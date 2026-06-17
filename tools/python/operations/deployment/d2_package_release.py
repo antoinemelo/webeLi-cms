@@ -38,6 +38,7 @@ DEFAULT_EXCLUDES = [
     "backend/vendor",
     "backend/vendor/*",
     "admin-app/assets/*.js.map",
+    "ops/.env",
     "ops/ftp.deploy.json",
     "backend/storage",
     "backend/storage/*",
@@ -47,6 +48,7 @@ DEFAULT_EXCLUDES = [
     "storage/backups/*",
     "storage/backups/**",
     "storage/uploads/*",
+    "storage/security/*",
     # Règle stricte: une release ne transporte jamais ses exports locaux,
     # ses anciens ZIP ni son propre staging. Les seuls fichiers tolérés
     # sous storage/exports sont les garde-fous .gitkeep/.htaccess.
@@ -89,6 +91,7 @@ KEEP_FILES = {
     "storage/cache/.gitkeep",
     "storage/logs/.gitkeep",
     "storage/uploads/.gitkeep",
+    "storage/security/.gitkeep",
     "storage/exports/.gitkeep",
     "storage/exports/.htaccess",
     "storage/exports/static/.gitkeep",
