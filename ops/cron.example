@@ -1,0 +1,11 @@
+# Définir CMS_ROOT vers la racine réelle de l'installation.
+CMS_ROOT="/chemin/vers/dec-cms"
+
+# publication planifiée
+* * * * * php "$CMS_ROOT/backend/bin/console" workflow:publish-scheduled
+
+# audit SEO quotidien
+15 3 * * * php "$CMS_ROOT/backend/bin/console" seo:audit
+
+# worker IA SQLite
+*/5 * * * * php "$CMS_ROOT/tools/php/ai_worker.php" --limit=10 >> "$CMS_ROOT/storage/logs/ai_worker.cron.log" 2>&1

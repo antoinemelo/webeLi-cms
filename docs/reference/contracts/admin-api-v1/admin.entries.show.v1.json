@@ -1,0 +1,152 @@
+{
+  "contract": "admin.entries.show.v1",
+  "method": "GET",
+  "path": "/admin/api/entries/{id}",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer",
+    "language_code": "optional enabled language code"
+  },
+  "response": {
+    "data": {
+      "entry": {
+        "id": 12,
+        "site_id": 1,
+        "content_type_key": "page",
+        "entry_key": "about",
+        "status": "draft",
+        "workflow_state": "draft",
+        "is_active": true,
+        "is_archived": false,
+        "created_at": "2026-04-30 10:00:00",
+        "updated_at": "2026-04-30 10:10:00",
+        "published_at": null
+      },
+      "localization": {
+        "language_code": "fr",
+        "title": "À propos",
+        "slug": "a-propos",
+        "blocks": [
+          {
+            "type": "markdown",
+            "data": {
+              "markdown": "Texte principal composé dans les blocs."
+            }
+          }
+        ]
+      },
+      "fields": {},
+      "seo": {
+        "meta_title": "À propos",
+        "meta_description": "Résumé",
+        "meta_robots": "index,follow",
+        "canonical_url": "",
+        "status": {
+          "state": "ok",
+          "label": "SEO prêt",
+          "warnings": []
+        }
+      },
+      "publication": null,
+      "working_revision": {
+        "id": 55,
+        "revision_number": 3,
+        "language_code": "fr",
+        "workflow_status": "draft",
+        "created_by_user_id": 1,
+        "published_by_user_id": null,
+        "created_at": "...",
+        "updated_at": "...",
+        "published_at": null,
+        "change_notes": "",
+        "revision_label": "Working draft",
+        "summary": "Contenu éditorial"
+      },
+      "published_revision": null,
+      "revisions": [],
+      "routes": [
+        {
+          "id": 8,
+          "language_code": "fr",
+          "full_path": "/a-propos",
+          "status": "draft",
+          "is_primary": true,
+          "is_canonical": true
+        }
+      ],
+      "taxonomies": [
+        {
+          "taxonomy_id": 1,
+          "taxonomy_key": "categories",
+          "term_id": 1,
+          "term_key": "actualites",
+          "name": "Actualités",
+          "slug": "actualites",
+          "full_path": "/categories/actualites",
+          "sort_order": 1
+        },
+        {
+          "taxonomy_id": 2,
+          "taxonomy_key": "tags",
+          "term_id": 3,
+          "term_key": "cms",
+          "name": "CMS",
+          "slug": "cms",
+          "full_path": "/tags/cms",
+          "sort_order": 2
+        }
+      ],
+      "locks": [],
+      "permissions": {
+        "content.read": true,
+        "content.update": true,
+        "content.publish": false
+      },
+      "editorial_summary": {
+        "status": "draft",
+        "status_label": "Brouillon",
+        "title_missing": false,
+        "slug_missing": false,
+        "block_count": 2,
+        "has_working_revision": true,
+        "has_published_revision": false,
+        "published_revision_id": 0,
+        "can_preview": true,
+        "can_publish": true
+      },
+      "ui_hints": {
+        "draft_badge": "Brouillon disponible",
+        "publication_badge": "Non publié",
+        "preview_label": "Prévisualiser la version de travail",
+        "publish_label": "Publier cette révision",
+        "messages": []
+      }
+    },
+    "meta": {
+      "contract": "admin.entries.show.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    },
+    "article_display_fields": {
+      "fields.article_detail_use_custom_display_settings": "boolean",
+      "fields.article_detail_show_published_date": "boolean",
+      "fields.article_detail_show_author": "boolean",
+      "fields.article_detail_show_updated_date": "boolean",
+      "fields.article_detail_show_type": "boolean",
+      "fields.article_detail_date_format": "short|medium|long|iso",
+      "fields.article_detail_include_author_in_schema": "boolean"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

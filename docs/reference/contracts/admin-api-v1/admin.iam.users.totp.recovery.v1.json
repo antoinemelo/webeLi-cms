@@ -1,0 +1,43 @@
+{
+  "contract": "admin.iam.users.totp.recovery.v1",
+  "methods": [
+    "POST"
+  ],
+  "permission": "users.manage",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "POST": {
+      "reason": "optional string"
+    }
+  },
+  "response": {
+    "data": {
+      "user": "iam user summary",
+      "recovery_codes": "empty array for email-based 2FA",
+      "message": "..."
+    },
+    "meta": {
+      "contract": "admin.iam.users.totp.recovery.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/users/{id}/totp/recovery-codes"
+}

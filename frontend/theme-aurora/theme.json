@@ -1,0 +1,13 @@
+{
+  "key": "aurora",
+  "name": "Aurora Fullscreen",
+  "version": "1.0.0",
+  "description": "Template éditorial élégant avec hero plein écran, superposition de contenu et palette sobre mais chaleureuse.",
+  "supports": {
+    "dark_mode": false,
+    "custom_blocks": true,
+    "seo_meta_preview": true,
+    "fullscreen_hero": true,
+    "theme_preview": true
+  }
+}

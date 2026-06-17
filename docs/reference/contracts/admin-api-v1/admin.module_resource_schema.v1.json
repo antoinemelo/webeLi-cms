@@ -1,0 +1,35 @@
+{
+  "contract": "admin.module_resource_schema.v1",
+  "method": "GET",
+  "path": "/admin/api/modules/{key}/resources/{resource}/schema",
+  "permission": "blueprints.read",
+  "response": {
+    "data": {
+      "schema": {
+        "module": "string",
+        "resource": "string",
+        "blueprint_key": "string",
+        "resource_type": "module_resource | headless | content_type | block | system",
+        "storage": "declared SQLite storage, when applicable",
+        "capabilities": "admin/headless/public/localized/revisions/workflow/seo/export flags",
+        "permissions": "read/create/update/delete permission keys",
+        "headless": "headless exposure policy and endpoint hints",
+        "admin": "schema-driven admin form/list policy",
+        "fields": "declared field schemas",
+        "relations": "declared relation schemas",
+        "validation": "validation schema",
+        "export": "export policy",
+        "contract": "API contract summary"
+      }
+    },
+    "meta": {
+      "contract": "admin.module_resource_schema.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": ["AUTH_REQUIRED", "AUTHZ_FORBIDDEN", "MODULE_NOT_FOUND", "CONTENT_TYPE_NOT_FOUND", "INTERNAL_SERVER_ERROR"],
+  "supported_versions": ["admin-api-v1"]
+}

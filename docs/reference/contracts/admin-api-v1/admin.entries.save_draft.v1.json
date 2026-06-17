@@ -1,0 +1,111 @@
+{
+  "contract": "admin.entries.save_draft.v1",
+  "methods": [
+    "POST",
+    "PATCH"
+  ],
+  "paths": [
+    "/admin/api/entries",
+    "/admin/api/entries/{id}"
+  ],
+  "permissions": {
+    "POST": "content.create",
+    "PATCH": "content.revisions.save"
+  },
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Contract-Version": "admin-api-v1",
+    "X-CSRF-Token": "required"
+  },
+  "request": {
+    "data": {
+      "site_id": 1,
+      "language_code": "fr",
+      "content_type_key": "page",
+      "entry_key": "about",
+      "title": "À propos",
+      "slug": "a-propos",
+      "fields": {
+        "author_name": "Équipe DEC CMS",
+        "publication_date": "2026-05-27 08:00:00",
+        "article_detail_use_custom_display_settings": false,
+        "article_detail_show_published_date": true,
+        "article_detail_show_author": false,
+        "article_detail_show_updated_date": false,
+        "article_detail_show_type": true,
+        "article_detail_date_format": "medium",
+        "article_detail_include_author_in_schema": true
+      },
+      "meta_title": "À propos",
+      "meta_description": "Résumé SEO",
+      "meta_robots": "index,follow",
+      "change_notes": "Correction du titre",
+      "expected_working_revision_id": 55,
+      "blocks": [
+        {
+          "type": "markdown",
+          "data": {
+            "markdown": "Texte principal composé dans les blocs."
+          }
+        }
+      ],
+      "taxonomy_terms": {
+        "categories": [
+          1
+        ],
+        "tags": [
+          3,
+          4
+        ]
+      }
+    }
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "revision_id": 56,
+      "content_type_key": "page",
+      "language_code": "fr",
+      "created": false,
+      "status": "draft",
+      "next_actions": {
+        "show": {
+          "method": "GET",
+          "path": "/admin/api/entries/12"
+        },
+        "publish": {
+          "method": "POST",
+          "path": "/admin/api/entries/12/publish",
+          "revision_id": 56
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.entries.save_draft.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "INVALID_JSON",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "REVISION_CONFLICT",
+    "ROUTE_CONFLICT"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "notes": [
+    "Native article detail display fields are edited through the article blueprint settings tab and accepted in fields for draft saves."
+  ]
+}

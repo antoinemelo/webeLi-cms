@@ -1,0 +1,11 @@
+{% if is_preview|default(false) %}
+<div class="{{ search_class }} header-search--disabled" role="search" aria-disabled="true" data-amcms-search-disabled="preview">
+  <label class="sr-only" for="{{ search_id }}">{{ ui.search }}</label>
+  <input id="{{ search_id }}" class="form-control" name="q" value="" placeholder="{{ ui.search }} indisponible en prévisualisation" autocomplete="off" disabled>
+</div>
+{% else %}
+<form class="{{ search_class }}" action="{{ localized_search_url|default(url('/search')) }}" method="get" role="search">
+  <label class="sr-only" for="{{ search_id }}">{{ ui.search }}</label>
+  <input id="{{ search_id }}" class="form-control" name="q" value="{{ search_query|default('') }}" placeholder="{{ ui.search_placeholder }}" autocomplete="search">
+</form>
+{% endif %}

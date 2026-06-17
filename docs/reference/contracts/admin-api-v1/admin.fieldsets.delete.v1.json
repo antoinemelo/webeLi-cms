@@ -1,0 +1,31 @@
+{
+  "contract": "admin.fieldsets.delete.v1",
+  "methods": [
+    "DELETE"
+  ],
+  "paths": [
+    "/admin/api/fieldsets/{key}"
+  ],
+  "permission": "blueprints.manage",
+  "response": {
+    "data": {
+      "deleted": true,
+      "fieldset_key": "seo_basic"
+    },
+    "meta": {
+      "contract": "admin.fieldsets.delete.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_ERROR",
+    "CONTENT_TYPE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

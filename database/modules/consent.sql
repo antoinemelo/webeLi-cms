@@ -1,0 +1,4 @@
+-- Deprecated compatibility placeholder.
+-- The native cookie/consent module now uses database/modules/cookies.sql
+-- and the dedicated SQLite database storage/database/cookies.sqlite.
+-- This file intentionally contains no DDL to avoid maintaining two schemas.

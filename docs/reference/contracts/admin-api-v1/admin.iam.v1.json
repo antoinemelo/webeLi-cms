@@ -1,0 +1,271 @@
+{
+  "contract": "admin.iam.v1",
+  "kind": "reference",
+  "title": "Admin IAM shared reference contract v1",
+  "description": "Shared reusable definitions for the native IAM backoffice: users, roles, permissions, sessions, site access and audit logs. Endpoint-level contracts are documented in admin.iam.*.v1.json files.",
+  "version": 1,
+  "definitions": {
+    "user": {
+      "type": "object",
+      "required": [
+        "id",
+        "email",
+        "name",
+        "is_active",
+        "roles",
+        "site_roles"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "first_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "locale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "disabled_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disabled_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_login_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "active_session_count": {
+          "type": "integer"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "site_roles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/site_role"
+          }
+        }
+      }
+    },
+    "site_role": {
+      "type": "object",
+      "required": [
+        "site_id",
+        "role_id"
+      ],
+      "properties": {
+        "site_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "role_id": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "required": [
+        "id",
+        "role_key",
+        "name",
+        "permission_ids",
+        "is_system"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "role_key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permission_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "is_system": {
+          "type": "boolean"
+        }
+      }
+    },
+    "permission": {
+      "type": "object",
+      "required": [
+        "id",
+        "permission_key",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "permission_key": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "required": [
+        "id",
+        "user_id",
+        "email",
+        "expires_at",
+        "is_active"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "user_id": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string"
+        },
+        "ip_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user_agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "audit_log": {
+      "type": "object",
+      "required": [
+        "id",
+        "action_key",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "actor_user_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "actor_email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action_key": {
+          "type": "string"
+        },
+        "resource_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resource_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "context": {
+          "type": "object"
+        },
+        "ip_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user_agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

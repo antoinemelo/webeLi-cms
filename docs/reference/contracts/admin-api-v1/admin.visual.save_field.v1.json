@@ -1,0 +1,54 @@
+{
+  "contract": "admin.visual.save_field.v1",
+  "method": "POST",
+  "path": "/admin/api/visual/entries/{id}/field",
+  "permission": "content.update",
+  "request": {
+    "site_id": 1,
+    "language_code": "fr",
+    "target": {
+      "kind": "block",
+      "block_id": "block_abc",
+      "field_path": "data.title"
+    },
+    "value": "Nouveau titre",
+    "expected_working_revision_id": 56,
+    "lock_token": "optional-current-block-lock-token"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "site_id": 1,
+      "language_code": "fr",
+      "working_revision_id": 57,
+      "updated_field": {
+        "kind": "block",
+        "block_id": "block_abc",
+        "field_path": "data.title",
+        "value": "Nouveau titre"
+      },
+      "dirty": true
+    },
+    "meta": {
+      "contract": "admin.visual.save_field.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "REVISION_CONFLICT",
+    "RESOURCE_LOCKED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

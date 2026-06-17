@@ -1,0 +1,25 @@
+<section class="hero hero--compact" aria-labelledby="archive-title">
+  <p class="eyebrow">{{ ui.taxonomy_archive }}</p>
+  <h1 id="archive-title">{{ archive_title }}</h1>
+
+  {% if archive_description %}
+    <p>{{ archive_description }}</p>
+  {% endif %}
+</section>
+
+{% if archive_items %}
+  <section class="archive-list" aria-label="{{ archive_title }}">
+    {% for item in archive_items %}
+      <article class="archive-item">
+        <div class="meta">{{ item.type_key }}</div>
+        <h2><a href="{{ item.path }}">{{ item.title }}</a></h2>
+
+        {% if item.summary %}
+          <p>{{ item.summary }}</p>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <p class="empty-state">{{ ui.empty_archive }}</p>
+{% endif %}

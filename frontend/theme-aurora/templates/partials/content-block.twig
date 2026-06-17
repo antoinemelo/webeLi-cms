@@ -1,0 +1,202 @@
+{% set type = block.type|default('markdown') %}
+{% set data = block.data|default(block) %}
+{% set class_name = ('content-block content-block--' ~ type ~ ' ' ~ block.css_class|default(''))|trim %}
+{% set anchor = block.anchor|default('') %}
+{% set block_id = block.id|default('') %}
+{% set block_label = block.label|default(type|capitalize) %}
+{% set block_index = block_index|default(null) %}
+{% set block_index_attr = block_index is not null ? ' data-amcms-block-index="' ~ block_index ~ '"' : '' %}
+{% set visual = visual_editing|default(false) %}
+{% set raw_editorial_status = block.editorial_status|default('published') %}
+{% set visual_status = block._visual_editorial_status|default(raw_editorial_status in ['draft', 'review', 'ready', 'archived'] ? raw_editorial_status : 'none') %}
+{% set visual_status_label = block._visual_status_label|default(visual_status == 'draft' ? 'BLOC :: BROUILLON' : (visual_status == 'review' ? 'BLOC :: EN RELECTURE' : (visual_status == 'ready' ? 'BLOC :: PRÊT À PUBLIER' : (visual_status == 'archived' ? 'BLOC :: ARCHIVÉ' : '')))) %}
+{% set visual_status_attr = visual and block_id and visual_status != 'none' and visual_status != 'published' ? ' data-amcms-editorial-status="' ~ visual_status|e('html_attr') ~ '" data-amcms-editorial-label="' ~ visual_status_label|e('html_attr') ~ '"' : '' %}
+{% set block_attrs = visual and block_id ? ' data-amcms-block="1" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-block-type="' ~ type|e('html_attr') ~ '"' ~ block_index_attr ~ visual_status_attr ~ ' data-amcms-label="' ~ block_label|e('html_attr') ~ '"' : '' %}
+{% set image_block_attrs = visual and block_id ? ' data-amcms-image-field-path="data.src" data-amcms-image-label="Image"' : '' %}
+{% set hero_media_attrs = visual and block_id ? ' data-amcms-image-field-path="data.image_src" data-amcms-image-label="Image" data-amcms-button-field-path="data.buttons" data-amcms-button-label="Boutons"' : '' %}
+{% set buttons_block_attrs = visual and block_id ? ' data-amcms-button-field-path="data.items" data-amcms-button-label="Boutons"' : '' %}
+{% set edit_image_src = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.src" data-amcms-editor="media_url" data-amcms-label="Image"' : '' %}
+{% set edit_hero_image_src = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.image_src" data-amcms-editor="media_url" data-amcms-label="Image"' : '' %}
+{% set edit_buttons = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.items" data-amcms-editor="button_list" data-amcms-label="Boutons"' : '' %}
+{% set edit_hero_buttons = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.buttons" data-amcms-editor="button_list" data-amcms-label="Boutons"' : '' %}
+{% set edit_eyebrow = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.eyebrow" data-amcms-editor="inline_text" data-amcms-label="Surtitre"' : '' %}
+{% set edit_title = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.title" data-amcms-editor="inline_text" data-amcms-label="Titre"' : '' %}
+{% set edit_lead = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.lead" data-amcms-editor="inline_textarea" data-amcms-label="Texte"' : '' %}
+{% set edit_text = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.text" data-amcms-editor="richtext_light" data-amcms-label="Texte"' : '' %}
+{% set edit_caption = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.caption" data-amcms-editor="inline_textarea" data-amcms-label="Légende"' : '' %}
+{% if block.enabled is same as(false) or (not is_preview|default(false) and block.editorial_status|default('published') != 'published') %}
+{% elseif type == 'markdown' %}
+  {% set markdown_text = data.text|default(data.markdown|default(block.text|default(''))) %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} prose-block"><div{{ edit_text|raw }}>{{ markdown_text|markdown_to_html|raw }}</div></section>
+{% elseif type in ['richtext', 'html_safe', 'html_raw'] %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }}">{{ data.html|default(block.html|default(''))|raw }}</section>
+{% elseif type == 'image' %}
+  {% set media_src = data.src|default(block.src|default('')) %}
+  {% if media_src %}
+    <figure{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }}{{ image_block_attrs|raw }} class="{{ class_name }} figure my-4">
+      <img class="figure-img img-fluid rounded-4"{{ edit_image_src|raw }} src="{{ media_src }}"{% if data.srcset|default('') %} srcset="{{ data.srcset }}"{% endif %}{% if data.sizes|default('') %} sizes="{{ data.sizes }}"{% endif %}{% if data.width|default(0) %} width="{{ data.width }}"{% endif %}{% if data.height|default(0) %} height="{{ data.height }}"{% endif %} alt="{{ data.alt|default(block.alt|default('')) }}" loading="{{ data.loading|default('lazy') }}">
+      {% if data.caption|default(block.caption|default('')) %}<figcaption class="figure-caption"{{ edit_caption|raw }}>{{ data.caption|default(block.caption) }}</figcaption>{% endif %}
+    </figure>
+  {% endif %}
+{% elseif type == 'video' %}
+  {% set media_src = data.src|default('') %}
+  {% if media_src %}
+    <figure{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} my-4">
+      {% if data.title|default('') %}<h2 class="h4">{{ data.title }}</h2>{% endif %}
+      <video class="w-100 rounded-4" controls preload="metadata"{% if data.poster|default('') %} poster="{{ data.poster }}"{% endif %}><source src="{{ media_src }}"></video>
+      {% if data.caption|default('') %}<figcaption class="figure-caption">{{ data.caption }}</figcaption>{% endif %}
+    </figure>
+  {% endif %}
+{% elseif type == 'audio' %}
+  {% set media_src = data.src|default('') %}
+  {% if media_src %}
+    <figure{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} my-4">
+      {% if data.title|default('') %}<h2 class="h4">{{ data.title }}</h2>{% endif %}
+      <audio class="w-100" controls preload="metadata"><source src="{{ media_src }}"></audio>
+      {% if data.caption|default('') %}<figcaption class="figure-caption">{{ data.caption }}</figcaption>{% endif %}
+    </figure>
+  {% endif %}
+{% elseif type == 'iframe' %}
+  {% set frame_src = data.src|default('') %}
+  {% if frame_src %}
+    <div{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} ratio ratio-16x9 my-4" style="min-height:{{ data.height|default(420) }}px">
+      <iframe src="{{ frame_src }}" title="{{ data.title|default('Contenu intégré') }}" loading="lazy" allow="{{ data.allow|default('fullscreen; picture-in-picture') }}" sandbox="{{ data.sandbox|default('allow-scripts allow-same-origin allow-presentation') }}"></iframe>
+    </div>
+  {% endif %}
+{% elseif type == 'embed' %}
+  {% set embed_url = data.url|default(data.src|default('')) %}
+  {% if embed_url %}
+    <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-embed">
+      <p><a href="{{ embed_url }}" rel="noopener noreferrer">{{ data.title|default('Contenu externe') }}</a></p>
+    </section>
+  {% endif %}
+{% elseif type == 'hero' %}
+  {% set h = data.heading_level|default('h2') == 'h1' ? 'h1' : 'h2' %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }}{{ hero_media_attrs|raw }} class="{{ class_name }} block-hero block-hero--{{ data.layout|default('simple') }}"{% if data.layout|default('simple') == 'cover' and data.image_src|default('') %} style="background-image:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)),url('{{ data.image_src }}')"{% endif %}>
+    <div class="block-hero__content">
+      {% if data.eyebrow|default('') %}<p class="eyebrow"{{ edit_eyebrow|raw }}>{{ data.eyebrow }}</p>{% endif %}
+      {% if data.title|default('') %}<{{ h }}{% if h == 'h1' %} id="page-title"{% endif %}{{ edit_title|raw }}>{{ data.title }}</{{ h }}>{% endif %}
+      {% if data.lead|default('') %}<p class="lead"{{ edit_lead|raw }}>{{ data.lead }}</p>{% endif %}
+      {% if data.buttons|default([]) %}<div class="actions">{% for btn in data.buttons %}<a class="btn btn--{{ btn.style|default('primary') }}"{{ edit_hero_buttons|raw }} data-amcms-button-index="{{ loop.index0 }}" href="{{ btn.url }}"{% if btn.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ btn.label }}</a>{% endfor %}</div>{% endif %}
+    </div>
+    {% if data.image_src|default('') and data.layout|default('simple') != 'cover' %}
+      <picture class="block-hero__media home-hero__media">
+        <img{{ edit_hero_image_src|raw }} src="{{ data.image_src }}"{% if data.image_srcset|default('') %} srcset="{{ data.image_srcset }}"{% endif %}{% if data.image_sizes|default('') %} sizes="{{ data.image_sizes }}"{% endif %} width="{{ data.image_width|default(1280) }}" height="{{ data.image_height|default(853) }}" alt="{{ data.image_alt|default('') }}" loading="{{ data.image_loading|default('eager') }}"{% if data.image_loading|default('eager') == 'eager' %} fetchpriority="high"{% endif %}>
+      </picture>
+    {% endif %}
+  </section>
+{% elseif type == 'gallery' %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-gallery block-gallery--{{ data.columns|default(3) }}">
+    {% for item in data.items|default([]) %}<figure><img src="{{ item.src|default('') }}"{% if item.srcset|default('') %} srcset="{{ item.srcset }}"{% endif %}{% if item.sizes|default('') %} sizes="{{ item.sizes }}"{% endif %}{% if item.width|default(0) %} width="{{ item.width }}"{% endif %}{% if item.height|default(0) %} height="{{ item.height }}"{% endif %} alt="{{ item.alt|default('') }}" loading="lazy">{% if item.caption|default('') %}<figcaption>{{ item.caption }}</figcaption>{% endif %}</figure>{% endfor %}
+  </section>
+{% elseif type == 'plan' %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-plan block-plan--{{ data.source|default('pages') }}">
+    {% if data.title|default('') %}<h2 class="block-plan__title"{{ edit_title|raw }}>{{ data.title }}</h2>{% endif %}
+    {% if data.items|default([]) %}
+      <nav class="block-plan__nav" aria-label="{{ data.title|default('Plan') }}">
+        <ul class="block-plan__list">
+          {% for item in data.items %}
+            <li class="block-plan__item">
+              <a href="{{ item.url }}">{{ item.title }}</a>
+              {% if item.summary|default('') %}<p>{{ item.summary }}</p>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+      {% set pagination = data.pagination|default({}) %}
+      {% if pagination.enabled|default(false) %}
+        <nav class="block-pagination" aria-label="Pagination {{ data.title|default('Plan') }}">
+          {% if pagination.has_previous|default(false) %}<a class="btn btn--ghost" href="{{ pagination.previous_url }}{% if anchor %}#{{ anchor }}{% endif %}" rel="prev" aria-label="Page précédente">‹</a>{% endif %}
+          <span>{{ pagination.page|default(1) }} / {{ pagination.total_pages|default(1) }}</span>
+          {% if pagination.has_next|default(false) %}<a class="btn btn--ghost" href="{{ pagination.next_url }}{% if anchor %}#{{ anchor }}{% endif %}" rel="next" aria-label="Page suivante">›</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-body-secondary">Aucun lien publié.</p>
+    {% endif %}
+  </section>
+{% elseif type == 'articles' %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-articles">
+    <div class="block-articles__header">
+      {% if data.title|default('') %}<h2{{ edit_title|raw }}>{{ data.title }}</h2>{% endif %}
+      {% if data.show_more_button|default(true) and data.more_url|default('') %}<a class="btn btn--ghost" href="{{ data.more_url }}">{{ data.more_label_resolved|default(data.more_label|default('Articles')) }}</a>{% endif %}
+    </div>
+    {% if data.items|default([]) %}
+      {% set display = data.display|default({}) %}
+      {% set display_show_published_date = display.show_published_date is defined ? display.show_published_date : true %}
+      {% set display_show_updated_date = display.show_updated_date is defined ? display.show_updated_date : false %}
+      {% set display_show_author = display.show_author is defined ? display.show_author : false %}
+      {% set display_show_type = display.show_type is defined ? display.show_type : true %}
+      <div class="block-articles__grid">
+        {% for item in data.items %}
+          {% set show_published_date = display_show_published_date and item.published_at|default('') %}
+          {% set show_updated_date = display_show_updated_date and item.updated_at|default('') and item.updated_at != item.published_at|default('') %}
+          {% set show_author = display_show_author and item.author_name|default('') %}
+          {% set show_type = display_show_type and item.categories|default([]) %}
+          {% set has_meta = show_published_date or show_updated_date or show_author or show_type %}
+          <article class="block-article-card">
+            {% if has_meta %}
+              <div class="block-article-card__meta">
+                {% if show_type %}<a class="block-article-card__meta-item block-article-card__meta-item--type" href="{{ item.categories[0].url }}">{{ item.categories[0].name }}</a>{% endif %}
+                {% if show_published_date %}<time class="block-article-card__meta-item block-article-card__meta-item--published" datetime="{{ item.published_at }}">{{ item.published_at_label|default(item.published_at|slice(0, 10), true) }}</time>{% endif %}
+                {% if show_updated_date %}<time class="block-article-card__meta-item block-article-card__meta-item--updated" datetime="{{ item.updated_at }}">{{ item.updated_at_label|default(item.updated_at|slice(0, 10), true) }}</time>{% endif %}
+                {% if show_author %}<span class="block-article-card__meta-item block-article-card__meta-item--author">{{ item.author_name }}</span>{% endif %}
+              </div>
+            {% endif %}
+            <h3>{{ item.title }}</h3>
+            {% if item.summary|default('') %}<p>{{ item.summary }}</p>{% endif %}
+            {% if item.tags|default([]) %}
+              <div class="block-article-card__terms">
+                {% for term in item.tags|default([]) %}<a href="{{ term.url }}">#{{ term.name }}</a>{% endfor %}
+              </div>
+            {% endif %}
+            <a class="block-article-card__more" href="{{ item.path }}">{{ data.read_label|default('Lire') }}</a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-body-secondary">Aucun article publié pour ce filtre.</p>
+    {% endif %}
+  </section>
+{% elseif type == 'buttons' %}
+  <nav{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }}{{ buttons_block_attrs|raw }} class="{{ class_name }} actions" aria-label="Actions">
+    {% for btn in data.items|default([]) %}<a class="btn btn--{{ btn.style|default('primary') }}"{{ edit_buttons|raw }} data-amcms-button-index="{{ loop.index0 }}" href="{{ btn.url }}"{% if btn.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ btn.label }}</a>{% endfor %}
+  </nav>
+{% elseif type == 'card' %}
+  {% set edit_card_title = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.title" data-amcms-editor="inline_text" data-amcms-label="Titre"' : '' %}
+  {% set edit_card_text = visual and block_id ? ' data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="' ~ block_id|e('html_attr') ~ '" data-amcms-field-path="data.text" data-amcms-editor="inline_textarea" data-amcms-label="Texte"' : '' %}
+  {% set raw_card_style = data.style|default('default') %}
+  {% set card_style = raw_card_style in ['feature', 'featured', 'force', 'strong', 'card'] ? 'feature' : (raw_card_style == 'compact' ? 'compact' : 'default') %}
+  <article{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-card block-card--{{ card_style }}" data-card-style="{{ card_style }}">
+    {% if data.icon_src|default('') %}<img class="feature-card__icon feature-card__icon--media" src="{{ data.icon_src }}" alt="{{ data.icon_alt|default('') }}" loading="lazy">{% elseif data.icon|default('') %}<span class="feature-card__icon" aria-hidden="true">{{ data.icon }}</span>{% endif %}
+    {% if data.title|default('') %}<h2{{ edit_card_title|raw }}>{{ data.title }}</h2>{% endif %}
+    {% if data.text|default('') %}<div class="block-card__text"{{ edit_card_text|raw }}>{{ data.text|markdown_to_html|raw }}</div>{% endif %}
+    {% if data.url|default('') and data.link_label|default('') %}<a class="block-card__link" href="{{ data.url }}">{{ data.link_label }}</a>{% endif %}
+  </article>
+{% elseif type == 'form' %}
+  {% set form_key = data.form_key|default('') %}
+  {% if form_key %}
+    <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} form-block form-block--{{ data.layout|default('default') }}" data-form-block="{{ form_key }}" data-form-started="{{ 'now'|date('U') }}">
+      {% if data.title|default('') %}<h2{{ edit_title|raw }}>{{ data.title }}</h2>{% endif %}
+      {% if data.intro|default('') %}<p{{ edit_lead|raw }}>{{ data.intro }}</p>{% endif %}
+      <div class="form-block__mount" role="status">Chargement du formulaire…</div>
+    </section>
+  {% endif %}
+{% elseif type == 'columns' %}
+  {% set columns_layout = data.layout|default('2_equal') %}
+  {% set columns_gap = data.gap|default('md') %}
+  {% set stack_class = data.stack_on_mobile|default(true) ? ' block-columns--stack-mobile' : '' %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} block-columns block-columns--{{ columns_layout }} block-columns--gap-{{ columns_gap }}{{ stack_class }}">
+    {% for col in data.columns|default([]) %}
+      {% set width = col.width|default('auto') %}
+      <div class="block-column block-column--{{ width }}"{% if col.label|default('') %} aria-label="{{ col.label|e('html_attr') }}"{% endif %}>
+        {% for child in col.blocks|default([]) %}
+          {% if child.type|default('') != 'columns' %}{% include 'partials/content-block.twig' with { block: child, is_preview: is_preview|default(false), visual_editing: visual } only %}{% endif %}
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </section>
+{% else %}
+  {% set fallback_markdown_text = data.text|default(data.markdown|default(block.text|default(''))) %}
+  <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} prose-block"><div{{ edit_text|raw }}>{{ fallback_markdown_text|markdown_to_html|raw }}</div></section>
+{% endif %}

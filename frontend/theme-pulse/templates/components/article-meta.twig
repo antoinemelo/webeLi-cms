@@ -1,0 +1,29 @@
+{% set display = display|default({}) %}
+{% set display_show_type = display.show_type is defined ? display.show_type : true %}
+{% set display_show_published_date = display.show_published_date is defined ? display.show_published_date : true %}
+{% set display_show_updated_date = display.show_updated_date is defined ? display.show_updated_date : false %}
+{% set display_show_author = display.show_author is defined ? display.show_author : true %}
+{% set show_type = display_show_type and type_label|default('') is not empty %}
+{% set show_published_date = display_show_published_date and published_at|default('') is not empty %}
+{% set show_updated_date = display_show_updated_date and updated_at|default('') is not empty and updated_at != published_at %}
+{% set show_author = display_show_author and author_name|default('') is not empty %}
+{% set has_meta = show_type or show_published_date or show_updated_date or show_author %}
+
+{% if has_meta %}
+  <div class="meta article-meta">
+    {% if show_type %}
+      <span class="article-meta__item article-meta__type">{{ type_label }}</span>
+    {% endif %}
+    {% if show_published_date %}
+      <time class="article-meta__item article-meta__date article-meta__date--published" datetime="{{ published_at }}" itemprop="datePublished">{{ published_at_label|default(published_at|slice(0, 10), true) }}</time>
+    {% endif %}
+    {% if show_updated_date %}
+      <time class="article-meta__item article-meta__date article-meta__date--updated" datetime="{{ updated_at }}" itemprop="dateModified">{{ updated_at_label|default(updated_at|slice(0, 10), true) }}</time>
+    {% endif %}
+    {% if show_author %}
+      <span class="article-meta__item article-meta__author" itemprop="author" itemscope itemtype="https://schema.org/Person">
+        <span itemprop="name">{{ author_name }}</span>
+      </span>
+    {% endif %}
+  </div>
+{% endif %}

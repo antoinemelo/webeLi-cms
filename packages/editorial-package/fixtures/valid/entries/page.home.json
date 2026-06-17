@@ -1,0 +1,60 @@
+{
+  "blocks": [
+    {
+      "block_key": "page.home.hero",
+      "data": {
+        "image_media_key": "media.hero",
+        "title": "Bienvenue"
+      },
+      "editorial_status": "published",
+      "enabled": true,
+      "sort_order": 0,
+      "type": "hero"
+    }
+  ],
+  "blueprint_key": "page",
+  "content_type_key": "page",
+  "dates": {
+    "created_at": "2026-06-12T00:00:00Z",
+    "published_at": "2026-06-12T00:00:00Z",
+    "updated_at": "2026-06-12T00:00:00Z"
+  },
+  "entry_key": "page.home",
+  "fields": {
+    "intro": "Bienvenue"
+  },
+  "languages": [
+    "fr"
+  ],
+  "localizations": [
+    {
+      "language": "fr",
+      "localization_key": "page.home.fr",
+      "route": "/",
+      "slug": "",
+      "title": "Accueil"
+    }
+  ],
+  "media_keys": [
+    "media.hero"
+  ],
+  "relations": [],
+  "seo": {
+    "blueprint_metadata": {},
+    "canonical": null,
+    "description": "Page d’accueil",
+    "image_media_keys": [
+      "media.hero"
+    ],
+    "open_graph": {},
+    "robots": {
+      "follow": true,
+      "index": true
+    },
+    "structured_data": [],
+    "title": "Accueil",
+    "twitter": {}
+  },
+  "source_site_key": "demo",
+  "status": "published"
+}

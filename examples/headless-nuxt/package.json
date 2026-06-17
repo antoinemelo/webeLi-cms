@@ -1,0 +1,18 @@
+{
+  "name": "amcms-headless-nuxt-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@amcms/client": "file:../../packages/amcms-client",
+    "nuxt": "^3.14.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

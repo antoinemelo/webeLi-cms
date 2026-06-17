@@ -1,0 +1,149 @@
+{
+  "contract": "public.routes.index.v1",
+  "kind": "schema",
+  "summary": "Lister les routes publiques indexables.",
+  "description": "Retourne les routes actives/canoniques publiées, avec filtre optionnel par type de contenu.",
+  "method": "GET",
+  "source": "routes + public_content_snapshots",
+  "security": "Public read endpoint; may be protected by bearer scope content:read; active/canonical routes only.",
+  "path": "/api/v1/routes",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    },
+    "type": {
+      "type": "string",
+      "required": false,
+      "description": "Filtre optionnel sur le type de contenu lié à la route."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "resource_type",
+                  "resource_id",
+                  "title",
+                  "updated_at",
+                  "meta_robots"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "resource_type": {
+                    "type": "string"
+                  },
+                  "resource_id": {
+                    "type": "integer"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  },
+                  "meta_robots": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.routes.index.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Contexte site/langue ou filtre invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/routes?type=article&lang=fr",
+    "response": {
+      "data": {
+        "items": [
+          {
+            "path": "/articles/mon-article",
+            "resource_type": "content_entry",
+            "resource_id": 42,
+            "title": "Mon article",
+            "updated_at": "2026-05-02 10:00:00",
+            "meta_robots": "index,follow"
+          }
+        ]
+      },
+      "meta": {
+        "contract": "public.routes.index.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr",
+        "source": "routes + public_content_snapshots"
+      }
+    }
+  }
+}

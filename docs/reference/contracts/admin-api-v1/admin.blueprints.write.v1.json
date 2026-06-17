@@ -1,0 +1,33 @@
+{
+  "contract": "admin.blueprints.write.v1",
+  "method": "POST",
+  "path": "/admin/api/blueprints",
+  "permission": "blueprints.manage",
+  "request": {
+    "blueprint_key": "landing_page",
+    "resource_type": "content_type",
+    "site_id": null,
+    "label": "Landing page",
+    "description": "Modèle éditorial versionné."
+  },
+  "response": {
+    "data": {
+      "id": 4,
+      "blueprint_key": "landing_page",
+      "resource_type": "content_type",
+      "is_active": true
+    },
+    "meta": {
+      "contract": "admin.blueprints.write.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_FAILED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

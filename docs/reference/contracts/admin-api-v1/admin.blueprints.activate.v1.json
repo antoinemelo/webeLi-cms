@@ -1,0 +1,30 @@
+{
+  "contract": "admin.blueprints.activate.v1",
+  "method": "POST",
+  "path": "/admin/api/blueprints/{key}/activate",
+  "permission": "blueprints.manage",
+  "request": {
+    "version": 2
+  },
+  "response": {
+    "data": {
+      "id": 1,
+      "blueprint_key": "page",
+      "active_version": 2,
+      "is_active": true
+    },
+    "meta": {
+      "contract": "admin.blueprints.activate.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_FAILED",
+    "CONTENT_TYPE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

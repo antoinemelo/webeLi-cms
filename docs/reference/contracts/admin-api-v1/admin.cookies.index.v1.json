@@ -1,0 +1,96 @@
+{
+  "contract": "admin.cookies.index.v1",
+  "method": "GET",
+  "path": "/admin/api/cookies",
+  "permissions": {
+    "read": "cookies.read"
+  },
+  "headers": {
+    "GET": {
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "query": {
+    "lang": "optional language code used for editable cookie texts",
+    "content_language_code": "optional alias for lang"
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "settings": {
+        "site_id": "integer",
+        "enabled": "boolean/integer",
+        "banner_position": "bottom | top | modal",
+        "consent_ttl_days": "integer",
+        "theme": "string",
+        "legal_text_title": "localized string",
+        "legal_text_intro": "localized string"
+      },
+      "categories": [
+        {
+          "id": "integer",
+          "site_id": "integer",
+          "key": "necessary | preferences | statistics | marketing | external_media | custom",
+          "is_required": "boolean/integer",
+          "is_enabled": "boolean/integer",
+          "sort_order": "integer",
+          "title": "localized string",
+          "description": "localized string"
+        }
+      ],
+      "services": [
+        {
+          "id": "integer",
+          "category_id": "integer",
+          "name": "string",
+          "provider": "string",
+          "purpose": "localized string",
+          "duration": "string",
+          "cookie_type": "http | html_local_storage | html_session_storage | pixel | script | other",
+          "domain": "string",
+          "privacy_policy_url": "nullable string",
+          "is_enabled": "boolean/integer"
+        }
+      ],
+      "bindings": [
+        {
+          "id": "integer",
+          "service_id": "integer",
+          "category_key": "string",
+          "selector": "script selector or symbolic key",
+          "script_type": "inline | external | iframe | placeholder",
+          "source_url": "nullable string",
+          "is_enabled": "boolean/integer"
+        }
+      ],
+      "logs": [
+        {
+          "id": "integer",
+          "consent_uid": "string",
+          "site_id": "integer",
+          "language_code": "string",
+          "choices_json": "json string",
+          "action": "accept_all | reject_all | save_custom | revoke | update",
+          "created_at": "datetime"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.cookies.index.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

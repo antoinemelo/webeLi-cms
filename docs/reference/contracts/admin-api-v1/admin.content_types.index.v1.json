@@ -1,0 +1,28 @@
+{
+  "contract": "admin.content_types.index.v1",
+  "method": "GET",
+  "path": "/admin/api/content-types",
+  "permission": "content.read",
+  "response": {
+    "data": [
+      {
+        "type_key": "article",
+        "singular_label": "Article",
+        "plural_label": "Articles",
+        "is_hierarchical": false,
+        "is_active": true
+      }
+    ],
+    "meta": {
+      "contract": "admin.content_types.index.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

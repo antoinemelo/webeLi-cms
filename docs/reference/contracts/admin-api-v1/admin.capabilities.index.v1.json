@@ -1,0 +1,44 @@
+{
+  "contract": "admin.capabilities.index.v1",
+  "method": "GET",
+  "path": "/admin/api/capabilities",
+  "permission": "fields.read",
+  "supported_versions": ["admin-api-v1"],
+  "query": {
+    "site_id": "optional integer; defaults to resolved current site"
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "capabilities": [
+        {
+          "key": "string",
+          "label": "string",
+          "module": "string",
+          "permission": "IAM permission key checked again by the executor",
+          "input_schema": "object",
+          "output_schema": "object",
+          "supports_dry_run": "boolean",
+          "requires_confirmation": "boolean",
+          "risk_level": "low | medium | high",
+          "description": "string"
+        }
+      ],
+      "count": "integer"
+    },
+    "meta": {
+      "contract": "admin.capabilities.index.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "ROUTE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ]
+}

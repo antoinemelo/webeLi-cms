@@ -1,0 +1,69 @@
+{
+  "contract": "admin.entries.publish.v1",
+  "method": "POST",
+  "path": "/admin/api/entries/{id}/publish",
+  "permission": "content.publish",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Contract-Version": "admin-api-v1",
+    "X-CSRF-Token": "required"
+  },
+  "request": {
+    "data": {
+      "site_id": 1,
+      "language_code": "fr",
+      "revision_id": 56,
+      "expected_working_revision_id": 56
+    }
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "language_code": "fr",
+      "published_revision_id": 56,
+      "previous_published_revision_id": 40,
+      "published_by_user_id": 1,
+      "published_at": "2026-04-30 10:20:00",
+      "status": "published",
+      "workflow_state": "published",
+      "critical_projections": {
+        "mode": "synchronous_atomic",
+        "status": "ready",
+        "items": [
+          "routes",
+          "seo_metadata",
+          "search_documents"
+        ]
+      },
+      "secondary_events": [
+        "content.entry_published",
+        "content.published_projection_ready"
+      ]
+    },
+    "meta": {
+      "contract": "admin.entries.publish.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "INVALID_JSON",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "REVISION_CONFLICT",
+    "PUBLICATION_CONFLICT",
+    "ROUTE_CONFLICT"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

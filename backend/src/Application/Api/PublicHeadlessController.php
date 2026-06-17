@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Application\Api;
+
+use App\Application\PublicApi\PublicApiKernel;
+use App\Application\PublicApi\PublicContentApiHandler;
+use App\Application\PublicApi\PublicCookieConsentApiHandler;
+use App\Application\PublicApi\PublicFormApiHandler;
+use App\Application\PublicApi\PublicSearchApiHandler;
+use App\Application\PublicApi\PublicTaxonomyApiHandler;
+use App\Core\Response;
+
+final class PublicHeadlessController
+{
+    public function __construct(
+        private readonly PublicApiKernel $api,
+        private readonly PublicContentApiHandler $content,
+        private readonly PublicTaxonomyApiHandler $taxonomies,
+        private readonly PublicSearchApiHandler $searchHandler,
+        private readonly PublicFormApiHandler $forms,
+        private readonly PublicCookieConsentApiHandler $cookies,
+    ) {}
+
+    public function health(): Response { return $this->api->health(); }
+    public function byRoute(): Response { return $this->api->byRoute(); }
+    public function contentIndex(): Response { return $this->api->contentIndex(); }
+    public function contentByType(string $type): Response { return $this->api->contentByType($type); }
+    public function contentShow(string $type, string $slug): Response { return $this->api->contentShow($type, $slug); }
+    public function contentByPath(): Response { return $this->content->byPath(); }
+    public function routes(): Response { return $this->api->routes(); }
+    public function languages(): Response { return $this->api->languages(); }
+    public function menu(string $key): Response { return $this->api->menu($key); }
+    public function menusIndex(): Response { return $this->api->menusIndex(); }
+    public function taxonomiesIndex(): Response { return $this->api->taxonomiesIndex(); }
+    public function taxonomy(string $taxonomy): Response { return $this->api->taxonomy($taxonomy); }
+    public function search(): Response { return $this->api->search(); }
+    public function mediaIndex(): Response { return $this->api->mediaIndex(); }
+    public function media(string|int $id): Response { return $this->api->media($id); }
+    public function formShow(string $key): Response { return $this->forms->show($key); }
+    public function formSubmit(string $key): Response { return $this->forms->submit($key); }
+    public function cookieConfig(): Response { return $this->cookies->config(); }
+    public function cookieConsent(): Response { return $this->cookies->log(); }
+}

@@ -1,0 +1,81 @@
+{
+  "contract": "admin.menus.items.replace.v1",
+  "method": "PUT",
+  "path": "/admin/api/menus/{key}/items",
+  "permission": "menu.manage",
+  "query": {
+    "lang": "optional string"
+  },
+  "request": {
+    "data": {
+      "items": [
+        {
+          "label": "Accueil",
+          "title_attr": null,
+          "url": "/fr/",
+          "resource_type": null,
+          "resource_id": null,
+          "term_id": null,
+          "localizations": {
+            "fr": {
+              "label": "Accueil",
+              "title_attr": null
+            },
+            "en": {
+              "label": "Home",
+              "title_attr": null
+            }
+          },
+          "css_class": null,
+          "open_in_new_tab": false,
+          "sort_order": 10,
+          "is_active": true,
+          "children": []
+        }
+      ]
+    }
+  },
+  "response": {
+    "data": {
+      "menu": {
+        "menu_key": "main",
+        "name": "Menu principal",
+        "language_mode": "shared"
+      },
+      "items": [
+        {
+          "id": 1,
+          "label": "Accueil",
+          "manual_url": "/fr/",
+          "target_label": "/fr/",
+          "target_missing": false,
+          "sort_order": 10,
+          "children": []
+        }
+      ],
+      "languages": []
+    },
+    "meta": {
+      "contract": "admin.menus.items.replace.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "notes": [
+    "Chaque item doit pointer vers exactement une cible : url/manual_url, term_id ou resource_type + resource_id.",
+    "Le builder admin masque les IDs via les endpoints existants /admin/api/entries et /admin/api/taxonomy-terms, mais le payload reste compatible."
+  ],
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "MENU_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

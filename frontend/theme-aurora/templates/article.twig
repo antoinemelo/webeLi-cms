@@ -1,0 +1,33 @@
+{% set blocks = entry_blocks|default([]) %}
+{% set first_image = '' %}
+{% for block in blocks %}
+  {% if first_image == '' and block.type|default('') == 'hero' %}{% set first_image = block.data.image_src|default('') %}{% endif %}
+  {% if first_image == '' and block.type|default('') == 'image' %}{% set first_image = block.data.src|default('') %}{% endif %}
+{% endfor %}
+
+<article class="article-page aurora-document" data-entry-key="{{ entry_key }}" itemscope itemtype="https://schema.org/Article">
+  <header class="aurora-hero aurora-hero--article" aria-labelledby="article-title"{% if first_image %} style="--aurora-hero-image:url('{{ first_image }}')"{% endif %}>
+    {% if first_image %}<picture class="aurora-hero__image" aria-hidden="true"><img src="{{ first_image }}" alt="" loading="eager" fetchpriority="high"></picture>{% endif %}
+    <div class="aurora-hero__shade" aria-hidden="true"></div>
+    <div class="aurora-hero__content">
+      {% if is_preview %}<span class="badge aurora-preview-badge">{{ ui.preview }}</span>{% endif %}
+      {% include 'components/article-meta.twig' with {
+        display: article_display|default({}),
+        type_label: entry_type_label,
+        published_at: entry_published_at,
+        published_at_label: entry_published_at_label|default(''),
+        updated_at: entry_updated_at|default(''),
+        updated_at_label: entry_updated_at_label|default(''),
+        author_name: entry_author_name|default('')
+      } %}
+      <h1 id="article-title" itemprop="headline">{{ entry_title }}</h1>
+      {% if meta_description|default('') %}<p class="lead">{{ meta_description }}</p>{% endif %}
+    </div>
+  </header>
+
+  <div class="aurora-content-shell prose article-page__body" itemprop="articleBody">
+    {% include 'partials/breadcrumbs.twig' %}
+    {% include 'partials/content-blocks.twig' %}
+    {% include 'partials/social-share.twig' %}
+  </div>
+</article>

@@ -1,0 +1,81 @@
+{
+  "contract": "admin.iam.users.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "permission": "users.read",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "users": [
+        {
+          "id": 1,
+          "email": "admin@example.test",
+          "first_name": "Admin",
+          "last_name": "CMS",
+          "name": "Admin CMS",
+          "locale": "fr-CH",
+          "is_active": true,
+          "disabled_at": null,
+          "disabled_reason": null,
+          "last_login_at": "2026-05-02 10:00:00",
+          "active_session_count": 1,
+          "roles": [
+            1
+          ],
+          "site_roles": [
+            {
+              "site_id": 1,
+              "role_id": 1
+            }
+          ]
+        }
+      ],
+      "pagination": {
+        "total": 1,
+        "limit": 50,
+        "offset": 0
+      },
+      "filters": {
+        "q": "admin",
+        "site_id": 1,
+        "role_id": 1,
+        "is_active": true
+      },
+      "actions": {
+        "show": {
+          "method": "GET",
+          "path": "/admin/api/iam/users/{id}"
+        },
+        "store": {
+          "method": "POST",
+          "path": "/admin/api/iam/users"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.iam.users.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/users"
+}

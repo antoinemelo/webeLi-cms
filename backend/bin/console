@@ -1,0 +1,149 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/runtime.php';
+$config = require __DIR__ . '/../bootstrap/config.php';
+$cmd = $argv[1] ?? 'help';
+
+$commandList = 'Commands: migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke';
+if (in_array($cmd, ['help', '--help', '-h'], true)) {
+    echo $commandList . "\n";
+    exit(0);
+}
+if ($cmd === 'log:tail') {
+    $path = base_path('storage/logs/app.log');
+    echo is_file($path) ? implode('', array_slice(file($path), -50)) : "No log file\n";
+    exit(0);
+}
+
+$coreDb = new App\Core\Database($config['databases']['core']['path']);
+$iamDb = new App\Core\Database($config['databases']['iam']['path']);
+$formsDb = isset($config['databases']['forms']['path']) ? new App\Core\Database($config['databases']['forms']['path']) : null;
+$cookiesDb = isset($config['databases']['cookies']['path']) ? new App\Core\Database($config['databases']['cookies']['path']) : null;
+$logger = new App\Core\Logger(base_path('storage/logs/app.log'));
+$services = new App\Core\ServiceFactory($coreDb, $iamDb, $formsDb, $cookiesDb, $config, $logger);
+
+$syncModules = static function () use ($services): void {
+    $services->modules()->syncManifest();
+    $services->modules()->applyMigrations();
+    $services->modules()->syncContentTypes();
+};
+
+switch ($cmd) {
+    case 'migrate':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $syncModules();
+        echo "Migrations, seeds and module sync completed\n";
+        break;
+
+    case 'modules:sync':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $syncModules();
+        echo "Module manifest, migrations and content types synced\n";
+        break;
+
+    case 'rebuild':
+    case 'projections:rebuild':
+    case 'search:reindex':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $services->projections()->rebuildAll();
+        echo "Projections rebuilt\n";
+        break;
+
+    case 'seo:audit':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $services->projections()->rebuildAll();
+        echo "SEO audit refreshed through projection rebuild\n";
+        break;
+
+
+    case 'static:export':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $parseOptions = static function (array $argv): array {
+            $options = [
+                'dry_run' => false,
+                'site' => null,
+                'lang' => null,
+                'all_languages' => false,
+                'route' => null,
+                'output' => null,
+            ];
+            foreach (array_slice($argv, 2) as $arg) {
+                if ($arg === '--dry-run') { $options['dry_run'] = true; continue; }
+                if ($arg === '--all-languages') { $options['all_languages'] = true; continue; }
+                if (str_starts_with($arg, '--site=')) { $options['site'] = substr($arg, 7); continue; }
+                if (str_starts_with($arg, '--lang=')) { $options['lang'] = substr($arg, 7); continue; }
+                if (str_starts_with($arg, '--route=')) { $options['route'] = substr($arg, 8); continue; }
+                if (str_starts_with($arg, '--output=')) { $options['output'] = substr($arg, 9); continue; }
+                fwrite(STDERR, "Option inconnue pour static:export: {$arg}\n");
+                exit(2);
+            }
+            if ($options['lang'] !== null && $options['all_languages']) {
+                fwrite(STDERR, "Options incompatibles: --lang et --all-languages\n");
+                exit(2);
+            }
+            return $options;
+        };
+        $source = new App\StaticExport\SqlStaticExportSource($coreDb);
+        $collector = new App\StaticExport\StaticExportRouteCollector($source);
+        $renderer = new App\StaticExport\StaticExportRenderer($config, $services->resolvePublicRoute(), $services->sites());
+        $exporter = new App\StaticExport\StaticExportService(
+            $source,
+            $collector,
+            $renderer,
+            new App\StaticExport\StaticAssetCollector(),
+            new App\StaticExport\StaticExportManifestWriter(),
+            $formsDb ? new App\StaticExport\StaticFormRenderer(new App\Application\Forms\FormRepository($formsDb)) : null,
+            new App\EditorialPackage\EditorialExportService($coreDb, storageFactory: new App\Application\Media\Storage\StorageDriverFactory($coreDb)),
+        );
+        $result = $exporter->export($parseOptions($argv));
+        echo json_encode($result['manifest'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        if (!empty($result['manifest']['errors'])) {
+            exit(1);
+        }
+        break;
+
+    case 'content:publish-scheduled':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        echo "Scheduled publication command registered; no scheduled publisher implemented yet\n";
+        break;
+
+    case 'worker:outbox':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $worker = new App\Worker\OutboxWorker($services->outbox(), $logger, $services->systemJobs(), $services->webhookDispatcher());
+        $processed = $worker->run((int) ($argv[2] ?? 25), (int) ($config['app']['worker_max_attempts'] ?? 5));
+        echo 'Processed: ' . $processed . "\n";
+        break;
+
+
+    case 'worker:ai':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $worker = new App\Modules\AiAssistant\Services\AiTaskWorker($services->aiTasks(), $services->aiProviderManager(), $services->aiUsageLogger(), $logger);
+        $result = $worker->run((int) ($argv[2] ?? 10));
+        echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        exit(((int) ($result['failed'] ?? 0)) > 0 ? 1 : 0);
+
+    case 'webhooks:dispatch':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $result = $services->webhookDispatcher()->run((int) ($argv[2] ?? 25), (int) ($config['app']['worker_max_attempts'] ?? 5));
+        echo 'Scheduled: ' . $result['scheduled'] . ', delivered: ' . $result['delivered'] . "
+";
+        break;
+
+    case 'queue:stats':
+        echo json_encode($services->outbox()->stats(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        break;
+
+    case 'test:smoke':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $count = (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM content_entries')->fetchColumn();
+        $routes = (int) $coreDb->pdo()->query("SELECT COUNT(*) FROM routes WHERE status = 'active'")->fetchColumn();
+        $ok = $count > 0 && $routes > 0;
+        echo $ok ? "Smoke OK\n" : "Smoke failed\n";
+        exit($ok ? 0 : 1);
+
+    default:
+        echo $commandList . "\n";
+}

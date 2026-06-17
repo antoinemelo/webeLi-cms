@@ -1,0 +1,205 @@
+{
+  "contract": "public.menus.show.v1",
+  "kind": "schema",
+  "summary": "Lire un menu public actif.",
+  "description": "Retourne un menu actif avec son arbre de liens publics et sous-menus.",
+  "method": "GET",
+  "source": "menus + menu_items",
+  "security": "Public read endpoint; may be protected by bearer scope menus:read; active menus/items only.",
+  "path": "/api/v1/menus/{key}",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    }
+  },
+  "path_params": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "description": "Clé publique du menu."
+    }
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "key",
+            "location",
+            "name",
+            "items"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "location": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "label",
+                  "title",
+                  "url",
+                  "target",
+                  "css_class",
+                  "resource_type",
+                  "resource_id",
+                  "children"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": "string",
+                    "enum": [
+                      "_self",
+                      "_blank"
+                    ]
+                  },
+                  "css_class": {
+                    "type": "string"
+                  },
+                  "resource_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "resource_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "children": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.menus.show.v1"
+  },
+  "errors": [
+    {
+      "code": "MENU_NOT_FOUND",
+      "status": 404,
+      "description": "Menu absent ou inactif.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    },
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Clé de menu ou contexte invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/menus/primary?lang=fr",
+    "response": {
+      "data": {
+        "key": "primary",
+        "location": "header",
+        "name": "Menu principal",
+        "items": [
+          {
+            "id": 1,
+            "label": "Accueil",
+            "title": "",
+            "url": "/",
+            "target": "_self",
+            "css_class": "",
+            "resource_type": "content_entry",
+            "resource_id": 1,
+            "children": []
+          }
+        ]
+      },
+      "meta": {
+        "contract": "public.menus.show.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr",
+        "menu_key": "primary"
+      }
+    }
+  }
+}

@@ -1,0 +1,144 @@
+[data-amcms-visual="1"] .container,
+[data-amcms-visual="1"] .container-sm,
+[data-amcms-visual="1"] .container-md,
+[data-amcms-visual="1"] .container-lg,
+[data-amcms-visual="1"] .container-xl,
+[data-amcms-visual="1"] .container-xxl {
+  width: 100% !important;
+  max-width: none !important;
+}
+[data-amcms-visual="1"] .main-content {
+  padding-left: clamp(1rem, 2vw, 2rem);
+  padding-right: clamp(1rem, 2vw, 2rem);
+}
+
+[data-amcms-visual="1"] [data-amcms-block="1"] {
+  position: relative;
+  outline: 1px dashed rgba(79, 70, 229, .25);
+  outline-offset: .35rem;
+  transition: outline-color .15s ease, box-shadow .15s ease;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"]:hover,
+[data-amcms-visual="1"] [data-amcms-selected="1"] {
+  outline-color: rgba(79, 70, 229, .85);
+  box-shadow: 0 0 0 .35rem rgba(79, 70, 229, .08);
+}
+[data-amcms-visual="1"] [data-amcms-editable="1"] {
+  cursor: pointer;
+}
+[data-amcms-visual="1"] [data-amcms-editable="1"]:hover {
+  background: rgba(79, 70, 229, .08);
+  border-radius: .35rem;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"]::before {
+  content: attr(data-amcms-label);
+  position: absolute;
+  z-index: 20;
+  top: -.9rem;
+  left: .75rem;
+  padding: .15rem .45rem;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  font: 600 .72rem/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  opacity: 0;
+  transform: translateY(.2rem);
+  transition: opacity .15s ease, transform .15s ease;
+  pointer-events: none;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"]:hover::before,
+[data-amcms-visual="1"] [data-amcms-selected="1"]::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-amcms-visual="1"] [data-amcms-editorial-status] {
+  outline-style: solid;
+  outline-width: 2px;
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status]::after {
+  content: attr(data-amcms-editorial-label);
+  position: absolute;
+  z-index: 21;
+  top: -.9rem;
+  right: .75rem;
+  padding: .16rem .5rem;
+  border-radius: 999px;
+  color: #fff;
+  font: 700 .72rem/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .16);
+  pointer-events: none;
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="draft"] {
+  outline-color: rgba(220, 38, 38, .78);
+  box-shadow: 0 0 0 .35rem rgba(220, 38, 38, .08);
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="draft"]::after {
+  background: #dc2626;
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="review"] {
+  outline-color: rgba(234, 88, 12, .78);
+  box-shadow: 0 0 0 .35rem rgba(234, 88, 12, .08);
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="review"]::after {
+  background: #ea580c;
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="ready"] {
+  outline-color: rgba(22, 163, 74, .78);
+  box-shadow: 0 0 0 .35rem rgba(22, 163, 74, .08);
+}
+[data-amcms-visual="1"] [data-amcms-editorial-status="ready"]::after {
+  background: #16a34a;
+}
+
+/* Editorial state must always win over the technical block/type selection outline. */
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status] {
+  outline-style: solid !important;
+  outline-width: 2px !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status]:hover,
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status][data-amcms-selected="1"] {
+  outline-style: solid !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="draft"],
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="draft"]:hover,
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="draft"][data-amcms-selected="1"] {
+  outline-color: rgba(220, 38, 38, .9) !important;
+  box-shadow: 0 0 0 .35rem rgba(220, 38, 38, .10) !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="review"],
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="review"]:hover,
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="review"][data-amcms-selected="1"] {
+  outline-color: rgba(234, 88, 12, .9) !important;
+  box-shadow: 0 0 0 .35rem rgba(234, 88, 12, .10) !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="ready"],
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="ready"]:hover,
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="ready"][data-amcms-selected="1"] {
+  outline-color: rgba(22, 163, 74, .9) !important;
+  box-shadow: 0 0 0 .35rem rgba(22, 163, 74, .10) !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status]::before {
+  opacity: 0 !important;
+  transform: translateY(.2rem);
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status]:hover::before,
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status][data-amcms-selected="1"]::before {
+  opacity: 1 !important;
+  transform: translateY(0);
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="draft"]::before {
+  background: #dc2626 !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="review"]::before {
+  background: #ea580c !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="ready"]::before {
+  background: #16a34a !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status="archived"]::before {
+  background: #475569 !important;
+}
+[data-amcms-visual="1"] [data-amcms-block="1"][data-amcms-editorial-status]::after {
+  opacity: 1 !important;
+}

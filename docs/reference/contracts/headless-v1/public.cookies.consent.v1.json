@@ -1,0 +1,66 @@
+{
+  "contract": "public.cookies.log.v1",
+  "kind": "schema",
+  "summary": "Journaliser un consentement.",
+  "description": "Enregistre le choix de consentement sans exposer de donnée sensible.",
+  "method": "POST",
+  "source": "canonical public application use case",
+  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "path": "/api/v1/cookies/consent",
+  "query_params": {
+    "lang": {
+      "type": "string",
+      "required": false,
+      "description": "Langue active du site."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "logged"
+          ],
+          "properties": {
+            "logged": {
+              "type": "boolean"
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.cookies.log.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Payload de consentement invalide."
+    }
+  ],
+  "examples": {
+    "request": "POST /api/v1/cookies/consent?lang=fr",
+    "response": {
+      "data": {
+        "logged": true
+      },
+      "meta": {
+        "contract": "public.cookies.log.v1",
+        "site_id": 1,
+        "language_code": "fr"
+      }
+    }
+  }
+}

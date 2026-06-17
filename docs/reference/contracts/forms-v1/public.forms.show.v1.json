@@ -1,0 +1,30 @@
+{
+  "contract": "public.forms.show.v1",
+  "response": {
+    "data": {
+      "form": {
+        "id": 1,
+        "form_key": "contact",
+        "name": "Contact",
+        "description_text": "",
+        "submit_label": "Envoyer",
+        "success_message": "Merci, votre message a été envoyé.",
+        "honeypot_field": "website",
+        "min_submit_seconds": 2,
+        "fields": [
+          {
+            "field_key": "email",
+            "field_type": "email",
+            "is_required": true,
+            "width": "half",
+            "label": "Email",
+            "placeholder": "nom@example.org",
+            "help_text": "",
+            "options": []
+          }
+        ]
+      }
+    },
+    "meta": { "contract": "public.forms.show.v1", "site_id": 1, "language_code": "fr" }
+  }
+}

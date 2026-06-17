@@ -1,0 +1,48 @@
+{
+  "contract": "admin.entries.revisions.index.v1",
+  "method": "GET",
+  "path": "/admin/api/entries/{id}/revisions",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer; defaults to the resolved current site",
+    "language_code": "optional enabled language code; defaults to the resolved site default language"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "language_code": "fr",
+      "revisions": [
+        {
+          "id": 56,
+          "revision_number": 7,
+          "language_code": "fr",
+          "workflow_status": "draft",
+          "created_at": "2026-05-14 12:00:00",
+          "updated_at": "2026-05-14 12:00:00",
+          "published_at": null,
+          "change_notes": "Correction SEO",
+          "revision_label": "Working draft",
+          "summary": "Contenu éditorial"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.entries.revisions.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "VALIDATION_FAILED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

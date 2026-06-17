@@ -1,0 +1,144 @@
+{
+  "contract": "admin.imports_exports.v1",
+  "methods": [
+    "GET",
+    "POST",
+    "DELETE"
+  ],
+  "paths": [
+    "/admin/api/imports-exports",
+    "/admin/api/imports-exports/imports/inspect",
+    "/admin/api/imports-exports/imports/{importId:[A-Za-z0-9._-]+}",
+    "/admin/api/imports-exports/imports/execute",
+    "/admin/api/imports-exports/static/actions/page",
+    "/admin/api/imports-exports/static/actions/language",
+    "/admin/api/imports-exports/static/actions/site",
+    "/admin/api/imports-exports/static/actions/all-languages",
+    "/admin/api/imports-exports/static/actions/rerun",
+    "/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}/manifest",
+    "/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}/report",
+    "/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}/zip",
+    "/admin/api/imports-exports/editorial/{releaseId:[A-Za-z0-9._-]+}/zip",
+    "/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}"
+  ],
+  "permissions": {
+    "GET": [
+      "imports_exports.read",
+      "imports_exports.write",
+      "imports_exports.manage"
+    ],
+    "POST": [
+      "imports_exports.write",
+      "imports_exports.manage"
+    ],
+    "DELETE": [
+      "imports_exports.manage"
+    ],
+    "rules": {
+      "history": [
+        "imports_exports.read",
+        "imports_exports.write",
+        "imports_exports.manage"
+      ],
+      "manifest_report_zip": [
+        "imports_exports.write",
+        "imports_exports.manage"
+      ],
+      "static_export_actions": [
+        "imports_exports.write",
+        "imports_exports.manage"
+      ],
+      "release_deletion": [
+        "imports_exports.manage"
+      ],
+      "import_history": [
+        "imports_exports.read",
+        "imports_exports.write",
+        "imports_exports.manage"
+      ],
+      "import_history_deletion": [
+        "imports_exports.manage"
+      ]
+    }
+  },
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "headers": {
+    "X-Contract-Version": "admin-api-v1",
+    "Content-Type": "application/json for export/import execution/delete actions; multipart/form-data for import inspection",
+    "X-CSRF-Token": "required for POST/DELETE actions"
+  },
+  "request": {
+    "data": {
+      "site_id": "optional integer; selected site context",
+      "site": "optional site handle when available",
+      "lang": "optional language code for language/page exports",
+      "language_code": "optional alias of lang",
+      "route": "required for page export; public route path such as /about",
+      "release_id": "optional previous release id for rerun",
+      "output": "optional safe server output path under storage/exports/static/",
+      "zip": "optional boolean; generate static-export.zip when true",
+      "import_token": "required opaque one-time staging token for execution",
+      "mode": "create | upsert | replace"
+    },
+    "multipart": {
+      "archive": "required ZIP file containing Editorial Package 1.0",
+      "site_id": "required target site context",
+      "lang": "optional admin language context"
+    }
+  },
+  "response": {
+    "data": {
+      "last_export": {
+        "release_id": "string|null",
+        "status": "pending | running | succeeded | failed | skipped",
+        "site": "string|null",
+        "languages": "array of language codes",
+        "mode": "route | language | site | all_languages",
+        "exported_routes": "integer",
+        "errors_count": "integer",
+        "warnings_count": "integer",
+        "generated_at": "ISO-8601 datetime when available",
+        "output_path": "server path of the static public directory",
+        "links": {
+          "manifest": "admin API URL to manifest",
+          "report": "admin API URL to report",
+          "zip": "admin API URL to ZIP when generated",
+          "static_zip": "admin API URL to the static ZIP when generated",
+          "editorial_zip": "admin API URL to the validated Editorial Package ZIP when generated"
+        },
+        "artifacts": "static and editorial artifact descriptors with sha256 and size"
+      },
+      "history": "filesystem-backed releases; file links and server paths omitted for read-only users",
+      "actions": "empty for read-only users; static export actions for write/manage users",
+      "release": "manifest/report/ZIP payload for release-specific GET endpoints when applicable",
+      "message": "human-readable result message for POST/DELETE actions",
+      "capabilities": "read_history, write, manage and import_available flags",
+      "plan": "read-only editorial import plan: contents, blueprints, media, route conflicts, unresolved relations, supported modes and blocking errors",
+      "report": "transactional editorial import report",
+      "import_history": "filesystem-backed import summaries visible to read/write/manage; sensitive details and deletion reserved to manage"
+    },
+    "meta": {
+      "contract": "admin.imports_exports.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer|null",
+      "language_code": "string|null",
+      "request_id": "string"
+    },
+    "import_execution": "transactional create/upsert/replace report: create adds missing only, upsert adds missing and updates existing, replace updates existing only; filesystem history and no sync mode"
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "INVALID_JSON",
+    "VALIDATION_FAILED",
+    "ROUTE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR",
+    "EDITORIAL_ARCHIVE_INVALID",
+    "EDITORIAL_PACKAGE_INCOMPATIBLE"
+  ]
+}

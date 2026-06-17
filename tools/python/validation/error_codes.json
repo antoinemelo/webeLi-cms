@@ -1,0 +1,370 @@
+{
+  "version": 1,
+  "codes": [
+    {
+      "code": "CFG-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CFG-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CFG-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CFG-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CFG-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CFG-006",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-006",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-007",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DB-008",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "PRJ-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "PRJ-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "PRJ-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "PRJ-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "BPT-006",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CNT-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "CNT-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WF-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WF-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WF-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "AUTH-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "AUTH-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "AUTH-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "AUTH-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "AUTH-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SITE-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SITE-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SITE-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "I18N-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "I18N-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "I18N-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "API-006",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WHK-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WHK-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WHK-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "WHK-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SEC-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SEC-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SEC-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SEC-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "SEC-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "MED-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "OPS-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "OPS-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "REL-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "REL-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "REL-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DOC-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DOC-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DOC-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DOC-004",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "DOC-005",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "ARCH-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "ARCH-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "ARCH-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "VAL-001",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "VAL-002",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "VAL-003",
+      "status": "active",
+      "default_severity": "error"
+    },
+    {
+      "code": "VAL-004",
+      "status": "active",
+      "default_severity": "error"
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "contract": "public.module_resource_schema.v1",
+  "method": "GET",
+  "path": "/api/v1/modules/{module}/{resource}/schema",
+  "summary": "Lire le schéma headless public d’une ressource déclarée par un module actif.",
+  "description": "Retourne le contrat de lecture d’une ressource métier exposée en headless par un module actif. L’endpoint ne retourne pas les données de la ressource : il expose uniquement le schéma contractuel, les capacités, les permissions et les métadonnées nécessaires aux clients API.",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Clé du site à résoudre explicitement."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "description": "Identifiant numérique du site à résoudre explicitement."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "description": "Code langue demandé pour contextualiser le schéma si la ressource est localisable."
+    }
+  },
+  "path_params": {
+    "module": {
+      "type": "string",
+      "required": true,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Clé technique du module actif, par exemple crm ou commerce."
+    },
+    "resource": {
+      "type": "string",
+      "required": true,
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Clé technique de la ressource déclarée par le module, par exemple contact ou product."
+    }
+  },
+  "security": {
+    "bearer": {
+      "required": "depends_on_site_policy",
+      "scopes": ["headless:read"]
+    }
+  },
+  "auth": "public API v1 guard; token required unless the project marks this path as public",
+  "response": {
+    "type": "object",
+    "required": ["data", "meta"],
+    "properties": {
+      "data": {
+        "type": "object",
+        "required": ["schema"],
+        "properties": {
+          "schema": {
+            "type": "object",
+            "required": ["module", "resource", "blueprint_key", "resource_type", "capabilities", "permissions", "headless", "fields"],
+            "properties": {
+              "module": {"type": "string"},
+              "resource": {"type": "string"},
+              "blueprint_key": {"type": "string"},
+              "resource_type": {"type": "string", "enum": ["module_resource", "headless"]},
+              "storage": {
+                "type": "object",
+                "properties": {
+                  "database": {"type": "string"},
+                  "table": {"type": "string"},
+                  "primary_key": {"type": "string"}
+                },
+                "additionalProperties": true
+              },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "admin": {"type": "boolean"},
+                  "headless": {"type": "boolean"},
+                  "public": {"type": "boolean"},
+                  "localized": {"type": "boolean"},
+                  "revisions": {"type": "boolean"},
+                  "workflow": {"type": "boolean"},
+                  "seo": {"type": "boolean"},
+                  "export": {"type": "boolean"}
+                },
+                "additionalProperties": true
+              },
+              "permissions": {
+                "type": "object",
+                "properties": {
+                  "read": {"type": "string"},
+                  "create": {"type": "string"},
+                  "update": {"type": "string"},
+                  "delete": {"type": "string"}
+                },
+                "additionalProperties": true
+              },
+              "headless": {
+                "type": "object",
+                "properties": {
+                  "enabled": {"type": "boolean"},
+                  "collection_endpoint": {"type": "string"},
+                  "item_endpoint": {"type": "string"}
+                },
+                "additionalProperties": true
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["key", "type"],
+                  "properties": {
+                    "key": {"type": "string"},
+                    "type": {"type": "string"},
+                    "label": {"type": "string"},
+                    "required": {"type": "boolean"},
+                    "storage_column": {"type": "string"},
+                    "validation": {"type": "object", "additionalProperties": true},
+                    "ui": {"type": "object", "additionalProperties": true}
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "relations": {
+                "type": "array",
+                "items": {"type": "object", "additionalProperties": true}
+              },
+              "contract": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "meta": {
+        "type": "object",
+        "required": ["contract", "module", "resource", "request_id"],
+        "properties": {
+          "contract": {"type": "string", "const": "public.module_resource_schema.v1"},
+          "site_id": {"type": "integer"},
+          "site_key": {"type": "string"},
+          "language_code": {"type": "string"},
+          "module": {"type": "string"},
+          "resource": {"type": "string"},
+          "request_id": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "errors": [
+    {"status": 401, "code": "PUBLIC_API_TOKEN_MISSING", "description": "Token requis lorsque l’API publique est protégée."},
+    {"status": 403, "code": "PUBLIC_API_TOKEN_FORBIDDEN", "description": "Le token ne possède pas les droits nécessaires."},
+    {"status": 404, "code": "ROUTE_NOT_FOUND", "description": "Module, ressource ou schéma headless introuvable."}
+  ],
+  "examples": {
+    "response": {
+      "data": {
+        "schema": {
+          "module": "crm",
+          "resource": "contact",
+          "blueprint_key": "crm_contact",
+          "resource_type": "module_resource",
+          "storage": {"database": "crm", "table": "crm_contacts", "primary_key": "id"},
+          "capabilities": {"admin": true, "headless": true, "public": false, "localized": false, "revisions": false, "workflow": false, "seo": false, "export": true},
+          "permissions": {"read": "crm.read", "create": "crm.manage", "update": "crm.manage", "delete": "crm.manage"},
+          "headless": {"enabled": true, "collection_endpoint": "/api/v1/modules/crm/contacts", "item_endpoint": "/api/v1/modules/crm/contacts/{id}"},
+          "fields": [{"key": "email", "type": "email", "label": "Email", "required": true, "storage_column": "email"}],
+          "relations": [],
+          "contract": {"name": "public.crm_contact.schema.v1"}
+        }
+      },
+      "meta": {
+        "contract": "public.module_resource_schema.v1",
+        "site_id": 1,
+        "site_key": "default",
+        "language_code": "fr",
+        "module": "crm",
+        "resource": "contact",
+        "request_id": "20260604120000-abc"
+      }
+    }
+  }
+}

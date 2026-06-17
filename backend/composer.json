@@ -1,0 +1,15 @@
+{
+  "name": "dec-cms/runtime",
+  "description": "DEC CMS runtime Twig-ready, SEO-first, multisite, multilingual",
+  "license": "proprietary",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "twig/twig": "^3.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}

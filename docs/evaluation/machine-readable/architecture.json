@@ -1,0 +1,113 @@
+{
+  "components": [
+    {
+      "confidence": "high",
+      "evidence": [
+        "backend/"
+      ],
+      "id": "component-php-runtime-c18b0079b7",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "php-runtime",
+      "responsibility": "HTTP runtime, routing, services and SSR",
+      "source": [
+        "backend/"
+      ],
+      "status": "supported"
+    },
+    {
+      "confidence": "high",
+      "evidence": [
+        "frontend/theme-default/"
+      ],
+      "id": "component-twig-rendering-775e55e790",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "twig-rendering",
+      "responsibility": "Public server-side templates",
+      "source": [
+        "frontend/theme-default/"
+      ],
+      "status": "supported"
+    },
+    {
+      "confidence": "high",
+      "evidence": [
+        "frontend/admin-vue/src/"
+      ],
+      "id": "component-vue-typescript-backoffice-f89acfce44",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "vue-typescript-backoffice",
+      "responsibility": "Administrative SPA source",
+      "source": [
+        "frontend/admin-vue/src/"
+      ],
+      "status": "supported"
+    },
+    {
+      "confidence": "high",
+      "evidence": [
+        "admin-app/"
+      ],
+      "id": "component-compiled-admin-assets-f04e214f92",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "compiled-admin-assets",
+      "responsibility": "Deployable administrative assets",
+      "source": [
+        "admin-app/"
+      ],
+      "status": "supported"
+    },
+    {
+      "confidence": "high",
+      "evidence": [
+        "database/"
+      ],
+      "id": "component-sqlite-schemas-3bfe510de5",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "sqlite-schemas",
+      "responsibility": "Persistent schemas and seeds",
+      "source": [
+        "database/"
+      ],
+      "status": "supported"
+    },
+    {
+      "confidence": "high",
+      "evidence": [
+        "tools/python/"
+      ],
+      "id": "component-python-tooling-2407edaa5a",
+      "last_verified": "2026-06-14",
+      "limitations": [],
+      "name": "python-tooling",
+      "responsibility": "Local operations, validation and release",
+      "source": [
+        "tools/python/"
+      ],
+      "status": "supported"
+    }
+  ],
+  "confidence": "high",
+  "evidence": [
+    "backend/",
+    "frontend/",
+    "database/",
+    "tools/python/"
+  ],
+  "id": "architecture-current",
+  "last_verified": "2026-06-14",
+  "limitations": [
+    "Static inventory does not measure runtime performance or operational resilience."
+  ],
+  "source": [
+    "backend/",
+    "frontend/",
+    "database/",
+    "tools/python/"
+  ],
+  "status": "supported"
+}

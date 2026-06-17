@@ -1,0 +1,719 @@
+[
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/iam.sql"
+    ],
+    "id": "database-source-database-iam-sql-b86b5bd58a",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/iam.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "api_tokens",
+      "iam_audit_logs",
+      "iam_email_2fa_challenges",
+      "iam_permissions",
+      "iam_rate_limits",
+      "iam_role_permissions",
+      "iam_roles",
+      "iam_sessions",
+      "iam_user_roles",
+      "iam_user_site_roles",
+      "iam_users",
+      "schema_migrations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/070_module_resource_blueprints.sql"
+    ],
+    "id": "database-source-database-migrations-core-070-module-resource-blueprints-sql-ab642eecfc",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/070_module_resource_blueprints.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "module_blueprints_v2"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/071_backfill_forms_module_blueprint_storage.sql"
+    ],
+    "id": "database-source-database-migrations-core-071-backfill-forms-module-blueprint-storage-sql-96ccc2065e",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/071_backfill_forms_module_blueprint_storage.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/072_action_runs.sql"
+    ],
+    "id": "database-source-database-migrations-core-072-action-runs-sql-f45b5c373f",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/072_action_runs.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "action_runs"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/073_backfill_ai_module_blueprint_storage.sql"
+    ],
+    "id": "database-source-database-migrations-core-073-backfill-ai-module-blueprint-storage-sql-966f78fc6f",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/073_backfill_ai_module_blueprint_storage.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/075_cross_database_operations.sql"
+    ],
+    "id": "database-source-database-migrations-core-075-cross-database-operations-sql-7016ca1b54",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/075_cross_database_operations.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "cross_database_operations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0001_init.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0001-init-sql-2a55f8eeb8",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0001_init.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "api_tokens",
+      "iam_audit_logs",
+      "iam_email_2fa_challenges",
+      "iam_permissions",
+      "iam_rate_limits",
+      "iam_role_permissions",
+      "iam_roles",
+      "iam_sessions",
+      "iam_user_roles",
+      "iam_user_site_roles",
+      "iam_users"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0002_admin_security_hardening.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0002-admin-security-hardening-sql-96850c837f",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0002_admin_security_hardening.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "iam_rate_limits"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0003_api_tokens.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0003-api-tokens-sql-d4567f625f",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0003_api_tokens.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "api_tokens"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0004_totp_2fa.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0004-totp-2fa-sql-35d0fa1acc",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0004_totp_2fa.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "iam_email_2fa_challenges"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0005_ai_assistant_permissions.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0005-ai-assistant-permissions-sql-ac8d04d5f7",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0005_ai_assistant_permissions.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0006_imports_exports_permissions.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0006-imports-exports-permissions-sql-d0e54d7c5b",
+    "kind": "migration",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0006_imports_exports_permissions.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/modules/ai.sql"
+    ],
+    "id": "database-source-database-modules-ai-sql-15a1c1b1c5",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/ai.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "ai_model_usages",
+      "ai_models",
+      "ai_prompts",
+      "ai_provider_types",
+      "ai_providers",
+      "ai_settings",
+      "ai_site_usage_settings",
+      "ai_suggestions",
+      "ai_task_results",
+      "ai_tasks",
+      "ai_usage_events"
+    ],
+    "views": [
+      "ai_model_catalog"
+    ]
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/modules/analytics.sql"
+    ],
+    "id": "database-source-database-modules-analytics-sql-1ece801623",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/analytics.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "analytics_events",
+      "content_quality_snapshots"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/modules/consent.sql"
+    ],
+    "id": "database-source-database-modules-consent-sql-cf6c2c35c6",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/consent.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/modules/cookies.sql"
+    ],
+    "id": "database-source-database-modules-cookies-sql-fe73d922e6",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/cookies.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "cookie_banner_settings",
+      "cookie_banner_translations",
+      "cookie_categories",
+      "cookie_category_translations",
+      "cookie_consent_logs",
+      "cookie_script_bindings",
+      "cookie_service_cookies",
+      "cookie_service_translations",
+      "cookie_services"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/modules/forms.sql"
+    ],
+    "id": "database-source-database-modules-forms-sql-7a3ef3d182",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/forms.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "form_field_translations",
+      "form_fields",
+      "form_notification_deliveries",
+      "form_rate_limit_hits",
+      "form_submission_values",
+      "form_submissions",
+      "form_translations",
+      "forms"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/schema/core.sql"
+    ],
+    "id": "database-source-database-schema-core-sql-0024fcad5d",
+    "kind": "schema",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/schema/core.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "action_runs",
+      "blueprint_fields",
+      "blueprint_fieldsets",
+      "blueprint_migrations",
+      "blueprint_publications",
+      "blueprint_sections",
+      "blueprint_usage",
+      "blueprint_versions",
+      "blueprints",
+      "configuration_revisions",
+      "content_entries",
+      "content_entry_field_values",
+      "content_entry_localizations",
+      "content_entry_publications",
+      "content_entry_taxonomy_terms",
+      "content_entry_working_revisions",
+      "content_field_unique_values",
+      "content_relations",
+      "content_slug_registry",
+      "content_type_taxonomies",
+      "content_types",
+      "editor_block_types",
+      "field_groups",
+      "field_validation_rules",
+      "field_visibility_conditions",
+      "fields",
+      "fieldset_fields",
+      "fieldsets",
+      "global_variable_localizations",
+      "global_variables",
+      "languages",
+      "layout_block_localizations",
+      "layout_blocks",
+      "layout_containers",
+      "media_asset_events",
+      "media_asset_localizations",
+      "media_asset_variants",
+      "media_assets",
+      "media_folders",
+      "media_usages",
+      "media_variant_presets",
+      "menu_item_localizations",
+      "menu_items",
+      "menus",
+      "module_api_contracts",
+      "module_blueprints",
+      "module_databases",
+      "module_dependencies",
+      "module_hooks",
+      "module_lifecycle_events",
+      "module_permissions",
+      "module_routes",
+      "modules",
+      "outbox_events",
+      "public_content_snapshots",
+      "redirects",
+      "revision_comments",
+      "revision_locks",
+      "revisions",
+      "routes",
+      "schema_field_types",
+      "schema_migrations",
+      "search_documents",
+      "seo_audit_issues",
+      "seo_metadata",
+      "seo_templates",
+      "site_domains",
+      "site_languages",
+      "site_localizations",
+      "site_preferences",
+      "site_settings",
+      "sites",
+      "system_jobs",
+      "taxonomies",
+      "taxonomy_term_localizations",
+      "taxonomy_terms",
+      "themes",
+      "tombstones",
+      "webhook_deliveries",
+      "webhook_endpoints"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/cookies_seed.sql"
+    ],
+    "id": "database-source-database-seeds-cookies-seed-sql-8d7550728a",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/cookies_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/core_seed.sql"
+    ],
+    "id": "database-source-database-seeds-core-seed-sql-24db885191",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/core_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/ai_default_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-ai-default-seed-sql-64733f6f49",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/ai_default_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/cookies_default_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-cookies-default-seed-sql-425f8b8552",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/cookies_default_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/core_default_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-core-default-seed-sql-d236012f79",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/core_default_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/core_multisite_contract_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-core-multisite-contract-seed-sql-fd75d07343",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/core_multisite_contract_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/forms_default_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-forms-default-seed-sql-0ed71270c6",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/forms_default_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/iam_default_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-iam-default-seed-sql-426da4a694",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/iam_default_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/default/iam_multisite_contract_seed.sql"
+    ],
+    "id": "database-source-database-seeds-default-iam-multisite-contract-seed-sql-995838a47d",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/default/iam_multisite_contract_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/demo_content_seed.sql"
+    ],
+    "id": "database-source-database-seeds-demo-content-seed-sql-f101f9fd7b",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/demo_content_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/seeds/iam_seed.sql"
+    ],
+    "id": "database-source-database-seeds-iam-seed-sql-83538d4856",
+    "kind": "seed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/seeds/iam_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/views/search_views.sql"
+    ],
+    "id": "database-source-database-views-search-views-sql-4fd624b7eb",
+    "kind": "view",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/views/search_views.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": [
+      "v_search_ready_entries"
+    ]
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/views/seo_views.sql"
+    ],
+    "id": "database-source-database-views-seo-views-sql-21c9da7d67",
+    "kind": "view",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/views/seo_views.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": [
+      "v_routes_duplicates_check",
+      "v_seo_missing_meta_description"
+    ]
+  }
+]

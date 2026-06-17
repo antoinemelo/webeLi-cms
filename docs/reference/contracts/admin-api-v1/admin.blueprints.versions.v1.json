@@ -1,0 +1,38 @@
+{
+  "contract": "admin.blueprints.versions.v1",
+  "method": "GET",
+  "path": "/admin/api/blueprints/{key}/versions",
+  "permission": "blueprints.read",
+  "response": {
+    "data": [
+      {
+        "id": 1,
+        "blueprint_id": 1,
+        "version": 1,
+        "version_label": "Initial native page blueprint",
+        "status": "active",
+        "is_active": true,
+        "schema": {},
+        "ui_schema": {},
+        "validation": {},
+        "seo_policy": {},
+        "routing_policy": {},
+        "workflow_policy": {},
+        "translation_policy": {},
+        "permissions_policy": {}
+      }
+    ],
+    "meta": {
+      "contract": "admin.blueprints.versions.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CONTENT_TYPE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

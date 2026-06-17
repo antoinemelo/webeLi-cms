@@ -1,0 +1,39 @@
+{
+  "contract": "admin.module_blueprints.v1",
+  "method": "GET",
+  "path": "/admin/api/modules/{key}/blueprints",
+  "permission": "blueprints.read",
+  "response": {
+    "data": {
+      "blueprints": [
+        {
+          "module": "string",
+          "resource": "string",
+          "blueprint_key": "string",
+          "resource_type": "content_type | block | system | module_resource | headless",
+          "version": "integer",
+          "storage": "object",
+          "capabilities": "object",
+          "permissions": "object",
+          "headless": "object",
+          "admin": "object",
+          "sections": "array",
+          "fields": "array",
+          "relations": "array",
+          "validation": "object",
+          "export": "object",
+          "contract": "object"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.module_blueprints.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": ["AUTH_REQUIRED", "AUTHZ_FORBIDDEN", "MODULE_NOT_FOUND", "INTERNAL_SERVER_ERROR"],
+  "supported_versions": ["admin-api-v1"]
+}

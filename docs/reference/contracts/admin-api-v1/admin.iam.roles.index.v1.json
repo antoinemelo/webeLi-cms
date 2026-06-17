@@ -1,0 +1,68 @@
+{
+  "contract": "admin.iam.roles.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "permission": "roles.read",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "roles": [
+        {
+          "id": 1,
+          "role_key": "super_admin",
+          "name": "Super admin",
+          "description": "Accès complet au CMS.",
+          "permission_ids": [
+            1,
+            2,
+            3
+          ],
+          "is_system": true
+        }
+      ],
+      "permissions": [
+        {
+          "id": 1,
+          "permission_key": "iam.users.manage",
+          "name": "Gérer les utilisateurs",
+          "description": "Créer, modifier, activer et désactiver les utilisateurs."
+        }
+      ],
+      "actions": {
+        "store": {
+          "method": "POST",
+          "path": "/admin/api/iam/roles"
+        },
+        "update": {
+          "method": "PATCH",
+          "path": "/admin/api/iam/roles/{id}"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.iam.roles.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/roles"
+}

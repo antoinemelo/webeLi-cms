@@ -1,0 +1,3 @@
+{% for block in entry_blocks|default([]) %}
+  {% include 'components/content-block.twig' with { block: block } only %}
+{% endfor %}

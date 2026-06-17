@@ -1,0 +1,3353 @@
+openapi: "3.1.0"
+info:
+  title: "DEC CMS Public Headless API"
+  version: "1.0.0"
+  description: "OpenAPI généré depuis docs/reference/contracts/headless-v1/. Surface limitée à /api/v1/*."
+servers:
+  -
+    url: "/"
+    description: "Même origine que le front public."
+tags:
+  -
+    name: "Headless v1"
+    description: "API publique headless v1."
+paths:
+  "/api/v1/content":
+    get:
+      operationId: "get_public_content_index_v1"
+      summary: "Lister des contenus publiés."
+      description: "Retourne une liste légère et paginée de contenus publiés, filtrable par type, taxonomie et terme. La variante query `?type=` et la variante path `{type}` conservent le même contrat."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "limit"
+          in: "query"
+          required: false
+          description: "Nombre maximum d'éléments retournés."
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 24
+        -
+          name: "offset"
+          in: "query"
+          required: false
+          description: "Décalage zéro-indexé."
+          schema:
+            type: "integer"
+            minimum: 0
+            default: 0
+        -
+          name: "page"
+          in: "query"
+          required: false
+          description: "Alternative à offset. Si présent, offset=(page-1)*limit."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "type"
+          in: "query"
+          required: false
+          description: "Type de contenu demandé lorsque la route /api/v1/content est utilisée."
+          schema:
+            type: "string"
+        -
+          name: "taxonomy"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "term"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicContentIndexResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          id: 42
+                          key: "mon-article"
+                          type: "article"
+                          title: "Mon article"
+                          summary: "Résumé SEO"
+                          path: "/articles/mon-article"
+                          url: "/articles/mon-article"
+                          published_at: "2026-05-01 10:00:00"
+                          updated_at: "2026-05-02 10:00:00"
+                          seo:
+                            title: "Mon article"
+                            description: "Résumé SEO"
+                          taxonomies: []
+                      pagination:
+                        total: 1
+                        limit: 10
+                        offset: 0
+                        has_more: false
+                    meta:
+                      contract: "public.content.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      type: "article"
+                      source: "public_content_snapshots"
+        "404":
+          description: "Le type de contenu demandé n’existe pas ou n’est pas actif."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Le type de contenu demandé n’existe pas ou n’est pas actif."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Paramètre de contexte ou de pagination invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Paramètre de contexte ou de pagination invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/content-by-path":
+    get:
+      operationId: "get_public_content_by_path_v1"
+      summary: "Lire un contenu publié par chemin canonique."
+      description: "Alias de compatibilité v1 servi par PublicHeadlessController::contentByPath. Il retourne l’ancien contrat détaillé system/editorial/seo/blocks/media/links/meta pour un chemin publié."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "path"
+          in: "query"
+          required: false
+          description: "Chemin canonique public à lire."
+          schema:
+            type: "string"
+            default: "/"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicContentShowResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      system:
+                        id: 42
+                        site_id: 1
+                        content_type: "article"
+                        entry_key: "mon-article"
+                        language_code: "fr"
+                        status: "published"
+                        published_at: "2026-05-01 10:00:00"
+                        source_revision_id: 7
+                      editorial:
+                        title: "Mon article"
+                        slug: "mon-article"
+                        path: "/articles/mon-article"
+                        fields: {}
+                        published_at: "2026-05-01 10:00:00"
+                        published_at_label: "1 mai 2026"
+                        author_name: ""
+                        display:
+                          show_published_date: true
+                          show_author: true
+                          show_updated_date: false
+                          show_type: true
+                          include_author_in_schema: true
+                          date_format: "medium"
+                      seo:
+                        meta_title: "Mon article"
+                        meta_description: "Résumé"
+                        meta_robots: "index,follow"
+                        canonical_url: "/articles/mon-article"
+                        json_ld: null
+                        hreflang_code: "fr"
+                      blocks: []
+                      media: []
+                      links:
+                        canonical: "/articles/mon-article"
+                        hreflang: []
+                      meta:
+                        source: "public_content_snapshots"
+                        projected_at: "2026-05-01 10:00:00"
+                        blueprint: null
+                    meta:
+                      contract: "public.content.by_path.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      path: "/articles/mon-article"
+                      source: "public_content_snapshots"
+        "404":
+          description: "Aucun contenu publié ne correspond au chemin."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Aucun contenu publié ne correspond au chemin."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Contexte site/langue invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/content/{type}":
+    get:
+      operationId: "get_public_content_index_v1"
+      summary: "Lister des contenus publiés."
+      description: "Retourne une liste légère et paginée de contenus publiés, filtrable par type, taxonomie et terme. La variante query `?type=` et la variante path `{type}` conservent le même contrat."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "limit"
+          in: "query"
+          required: false
+          description: "Nombre maximum d'éléments retournés."
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 24
+        -
+          name: "offset"
+          in: "query"
+          required: false
+          description: "Décalage zéro-indexé."
+          schema:
+            type: "integer"
+            minimum: 0
+            default: 0
+        -
+          name: "page"
+          in: "query"
+          required: false
+          description: "Alternative à offset. Si présent, offset=(page-1)*limit."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "type"
+          in: "query"
+          required: false
+          description: "Type de contenu demandé lorsque la route /api/v1/content est utilisée."
+          schema:
+            type: "string"
+        -
+          name: "taxonomy"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "term"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "type"
+          in: "path"
+          required: true
+          description: "Type de contenu actif. Présent seulement sur /api/v1/content/{type}."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicContentIndexResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          id: 42
+                          key: "mon-article"
+                          type: "article"
+                          title: "Mon article"
+                          summary: "Résumé SEO"
+                          path: "/articles/mon-article"
+                          url: "/articles/mon-article"
+                          published_at: "2026-05-01 10:00:00"
+                          updated_at: "2026-05-02 10:00:00"
+                          seo:
+                            title: "Mon article"
+                            description: "Résumé SEO"
+                          taxonomies: []
+                      pagination:
+                        total: 1
+                        limit: 10
+                        offset: 0
+                        has_more: false
+                    meta:
+                      contract: "public.content.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      type: "article"
+                      source: "public_content_snapshots"
+        "404":
+          description: "Le type de contenu demandé n’existe pas ou n’est pas actif."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Le type de contenu demandé n’existe pas ou n’est pas actif."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Paramètre de contexte ou de pagination invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Paramètre de contexte ou de pagination invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/content/{type}/{slug}":
+    get:
+      operationId: "get_public_content_show_v1"
+      summary: "Lire un contenu publié par type et slug."
+      description: "Retourne le payload public normalisé d’une entrée publiée, en réutilisant la projection de route publique."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "slug"
+          in: "path"
+          required: true
+          description: "Slug public du contenu, normalisé en slug sûr."
+          schema:
+            type: "string"
+        -
+          name: "type"
+          in: "path"
+          required: true
+          description: "Type de contenu actif, normalisé en slug sûr."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicContentShowResponse"
+              examples:
+                default:
+                  value:
+                    data: "Voir schema public.route.show.v1 / data"
+                    meta:
+                      contract: "public.content.show.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      type: "article"
+                      slug: "mon-article"
+                      source: "ResolvePublicRoute::entryPayload + public_content_snapshots"
+        "404":
+          description: "Aucun contenu publié ne correspond au couple type/slug."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Aucun contenu publié ne correspond au couple type/slug."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Type ou slug invalide, ou contexte site/langue invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Type ou slug invalide, ou contexte site/langue invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/cookies/config":
+    get:
+      operationId: "get_public_cookies_config_v1"
+      summary: "Lire la configuration publique des cookies."
+      description: "Retourne catégories, services et textes publics pour le site et la langue."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Langue active du site."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    additionalProperties: true
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      enabled: true
+                      categories: []
+                      services: []
+                    meta:
+                      contract: "public.cookies.config.v1"
+                      site_id: 1
+                      language_code: "fr"
+  "/api/v1/cookies/consent":
+    post:
+      operationId: "post_public_cookies_log_v1"
+      summary: "Journaliser un consentement."
+      description: "Enregistre le choix de consentement sans exposer de donnée sensible."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Langue active du site."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "logged"
+                    properties:
+                      logged:
+                        type: "boolean"
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      logged: true
+                    meta:
+                      contract: "public.cookies.log.v1"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Payload de consentement invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Payload de consentement invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/forms/{key}":
+    get:
+      operationId: "get_public_forms_show_v1"
+      summary: "Lire un formulaire public."
+      description: "Retourne uniquement la définition publique active du formulaire."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Langue active du site."
+          schema:
+            type: "string"
+        -
+          name: "key"
+          in: "path"
+          required: true
+          description: "Clé publique de la ressource."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "form"
+                    properties:
+                      form:
+                        type: "object"
+                        additionalProperties: true
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      form:
+                        form_key: "contact"
+                        name: "Contact"
+                        fields: []
+                    meta:
+                      contract: "public.forms.show.v1"
+                      site_id: 1
+                      language_code: "fr"
+        "404":
+          description: "Formulaire introuvable."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Formulaire introuvable."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/forms/{key}/submit":
+    post:
+      operationId: "post_public_forms_submit_v1"
+      summary: "Soumettre un formulaire public."
+      description: "Valide et enregistre une soumission selon les règles du module Forms."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Langue active du site."
+          schema:
+            type: "string"
+        -
+          name: "key"
+          in: "path"
+          required: true
+          description: "Clé publique de la ressource."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    additionalProperties: true
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      submitted: true
+                    meta:
+                      contract: "public.forms.submit.v1"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Champs invalides."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Champs invalides."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "404":
+          description: "Formulaire introuvable."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Formulaire introuvable."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/health":
+    get:
+      operationId: "get_public_health_v1"
+      summary: "Vérifier la disponibilité de l’API headless v1."
+      description: "Retourne un statut minimal dans le contexte site/langue résolu, sans lire de contenu éditorial."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "status"
+                    properties:
+                      status:
+                        type: "string"
+                        enum:
+                          - "ok"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                      site_id:
+                        type: "integer"
+                      language_code:
+                        type: "string"
+                      source:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      status: "ok"
+                    meta:
+                      contract: "public.health.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      site_key: "main"
+                      language_code: "fr"
+        "422":
+          description: "Site ou langue invalide via le contexte résolu."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Site ou langue invalide via le contexte résolu."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/languages":
+    get:
+      operationId: "get_public_languages_index_v1"
+      summary: "Lister les langues actives du site."
+      description: "Retourne les langues configurées pour le site courant, avec statut actif/défaut/courant et informations hreflang."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "items"
+                    properties:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          required:
+                            - "code"
+                            - "name"
+                            - "native_name"
+                            - "url_prefix"
+                            - "hreflang"
+                            - "is_default"
+                            - "is_active"
+                            - "is_current"
+                          properties:
+                            code:
+                              type: "string"
+                            name:
+                              type: "string"
+                            native_name:
+                              type: "string"
+                            url_prefix:
+                              type: "string"
+                            hreflang:
+                              type: "string"
+                            is_default:
+                              type: "boolean"
+                            is_active:
+                              type: "boolean"
+                            is_current:
+                              type: "boolean"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                      site_id:
+                        type: "integer"
+                      language_code:
+                        type: "string"
+                      source:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          code: "fr"
+                          name: "Français"
+                          native_name: "Français"
+                          url_prefix: ""
+                          hreflang: "fr"
+                          is_default: true
+                          is_active: true
+                          is_current: true
+                    meta:
+                      contract: "public.languages.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Contexte site/langue invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/media":
+    get:
+      operationId: "get_public_media_index_v1"
+      summary: "Lister les médias publics prêts et validés."
+      description: "Retourne une liste paginée de médias publics, avec filtre optionnel par media_type."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "limit"
+          in: "query"
+          required: false
+          description: "Nombre maximum d'éléments retournés."
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 24
+        -
+          name: "offset"
+          in: "query"
+          required: false
+          description: "Décalage zéro-indexé."
+          schema:
+            type: "integer"
+            minimum: 0
+            default: 0
+        -
+          name: "page"
+          in: "query"
+          required: false
+          description: "Alternative à offset. Si présent, offset=(page-1)*limit."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "media_type"
+          in: "query"
+          required: false
+          description: "Filtre sur le type de média public."
+          schema:
+            type: "string"
+            enum:
+              - "image"
+              - "video"
+              - "audio"
+              - "document"
+              - "binary"
+        -
+          name: "type"
+          in: "query"
+          required: false
+          description: "Alias historique de media_type."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicMediaResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          id: 5
+                          uuid: "uuid"
+                          url: "/storage/media/image.jpg"
+                          filename: "image.jpg"
+                          mime_type: "image/jpeg"
+                          media_type: "image"
+                          size_bytes: 120000
+                          width: 1200
+                          height: 800
+                          alt_text: "Texte alternatif"
+                          caption: "Légende"
+                          title: "Image"
+                          updated_at: "2026-05-02 10:00:00"
+                      pagination:
+                        total: 1
+                        limit: 24
+                        offset: 0
+                        has_more: false
+                    meta:
+                      contract: "public.media.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      media_type: "image"
+        "422":
+          description: "media_type invalide ou contexte/pagination invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "media_type invalide ou contexte/pagination invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/media/{id}":
+    get:
+      operationId: "get_public_media_show_v1"
+      summary: "Lire un média public prêt et validé."
+      description: "Retourne un média public avec URL normalisée et variantes prêtes générées."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "id"
+          in: "path"
+          required: true
+          description: "Identifiant technique du média."
+          schema:
+            type: "integer"
+            minimum: 1
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicMediaResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      id: 5
+                      uuid: "uuid"
+                      url: "/storage/media/image.jpg"
+                      filename: "image.jpg"
+                      mime_type: "image/jpeg"
+                      media_type: "image"
+                      size_bytes: 120000
+                      width: 1200
+                      height: 800
+                      alt_text: "Texte alternatif"
+                      caption: "Légende"
+                      title: "Image"
+                      variants:
+                        -
+                          key: "thumb"
+                          url: "/storage/media/image-thumb.webp"
+                          width: 320
+                          height: 213
+                          format: "webp"
+                          mime_type: "image/webp"
+                          size_bytes: 18000
+                    meta:
+                      contract: "public.media.show.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      media_id: 5
+        "404":
+          description: "Média absent, non prêt, invalide ou hors site."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Média absent, non prêt, invalide ou hors site."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Identifiant média invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Identifiant média invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/menus":
+    get:
+      operationId: "get_public_menus_index_v1"
+      summary: "Lister les menus publics actifs."
+      description: "Retourne les menus actifs disponibles pour le site, sans leurs arbres détaillés."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicMenuResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          key: "primary"
+                          location: "header"
+                          name: "Menu principal"
+                          language_mode: "shared"
+                          item_count: 4
+                    meta:
+                      contract: "public.menus.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Contexte site/langue invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/menus/{key}":
+    get:
+      operationId: "get_public_menus_show_v1"
+      summary: "Lire un menu public actif."
+      description: "Retourne un menu actif avec son arbre de liens publics et sous-menus."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "key"
+          in: "path"
+          required: true
+          description: "Clé publique du menu."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicMenuResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      key: "primary"
+                      location: "header"
+                      name: "Menu principal"
+                      items:
+                        -
+                          id: 1
+                          label: "Accueil"
+                          title: ""
+                          url: "/"
+                          target: "_self"
+                          css_class: ""
+                          resource_type: "content_entry"
+                          resource_id: 1
+                          children: []
+                    meta:
+                      contract: "public.menus.show.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      menu_key: "primary"
+        "404":
+          description: "Menu absent ou inactif."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Menu absent ou inactif."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Clé de menu ou contexte invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Clé de menu ou contexte invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/modules/{module}/{resource}/schema":
+    get:
+      operationId: "get_public_module_resource_schema_v1"
+      summary: "Lire le schéma headless public d’une ressource déclarée par un module actif."
+      description: "Retourne le contrat de lecture d’une ressource métier exposée en headless par un module actif. L’endpoint ne retourne pas les données de la ressource : il expose uniquement le schéma contractuel, les capacités, les permissions et les métadonnées nécessaires aux clients API."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Clé du site à résoudre explicitement."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant numérique du site à résoudre explicitement."
+          schema:
+            type: "integer"
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé pour contextualiser le schéma si la ressource est localisable."
+          schema:
+            type: "string"
+        -
+          name: "module"
+          in: "path"
+          required: true
+          description: "Clé technique du module actif, par exemple crm ou commerce."
+          schema:
+            type: "string"
+            pattern: "^[a-z][a-z0-9_]*$"
+        -
+          name: "resource"
+          in: "path"
+          required: true
+          description: "Clé technique de la ressource déclarée par le module, par exemple contact ou product."
+          schema:
+            type: "string"
+            pattern: "^[a-z][a-z0-9_]*$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "schema"
+                    properties:
+                      schema:
+                        type: "object"
+                        required:
+                          - "module"
+                          - "resource"
+                          - "blueprint_key"
+                          - "resource_type"
+                          - "capabilities"
+                          - "permissions"
+                          - "headless"
+                          - "fields"
+                        properties:
+                          module:
+                            type: "string"
+                          resource:
+                            type: "string"
+                          blueprint_key:
+                            type: "string"
+                          resource_type:
+                            type: "string"
+                            enum:
+                              - "module_resource"
+                              - "headless"
+                          storage:
+                            type: "object"
+                            properties:
+                              database:
+                                type: "string"
+                              table:
+                                type: "string"
+                              primary_key:
+                                type: "string"
+                            additionalProperties: true
+                          capabilities:
+                            type: "object"
+                            properties:
+                              admin:
+                                type: "boolean"
+                              headless:
+                                type: "boolean"
+                              public:
+                                type: "boolean"
+                              localized:
+                                type: "boolean"
+                              revisions:
+                                type: "boolean"
+                              workflow:
+                                type: "boolean"
+                              seo:
+                                type: "boolean"
+                              export:
+                                type: "boolean"
+                            additionalProperties: true
+                          permissions:
+                            type: "object"
+                            properties:
+                              read:
+                                type: "string"
+                              create:
+                                type: "string"
+                              update:
+                                type: "string"
+                              delete:
+                                type: "string"
+                            additionalProperties: true
+                          headless:
+                            type: "object"
+                            properties:
+                              enabled:
+                                type: "boolean"
+                              collection_endpoint:
+                                type: "string"
+                              item_endpoint:
+                                type: "string"
+                            additionalProperties: true
+                          fields:
+                            type: "array"
+                            items:
+                              type: "object"
+                              required:
+                                - "key"
+                                - "type"
+                              properties:
+                                key:
+                                  type: "string"
+                                type:
+                                  type: "string"
+                                label:
+                                  type: "string"
+                                required:
+                                  type: "boolean"
+                                storage_column:
+                                  type: "string"
+                                validation:
+                                  type: "object"
+                                  additionalProperties: true
+                                ui:
+                                  type: "object"
+                                  additionalProperties: true
+                              additionalProperties: true
+                          relations:
+                            type: "array"
+                            items:
+                              type: "object"
+                              additionalProperties: true
+                          contract:
+                            type: "object"
+                            additionalProperties: true
+                        additionalProperties: true
+                    additionalProperties: false
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "module"
+                      - "resource"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                        const: "public.module_resource_schema.v1"
+                      site_id:
+                        type: "integer"
+                      site_key:
+                        type: "string"
+                      language_code:
+                        type: "string"
+                      module:
+                        type: "string"
+                      resource:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                    additionalProperties: true
+                additionalProperties: false
+              examples:
+                default:
+                  value:
+                    data:
+                      schema:
+                        module: "crm"
+                        resource: "contact"
+                        blueprint_key: "crm_contact"
+                        resource_type: "module_resource"
+                        storage:
+                          database: "crm"
+                          table: "crm_contacts"
+                          primary_key: "id"
+                        capabilities:
+                          admin: true
+                          headless: true
+                          public: false
+                          localized: false
+                          revisions: false
+                          workflow: false
+                          seo: false
+                          export: true
+                        permissions:
+                          read: "crm.read"
+                          create: "crm.manage"
+                          update: "crm.manage"
+                          delete: "crm.manage"
+                        headless:
+                          enabled: true
+                          collection_endpoint: "/api/v1/modules/crm/contacts"
+                          item_endpoint: "/api/v1/modules/crm/contacts/{id}"
+                        fields:
+                          -
+                            key: "email"
+                            type: "email"
+                            label: "Email"
+                            required: true
+                            storage_column: "email"
+                        relations: []
+                        contract:
+                          name: "public.crm_contact.schema.v1"
+                    meta:
+                      contract: "public.module_resource_schema.v1"
+                      site_id: 1
+                      site_key: "default"
+                      language_code: "fr"
+                      module: "crm"
+                      resource: "contact"
+                      request_id: "20260604120000-abc"
+        "401":
+          description: "Token requis lorsque l’API publique est protégée."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Token requis lorsque l’API publique est protégée."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "403":
+          description: "Le token ne possède pas les droits nécessaires."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Le token ne possède pas les droits nécessaires."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "404":
+          description: "Module, ressource ou schéma headless introuvable."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Module, ressource ou schéma headless introuvable."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/route":
+    get:
+      operationId: "get_public_route_show_v1"
+      summary: "Résoudre une route publique en payload headless complet."
+      description: "Retourne le même payload public normalisé que le front HTML pour une route donnée : contenu, SEO, menus, taxonomies, médias et listing éventuel. Les redirections retournent un payload redirect avec le statut correspondant."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "path"
+          in: "query"
+          required: false
+          description: "Chemin public à résoudre, normalisé en slash initial, sans query string."
+          schema:
+            type: "string"
+            default: "/"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicRouteResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      kind: "article"
+                      site:
+                        id: 1
+                        key: "main"
+                        name: "Site"
+                        base_url: "https://example.test"
+                        default_language_code: "fr"
+                      language: "fr"
+                      route:
+                        path: "/articles/mon-article"
+                        canonical: "https://example.test/articles/mon-article"
+                        breadcrumbs: []
+                        alternates: []
+                        x_default_url: ""
+                      content:
+                        id: 42
+                        type: "article"
+                        key: "mon-article"
+                        title: "Mon article"
+                        summary: "Résumé"
+                        published_at: "2026-05-01 10:00:00"
+                        published_at_label: "1 mai 2026"
+                        updated_at: "2026-05-02 10:00:00"
+                        updated_at_label: "2 mai 2026"
+                        author_name: ""
+                        display: null
+                        fields: {}
+                        blocks: []
+                      listing: null
+                      taxonomies: []
+                      menus:
+                        primary: []
+                        footer: []
+                        footer_top: []
+                        footer_bottom: []
+                      seo:
+                        title: "Mon article"
+                        description: "Résumé"
+                        robots: "index,follow"
+                        canonical: "https://example.test/articles/mon-article"
+                        json_ld: null
+                        open_graph:
+                          type: "article"
+                          title: "Mon article"
+                          description: "Résumé"
+                          image: ""
+                          locale: "fr"
+                          locale_alternates: []
+                        twitter:
+                          title: "Mon article"
+                          description: "Résumé"
+                      media: []
+                      ui: {}
+                    meta:
+                      contract: "public.route.show.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      path: "/articles/mon-article"
+                      source: "ResolvePublicRoute + public_content_snapshots"
+        "404":
+          description: "Aucune route active/canonique ne correspond au chemin."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Aucune route active/canonique ne correspond au chemin."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "410":
+          description: "La route existe mais le contenu publié a été retiré."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "La route existe mais le contenu publié a été retiré."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Contexte site/langue invalide ou paramètres non acceptés."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue invalide ou paramètres non acceptés."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/routes":
+    get:
+      operationId: "get_public_routes_index_v1"
+      summary: "Lister les routes publiques indexables."
+      description: "Retourne les routes actives/canoniques publiées, avec filtre optionnel par type de contenu."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "type"
+          in: "query"
+          required: false
+          description: "Filtre optionnel sur le type de contenu lié à la route."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "items"
+                    properties:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          required:
+                            - "path"
+                            - "resource_type"
+                            - "resource_id"
+                            - "title"
+                            - "updated_at"
+                            - "meta_robots"
+                          properties:
+                            path:
+                              type: "string"
+                            resource_type:
+                              type: "string"
+                            resource_id:
+                              type: "integer"
+                            title:
+                              type: "string"
+                            updated_at:
+                              type: "string"
+                            meta_robots:
+                              type: "string"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                      site_id:
+                        type: "integer"
+                      language_code:
+                        type: "string"
+                      source:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          path: "/articles/mon-article"
+                          resource_type: "content_entry"
+                          resource_id: 42
+                          title: "Mon article"
+                          updated_at: "2026-05-02 10:00:00"
+                          meta_robots: "index,follow"
+                    meta:
+                      contract: "public.routes.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      source: "routes + public_content_snapshots"
+        "422":
+          description: "Contexte site/langue ou filtre invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue ou filtre invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/search":
+    get:
+      operationId: "get_public_search_index_v1"
+      summary: "Rechercher dans les contenus publiés."
+      description: "Recherche publique sur les documents indexés cohérents avec les snapshots publiés, filtrable par type, taxonomie et terme. Une requête vide retourne une liste vide."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "limit"
+          in: "query"
+          required: false
+          description: "Nombre maximum d'éléments retournés."
+          schema:
+            type: "integer"
+            minimum: 1
+            maximum: 100
+            default: 24
+        -
+          name: "offset"
+          in: "query"
+          required: false
+          description: "Décalage zéro-indexé."
+          schema:
+            type: "integer"
+            minimum: 0
+            default: 0
+        -
+          name: "page"
+          in: "query"
+          required: false
+          description: "Alternative à offset. Si présent, offset=(page-1)*limit."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "q"
+          in: "query"
+          required: false
+          description: "Texte recherché, tronqué à 120 caractères."
+          schema:
+            type: "string"
+        -
+          name: "type"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "taxonomy"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "term"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicSearchResponse"
+              examples:
+                default:
+                  value:
+                    data:
+                      query: "parapente"
+                      items:
+                        -
+                          id: 42
+                          type: "article"
+                          title: "Vol parapente"
+                          summary: "Résumé"
+                          path: "/articles/vol-parapente"
+                          updated_at: "2026-05-02 10:00:00"
+                          seo:
+                            title: "Vol parapente"
+                            description: "Résumé"
+                            robots: "index,follow"
+                      pagination:
+                        total: 1
+                        limit: 10
+                        offset: 0
+                        has_more: false
+                    meta:
+                      contract: "public.search.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      source: "search_documents + public_content_snapshots"
+        "422":
+          description: "Contexte site/langue ou pagination invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue ou pagination invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/taxonomies":
+    get:
+      operationId: "get_public_taxonomies_index_v1"
+      summary: "Lister les taxonomies ou lire les termes d’une taxonomie publique."
+      description: "Contrat documentaire conservé pour les deux endpoints taxonomiques v1. Le runtime retourne public.taxonomies.index.v1 pour la liste et public.taxonomies.show.v1 pour le détail."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "items"
+                    properties:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          required:
+                            - "key"
+                            - "name"
+                            - "archive_enabled"
+                            - "is_active"
+                          properties:
+                            key:
+                              type: "string"
+                            name:
+                              type: "string"
+                            archive_enabled:
+                              type: "boolean"
+                            is_active:
+                              type: "boolean"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                      site_id:
+                        type: "integer"
+                      language_code:
+                        type: "string"
+                      source:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      items:
+                        -
+                          key: "category"
+                          name: "Catégories"
+                          archive_enabled: true
+                          is_active: true
+                    meta:
+                      contract: "public.taxonomies.index.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+        "404":
+          description: "Taxonomie absente ou inactive."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Taxonomie absente ou inactive."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Contexte site/langue ou clé de taxonomie invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue ou clé de taxonomie invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+  "/api/v1/taxonomies/{taxonomy}":
+    get:
+      operationId: "get_public_taxonomies_show_v1"
+      summary: "Lister les taxonomies ou lire les termes d’une taxonomie publique."
+      description: "Contrat documentaire conservé pour les deux endpoints taxonomiques v1. Le runtime retourne public.taxonomies.index.v1 pour la liste et public.taxonomies.show.v1 pour le détail."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "site"
+          in: "query"
+          required: false
+          description: "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+          schema:
+            type: "string"
+        -
+          name: "site_id"
+          in: "query"
+          required: false
+          description: "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+          schema:
+            type: "integer"
+            minimum: 1
+        -
+          name: "lang"
+          in: "query"
+          required: false
+          description: "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+          schema:
+            type: "string"
+            pattern: "^[a-z]{2}(?:-[a-z0-9]{2,8})?$"
+        -
+          name: "taxonomy"
+          in: "path"
+          required: true
+          description: "Clé de taxonomie active. Présente uniquement sur /api/v1/taxonomies/{taxonomy}."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "taxonomy"
+                      - "terms"
+                    properties:
+                      taxonomy:
+                        type: "object"
+                        required:
+                          - "key"
+                          - "name"
+                          - "archive_enabled"
+                        properties:
+                          key:
+                            type: "string"
+                          name:
+                            type: "string"
+                          archive_enabled:
+                            type: "boolean"
+                      terms:
+                        type: "array"
+                        items:
+                          type: "object"
+                          required:
+                            - "id"
+                            - "key"
+                            - "slug"
+                            - "name"
+                            - "description"
+                            - "path"
+                          properties:
+                            id:
+                              type: "integer"
+                            key:
+                              type: "string"
+                            slug:
+                              type: "string"
+                            name:
+                              type: "string"
+                            description:
+                              type: "string"
+                            path:
+                              type: "string"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                      request_id:
+                        type: "string"
+                      site_id:
+                        type: "integer"
+                      language_code:
+                        type: "string"
+                      source:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      taxonomy:
+                        key: "category"
+                        name: "Catégories"
+                        archive_enabled: true
+                      terms:
+                        -
+                          id: 3
+                          key: "news"
+                          slug: "actualites"
+                          name: "Actualités"
+                          description: ""
+                          path: "/categories/actualites"
+                    meta:
+                      contract: "public.taxonomies.show.v1"
+                      request_id: "20260604120000-abc"
+                      site_id: 1
+                      language_code: "fr"
+                      taxonomy_key: "category"
+        "404":
+          description: "Taxonomie absente ou inactive."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "NOT_FOUND"
+                      message: "Taxonomie absente ou inactive."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "422":
+          description: "Contexte site/langue ou clé de taxonomie invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Contexte site/langue ou clé de taxonomie invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: "http"
+      scheme: "bearer"
+      bearerFormat: "Opaque token"
+      description: "Token stateless optionnel selon configuration APP_PUBLIC_API_AUTH_ENABLED."
+  schemas:
+    PublicMeta:
+      type: "object"
+      required:
+        - "contract"
+        - "request_id"
+      properties:
+        contract:
+          type: "string"
+        request_id:
+          type: "string"
+        site_id:
+          type: "integer"
+        language_code:
+          type: "string"
+        source:
+          type: "string"
+      additionalProperties: true
+    PublicApiError:
+      type: "object"
+      required:
+        - "error"
+        - "meta"
+      properties:
+        error:
+          type: "object"
+          required:
+            - "code"
+            - "message"
+          properties:
+            code:
+              type: "string"
+            message:
+              type: "string"
+            details:
+              type: "object"
+              additionalProperties: true
+          additionalProperties: true
+        meta:
+          "$ref": "#/components/schemas/PublicMeta"
+      additionalProperties: false
+    Pagination:
+      type: "object"
+      required:
+        - "total"
+        - "limit"
+        - "offset"
+        - "has_more"
+      properties:
+        total:
+          type: "integer"
+          minimum: 0
+        limit:
+          type: "integer"
+          minimum: 1
+        offset:
+          type: "integer"
+          minimum: 0
+        has_more:
+          type: "boolean"
+      additionalProperties: true
+    PublicContentIndexResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          type: "object"
+          required:
+            - "items"
+            - "pagination"
+          properties:
+            items:
+              type: "array"
+              items:
+                type: "object"
+                required:
+                  - "id"
+                  - "key"
+                  - "type"
+                  - "title"
+                  - "summary"
+                  - "path"
+                  - "url"
+                  - "published_at"
+                  - "updated_at"
+                  - "seo"
+                  - "taxonomies"
+                properties:
+                  id:
+                    type: "integer"
+                  key:
+                    type: "string"
+                  type:
+                    type: "string"
+                  title:
+                    type: "string"
+                  summary:
+                    type: "string"
+                  path:
+                    type: "string"
+                  url:
+                    type: "string"
+                  published_at:
+                    type: "string"
+                  updated_at:
+                    type: "string"
+                  seo:
+                    type: "object"
+                    required:
+                      - "title"
+                      - "description"
+                    properties:
+                      title:
+                        type: "string"
+                      description:
+                        type: "string"
+                  taxonomies:
+                    type: "array"
+                    items:
+                      type: "object"
+                      additionalProperties: true
+            pagination:
+              type: "object"
+              required:
+                - "total"
+                - "limit"
+                - "offset"
+                - "has_more"
+              properties:
+                total:
+                  type: "integer"
+                limit:
+                  type: "integer"
+                offset:
+                  type: "integer"
+                has_more:
+                  type: "boolean"
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true
+    PublicContentShowResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          type: "object"
+          required:
+            - "system"
+            - "editorial"
+            - "seo"
+            - "blocks"
+            - "media"
+            - "links"
+            - "meta"
+          properties:
+            system:
+              type: "object"
+              required:
+                - "id"
+                - "site_id"
+                - "content_type"
+                - "entry_key"
+                - "language_code"
+                - "status"
+                - "published_at"
+                - "source_revision_id"
+              properties:
+                id:
+                  type: "integer"
+                site_id:
+                  type: "integer"
+                content_type:
+                  type: "string"
+                entry_key:
+                  type: "string"
+                language_code:
+                  type: "string"
+                status:
+                  type: "string"
+                  enum:
+                    - "published"
+                published_at:
+                  type: "string"
+                source_revision_id:
+                  type: "integer"
+            editorial:
+              type: "object"
+              required:
+                - "title"
+                - "slug"
+                - "path"
+                - "fields"
+                - "published_at"
+                - "published_at_label"
+                - "author_name"
+                - "display"
+              properties:
+                title:
+                  type: "string"
+                slug:
+                  type: "string"
+                path:
+                  type: "string"
+                fields:
+                  type: "object"
+                  additionalProperties: true
+                published_at:
+                  type: "string"
+                published_at_label:
+                  type: "string"
+                author_name:
+                  type: "string"
+                display:
+                  type: "object"
+                  required:
+                    - "show_published_date"
+                    - "show_author"
+                    - "show_updated_date"
+                    - "show_type"
+                    - "include_author_in_schema"
+                    - "date_format"
+                  properties:
+                    show_published_date:
+                      type: "boolean"
+                    show_author:
+                      type: "boolean"
+                    show_updated_date:
+                      type: "boolean"
+                    show_type:
+                      type: "boolean"
+                    include_author_in_schema:
+                      type: "boolean"
+                    date_format:
+                      type: "string"
+                      enum:
+                        - "short"
+                        - "medium"
+                        - "long"
+                        - "iso"
+            seo:
+              type: "object"
+              required:
+                - "meta_title"
+                - "meta_description"
+                - "meta_robots"
+                - "canonical_url"
+                - "json_ld"
+                - "hreflang_code"
+              properties:
+                meta_title:
+                  type: "string"
+                meta_description:
+                  type: "string"
+                meta_robots:
+                  type: "string"
+                canonical_url:
+                  type: "string"
+                json_ld:
+                  type:
+                    - "object"
+                    - "array"
+                    - "string"
+                    - "null"
+                hreflang_code:
+                  type: "string"
+            blocks:
+              type: "array"
+              items:
+                type: "object"
+                additionalProperties: true
+            media:
+              type: "array"
+              items:
+                type: "object"
+                additionalProperties: true
+            links:
+              type: "object"
+              required:
+                - "canonical"
+                - "hreflang"
+              properties:
+                canonical:
+                  type: "string"
+                hreflang:
+                  type: "array"
+                  items:
+                    type: "object"
+                    additionalProperties: true
+            meta:
+              type: "object"
+              required:
+                - "source"
+                - "projected_at"
+                - "blueprint"
+              properties:
+                source:
+                  type: "string"
+                projected_at:
+                  type: "string"
+                blueprint:
+                  type:
+                    - "object"
+                    - "string"
+                    - "null"
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true
+    PublicMediaResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          type: "object"
+          required:
+            - "items"
+            - "pagination"
+          properties:
+            items:
+              type: "array"
+              items:
+                type: "object"
+                required:
+                  - "id"
+                  - "uuid"
+                  - "url"
+                  - "filename"
+                  - "mime_type"
+                  - "media_type"
+                  - "size_bytes"
+                  - "width"
+                  - "height"
+                  - "alt_text"
+                  - "caption"
+                  - "title"
+                  - "updated_at"
+                properties:
+                  id:
+                    type: "integer"
+                  uuid:
+                    type: "string"
+                  url:
+                    type: "string"
+                  filename:
+                    type: "string"
+                  mime_type:
+                    type: "string"
+                  media_type:
+                    type: "string"
+                    enum:
+                      - "image"
+                      - "video"
+                      - "audio"
+                      - "document"
+                      - "binary"
+                      - ""
+                  size_bytes:
+                    type: "integer"
+                  width:
+                    type:
+                      - "integer"
+                      - "null"
+                  height:
+                    type:
+                      - "integer"
+                      - "null"
+                  alt_text:
+                    type: "string"
+                  caption:
+                    type: "string"
+                  title:
+                    type: "string"
+                  updated_at:
+                    type: "string"
+            pagination:
+              type: "object"
+              required:
+                - "total"
+                - "limit"
+                - "offset"
+                - "has_more"
+              properties:
+                total:
+                  type: "integer"
+                limit:
+                  type: "integer"
+                offset:
+                  type: "integer"
+                has_more:
+                  type: "boolean"
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true
+    PublicMenuResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          type: "object"
+          required:
+            - "items"
+          properties:
+            items:
+              type: "array"
+              items:
+                type: "object"
+                required:
+                  - "key"
+                  - "location"
+                  - "name"
+                  - "language_mode"
+                  - "item_count"
+                properties:
+                  key:
+                    type: "string"
+                  location:
+                    type:
+                      - "string"
+                      - "null"
+                  name:
+                    type: "string"
+                  language_mode:
+                    type: "string"
+                  item_count:
+                    type: "integer"
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true
+    PublicRouteResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          oneOf:
+            -
+              type: "object"
+              required:
+                - "kind"
+                - "site"
+                - "language"
+                - "route"
+                - "content"
+                - "listing"
+                - "taxonomies"
+                - "menus"
+                - "seo"
+                - "media"
+                - "ui"
+              properties:
+                kind:
+                  type: "string"
+                site:
+                  type: "object"
+                  required:
+                    - "id"
+                    - "key"
+                    - "name"
+                    - "base_url"
+                    - "default_language_code"
+                  properties:
+                    id:
+                      type: "integer"
+                    key:
+                      type: "string"
+                    name:
+                      type: "string"
+                    base_url:
+                      type: "string"
+                    default_language_code:
+                      type: "string"
+                language:
+                  type: "string"
+                route:
+                  type: "object"
+                  required:
+                    - "path"
+                    - "canonical"
+                    - "breadcrumbs"
+                    - "alternates"
+                    - "x_default_url"
+                  properties:
+                    path:
+                      type: "string"
+                    canonical:
+                      type: "string"
+                    breadcrumbs:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                    alternates:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                    x_default_url:
+                      type: "string"
+                content:
+                  type: "object"
+                  required:
+                    - "id"
+                    - "type"
+                    - "key"
+                    - "title"
+                    - "summary"
+                    - "published_at"
+                    - "published_at_label"
+                    - "updated_at"
+                    - "updated_at_label"
+                    - "author_name"
+                    - "display"
+                    - "fields"
+                    - "blocks"
+                  properties:
+                    id:
+                      type: "integer"
+                    type:
+                      type: "string"
+                    key:
+                      type: "string"
+                    title:
+                      type: "string"
+                    summary:
+                      type: "string"
+                    published_at:
+                      type: "string"
+                    published_at_label:
+                      type: "string"
+                    updated_at:
+                      type: "string"
+                    updated_at_label:
+                      type: "string"
+                    author_name:
+                      type: "string"
+                    display:
+                      type:
+                        - "object"
+                        - "null"
+                      additionalProperties: true
+                    fields:
+                      type: "object"
+                      additionalProperties: true
+                    blocks:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                listing:
+                  type:
+                    - "object"
+                    - "null"
+                  description: "Liste optionnelle pour index, archives ou recherche."
+                  additionalProperties: true
+                taxonomies:
+                  type: "array"
+                  items:
+                    type: "object"
+                    additionalProperties: true
+                menus:
+                  type: "object"
+                  required:
+                    - "primary"
+                    - "footer"
+                    - "footer_top"
+                    - "footer_bottom"
+                  properties:
+                    primary:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                    footer:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                    footer_top:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                    footer_bottom:
+                      type: "array"
+                      items:
+                        type: "object"
+                        additionalProperties: true
+                seo:
+                  type: "object"
+                  required:
+                    - "title"
+                    - "description"
+                    - "robots"
+                    - "canonical"
+                    - "json_ld"
+                    - "open_graph"
+                    - "twitter"
+                  properties:
+                    title:
+                      type: "string"
+                    description:
+                      type: "string"
+                    robots:
+                      type: "string"
+                    canonical:
+                      type: "string"
+                    json_ld:
+                      type:
+                        - "object"
+                        - "array"
+                        - "string"
+                        - "null"
+                    open_graph:
+                      type: "object"
+                      required:
+                        - "type"
+                        - "title"
+                        - "description"
+                        - "image"
+                        - "locale"
+                        - "locale_alternates"
+                      properties:
+                        type:
+                          type: "string"
+                        title:
+                          type: "string"
+                        description:
+                          type: "string"
+                        image:
+                          type: "string"
+                        locale:
+                          type: "string"
+                        locale_alternates:
+                          type: "array"
+                          items:
+                            type: "string"
+                    twitter:
+                      type: "object"
+                      required:
+                        - "title"
+                        - "description"
+                      properties:
+                        title:
+                          type: "string"
+                        description:
+                          type: "string"
+                media:
+                  type: "array"
+                  items:
+                    type: "object"
+                    additionalProperties: true
+                ui:
+                  type: "object"
+                  additionalProperties: true
+            -
+              type: "object"
+              required:
+                - "kind"
+                - "to"
+                - "status"
+              properties:
+                kind:
+                  type: "string"
+                  enum:
+                    - "redirect"
+                to:
+                  type: "string"
+                status:
+                  type: "integer"
+                  enum:
+                    - 301
+                    - 302
+                    - 303
+                    - 307
+                    - 308
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true
+    PublicSearchResponse:
+      type: "object"
+      required:
+        - "data"
+        - "meta"
+      properties:
+        data:
+          type: "object"
+          required:
+            - "query"
+            - "items"
+            - "pagination"
+          properties:
+            query:
+              type: "string"
+            items:
+              type: "array"
+              items:
+                type: "object"
+                required:
+                  - "id"
+                  - "type"
+                  - "title"
+                  - "summary"
+                  - "path"
+                  - "updated_at"
+                  - "seo"
+                properties:
+                  id:
+                    type: "integer"
+                  type:
+                    type: "string"
+                  title:
+                    type: "string"
+                  summary:
+                    type: "string"
+                  path:
+                    type: "string"
+                  updated_at:
+                    type: "string"
+                  seo:
+                    type: "object"
+                    required:
+                      - "title"
+                      - "description"
+                      - "robots"
+                    properties:
+                      title:
+                        type: "string"
+                      description:
+                        type: "string"
+                      robots:
+                        type: "string"
+            pagination:
+              type: "object"
+              required:
+                - "total"
+                - "limit"
+                - "offset"
+                - "has_more"
+              properties:
+                total:
+                  type: "integer"
+                limit:
+                  type: "integer"
+                offset:
+                  type: "integer"
+                has_more:
+                  type: "boolean"
+        meta:
+          type: "object"
+          required:
+            - "contract"
+            - "request_id"
+          properties:
+            contract:
+              type: "string"
+            request_id:
+              type: "string"
+            site_id:
+              type: "integer"
+            language_code:
+              type: "string"
+            source:
+              type: "string"
+          additionalProperties: true

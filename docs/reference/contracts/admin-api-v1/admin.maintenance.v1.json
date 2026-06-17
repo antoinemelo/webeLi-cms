@@ -1,0 +1,105 @@
+{
+  "contract": "admin.maintenance.v1",
+  "methods": [
+    "GET",
+    "POST",
+    "DELETE"
+  ],
+  "paths": [
+    "/admin/api/maintenance",
+    "/admin/api/maintenance/cache/clear",
+    "/admin/api/maintenance/search/reindex",
+    "/admin/api/maintenance/audit-logs",
+    "/admin/api/maintenance/runtime-logs"
+  ],
+  "permission": "maintenance.manage",
+  "summary": "État et actions de maintenance natives du back-office: cache, index de recherche, journaux runtime et audit IAM.",
+  "response": {
+    "data": {
+      "status": {
+        "cache": {
+          "exists": true,
+          "files": 12,
+          "size_bytes": 24576,
+          "writable": true
+        },
+        "runtime_logs": {
+          "exists": true,
+          "files": 2,
+          "size_bytes": 8192,
+          "writable": true
+        },
+        "audit_rows": 42,
+        "published_entries": 8,
+        "search_documents": 16,
+        "search_documents_current_language": 8
+      },
+      "audit_logs": [
+        {
+          "id": 42,
+          "actor_user_id": 1,
+          "actor_email": "admin@example.test",
+          "action_key": "content.entry.updated",
+          "resource_type": "content_entry",
+          "resource_id": 7,
+          "context_json": "{}",
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0",
+          "created_at": "2026-05-13 10:00:00"
+        }
+      ],
+      "runtime_logs": [
+        {
+          "name": "app.log",
+          "size_bytes": 8192,
+          "updated_at": "2026-05-13 10:00:00",
+          "tail": [
+            "[2026-05-13] info"
+          ]
+        }
+      ],
+      "message": "Maintenance action completed.",
+      "deleted_files": 0,
+      "deleted_rows": 0,
+      "rebuilt_entries": 8,
+      "languages": [
+        "fr"
+      ],
+      "actions": {
+        "clear_cache": {
+          "method": "POST",
+          "path": "/admin/api/maintenance/cache/clear"
+        },
+        "reindex_search": {
+          "method": "POST",
+          "path": "/admin/api/maintenance/search/reindex"
+        },
+        "clear_audit_logs": {
+          "method": "DELETE",
+          "path": "/admin/api/maintenance/audit-logs"
+        },
+        "clear_runtime_logs": {
+          "method": "DELETE",
+          "path": "/admin/api/maintenance/runtime-logs"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.maintenance.v1",
+      "request_id": "req_01HX0000000000000000000000",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "SITE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

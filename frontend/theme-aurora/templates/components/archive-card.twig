@@ -1,0 +1,11 @@
+<article class="card archive-card h-100 border-0 shadow-sm">
+  <div class="card-body p-4">
+    <p class="archive-card__meta small text-uppercase fw-semibold text-body-secondary mb-2">{{ item.type_key }}</p>
+    <h2 class="h4 card-title mb-2">
+      <a class="stretched-link text-decoration-none" href="{{ item.path }}">{{ item.title }}</a>
+    </h2>
+{% if item.summary|default('') %}
+    <p class="card-text text-body-secondary mb-0">{{ item.summary }}</p>
+{% endif %}
+  </div>
+</article>

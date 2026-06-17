@@ -1,0 +1,28 @@
+Options -Indexes
+RewriteEngine On
+AddDefaultCharset UTF-8
+
+# Défense en profondeur si le document root pointe sur la racine du package.
+RewriteRule ^(?:storage|database|tools|ops)(?:/|$) - [F,L]
+RewriteRule ^(?:config)(?:/|$) - [F,L]
+RewriteRule (^|/)\.(?:env|git|svn|hg) - [F,L]
+
+# Documentation publique headless : passer par le front controller.
+# IMPORTANT : ces règles doivent être placées AVANT le blocage générique des fichiers .json/.yaml.
+# Les deux règles avec préfixe autorisent aussi les sous-sites montés sous le base path
+# de l'installation, par exemple /mod/site-b/docs/public-api/openapi.v1.json.
+RewriteRule ^docs/public-api/?$ index.php [QSA,L]
+RewriteRule ^docs/public-api/(index\.html|openapi\.v1\.json|openapi\.v1\.yaml|quickstart\.md|authentication\.md|errors\.md|examples\.md)$ index.php [QSA,L]
+RewriteRule ^(?:[^/]+/)*docs/public-api/?$ index.php [QSA,L]
+RewriteRule ^(?:[^/]+/)*docs/public-api/(index\.html|openapi\.v1\.json|openapi\.v1\.yaml|quickstart\.md|authentication\.md|errors\.md|examples\.md)$ index.php [QSA,L]
+
+# Bloquer les fichiers sensibles, temporaires, archives et JSON non explicitement exposés.
+RewriteRule \.(?:sqlite(?:-(?:wal|shm|journal))?|db|sql|log|bak|backup|ini|env|yml|yaml|jsonl?|zip|tar|tgz|gz)$ - [F,L]
+
+# Servir directement les fichiers et dossiers publics existants.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Tout le reste passe par le front controller.
+RewriteRule ^ index.php [QSA,L]

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://am-cms.local/schemas/editorial-package/1.0/block.schema.json",
+  "type": "object", "additionalProperties": true,
+  "required": ["block_key", "type", "editorial_status", "data", "sort_order"],
+  "properties": {
+    "block_key": {"$ref": "definitions.schema.json#/$defs/portableKey"},
+    "type": {"enum": ["markdown", "richtext", "html_safe", "html_raw", "iframe", "embed", "image", "video", "audio", "hero", "gallery", "buttons", "card", "columns", "form", "plan", "articles"]},
+    "editorial_status": {"const": "published"}, "enabled": {"const": true}, "data": {"type": "object"}, "sort_order": {"type": "integer", "minimum": 0}
+  }
+}

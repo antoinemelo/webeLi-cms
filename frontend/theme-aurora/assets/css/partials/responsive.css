@@ -1,0 +1,289 @@
+@media (max-width: 991.98px) {
+  .site-header__inner {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .brand__text {
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-search {
+    grid-column: 2 / 3;
+  }
+
+  .site-navigation {
+    grid-column: 1 / -1;
+    padding: 10px 0 4px;
+    border-top: 1px solid #eef2f7;
+  }
+
+  .navbar-nav {
+    gap: 0;
+  }
+
+  .nav-link {
+    padding: .7rem 0 !important;
+    border-radius: 0;
+  }
+
+  .language-switch {
+    margin-top: 8px;
+  }
+
+  .language-switch__button {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .language-switch__menu {
+    width: 100%;
+    box-shadow: none;
+  }
+
+  .header-actions--mobile {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  .language-switch-mobile {
+    flex: 1 1 auto;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .home-hero {
+    grid-template-columns: 1fr;
+    padding-top: 38px;
+  }
+
+  .home-hero__media {
+    order: -1;
+  }
+
+  .grid--3,
+  .split-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .site-footer__inner {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-links,
+  .footer-links__row {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header__inner {
+    grid-template-columns: auto minmax(7.5rem, 1fr) auto;
+    gap: 8px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand__text {
+    max-width: 28vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: .95rem;
+  }
+
+  .brand__logo {
+    max-width: 112px;
+    max-height: 38px;
+  }
+
+  .header-search {
+    grid-column: 2 / 3;
+    order: 0;
+    min-width: 0;
+  }
+
+  .header-search .form-control {
+    min-width: 0;
+    padding-inline: 12px;
+  }
+
+  .nav-toggle {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .site-navigation {
+    order: 4;
+  }
+
+  .main-content {
+    padding-top: 20px;
+  }
+
+  .home-hero {
+    gap: 22px;
+  }
+
+  .home-hero h1,
+  .hero h1 {
+    font-size: clamp(2.05rem, 12vw, 3.2rem);
+  }
+
+  .home-hero__media,
+  .card,
+  .archive-item,
+  .prose,
+  .split-panel,
+  .status-page {
+    width: min(100% - 24px, 42rem);
+    border-radius: 18px;
+  }
+
+  .prose,
+  .split-panel {
+    padding: 22px;
+  }
+
+  .status-page {
+    padding: 22px;
+  }
+
+  .footer-links {
+    justify-items: start;
+  }
+
+  .footer-links__row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand__text {
+    display: none;
+  }
+
+  .brand__logo {
+    max-width: 96px;
+  }
+
+  .site-header__inner {
+    grid-template-columns: auto minmax(6rem, 1fr) auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .articles-index__blocks .content-block--markdown.prose {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .site-navigation .dropdown-menu {
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 4px 0 4px 14px;
+    border: 0;
+    border-left: 2px solid #eef2f7;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .site-navigation .dropdown-item {
+    padding: .62rem 0;
+  }
+}
+
+/* Verified tablet header correction ---------------------------------------
+   Bootstrap declares `.navbar > .container` as flex.  The selector below is
+   deliberately more specific and comes after the base header rules, so the
+   public header remains grid-based on tablet and mobile breakpoints. */
+@media (max-width: 991.98px) {
+  .site-header .navbar > .container.site-header__inner {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(8rem, 1fr) auto;
+    grid-template-areas:
+      "brand search toggle"
+      "navigation navigation navigation";
+    column-gap: 10px;
+    row-gap: 10px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .site-header .brand {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .site-header .header-search--primary {
+    grid-area: search;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .site-header .nav-toggle {
+    grid-area: toggle;
+    justify-self: end;
+  }
+
+  .site-header .site-navigation {
+    grid-area: navigation;
+    grid-column: 1 / -1;
+  }
+
+  .site-header .header-actions--desktop {
+    display: none !important;
+  }
+
+  .site-header .header-actions--mobile {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  .site-header .language-switch-mobile {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .site-header .navbar > .container.site-header__inner {
+    grid-template-columns: minmax(0, auto) minmax(6.5rem, 1fr) auto;
+    gap: 8px;
+  }
+
+  .site-header .brand__text {
+    max-width: 22vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: .92rem;
+  }
+
+  .site-header .header-search .form-control {
+    min-width: 0;
+    padding-inline: 11px;
+  }
+}
+
+@media (max-width: 430px) {
+  .site-header .brand__text {
+    display: none;
+  }
+}

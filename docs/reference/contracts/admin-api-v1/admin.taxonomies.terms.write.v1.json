@@ -1,0 +1,53 @@
+{
+  "contract": "admin.taxonomies.terms.write.v1",
+  "methods": [
+    "POST",
+    "PATCH"
+  ],
+  "paths": [
+    "/admin/api/taxonomies/{key}/terms",
+    "/admin/api/taxonomies/{key}/terms/{id}"
+  ],
+  "permission": "taxonomy.manage",
+  "query": {
+    "language_code": "optional string"
+  },
+  "request": {
+    "data": {
+      "term_key": "news",
+      "label": "Actualités",
+      "slug": "actualites",
+      "parent_id": null,
+      "sort_order": 10,
+      "is_enabled": true
+    }
+  },
+  "response": {
+    "data": {
+      "id": 1,
+      "taxonomy_key": "category",
+      "term_key": "news",
+      "label": "Actualités",
+      "slug": "actualites"
+    },
+    "meta": {
+      "contract": "admin.taxonomies.terms.write.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "TAXONOMY_NOT_FOUND",
+    "TAXONOMY_TERM_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

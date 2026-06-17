@@ -1,0 +1,38 @@
+{
+  "contract": "admin.block_blueprints.index.v1",
+  "method": "GET",
+  "path": "/admin/api/block-blueprints",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer",
+    "content_language_code": "optional enabled content language code"
+  },
+  "response": {
+    "data": {
+      "schema_version": 1,
+      "blueprints": [
+        "NativeBlockBlueprint"
+      ],
+      "fieldsets": "Record<string, Fieldset>",
+      "field_types": [
+        "NativeFieldType"
+      ]
+    },
+    "meta": {
+      "contract": "admin.block_blueprints.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

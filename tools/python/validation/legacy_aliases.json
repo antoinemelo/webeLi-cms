@@ -1,0 +1,632 @@
+{
+  "c0_db_validate": {
+    "target": "database.schema",
+    "validator_id": "DB_SCHEMA",
+    "status": "alias"
+  },
+  "c10_validate_admin_contracts": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c11_validate_release": {
+    "target": "operations.release_structure",
+    "validator_id": "RELEASE_STRUCTURE",
+    "status": "alias"
+  },
+  "c12_validate_local_paths": {
+    "target": "operations.release_structure",
+    "validator_id": "RELEASE_STRUCTURE",
+    "status": "alias"
+  },
+  "c16_validate_publication_pipeline": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c17_validate_regression_guard": {
+    "target": "shared.dependency_boundaries",
+    "validator_id": "DEPENDENCY_BOUNDARIES",
+    "status": "alias"
+  },
+  "c18_validate_editorial_backoffice": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c19_validate_blueprint_public_contract": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c1_validate_publication_contract": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c20_validate_blueprint_governance": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c21_validate_native_search": {
+    "target": "database.projections",
+    "validator_id": "PROJECTION_DEFINITIONS",
+    "status": "alias"
+  },
+  "c22_validate_headless_v1": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c23_validate_maintenance_context": {
+    "target": "operations.release_structure",
+    "validator_id": "RELEASE_STRUCTURE",
+    "status": "alias"
+  },
+  "c24_validate_global_iam_roles": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c25_validate_archive_menu_permissions": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c26_validate_documentation_alignment": {
+    "target": "documentation.contracts",
+    "validator_id": "DOCUMENTATION_CONTRACTS",
+    "status": "alias"
+  },
+  "c27_validate_editorial_v1_baseline": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c28_validate_security_headless_v1": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c29_validate_production_release": {
+    "target": "operations.release_structure",
+    "validator_id": "RELEASE_STRUCTURE",
+    "status": "alias"
+  },
+  "c2_validate_editorial_block_security": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c30_validate_v1_final": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c31_validate_public_appearance_contract": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c32_validate_security_headers": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c33_validate_public_api_rate_limit": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c34_validate_public_api_bearer_auth": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c35_validate_public_api_cors_scopes": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c36_validate_publication_webhooks_outbox": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c37_validate_webhook_signature": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c38_validate_webhook_test_endpoint": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c39_validate_webhook_retry": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c3_validate_public_runtime": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c40_validate_webhook_disable": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c41_validate_iam_totp_2fa": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c41_validate_openapi_headless_v1": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c42_validate_admin_security_backoffice": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c42_validate_sdk_headless_v1": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c43_validate_integrated_security_backoffice": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c43_validate_public_api_docs": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c44_validate_settings_tabs_not_main_menu": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c45_validate_totp_activation_copy_ui": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c46_validate_email_2fa_passwordless": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c47_validate_email_2fa_user_advanced": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c48_validate_security_permissions_matrix": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c49_validate_security_blueprints": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c4_validate_multisite_contract": {
+    "target": "content.site_locale",
+    "validator_id": "MULTISITE_LOCALE_MODEL",
+    "status": "alias"
+  },
+  "c50_validate_settings_security_tabs_ux": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c51_validate_unified_field_help_hints": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c52_validate_security_delete_actions": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c53_validate_security_ops": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c54_validate_security_ops_homogeneous_ui": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c55_validate_media_s3_storage": {
+    "target": "operations.media",
+    "validator_id": "MEDIA_STORAGE_MODEL",
+    "status": "alias"
+  },
+  "c56_validate_frontend_runtime": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c57_validate_studio_recent_content_parity": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c58_validate_article_block_display_policy": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c59_validate_article_block_meta_layout": {
+    "target": "configuration.repository_layout",
+    "validator_id": "REPOSITORY_LAYOUT",
+    "status": "alias"
+  },
+  "c5_validate_project_layout": {
+    "target": "configuration.repository_layout",
+    "validator_id": "REPOSITORY_LAYOUT",
+    "status": "alias"
+  },
+  "c60_validate_mobile_article_meta": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c61_validate_article_block_mobile_meta": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c62_validate_headless_examples": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c63_validate_admin_headless_api_ux": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c64_validate_public_api_docs_serving": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c65_validate_headless_frontend_integration": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c66_validate_editor_revision_permissions": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c67_validate_sqlite_storage_baseline": {
+    "target": "database.schema",
+    "validator_id": "DB_SCHEMA",
+    "status": "alias"
+  },
+  "c68_validate_editorial_status_sync": {
+    "target": "database.projections",
+    "validator_id": "PROJECTION_DEFINITIONS",
+    "status": "alias"
+  },
+  "c69_validate_webhook_ping_ui_persistence": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "c6_validate_route_integrity": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c70_validate_module_foundation": {
+    "target": "configuration.repository_layout",
+    "validator_id": "REPOSITORY_LAYOUT",
+    "status": "alias"
+  },
+  "c71_validate_module_blueprint_governance": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c72_validate_module_admin_governance": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c73_validate_forms_system_module": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c74_validate_runtime_autoload": {
+    "target": "configuration.repository_layout",
+    "validator_id": "REPOSITORY_LAYOUT",
+    "status": "alias"
+  },
+  "c75_validate_admin_modules_visibility": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c76_validate_admin_modules_menu_cleanup": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c77_validate_modules_permissions_matrix": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "c78_validate_modules_quick_actions_and_forms_title": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c79_validate_forms_blueprint_title_audit": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c7_validate_public_projection_integrity": {
+    "target": "database.projections",
+    "validator_id": "PROJECTION_DEFINITIONS",
+    "status": "alias"
+  },
+  "c80_validate_forms_blueprint_header_frontend": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c81_validate_modules_blueprint_header": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "c82_validate_modules_quick_action_icons": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c83_validate_admin_quick_action_icons_and_bundle": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c84_validate_quick_action_svg_icons": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c85_validate_ai_database": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c86_validate_ai_module": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "c87_validate_ai_tests_ux": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c88_validate_editorial_import_export": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "c89_validate_content_repository_architecture": {
+    "target": "shared.dependency_boundaries",
+    "validator_id": "DEPENDENCY_BOUNDARIES",
+    "status": "alias"
+  },
+  "c8_validate_admin_api_security": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c90_validate_public_api_unification": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c91_validate_public_api_v1_only": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "c92_validate_final_consolidation": {
+    "target": "shared.dependency_boundaries",
+    "validator_id": "DEPENDENCY_BOUNDARIES",
+    "status": "alias"
+  },
+  "c9_validate_sitemap_contract": {
+    "target": "content.site_locale",
+    "validator_id": "MULTISITE_LOCALE_MODEL",
+    "status": "alias"
+  },
+  "g10_validate_visual_editor": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "g11_validate_admin_api_contracts": {
+    "target": "api.specification",
+    "validator_id": "API_SPEC",
+    "status": "alias"
+  },
+  "g15_validate_editorial_truth": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "g2_validate_forms_module": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "g3_validate_cookies_module": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "g4_validate_iam_admin": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "g5_validate_native_block_content": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "g6_validate_preview_contract": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "g8_validate_block_blueprints": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "g9_validate_editor_blocks": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "validate_ai_database": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_ai_module": {
+    "target": "configuration.config_consistency",
+    "validator_id": "CONFIG_CONSISTENCY",
+    "status": "alias"
+  },
+  "validate_blueprint_integrity": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "validate_blueprint_legacy_removal": {
+    "target": "content.blueprints",
+    "validator_id": "BLUEPRINT_SCHEMA",
+    "status": "alias"
+  },
+  "validate_content_editing": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_content_list_public_url_basepath": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_cross_database_consistency": {
+    "target": "database.schema",
+    "validator_id": "DB_SCHEMA",
+    "status": "alias"
+  },
+  "validate_documentation_canonical": {
+    "target": "documentation.contracts",
+    "validator_id": "DOCUMENTATION_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_dual_export_artifacts": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_editorial_import_execution": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_editorial_import_inspection": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_editorial_package_format": {
+    "target": "content.contracts",
+    "validator_id": "CONTENT_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_evaluation_documentation": {
+    "target": "documentation.contracts",
+    "validator_id": "DOCUMENTATION_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_imports_exports_facade": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_public_documentation": {
+    "target": "documentation.contracts",
+    "validator_id": "DOCUMENTATION_CONTRACTS",
+    "status": "alias"
+  },
+  "validate_release_security_packaging": {
+    "target": "security.baseline",
+    "validator_id": "SECURITY_BASELINE",
+    "status": "alias"
+  },
+  "validate_seeded_blocks": {
+    "target": "database.schema",
+    "validator_id": "DB_SCHEMA",
+    "status": "alias"
+  },
+  "validate_static_export_backoffice": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_static_export_contract": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_static_export_documentation": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_static_export_output": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  },
+  "validate_static_export_permissions": {
+    "target": "permissions.model",
+    "validator_id": "PERMISSION_MODEL",
+    "status": "alias"
+  },
+  "validate_static_export_source": {
+    "target": "operations.manifests",
+    "validator_id": "OPERATIONS_MANIFESTS",
+    "status": "alias"
+  }
+}

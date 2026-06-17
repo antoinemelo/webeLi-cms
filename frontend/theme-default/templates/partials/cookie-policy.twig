@@ -1,0 +1,91 @@
+{% set policy = cookie_policy|default({}) %}
+{% set texts = policy.texts|default({}) %}
+{% set categories = policy.categories|default([]) %}
+{% set services = policy.services|default([]) %}
+
+<section class="cookie-policy my-4" aria-labelledby="cookie-policy-title">
+  <div class="p-4 p-lg-5 bg-body-tertiary rounded-4 border mb-4">
+    <h2 id="cookie-policy-title" class="h3 mb-3">{{ texts.preferences_title|default('Gérer vos préférences de cookies', true) }}</h2>
+    <p class="lead mb-3">{{ texts.banner_summary|default('Nous utilisons des cookies nécessaires au fonctionnement du site. Les autres cookies ne sont activés qu’avec votre accord.', true) }}</p>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-primary" data-cookie-consent-manage>{{ texts.manage_link_label|default('Gérer mes cookies', true) }}</button>
+    </div>
+  </div>
+
+  {% if texts.legal_notice_html|default('') %}
+    <div class="alert alert-light border" role="note">{{ texts.legal_notice_html|raw }}</div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    {% for category in categories %}
+      <div class="col-12 col-lg-6">
+        <article class="card h-100 shadow-sm border-0">
+          <div class="card-body">
+            <div class="d-flex justify-content-between gap-3 align-items-start">
+              <h3 class="h5 mb-2">{{ category.name|default(category.category_key) }}</h3>
+              {% if category.is_required|default(0) == 1 %}
+                <span class="badge text-bg-secondary">Nécessaire</span>
+              {% elseif category.is_preselected|default(0) == 1 %}
+                <span class="badge text-bg-info">Précoché</span>
+              {% else %}
+                <span class="badge text-bg-light border">Facultatif</span>
+              {% endif %}
+            </div>
+            <p class="mb-0 text-secondary">{{ category.description|default('') }}</p>
+          </div>
+        </article>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center gap-3">
+      <h3 class="h5 mb-0">Services et cookies déclarés</h3>
+      <span class="badge text-bg-light border">{{ services|length }} service{{ services|length > 1 ? 's' : '' }}</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Service</th>
+            <th scope="col">Catégorie</th>
+            <th scope="col">Fournisseur</th>
+            <th scope="col">Finalité</th>
+            <th scope="col">Durée</th>
+            <th scope="col">Cookies</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in services %}
+            <tr>
+              <th scope="row">
+                {{ service.name|default(service.service_key) }}
+                {% if service.privacy_url|default('') %}
+                  <br><a class="small" href="{{ service.privacy_url }}" rel="nofollow noopener" target="_blank">Politique du fournisseur</a>
+                {% endif %}
+              </th>
+              <td><code>{{ service.category_key|default('') }}</code></td>
+              <td>{{ service.provider_name|default('') }}</td>
+              <td>{{ service.purpose|default(service.description|default('')) }}</td>
+              <td>{{ service.duration|default('Session') }}</td>
+              <td>
+                {% set declaredCookies = service.cookies|default([]) %}
+                {% if declaredCookies %}
+                  <ul class="list-unstyled mb-0 small">
+                    {% for cookie in declaredCookies %}
+                      <li><code>{{ cookie.cookie_name }}</code>{% if cookie.duration|default('') %} · {{ cookie.duration }}{% endif %}{% if cookie.domain|default('') %} · {{ cookie.domain }}{% endif %}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <span class="text-secondary">Aucun cookie documenté</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="text-secondary">Aucun service facultatif n’est déclaré pour le moment.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

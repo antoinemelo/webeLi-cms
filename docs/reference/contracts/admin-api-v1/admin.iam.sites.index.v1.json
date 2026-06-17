@@ -1,0 +1,40 @@
+{
+  "contract": "admin.iam.sites.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "paths": {
+    "index": "/admin/api/iam/sites"
+  },
+  "permission": "users.read",
+  "request": {},
+  "response": {
+    "data": {
+      "sites": [
+        {
+          "id": 1,
+          "site_key": "main",
+          "name": "Site principal",
+          "default_language_code": "fr",
+          "is_active": true,
+          "host": "example.test",
+          "base_path": ""
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.iam.sites.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

@@ -1,0 +1,64 @@
+{% set type = block.type|default('paragraph') %}
+{% set data = block.data|default(block) %}
+
+{% if type == 'heading' %}
+  {% set level = data.level|default(2) %}
+  {% set safeLevel = level in [2, 3, 4] ? level : 2 %}
+  <h{{ safeLevel }}>{{ data.text|default('') }}</h{{ safeLevel }}>
+{% elseif type == 'lead' %}
+  <p class="lead">{{ data.text|default('') }}</p>
+{% elseif type == 'paragraph' %}
+  <p>{{ data.text|default('')|nl2br }}</p>
+{% elseif type == 'quote' %}
+  <figure class="border-start border-4 ps-3 my-4">
+    <blockquote class="blockquote mb-2">{{ data.text|default('')|nl2br }}</blockquote>
+{% if data.caption|default('') %}
+    <figcaption class="blockquote-footer mb-0">{{ data.caption }}</figcaption>
+{% endif %}
+  </figure>
+{% elseif type == 'image' %}
+  <figure class="figure my-4">
+    <img class="figure-img img-fluid rounded-4" src="{{ data.src|default('') }}" alt="{{ data.alt|default('') }}" loading="lazy">
+{% if data.caption|default('') %}
+    <figcaption class="figure-caption">{{ data.caption }}</figcaption>
+{% endif %}
+  </figure>
+{% elseif type == 'table' %}
+  <div class="table-responsive my-4">
+    <table class="table table-striped table-hover align-middle">
+{% if data.headers|default([]) %}
+      <thead>
+        <tr>
+{% for cell in data.headers %}
+          <th scope="col">{{ cell }}</th>
+{% endfor %}
+        </tr>
+      </thead>
+{% endif %}
+      <tbody>
+{% for row in data.rows|default([]) %}
+        <tr>
+{% for cell in row %}
+          <td>{{ cell }}</td>
+{% endfor %}
+        </tr>
+{% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% elseif type == 'cards' %}
+  <div class="row g-4 my-4">
+{% for card in data.items|default([]) %}
+    <div class="col-md-6 col-xl-4">
+      <article class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <h3 class="h5 card-title">{{ card.title|default('') }}</h3>
+          <p class="card-text text-body-secondary">{{ card.text|default('') }}</p>
+        </div>
+      </article>
+    </div>
+{% endfor %}
+  </div>
+{% else %}
+  <p>{{ data.text|default('')|nl2br }}</p>
+{% endif %}

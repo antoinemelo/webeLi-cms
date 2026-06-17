@@ -1,0 +1,81 @@
+{
+  "contract": "admin.profile.v1",
+  "methods": [
+    "GET",
+    "PATCH"
+  ],
+  "paths": {
+    "show": "/admin/api/profile",
+    "update": "/admin/api/profile"
+  },
+  "permission": "authenticated user",
+  "headers": {
+    "PATCH": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "PATCH": {
+      "data": {
+        "email": "required email, max 254 chars",
+        "first_name": "required string, max 120 chars",
+        "last_name": "optional string, max 120 chars",
+        "locale": "required BCP-like locale, example fr-CH"
+      }
+    }
+  },
+  "response": {
+    "data": {
+      "profile": {
+        "id": 1,
+        "email": "admin@example.test",
+        "first_name": "Admin",
+        "last_name": "CMS",
+        "name": "Admin CMS",
+        "locale": "fr-CH",
+        "is_active": true,
+        "last_login_at": "2026-05-02 10:00:00",
+        "created_at": "2026-05-02 10:00:00",
+        "updated_at": "2026-05-02 10:00:00"
+      },
+      "schema": {
+        "version": "profile.schema.v1",
+        "fields": [
+          "email",
+          "first_name",
+          "last_name",
+          "locale"
+        ]
+      },
+      "actions": {
+        "update": {
+          "method": "PATCH",
+          "path": "/admin/api/profile"
+        },
+        "change_password": {
+          "method": "PATCH",
+          "path": "/admin/api/profile/password"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.profile.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "CSRF_TOKEN_REJECTED",
+    "INVALID_JSON",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

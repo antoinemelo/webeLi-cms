@@ -1,0 +1,115 @@
+{
+  "contract": "public.health.v1",
+  "kind": "schema",
+  "summary": "Vérifier la disponibilité de l’API headless v1.",
+  "description": "Retourne un statut minimal dans le contexte site/langue résolu, sans lire de contenu éditorial.",
+  "method": "GET",
+  "source": "PublicHeadlessController::health",
+  "security": "Public endpoint; no bearer token required for monitoring; no draft data exposed.",
+  "path": "/api/v1/health",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok"
+              ]
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.health.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Site ou langue invalide via le contexte résolu.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      },
+      "fields": {
+        "site": [
+          "Site invalide."
+        ],
+        "lang": [
+          "Langue invalide."
+        ]
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/health?site=main&lang=fr",
+    "response": {
+      "data": {
+        "status": "ok"
+      },
+      "meta": {
+        "contract": "public.health.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "site_key": "main",
+        "language_code": "fr"
+      }
+    }
+  }
+}

@@ -1,0 +1,77 @@
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta_title|default(title|default(app_name)) }}</title>
+  <meta name="description" content="{{ meta_description|default(site_localization.default_meta_description|default('CMS éditorial SEO-first, responsive et multilingue.')) }}">
+{% if geo_summary|default(ai_summary|default('')) %}
+  <meta name="ai-summary" content="{{ geo_summary|default(ai_summary) }}">
+{% endif %}
+  <meta name="generator" content="DEC CMS">
+  <meta name="robots" content="{{ meta_robots|default(status|default(200) >= 400 ? 'noindex,follow' : 'index,follow') }}">
+{% if is_preview|default(false) %}
+  <meta name="amcms-preview" content="revision">
+{% endif %}
+{% if canonical|default('') %}
+  <link rel="canonical" href="{{ canonical }}">
+{% endif %}
+{% for lang in languages|default([]) %}
+  <link rel="alternate" hreflang="{{ lang.hreflang|default(lang.code) }}" href="{{ lang.absolute_url|default(lang.url) }}">
+{% endfor %}
+{% if x_default_url|default('') %}
+  <link rel="alternate" hreflang="x-default" href="{{ x_default_url }}">
+{% endif %}
+  <link rel="sitemap" type="application/xml" href="{{ sitemap_url|default('/sitemap.xml') }}">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="{{ llms_txt_url|default('/llms.txt') }}">
+{% if site_favicon_url|default('') %}
+  <link rel="icon" href="{{ site_favicon_url }}">
+  <link rel="shortcut icon" href="{{ site_favicon_url }}">
+{% endif %}
+{% if site_apple_touch_icon_url|default(site_favicon_url|default('')) %}
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ site_apple_touch_icon_url|default(site_favicon_url) }}">
+{% endif %}
+  <meta property="og:type" content="{{ og_type|default('website') }}">
+  <meta property="og:site_name" content="{{ site_localization.site_title|default(site.name|default(app_name)) }}">
+  <meta property="og:title" content="{{ og_title|default(meta_title|default(title|default(app_name))) }}">
+  <meta property="og:description" content="{{ og_description|default(meta_description|default(site_localization.default_meta_description|default(''))) }}">
+{% if canonical|default('') %}
+  <meta property="og:url" content="{{ canonical }}">
+{% endif %}
+{% if og_image|default('') %}
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{ og_image_alt|default(meta_title|default(title|default(app_name))) }}">
+{% endif %}
+{% if og_locale|default('') %}
+  <meta property="og:locale" content="{{ og_locale }}">
+{% endif %}
+{% for locale in og_locale_alternates|default([]) %}
+  <meta property="og:locale:alternate" content="{{ locale }}">
+{% endfor %}
+{% if article_published_time|default('') %}
+  <meta property="article:published_time" content="{{ article_published_time }}">
+{% endif %}
+{% if article_modified_time|default('') %}
+  <meta property="article:modified_time" content="{{ article_modified_time }}">
+{% endif %}
+  <meta name="twitter:card" content="{{ twitter_card|default('summary_large_image') }}">
+  <meta name="twitter:title" content="{{ twitter_title|default(og_title|default(meta_title|default(title|default(app_name)))) }}">
+  <meta name="twitter:description" content="{{ twitter_description|default(og_description|default(meta_description|default(site_localization.default_meta_description|default('')))) }}">
+{% if twitter_image|default(og_image|default('')) %}
+  <meta name="twitter:image" content="{{ twitter_image|default(og_image) }}">
+  <meta name="twitter:image:alt" content="{{ twitter_image_alt|default(og_image_alt|default(meta_title|default(title|default(app_name)))) }}">
+{% endif %}
+{% if json_ld|default('') %}
+  <script type="application/ld+json">
+{{ json_ld|raw }}
+  </script>
+{% endif %}
+  <link rel="stylesheet" href="{{ asset('/frontend/shared/vendor/bootstrap/5.3.3/css/bootstrap.min.css') }}">
+{% if appearance_css|default('') %}
+  <style id="amcms-appearance">{{ appearance_css|raw }}</style>
+{% endif %}
+  <link rel="stylesheet" href="{{ asset('/frontend/theme-pulse/assets/css/app.css') }}">
+{% if visual_editing|default(false) %}
+  <link rel="stylesheet" href="{{ asset('/frontend/theme-pulse/assets/css/visual-editing.css') }}">
+{% endif %}
+</head>

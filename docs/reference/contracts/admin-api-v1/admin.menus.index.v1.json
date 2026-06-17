@@ -1,0 +1,30 @@
+{
+  "contract": "admin.menus.index.v1",
+  "method": "GET",
+  "path": "/admin/api/menus",
+  "permission": "menu.read",
+  "response": {
+    "data": [
+      {
+        "id": 1,
+        "menu_key": "main",
+        "menu_location": "header",
+        "name": "Menu principal"
+      }
+    ],
+    "meta": {
+      "contract": "admin.menus.index.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "MENU_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

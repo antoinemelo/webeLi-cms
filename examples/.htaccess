@@ -1,0 +1,13 @@
+# Exemples headless publics : README et fichiers texte servis en UTF-8.
+Options -Indexes
+AddDefaultCharset UTF-8
+AddType "text/markdown; charset=UTF-8" .md
+<FilesMatch "\.(html|md|js|mjs|ts|tsx|vue|astro|json|css|example)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</FilesMatch>

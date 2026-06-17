@@ -1,0 +1,38 @@
+{
+  "contract": "admin.fieldsets.show.v1",
+  "methods": [
+    "GET"
+  ],
+  "paths": [
+    "/admin/api/fieldsets/{key}"
+  ],
+  "permission": "blueprints.read",
+  "response": {
+    "data": {
+      "fieldset_key": "seo_basic",
+      "label": "SEO de base",
+      "fields": [
+        {
+          "field_handle": "seo_title",
+          "field_type": "text"
+        }
+      ],
+      "used_by": []
+    },
+    "meta": {
+      "contract": "admin.fieldsets.show.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_ERROR",
+    "CONTENT_TYPE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

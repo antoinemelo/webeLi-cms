@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://am-cms.local/schemas/editorial-package/1.0/blueprint.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "blueprint_key",
+    "resource_type",
+    "version",
+    "status",
+    "is_active",
+    "label",
+    "definition",
+    "block_blueprints"
+  ],
+  "properties": {
+    "blueprint_key": {
+      "$ref": "definitions.schema.json#/$defs/portableKey"
+    },
+    "resource_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "const": "published"
+    },
+    "is_active": {
+      "const": true
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "definition": {
+      "type": "object",
+      "required": [
+        "schema",
+        "ui_schema",
+        "validation",
+        "seo_policy",
+        "routing_policy",
+        "workflow_policy",
+        "translation_policy",
+        "permissions_policy"
+      ]
+    },
+    "block_blueprints": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}

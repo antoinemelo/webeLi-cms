@@ -1,0 +1,55 @@
+{
+  "contract": "public.cookies.config.v1",
+  "kind": "schema",
+  "summary": "Lire la configuration publique des cookies.",
+  "description": "Retourne catégories, services et textes publics pour le site et la langue.",
+  "method": "GET",
+  "source": "canonical public application use case",
+  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "path": "/api/v1/cookies/config",
+  "query_params": {
+    "lang": {
+      "type": "string",
+      "required": false,
+      "description": "Langue active du site."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.cookies.config.v1"
+  },
+  "errors": [],
+  "examples": {
+    "request": "GET /api/v1/cookies/config?lang=fr",
+    "response": {
+      "data": {
+        "enabled": true,
+        "categories": [],
+        "services": []
+      },
+      "meta": {
+        "contract": "public.cookies.config.v1",
+        "site_id": 1,
+        "language_code": "fr"
+      }
+    }
+  }
+}

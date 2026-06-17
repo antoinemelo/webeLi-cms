@@ -1,0 +1,50 @@
+{
+  "contract": "admin.media.hygiene.v1",
+  "method": "GET",
+  "path": "/admin/api/media/hygiene",
+  "permission": "media.read",
+  "query": {
+    "site_id": "optional integer",
+    "lang": "optional language code",
+    "limit": "optional integer, 1 to 200"
+  },
+  "response": {
+    "data": {
+      "language_code": "fr",
+      "summary": {
+        "total_ready": 42,
+        "unused": 3,
+        "images_without_alt": 4,
+        "variant_failures": 0,
+        "metadata_incomplete": 6,
+        "delete_pending": 1
+      },
+      "checks": {
+        "images_without_alt": [],
+        "unused": [],
+        "variant_failures": [],
+        "metadata_incomplete": [],
+        "missing_original_files": []
+      }
+    },
+    "meta": {
+      "contract": "admin.media.hygiene.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr",
+      "limit": 60
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "MEDIA_NOT_FOUND",
+    "MEDIA_UPLOAD_FAILED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

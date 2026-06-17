@@ -1,0 +1,15 @@
+{
+  "name": "amcms-headless-astro-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@amcms/client": "file:../../packages/amcms-client",
+    "astro": "^5.0.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "contract": "admin.fieldsets.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "paths": [
+    "/admin/api/fieldsets"
+  ],
+  "permission": "blueprints.read",
+  "response": {
+    "data": [
+      {
+        "fieldset_key": "seo_basic",
+        "label": "SEO de base",
+        "usage_count": 2
+      }
+    ],
+    "meta": {
+      "contract": "admin.fieldsets.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_ERROR",
+    "CONTENT_TYPE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "contract": "public.forms.show.v1",
+  "kind": "schema",
+  "summary": "Lire un formulaire public.",
+  "description": "Retourne uniquement la définition publique active du formulaire.",
+  "method": "GET",
+  "source": "canonical public application use case",
+  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "path": "/api/v1/forms/{key}",
+  "query_params": {
+    "lang": {
+      "type": "string",
+      "required": false,
+      "description": "Langue active du site."
+    }
+  },
+  "path_params": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "description": "Clé publique de la ressource."
+    }
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "form"
+          ],
+          "properties": {
+            "form": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.forms.show.v1"
+  },
+  "errors": [
+    {
+      "code": "ROUTE_NOT_FOUND",
+      "status": 404,
+      "description": "Formulaire introuvable."
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/forms/contact?lang=fr",
+    "response": {
+      "data": {
+        "form": {
+          "form_key": "contact",
+          "name": "Contact",
+          "fields": []
+        }
+      },
+      "meta": {
+        "contract": "public.forms.show.v1",
+        "site_id": 1,
+        "language_code": "fr"
+      }
+    }
+  }
+}

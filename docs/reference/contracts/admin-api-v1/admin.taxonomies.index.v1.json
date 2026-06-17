@@ -1,0 +1,29 @@
+{
+  "contract": "admin.taxonomies.index.v1",
+  "method": "GET",
+  "path": "/admin/api/taxonomies",
+  "permission": "taxonomy.read",
+  "response": {
+    "data": [
+      {
+        "id": 1,
+        "taxonomy_key": "category",
+        "name": "Catégories",
+        "is_hierarchical": true
+      }
+    ],
+    "meta": {
+      "contract": "admin.taxonomies.index.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

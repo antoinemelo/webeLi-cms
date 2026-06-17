@@ -1,0 +1,18 @@
+# Documentation publique headless v1.
+# Ce dossier contient uniquement des fichiers statiques non sensibles.
+Options -Indexes
+AddDefaultCharset UTF-8
+AddType "text/markdown; charset=UTF-8" .md
+AddType "application/yaml; charset=UTF-8" .yaml .yml
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+</IfModule>
+<FilesMatch "\.(html|md|json|yaml|yml)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+</FilesMatch>

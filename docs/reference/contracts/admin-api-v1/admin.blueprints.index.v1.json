@@ -1,0 +1,31 @@
+{
+  "contract": "admin.blueprints.index.v1",
+  "method": "GET",
+  "path": "/admin/api/blueprints",
+  "permission": "blueprints.read",
+  "response": {
+    "data": [
+      {
+        "id": 1,
+        "blueprint_key": "page",
+        "resource_type": "content_type",
+        "site_id": null,
+        "legacy_content_type_id": 1,
+        "label": "Page",
+        "is_active": true,
+        "active_version": 1
+      }
+    ],
+    "meta": {
+      "contract": "admin.blueprints.index.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

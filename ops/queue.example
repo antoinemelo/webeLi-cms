@@ -1,0 +1,3 @@
+# Définir CMS_ROOT vers la racine réelle de l'installation.
+CMS_ROOT="/chemin/vers/dec-cms"
+php "$CMS_ROOT/backend/bin/console" queue:work

@@ -1,0 +1,32 @@
+<section class="hero hero--compact" aria-labelledby="search-title">
+  <p class="eyebrow">{{ ui.search }}</p>
+  <h1 id="search-title">{{ ui.search_title }}</h1>
+
+  <form class="search-page-form" action="{{ localized_search_url }}" method="get" role="search">
+    <label class="sr-only" for="search-q">{{ ui.search }}</label>
+    <input id="search-q" class="search-box" name="q" value="{{ search_query }}" placeholder="{{ ui.search_placeholder }}" autocomplete="search">
+    {% if search_filters.type %}<input type="hidden" name="type" value="{{ search_filters.type }}">{% endif %}
+    {% if search_filters.taxonomy %}<input type="hidden" name="taxonomy" value="{{ search_filters.taxonomy }}">{% endif %}
+    {% if search_filters.term %}<input type="hidden" name="term" value="{{ search_filters.term }}">{% endif %}
+  </form>
+</section>
+
+{% if search_results %}
+  <section class="archive-list" aria-label="{{ ui.search_results }}">
+    {% for item in search_results %}
+      <article class="archive-item">
+        <div class="meta">{{ item.type_key }}</div>
+        <h2><a href="{{ item.path }}">{{ item.title_html|default(item.title)|raw }}</a></h2>
+
+        {% if item.summary %}
+          <p>{{ item.summary_html|default(item.summary)|raw }}</p>
+        {% endif %}
+        {% if item.taxonomy_labels %}
+          <p class="archive-item__taxonomies">{{ item.taxonomy_labels }}</p>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <p class="empty-state">{{ search_query ? ui.no_results : ui.search_hint }}</p>
+{% endif %}

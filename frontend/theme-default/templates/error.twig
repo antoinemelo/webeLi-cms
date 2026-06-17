@@ -1,0 +1,9 @@
+<section class="hero hero--compact status-page">
+  <div class="status-code">{{ status|default(404) }}</div>
+  <h1>{{ error_title|default(ui.not_found_title) }}</h1>
+  <p>{{ error_message|default(ui.not_found_text) }}</p>
+  <div class="actions">
+    <a class="btn btn--primary" href="{{ localized_home_url }}">{{ ui.back_home }}</a>
+    <a class="btn btn--ghost" href="{{ localized_search_url }}">{{ ui.search }}</a>
+  </div>
+</section>

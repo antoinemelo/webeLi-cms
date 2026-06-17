@@ -1,0 +1,267 @@
+{
+  "contract": "public.media.index.v1",
+  "kind": "schema",
+  "summary": "Lister les médias publics prêts et validés.",
+  "description": "Retourne une liste paginée de médias publics, avec filtre optionnel par media_type.",
+  "method": "GET",
+  "source": "media_assets ready/valid",
+  "security": "Public read endpoint; may be protected by bearer scope media:read; ready/valid assets only; no quarantine/private path exposure.",
+  "path": "/api/v1/media",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    },
+    "limit": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "maximum": 100,
+      "default": 24,
+      "description": "Nombre maximum d'éléments retournés."
+    },
+    "offset": {
+      "type": "integer",
+      "required": false,
+      "minimum": 0,
+      "default": 0,
+      "description": "Décalage zéro-indexé."
+    },
+    "page": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Alternative à offset. Si présent, offset=(page-1)*limit."
+    },
+    "media_type": {
+      "type": "string",
+      "required": false,
+      "enum": [
+        "image",
+        "video",
+        "audio",
+        "document",
+        "binary"
+      ],
+      "description": "Filtre sur le type de média public."
+    },
+    "type": {
+      "type": "string",
+      "required": false,
+      "deprecated": true,
+      "description": "Alias historique de media_type."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "items",
+            "pagination"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "uuid",
+                  "url",
+                  "filename",
+                  "mime_type",
+                  "media_type",
+                  "size_bytes",
+                  "width",
+                  "height",
+                  "alt_text",
+                  "caption",
+                  "title",
+                  "updated_at"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "uuid": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "filename": {
+                    "type": "string"
+                  },
+                  "mime_type": {
+                    "type": "string"
+                  },
+                  "media_type": {
+                    "type": "string",
+                    "enum": [
+                      "image",
+                      "video",
+                      "audio",
+                      "document",
+                      "binary",
+                      ""
+                    ]
+                  },
+                  "size_bytes": {
+                    "type": "integer"
+                  },
+                  "width": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "alt_text": {
+                    "type": "string"
+                  },
+                  "caption": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "pagination": {
+              "type": "object",
+              "required": [
+                "total",
+                "limit",
+                "offset",
+                "has_more"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer"
+                },
+                "limit": {
+                  "type": "integer"
+                },
+                "offset": {
+                  "type": "integer"
+                },
+                "has_more": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.media.index.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "media_type invalide ou contexte/pagination invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      },
+      "fields": {
+        "media_type": [
+          "Type de média invalide."
+        ]
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/media?media_type=image&lang=fr",
+    "response": {
+      "data": {
+        "items": [
+          {
+            "id": 5,
+            "uuid": "uuid",
+            "url": "/storage/media/image.jpg",
+            "filename": "image.jpg",
+            "mime_type": "image/jpeg",
+            "media_type": "image",
+            "size_bytes": 120000,
+            "width": 1200,
+            "height": 800,
+            "alt_text": "Texte alternatif",
+            "caption": "Légende",
+            "title": "Image",
+            "updated_at": "2026-05-02 10:00:00"
+          }
+        ],
+        "pagination": {
+          "total": 1,
+          "limit": 24,
+          "offset": 0,
+          "has_more": false
+        }
+      },
+      "meta": {
+        "contract": "public.media.index.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr",
+        "media_type": "image"
+      }
+    }
+  }
+}

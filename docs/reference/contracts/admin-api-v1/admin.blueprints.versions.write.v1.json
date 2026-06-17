@@ -1,0 +1,40 @@
+{
+  "contract": "admin.blueprints.versions.write.v1",
+  "method": "POST",
+  "path": "/admin/api/blueprints/{key}/versions",
+  "permission": "blueprints.manage",
+  "request": {
+    "version": 2,
+    "status": "draft",
+    "schema": {},
+    "ui_schema": {},
+    "validation": {},
+    "seo_policy": {},
+    "routing_policy": {},
+    "workflow_policy": {},
+    "translation_policy": {},
+    "permissions_policy": {}
+  },
+  "response": {
+    "data": {
+      "id": 2,
+      "blueprint_id": 1,
+      "version": 2,
+      "status": "draft",
+      "is_active": false
+    },
+    "meta": {
+      "contract": "admin.blueprints.versions.write.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_FAILED",
+    "CONTENT_TYPE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

@@ -1,0 +1,59 @@
+# Secrets locaux de déploiement
+ops/ftp.deploy.json
+
+# Artefacts locaux de packaging / déploiement
+storage/exports/*
+!storage/exports/.gitkeep
+!storage/exports/.htaccess
+!storage/exports/static/
+storage/exports/static/*
+!storage/exports/static/.gitkeep
+!storage/exports/static/.htaccess
+storage/deployments/*.json
+storage/deployments/*.ndjson
+storage/deployments/releases/*.json
+!storage/deployments/.gitkeep
+!storage/deployments/releases/.gitkeep
+
+# Bases locales et fichiers temporaires SQLite
+storage/database/*.sqlite
+storage/database/*.sqlite-*
+!storage/database/.gitkeep
+
+# Runtime local
+storage/cache/*
+!storage/cache/.gitkeep
+storage/logs/*.log
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# Dépendances locales de développement
+node_modules/
+frontend/admin-vue/node_modules/
+admin-app/node_modules/
+vendor/
+backend/vendor/
+
+# Python
+__pycache__/
+*.pyc
+
+# Rapports locaux de qualification
+storage/qualification/*
+!storage/qualification/.gitkeep
+!storage/qualification/.htaccess
+
+# Preuves locales d'audit reproductible
+storage/audit-results/*
+!storage/audit-results/.gitkeep
+
+# Sauvegardes locales
+storage/backups/**/*.zip
+storage/backups/**/*.sqlite
+storage/backups/**/*.sqlite-*
+
+# Médias/runtime locaux
+storage/media/public/*
+!storage/media/public/.gitkeep
+storage/media/quarantine/*
+!storage/media/quarantine/.gitkeep

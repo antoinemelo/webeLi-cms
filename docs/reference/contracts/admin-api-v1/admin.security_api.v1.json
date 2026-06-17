@@ -1,0 +1,241 @@
+{
+  "contract": "admin.security_api.v1",
+  "methods": [
+    "GET",
+    "POST",
+    "PATCH",
+    "DELETE"
+  ],
+  "paths": [
+    "/admin/api/security",
+    "/admin/api/security/tokens",
+    "/admin/api/security/tokens/{id}",
+    "/admin/api/security/webhooks",
+    "/admin/api/security/webhooks/{id}",
+    "/admin/api/security/cors/{siteId}",
+    "/admin/api/security/tokens/test",
+    "/admin/api/security/webhooks/{id}/deliveries",
+    "/admin/api/security/webhooks/{id}/ping",
+    "/admin/api/security/webhooks/deliveries/cleanup"
+  ],
+  "permissions": {
+    "read": [
+      "security.tokens.read",
+      "security.webhooks.read",
+      "security.cors.read"
+    ],
+    "create": [
+      "security.tokens.manage",
+      "security.webhooks.manage"
+    ],
+    "update": [
+      "security.tokens.manage",
+      "security.webhooks.manage",
+      "security.cors.manage"
+    ],
+    "delete": [
+      "security.tokens.manage",
+      "security.webhooks.manage"
+    ],
+    "permissions": [
+      "security.tokens.read",
+      "security.tokens.manage",
+      "security.webhooks.read",
+      "security.webhooks.manage",
+      "security.cors.read",
+      "security.cors.manage"
+    ]
+  },
+  "headers": {
+    "read_requests": {
+      "X-Contract-Version": "admin-api-v1"
+    },
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "token_create": {
+      "data": {
+        "name": "Front statique production",
+        "site_id": 1,
+        "scopes": [
+          "headless:read"
+        ],
+        "is_active": true,
+        "expires_at": "2026-12-31 23:59:59"
+      }
+    },
+    "webhook_create": {
+      "data": {
+        "name": "Rebuild front",
+        "url": "https://front.example.test/rebuild",
+        "site_id": 1,
+        "events": [
+          "content.published",
+          "content.unpublished",
+          "content.updated"
+        ],
+        "secret": "change-me-with-at-least-16-chars",
+        "is_active": true,
+        "max_attempts": 5
+      }
+    },
+    "cors_update": {
+      "data": {
+        "origins": [
+          "https://front.example.test"
+        ]
+      }
+    },
+    "token_delete": {
+      "data": {
+        "site_id": 1
+      }
+    },
+    "webhook_delete": {
+      "data": {
+        "site_id": 1
+      }
+    },
+    "token_test": {
+      "data": {
+        "token": "amcms_plain_token_to_test",
+        "site_id": 1,
+        "scope": "headless:read"
+      }
+    },
+    "webhook_ping": {
+      "data": {
+        "site_id": 1
+      }
+    },
+    "webhook_deliveries_cleanup": {
+      "data": {
+        "site_id": 1,
+        "older_than_days": 30,
+        "statuses": [
+          "succeeded",
+          "failed"
+        ]
+      }
+    }
+  },
+  "response": {
+    "data": {
+      "sites": [
+        {
+          "id": 1,
+          "site_key": "main",
+          "name": "Site principal",
+          "default_language_code": "fr",
+          "is_active": true
+        }
+      ],
+      "tokens": [
+        {
+          "id": 1,
+          "name": "Front statique production",
+          "site_id": 1,
+          "scopes": "headless:read",
+          "is_active": true,
+          "expires_at": null,
+          "last_used_at": null,
+          "created_at": "2026-06-01 00:00:00",
+          "updated_at": "2026-06-01 00:00:00"
+        }
+      ],
+      "plain_token": "amcms_example_once_only_when_created",
+      "webhooks": [
+        {
+          "id": 1,
+          "site_id": 1,
+          "name": "Rebuild front",
+          "url": "https://front.example.test/rebuild",
+          "events": [
+            "content.published"
+          ],
+          "secret": "masked-or-editable-secret",
+          "is_active": true,
+          "max_attempts": 5,
+          "last_attempt_at": null,
+          "next_attempt_at": "2026-06-01 00:00:00",
+          "created_at": "2026-06-01 00:00:00",
+          "updated_at": "2026-06-01 00:00:00"
+        }
+      ],
+      "cors": [
+        {
+          "site_id": 1,
+          "origins": [
+            "https://front.example.test"
+          ]
+        }
+      ],
+      "webhook_stats": {
+        "pending": 0,
+        "failed": 0,
+        "succeeded": 0
+      },
+      "available_scopes": [
+        "headless:read",
+        "content:read",
+        "routes:read",
+        "menus:read",
+        "taxonomies:read",
+        "media:read",
+        "*"
+      ],
+      "available_webhook_events": [
+        "content.published",
+        "content.unpublished",
+        "content.updated",
+        "*"
+      ],
+      "message": "Opération effectuée.",
+      "token_test": {
+        "valid": true,
+        "message": "Token valide. Dernier usage mis à jour."
+      },
+      "webhook_deliveries": [
+        {
+          "id": 1,
+          "webhook_id": 1,
+          "outbox_event_id": 1,
+          "delivery_id": "wh_ping_1_example",
+          "event_topic": "webhook.ping",
+          "status": "succeeded",
+          "attempts": 1,
+          "http_status": 200,
+          "response_body": "OK",
+          "last_error": null,
+          "created_at": "2026-06-02 00:00:00",
+          "next_attempt_at": "2026-06-02 00:00:00",
+          "last_attempt_at": "2026-06-02 00:00:00",
+          "delivered_at": "2026-06-02 00:00:00"
+        }
+      ],
+      "cleanup": {
+        "deleted": 12
+      }
+    },
+    "meta": {
+      "contract": "admin.security_api.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

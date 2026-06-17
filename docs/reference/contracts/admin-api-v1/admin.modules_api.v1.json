@@ -1,0 +1,134 @@
+{
+  "contract": "admin.modules_api.v1",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "paths": [
+    "/admin/api/modules",
+    "/admin/api/modules/{key}",
+    "/admin/api/modules/{key}/install",
+    "/admin/api/modules/{key}/enable",
+    "/admin/api/modules/{key}/disable",
+    "/admin/api/modules/{key}/migrate",
+    "/admin/api/modules/{key}/health",
+    "/admin/api/modules/{key}/blueprints",
+    "/admin/api/modules/{key}/resources/{resource}/schema"
+  ],
+  "permissions": {
+    "GET": "modules.read",
+    "POST": "modules.manage"
+  },
+  "headers": {
+    "POST": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "query": {
+    "site_id": "optional integer; defaults to resolved current site",
+    "content_language_code": "optional content language code",
+    "ui_language_code": "optional admin interface language code: fr | en"
+  },
+  "request": {
+    "data": {
+      "site_id": "optional integer",
+      "content_language_code": "optional content language code",
+      "language_code": "deprecated alias of content_language_code",
+      "lang": "deprecated alias of content_language_code"
+    }
+  },
+  "response": {
+    "data": {
+      "modules": [
+        {
+          "key": "string",
+          "name": "string",
+          "version": "string",
+          "description": "string",
+          "installed": "boolean",
+          "enabled": "boolean",
+          "dependencies": "array of module keys",
+          "databases": "declared SQLite databases",
+          "permissions": "declared IAM permission keys",
+          "blueprints": "declared blueprint keys",
+          "navigation": "admin navigation entries",
+          "routes": "declared admin/api/headless routes",
+          "contracts": "declared API contracts",
+          "settings_schema": "object",
+          "alerts": "array of dependency/health warnings"
+        }
+      ],
+      "module": {
+        "key": "string",
+        "name": "string",
+        "version": "string",
+        "installed": "boolean",
+        "enabled": "boolean",
+        "health": "object when available"
+      },
+      "actions": {
+        "index": {
+          "method": "GET",
+          "path": "/admin/api/modules"
+        },
+        "show": {
+          "method": "GET",
+          "path": "/admin/api/modules/{key}"
+        },
+        "install": {
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/install"
+        },
+        "enable": {
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/enable"
+        },
+        "disable": {
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/disable"
+        },
+        "migrate": {
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/migrate"
+        },
+        "health": {
+          "method": "GET",
+          "path": "/admin/api/modules/{key}/health"
+        },
+        "blueprints": {
+          "method": "GET",
+          "path": "/admin/api/modules/{key}/blueprints"
+        },
+        "resource_schema": {
+          "method": "GET",
+          "path": "/admin/api/modules/{key}/resources/{resource}/schema"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.modules_api.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "INVALID_JSON",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "VALIDATION_FAILED",
+    "MODULE_NOT_FOUND",
+    "MODULE_DEPENDENCY_MISSING",
+    "MODULE_PROVIDER_INVALID",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

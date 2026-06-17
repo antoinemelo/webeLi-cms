@@ -1,0 +1,165 @@
+{
+  "contract": "admin.seo.audit.v1",
+  "method": "GET",
+  "path": "/admin/api/seo/audit",
+  "permission": "seo.read",
+  "query": {
+    "site_id": "integer optional; site actif résolu depuis le host si absent",
+    "language_code": "string optional; langue active du site",
+    "include_resolved": "boolean optional; false par défaut",
+    "include_technical": "boolean optional; true par défaut"
+  },
+  "response": {
+    "data": {
+      "filters": {
+        "site_id": 1,
+        "language_code": "fr",
+        "include_resolved": false,
+        "include_technical": true
+      },
+      "summary": {
+        "pages_total": 3,
+        "average_score": 82,
+        "issues_total": 2,
+        "technical_checks_total": 8,
+        "technical_checks_failed": 2,
+        "critical": 0,
+        "high": 1,
+        "medium": 2,
+        "low": 0,
+        "resolved": 0,
+        "unresolved": 2
+      },
+      "issues": [
+        {
+          "id": 12,
+          "site_id": 1,
+          "site_key": "main",
+          "resource_type": "content_entry",
+          "resource_id": 42,
+          "language_code": "fr",
+          "issue_code": "short_meta_description",
+          "severity": "medium",
+          "message": "Meta description trop courte",
+          "is_resolved": false,
+          "detected_at": "2026-05-02 10:00:00",
+          "resource": {
+            "title": "Titre public",
+            "entry_key": "page-home",
+            "public_path": "/",
+            "admin_edit_path": "/admin/app/contents/page/42"
+          }
+        }
+      ],
+      "technical_checks": [
+        {
+          "code": "seo.metadata_complete_for_canonical_routes",
+          "severity": "high",
+          "passed": false,
+          "count": 1,
+          "message": "Routes canoniques publiées sans SEO complet",
+          "evidence": [],
+          "recommendation": "Renseigner un meta title unique et une meta description utile pour chaque page publiée."
+        },
+        {
+          "code": "domains.https_and_301_canonical_host",
+          "severity": "high",
+          "passed": false,
+          "count": 1,
+          "message": "Redirections 301 domaine/HTTPS à vérifier",
+          "recommendation": "Définir un domaine primaire, forcer HTTPS et rediriger les variantes www/non-www vers le même hôte canonique.",
+          "evidence": []
+        }
+      ],
+      "pages": [
+        {
+          "resource_type": "content_entry",
+          "resource_id": 42,
+          "language_code": "fr",
+          "title": "Accueil",
+          "entry_key": "home",
+          "content_type_key": "page",
+          "public_path": "/",
+          "admin_edit_path": "/admin/app/contents/page/42",
+          "published_at": "2026-05-02 10:00:00",
+          "scores": {
+            "overall": 78,
+            "search_engines": 80,
+            "technical": 70,
+            "ai_readiness": 82
+          },
+          "status": "good",
+          "issue_count": 3,
+          "checks": [
+            {
+              "code": "canonical.self",
+              "severity": "high",
+              "passed": false,
+              "label": "Canonique cohérente",
+              "recommendation": "La canonique doit pointer vers cette page, sauf consolidation volontaire.",
+              "details": {
+                "canonical_url": "https://webe.li/mod/mod/",
+                "expected_url": "https://webe.li/"
+              }
+            }
+          ],
+          "recommendations": [
+            {
+              "scope": "page",
+              "severity": "high",
+              "code": "canonical.self",
+              "text": "La canonique doit pointer vers cette page, sauf consolidation volontaire."
+            }
+          ],
+          "serp_preview": {
+            "title": "Accueil — DEC CMS",
+            "url": "https://example.test/",
+            "description": "Présentation claire de la page telle qu’elle peut apparaître dans un résultat de recherche."
+          },
+          "ai_preview": {
+            "answer_title": "Accueil — DEC CMS",
+            "summary": "Résumé court utilisé pour évaluer la lisibilité par un assistant IA.",
+            "signals": [
+              "Contenu explicatif suffisant",
+              "Blocs éditoriaux structurés"
+            ]
+          }
+        }
+      ],
+      "guidance": {
+        "score_model": "Score global = 45% moteurs de recherche, 25% technique, 30% lisibilité IA.",
+        "priority_order": [
+          "Indexation et canonique",
+          "Meta title/description",
+          "Contenu structuré",
+          "Données structurées",
+          "Hreflang et liens internes"
+        ],
+        "home_examples": [
+          "Utiliser des redirections 301 pour concentrer le trafic sur le domaine canonique, avec ou sans www.",
+          "Ajouter une favicon et les icônes de site dans le head.",
+          "Corriger toute canonique qui pointe vers une autre page.",
+          "Publier les liens alternatifs hreflang pour les langues actives.",
+          "Varier les textes d’ancrage internes lorsqu’ils sont utilisés plusieurs fois."
+        ]
+      }
+    },
+    "meta": {
+      "contract": "admin.seo.audit.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

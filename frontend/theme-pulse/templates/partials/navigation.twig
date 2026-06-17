@@ -1,0 +1,23 @@
+<ul class="navbar-nav ms-lg-auto align-items-lg-center gap-lg-1" role="list">
+{% for item in menu_items|default([]) %}
+  {% set children = item.children|default([]) %}
+  {% set item_id = 'nav-item-' ~ item.id|default(loop.index|default(0)) %}
+  {% if children|length > 0 %}
+  <li class="nav-item dropdown nav-item--has-children">
+    <div class="nav-parent-control">
+      <a class="nav-link nav-parent-link rounded-pill px-lg-3 {{ item.css_class|default('') }}{% if item.is_current|default(false) or item.is_ancestor|default(false) %} active{% endif %}" href="{{ item.url|default('#') }}" id="{{ item_id }}" aria-haspopup="true" aria-expanded="false"{% if item.is_current|default(false) %} aria-current="page"{% endif %}{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ item.label }}</a>
+      <button class="nav-submenu-toggle dropdown-toggle" type="button" data-submenu-toggle aria-controls="{{ item_id }}-menu" aria-expanded="false" aria-label="{{ ui.open_submenu|default('Ouvrir le sous-menu') }} {{ item.label }}"></button>
+    </div>
+    <ul class="dropdown-menu" id="{{ item_id }}-menu" aria-labelledby="{{ item_id }}">
+      {% for child in children %}
+      <li><a class="dropdown-item {{ child.css_class|default('') }}{% if child.is_current|default(false) %} active{% endif %}" href="{{ child.url }}"{% if child.is_current|default(false) %} aria-current="page"{% endif %}{% if child.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ child.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% else %}
+  <li class="nav-item">
+    <a class="nav-link rounded-pill px-lg-3 {{ item.css_class|default('') }}{% if item.is_current|default(false) %} active{% endif %}" href="{{ item.url }}"{% if item.is_current|default(false) %} aria-current="page"{% endif %}{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ item.label }}</a>
+  </li>
+  {% endif %}
+{% endfor %}
+</ul>

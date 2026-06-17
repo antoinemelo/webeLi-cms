@@ -1,0 +1,80 @@
+{
+  "contract": "admin.entries.revisions.prune.v1",
+  "method": "DELETE",
+  "path": "/admin/api/entries/{id}/revisions/prune-before-published",
+  "permission": "content.revisions.prune",
+  "query": {
+    "site_id": "optional integer; defaults to the resolved current site",
+    "language_code": "optional enabled language code; defaults to the resolved site default language"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "language_code": "fr",
+      "deleted_revisions": 4,
+      "kept_revisions": 3,
+      "published_revision_id": 55,
+      "published_revision_number": 6,
+      "kept_revision_ids": [
+        55,
+        56,
+        57
+      ],
+      "deleted_revision_ids": [
+        11,
+        12,
+        13,
+        14
+      ],
+      "revisions": [
+        {
+          "id": 57,
+          "revision_number": 8,
+          "language_code": "fr",
+          "workflow_status": "draft",
+          "created_at": "2026-05-14 12:28:00",
+          "updated_at": "2026-05-14 12:28:00",
+          "published_at": null,
+          "change_notes": "",
+          "revision_label": "Working draft",
+          "summary": "Contenu éditorial"
+        },
+        {
+          "id": 55,
+          "revision_number": 6,
+          "language_code": "fr",
+          "workflow_status": "published",
+          "created_at": "2026-05-14 12:20:00",
+          "updated_at": "2026-05-14 12:21:00",
+          "published_at": "2026-05-14 12:21:00",
+          "change_notes": "",
+          "revision_label": "Working draft",
+          "summary": "Contenu éditorial"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.entries.revisions.prune.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "VALIDATION_FAILED"
+  ],
+  "notes": [
+    "Le nettoyage est strictement limité à la langue demandée.",
+    "Les candidats supprimés sont les révisions dont revision_number est inférieur à la dernière version publiée et qui ne sont plus protégées par le travail en cours ni par une projection publique.",
+    "La réponse renvoie la liste de révisions restante afin que l'admin puisse rafraîchir l'interface sans afficher de lignes fantômes."
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

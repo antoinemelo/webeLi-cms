@@ -1,0 +1,44 @@
+{
+  "contract": "admin.iam.users.totp.enable.v1",
+  "methods": [
+    "POST"
+  ],
+  "permission": "users.manage",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "POST": {
+      "required": "optional boolean, default true",
+      "mode": "optional string, email by default"
+    }
+  },
+  "response": {
+    "data": {
+      "user": "iam user summary with totp_enabled/totp_required",
+      "recovery_codes": "empty array for email-based 2FA",
+      "message": "..."
+    },
+    "meta": {
+      "contract": "admin.iam.users.totp.enable.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/users/{id}/totp/enable"
+}

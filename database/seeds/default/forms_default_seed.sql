@@ -1,0 +1,35 @@
+-- Seed snapshot genere depuis database.zip pour mod2_v02-e21e.
+-- Ne contient pas de DDL durable; les structures restent dans database/schema, database/modules et database/iam.sql.
+PRAGMA foreign_keys = OFF;
+BEGIN TRANSACTION;
+DELETE FROM "form_rate_limit_hits";
+DELETE FROM "form_notification_deliveries";
+DELETE FROM "form_submission_values";
+DELETE FROM "form_submissions";
+DELETE FROM "form_field_translations";
+DELETE FROM "form_fields";
+DELETE FROM "form_translations";
+DELETE FROM "forms";
+INSERT INTO "forms" ("id", "site_id", "form_key", "status", "is_active", "store_submissions", "notification_enabled", "notification_recipients_json", "notification_subject", "honeypot_field", "min_submit_seconds", "rate_limit_max_attempts", "rate_limit_window_seconds", "settings_json", "created_by_iam_user_id", "updated_by_iam_user_id", "created_at", "updated_at") VALUES (1, 1, 'contact', 'published', 1, 1, 1, '["antoinemelo@gmail.com"]', 'CMS DEC / Demande de contact', 'website', 2, 5, 900, '[]', 1, 1, '2026-05-10 05:48:39', '2026-05-10 05:53:18');
+INSERT INTO "form_translations" ("id", "form_id", "language_code", "name", "description_text", "submit_label", "success_message", "updated_at") VALUES (7, 1, 'de', 'Contact', NULL, 'Senden', 'Vielen Dank, Ihre Nachricht wurde gesendet.', '2026-05-10 05:53:18');
+INSERT INTO "form_translations" ("id", "form_id", "language_code", "name", "description_text", "submit_label", "success_message", "updated_at") VALUES (8, 1, 'en', 'Contact', NULL, 'Send', 'Thank you, your message has been sent.', '2026-05-10 05:53:18');
+INSERT INTO "form_translations" ("id", "form_id", "language_code", "name", "description_text", "submit_label", "success_message", "updated_at") VALUES (9, 1, 'fr', 'Contact', NULL, 'Envoyer', 'Merci, votre message a été envoyé.', '2026-05-10 05:53:18');
+INSERT INTO "form_fields" ("id", "form_id", "field_key", "field_type", "sort_order", "is_required", "is_active", "width", "default_value", "validation_json", "settings_json", "created_at", "updated_at") VALUES (7, 1, 'name', 'text', 0, 1, 1, 'half', NULL, '[]', '[]', '2026-05-10 05:53:18', '2026-05-10 05:53:18');
+INSERT INTO "form_fields" ("id", "form_id", "field_key", "field_type", "sort_order", "is_required", "is_active", "width", "default_value", "validation_json", "settings_json", "created_at", "updated_at") VALUES (8, 1, 'email', 'email', 1, 1, 1, 'half', NULL, '[]', '[]', '2026-05-10 05:53:18', '2026-05-10 05:53:18');
+INSERT INTO "form_fields" ("id", "form_id", "field_key", "field_type", "sort_order", "is_required", "is_active", "width", "default_value", "validation_json", "settings_json", "created_at", "updated_at") VALUES (9, 1, 'message', 'textarea', 2, 1, 1, 'full', NULL, '{"max":5000}', '[]', '2026-05-10 05:53:18', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (19, 7, 'de', 'Name', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (20, 7, 'en', 'Name', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (21, 7, 'fr', 'Nom', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (22, 8, 'de', 'E-Mail', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (23, 8, 'en', 'Email', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (24, 8, 'fr', 'Courriel', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (25, 9, 'de', 'Nachricht', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (26, 9, 'en', 'Message', NULL, NULL, '[]', '2026-05-10 05:53:18');
+INSERT INTO "form_field_translations" ("id", "field_id", "language_code", "label", "placeholder", "help_text", "options_json", "updated_at") VALUES (27, 9, 'fr', 'Message', NULL, NULL, '[]', '2026-05-10 05:53:18');
+DELETE FROM "sqlite_sequence";
+INSERT INTO "sqlite_sequence" ("name", "seq") VALUES ('form_field_translations', 27);
+INSERT INTO "sqlite_sequence" ("name", "seq") VALUES ('form_fields', 9);
+INSERT INTO "sqlite_sequence" ("name", "seq") VALUES ('form_translations', 9);
+INSERT INTO "sqlite_sequence" ("name", "seq") VALUES ('forms', 1);
+COMMIT;
+PRAGMA foreign_keys = ON;

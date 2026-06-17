@@ -1,0 +1,7 @@
+<form class="{{ className|default('search-form') }}" action="{{ action|default('') }}" method="get" role="search">
+  <label class="visually-hidden" for="{{ id }}">{{ label }}</label>
+  <div class="input-group input-group-lg">
+    <input id="{{ id }}" class="form-control" name="q" value="{{ query|default('') }}" placeholder="{{ placeholder }}" autocomplete="search" inputmode="search">
+    <button class="btn btn-primary" type="submit">{{ label }}</button>
+  </div>
+</form>

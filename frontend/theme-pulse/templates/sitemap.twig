@@ -1,0 +1,58 @@
+{% set texts = sitemap_ui|default({}) %}
+{% set cards = sitemap_cards|default([]) %}
+
+<article class="sitemap-page" data-entry-key="{{ entry_key }}">
+  {% if is_preview %}
+    <span class="badge">{{ ui.preview }}</span>
+  {% endif %}
+
+  <header class="sitemap-page__hero" aria-labelledby="sitemap-title">
+    <p class="eyebrow">{{ texts.eyebrow|default(entry_title) }}</p>
+    <h1 id="sitemap-title">{{ entry_title|default(texts.title) }}</h1>
+    {% if entry_summary|default('') %}
+      <p>{{ entry_summary }}</p>
+    {% else %}
+      <p>{{ texts.intro }}</p>
+    {% endif %}
+    <div class="sitemap-page__actions" aria-label="{{ texts.eyebrow|default(entry_title) }}">
+      <a class="btn btn-primary rounded-pill" href="{{ sitemap_home_url }}">{{ texts.home_action }}</a>
+      <a class="btn btn-outline-primary rounded-pill" href="{{ sitemap_xml_url }}">{{ sitemap_count }} {{ texts.xml_count }}</a>
+    </div>
+  </header>
+
+  {% if entry_blocks|default([]) %}
+    <div class="sitemap-page__intro-blocks prose">
+      {% include 'partials/content-blocks.twig' %}
+    </div>
+  {% endif %}
+
+  {% if cards %}
+    <div class="sitemap-page__grid" aria-label="{{ texts.eyebrow|default(entry_title) }}">
+      {% for card in cards %}
+        <section class="sitemap-card" aria-labelledby="sitemap-section-{{ loop.index }}">
+          <div class="sitemap-card__header">
+            <h2 id="sitemap-section-{{ loop.index }}">{{ card.title }}</h2>
+            <span>{{ card.count }}</span>
+          </div>
+          <ul class="sitemap-card__links">
+            {% for link in card.links %}
+              <li>
+                <a href="{{ link.url }}">
+                  <strong>{{ link.title }}</strong>
+                </a>
+                {% if link.lastmod %}
+                  <time datetime="{{ link.lastmod }}">{{ texts.updated }} {{ link.lastmod }}</time>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <section class="sitemap-card sitemap-card--empty">
+      <h2>{{ texts.empty_title }}</h2>
+      <p>{{ texts.empty_text }}</p>
+    </section>
+  {% endif %}
+</article>

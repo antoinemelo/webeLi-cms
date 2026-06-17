@@ -1,0 +1,40 @@
+{
+  "contract": "admin.forms.submissions.index.v1",
+  "method": "GET",
+  "path": "/admin/api/forms/{id}/submissions",
+  "permission": "forms.read",
+  "query": {
+    "limit": "optional integer default 100"
+  },
+  "response": {
+    "data": {
+      "submissions": [
+        {
+          "id": 12,
+          "status": "received",
+          "language_code": "fr",
+          "ip_hash": "sha256:...",
+          "created_at": "2026-05-07T10:30:00Z",
+          "data_json": {
+            "email": "nom@example.org",
+            "message": "Bonjour"
+          }
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.forms.submissions.index.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "ROUTE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

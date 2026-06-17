@@ -1,0 +1,14 @@
+{
+  "key": "pulse",
+  "name": "Pulse",
+  "version": "1.0.0",
+  "description": "Template public outdoor moderne, coloré et énergique, pensé pour les activités sportives, touristiques et expérientielles.",
+  "supports": {
+    "dark_mode": false,
+    "custom_blocks": true,
+    "seo_meta_preview": true,
+    "fullscreen_hero": true,
+    "theme_preview": true,
+    "visual_editing": true
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "contract": "admin.visual.block_locks.v1",
+  "method": "GET",
+  "path": "/admin/api/visual/entries/{id}/block-locks",
+  "permission": "content.read",
+  "query": {
+    "site_id": 1,
+    "language_code": "fr"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "language_code": "fr",
+      "locks": [
+        {
+          "block_id": "hero_home",
+          "language_code": "fr",
+          "locked_by_iam_user_id": 1,
+          "locked_by_label": "superadmin@webe.li",
+          "is_current_user": true,
+          "lock_token": "...",
+          "expires_at": "2026-05-14 08:20:49",
+          "ttl_seconds": 120
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.visual.block_locks.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

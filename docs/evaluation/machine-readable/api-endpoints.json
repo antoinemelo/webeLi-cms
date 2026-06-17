@@ -1,0 +1,380 @@
+[
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-content-backend-routes-api-php-cb254965a8",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/content",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-content-by-path-backend-routes-api-php-5b4087df1d",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/content-by-path",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-content-type-backend-routes-api-php-514f18cfff",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/content/{type}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-content-type-slug-backend-routes-api-php-63251d0dab",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/content/{type}/{slug}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-cookies-config-backend-routes-api-php-4a476574d2",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/cookies/config",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-post-api-v1-cookies-consent-backend-routes-api-php-8e2fed81dd",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/api/v1/cookies/consent",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-forms-key-backend-routes-api-php-f35b6603dc",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/forms/{key}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-post-api-v1-forms-key-submit-backend-routes-api-php-1a0fd0f7af",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/api/v1/forms/{key}/submit",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-health-backend-routes-api-php-65a2e2a777",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/health",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-languages-backend-routes-api-php-a54920cd6f",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/languages",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-media-backend-routes-api-php-321299913a",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/media",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-media-id-backend-routes-api-php-35becaf5cc",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/media/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-menus-backend-routes-api-php-a6d4e65a3a",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/menus",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-menus-key-backend-routes-api-php-a2b06fdc0f",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/menus/{key}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Modules/Forms/FormsModuleProvider.php"
+    ],
+    "id": "api-endpoint-get-api-v1-modules-forms-forms-schema-backend-src-modules-forms-formsmoduleprovider-php-a92ee0910e",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/modules/forms/forms/schema",
+    "source": [
+      "backend/src/Modules/Forms/FormsModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-modules-module-resource-schema-backend-routes-api-php-232215eec5",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/modules/{module}/{resource}/schema",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-route-backend-routes-api-php-05c3dfe817",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/route",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-routes-backend-routes-api-php-25da575144",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/routes",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-search-backend-routes-api-php-efb8975230",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/search",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-taxonomies-backend-routes-api-php-61170b60f3",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/taxonomies",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-taxonomies-taxonomy-backend-routes-api-php-8ec24436ab",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/taxonomies/{taxonomy}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  }
+]

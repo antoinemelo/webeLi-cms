@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DEC CMS — Documentation API headless v1</title>
+  <meta name="description" content="Documentation publique statique de l’API headless v1 DEC CMS pour développeurs front-end.">
+  <style>
+    :root { color-scheme: light; --bg:#f7f7f8; --panel:#fff; --text:#1f2933; --muted:#52606d; --line:#d9e2ec; --accent:#0f766e; --code:#111827; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+    header { background: var(--panel); border-bottom: 1px solid var(--line); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px; }
+    .hero { display: grid; gap: 14px; }
+    h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1; }
+    h2 { margin-top: 36px; }
+    h3 { margin-top: 24px; }
+    p { max-width: 760px; }
+    a { color: var(--accent); font-weight: 650; }
+    .lead { font-size: 1.14rem; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 20px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    pre { overflow: auto; background: var(--code); color: #f9fafb; padding: 16px; border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #eef2f7; }
+    .pill { display:inline-block; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: #eefbf8; color: #115e59; font-size: .9rem; }
+    footer { color: var(--muted); border-top: 1px solid var(--line); margin-top: 40px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap hero">
+    <span class="pill">API publique headless v1</span>
+    <h1>Documentation headless DEC CMS</h1>
+    <p class="lead">Une documentation statique, claire et directement exploitable par un développeur front-end tiers. La source de vérité machine-readable est le fichier <a href="./openapi.v1.json">openapi.v1.json</a>.</p>
+  </div>
+</header>
+<main class="wrap">
+  <section>
+    <h2>Démarrage</h2>
+    <div class="grid">
+      <article class="card"><h3>Quickstart</h3><p>Paramètres communs, endpoints principaux et premier appel API.</p><p><a href="./quickstart.md">Lire quickstart.md</a></p></article>
+      <article class="card"><h3>Authentification</h3><p>Usage de <code>Authorization: Bearer &lt;token&gt;</code> et scopes de lecture.</p><p><a href="./authentication.md">Lire authentication.md</a></p></article>
+      <article class="card"><h3>Erreurs</h3><p>Structure des erreurs publiques et statuts fréquents.</p><p><a href="./errors.md">Lire errors.md</a></p></article>
+      <article class="card"><h3>Exemples</h3><p>Exemples <code>fetch</code> pour route, content, menus, search et media.</p><p><a href="./examples.md">Lire examples.md</a></p></article>
+      <article class="card"><h3>SDK TypeScript</h3><p>Client minimal basé sur <code>fetch</code>, sans dépendance runtime ni framework imposé.</p><p><code>packages/amcms-client/</code></p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Paramètres communs</h2>
+    <table>
+      <thead><tr><th>Paramètre</th><th>Rôle</th></tr></thead>
+      <tbody>
+        <tr><td><code>site</code></td><td>Clé publique du site à cibler. Optionnel.</td></tr>
+        <tr><td><code>site_id</code></td><td>Identifiant technique du site. Optionnel et prioritaire sur <code>site</code> lorsqu’il est fourni.</td></tr>
+        <tr><td><code>lang</code></td><td>Code langue demandé. Si absent ou non actif, le site peut utiliser sa langue par défaut.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Authentification</h2>
+    <p>Quand la protection publique est activée, les appels utilisent un token Bearer.</p>
+    <pre><code>Authorization: Bearer &lt;token&gt;</code></pre>
+    <p>Scopes documentés : <code>content:read</code>, <code>media:read</code>, <code>search:read</code>, <code>menus:read</code>, <code>taxonomies:read</code>, <code>headless:read</code>.</p>
+  </section>
+
+  <section>
+    <h2>Exemple fetch</h2>
+    <pre><code>const response = await fetch('https://example.com/mod/site_a/api/v1/route?path=/&amp;site=site_a&amp;lang=fr', {
+  headers: {
+    'Accept': 'application/json',
+    'Authorization': 'Bearer &lt;token&gt;'
+  }
+});
+const route = await response.json();</code></pre>
+  </section>
+
+  <section>
+    <h2>Endpoints documentés</h2>
+    <p>La surface publique est limitée aux endpoints <code>GET /api/v1/*</code> décrits dans <a href="./openapi.v1.json">openapi.v1.json</a> : health, route, routes, content, content-by-path, languages, menus, taxonomies, media et search. Un SDK TypeScript minimal est disponible dans <code>packages/amcms-client/</code> pour les intégrations qui préfèrent un client typé.</p>
+  </section>
+
+  <section>
+    <h2>Ce que l’API ne fait pas encore</h2>
+    <p>Cette version ne fournit pas GraphQL, ne permet pas de mutation publique, n’expose pas les brouillons et ne fournit pas de preview avancée. Elle privilégie une surface de lecture stable pour l’intégration front-end.</p>
+  </section>
+</main>
+<footer>
+  <div class="wrap">Documentation statique générable sans solution lourde. Contrat technique : <a href="./openapi.v1.json">openapi.v1.json</a>.</div>
+</footer>
+</body>
+</html>

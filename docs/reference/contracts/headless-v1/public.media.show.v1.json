@@ -1,0 +1,252 @@
+{
+  "contract": "public.media.show.v1",
+  "kind": "schema",
+  "summary": "Lire un média public prêt et validé.",
+  "description": "Retourne un média public avec URL normalisée et variantes prêtes générées.",
+  "method": "GET",
+  "source": "media_assets ready/valid + variants ready",
+  "security": "Public read endpoint; may be protected by bearer scope media:read; ready/valid assets only; no quarantine/private path exposure.",
+  "path": "/api/v1/media/{id}",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    }
+  },
+  "path_params": {
+    "id": {
+      "type": "integer",
+      "required": true,
+      "minimum": 1,
+      "description": "Identifiant technique du média."
+    }
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "id",
+            "uuid",
+            "url",
+            "filename",
+            "mime_type",
+            "media_type",
+            "size_bytes",
+            "width",
+            "height",
+            "alt_text",
+            "caption",
+            "title",
+            "variants"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "uuid": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "mime_type": {
+              "type": "string"
+            },
+            "media_type": {
+              "type": "string",
+              "enum": [
+                "image",
+                "video",
+                "audio",
+                "document",
+                "binary",
+                ""
+              ]
+            },
+            "size_bytes": {
+              "type": "integer"
+            },
+            "width": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "height": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "alt_text": {
+              "type": "string"
+            },
+            "caption": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "variants": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "url",
+                  "width",
+                  "height",
+                  "format",
+                  "mime_type",
+                  "size_bytes"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "mime_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.media.show.v1"
+  },
+  "errors": [
+    {
+      "code": "MEDIA_NOT_FOUND",
+      "status": 404,
+      "description": "Média absent, non prêt, invalide ou hors site.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    },
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Identifiant média invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      },
+      "fields": {
+        "id": [
+          "Identifiant média invalide."
+        ]
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/media/5?lang=fr",
+    "response": {
+      "data": {
+        "id": 5,
+        "uuid": "uuid",
+        "url": "/storage/media/image.jpg",
+        "filename": "image.jpg",
+        "mime_type": "image/jpeg",
+        "media_type": "image",
+        "size_bytes": 120000,
+        "width": 1200,
+        "height": 800,
+        "alt_text": "Texte alternatif",
+        "caption": "Légende",
+        "title": "Image",
+        "variants": [
+          {
+            "key": "thumb",
+            "url": "/storage/media/image-thumb.webp",
+            "width": 320,
+            "height": 213,
+            "format": "webp",
+            "mime_type": "image/webp",
+            "size_bytes": 18000
+          }
+        ]
+      },
+      "meta": {
+        "contract": "public.media.show.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr",
+        "media_id": 5
+      }
+    }
+  }
+}

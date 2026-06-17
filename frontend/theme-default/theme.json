@@ -1,0 +1,10 @@
+{
+  "key": "default",
+  "name": "Default Theme",
+  "version": "2.0.0",
+  "supports": {
+    "dark_mode": false,
+    "custom_blocks": true,
+    "seo_meta_preview": true
+  }
+}

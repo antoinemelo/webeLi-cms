@@ -1,0 +1,141 @@
+{
+  "contract": "admin.content_types.editor_schema.v1",
+  "method": "GET",
+  "path": "/admin/api/content-types/{type}/editor-schema",
+  "permission": "content.read",
+  "response": {
+    "data": {
+      "content_type": {
+        "type_key": "article",
+        "name": "Article",
+        "singular_label": "Article",
+        "plural_label": "Articles",
+        "default_status": "draft",
+        "capabilities": {
+          "localizations": true,
+          "revisions": true,
+          "workflow": true,
+          "permalink": true,
+          "layout": true,
+          "seo": true,
+          "taxonomies": true
+        }
+      },
+      "fields": [
+        {
+          "field_key": "subtitle",
+          "label": "Sous-titre",
+          "field_type": "text",
+          "is_required": false,
+          "is_localized": true
+        }
+      ],
+      "editor_tabs": [
+        {
+          "key": "content",
+          "label": "Contenu",
+          "fields": [
+            "subtitle"
+          ]
+        }
+      ],
+      "seo_policy": {
+        "enabled": true
+      },
+      "taxonomy_policy": {
+        "enabled": true,
+        "taxonomies": [
+          {
+            "id": 1,
+            "site_id": 1,
+            "taxonomy_key": "categories",
+            "name": "Categories",
+            "description": "",
+            "is_hierarchical": true,
+            "is_localized": true,
+            "seo_enabled": true,
+            "archive_enabled": true,
+            "is_required": true,
+            "max_terms": 1,
+            "terms": [
+              {
+                "id": 1,
+                "taxonomy_id": 1,
+                "parent_id": null,
+                "term_key": "actualites",
+                "name": "Actualités",
+                "slug": "actualites",
+                "full_path": "/categories/actualites",
+                "sort_order": 10,
+                "localizations": {
+                  "fr": {
+                    "name": "Actualités",
+                    "slug": "actualites",
+                    "full_path": "/categories/actualites"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "site_id": 1,
+            "taxonomy_key": "tags",
+            "name": "Tags",
+            "is_required": false,
+            "max_terms": null,
+            "terms": [
+              {
+                "id": 3,
+                "taxonomy_id": 2,
+                "parent_id": null,
+                "term_key": "cms",
+                "name": "CMS",
+                "slug": "cms",
+                "full_path": "/tags/cms",
+                "sort_order": 10,
+                "localizations": {
+                  "fr": {
+                    "name": "CMS",
+                    "slug": "cms",
+                    "full_path": "/tags/cms"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "workflow_policy": {
+        "enabled": true,
+        "states": [
+          "draft",
+          "review",
+          "published",
+          "archived",
+          "scheduled"
+        ],
+        "publish_requires_revision_id": true
+      },
+      "routing_policy": {
+        "enabled": true,
+        "language_scoped": true
+      },
+      "template_binding": {}
+    },
+    "meta": {
+      "contract": "admin.content_types.editor_schema.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CONTENT_TYPE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

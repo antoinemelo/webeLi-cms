@@ -1,0 +1,9 @@
+{% set blocks = entry_blocks|default([]) %}
+
+{% if blocks %}
+  <div class="content-blocks" data-content-blocks>
+    {% for block in blocks %}
+      {% include 'partials/content-block.twig' with { block: block, block_index: loop.index0, is_preview: is_preview|default(false), visual_editing: visual_editing|default(false) } only %}
+    {% endfor %}
+  </div>
+{% endif %}

@@ -1,0 +1,344 @@
+[
+  {
+    "command": "python3 tools/cms.py validate --validator REPOSITORY_LAYOUT",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/configuration/repository_layout.py"
+    ],
+    "execution_result": null,
+    "id": "validator-repository-layout-07566eb46b",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "REPOSITORY_LAYOUT",
+    "source": [
+      "tools/python/validation/configuration/repository_layout.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator CONFIG_CONSISTENCY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/configuration/config_consistency.py"
+    ],
+    "execution_result": null,
+    "id": "validator-config-consistency-2c517a4541",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "CONFIG_CONSISTENCY",
+    "source": [
+      "tools/python/validation/configuration/config_consistency.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator DB_SCHEMA",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/schema.py"
+    ],
+    "execution_result": null,
+    "id": "validator-db-schema-3dcd9b5fc5",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "DB_SCHEMA",
+    "source": [
+      "tools/python/validation/database/schema.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator DB_INVENTORY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/inventory.py"
+    ],
+    "execution_result": null,
+    "id": "validator-db-inventory-a119b52f6f",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "DB_INVENTORY",
+    "source": [
+      "tools/python/validation/database/inventory.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PROJECTION_DEFINITIONS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/projections.py"
+    ],
+    "execution_result": null,
+    "id": "validator-projection-definitions-5dde5fc823",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PROJECTION_DEFINITIONS",
+    "source": [
+      "tools/python/validation/database/projections.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator BLUEPRINT_SCHEMA",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/content/blueprints.py"
+    ],
+    "execution_result": null,
+    "id": "validator-blueprint-schema-2423d511f8",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "BLUEPRINT_SCHEMA",
+    "source": [
+      "tools/python/validation/content/blueprints.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator CONTENT_CONTRACTS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/content/contracts.py"
+    ],
+    "execution_result": null,
+    "id": "validator-content-contracts-a4f9c3dc34",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "CONTENT_CONTRACTS",
+    "source": [
+      "tools/python/validation/content/contracts.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator MULTISITE_LOCALE_MODEL",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/content/site_locale.py"
+    ],
+    "execution_result": null,
+    "id": "validator-multisite-locale-model-6df23f74d0",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "MULTISITE_LOCALE_MODEL",
+    "source": [
+      "tools/python/validation/content/site_locale.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PERMISSION_MODEL",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/permissions/model.py"
+    ],
+    "execution_result": null,
+    "id": "validator-permission-model-4fcbb51500",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PERMISSION_MODEL",
+    "source": [
+      "tools/python/validation/permissions/model.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator API_SPEC",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/api/specification.py"
+    ],
+    "execution_result": null,
+    "id": "validator-api-spec-e6944f9381",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "API_SPEC",
+    "source": [
+      "tools/python/validation/api/specification.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator SECURITY_BASELINE",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/security/baseline.py"
+    ],
+    "execution_result": null,
+    "id": "validator-security-baseline-00af30c8c3",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "SECURITY_BASELINE",
+    "source": [
+      "tools/python/validation/security/baseline.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator MEDIA_STORAGE_MODEL",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/operations/media.py"
+    ],
+    "execution_result": null,
+    "id": "validator-media-storage-model-bc7a3898ed",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "MEDIA_STORAGE_MODEL",
+    "source": [
+      "tools/python/validation/operations/media.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator OPERATIONS_MANIFESTS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/operations/manifests.py"
+    ],
+    "execution_result": null,
+    "id": "validator-operations-manifests-f1f8f20586",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "OPERATIONS_MANIFESTS",
+    "source": [
+      "tools/python/validation/operations/manifests.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator RELEASE_STRUCTURE",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/operations/release_structure.py"
+    ],
+    "execution_result": null,
+    "id": "validator-release-structure-ff4ac01e41",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "RELEASE_STRUCTURE",
+    "source": [
+      "tools/python/validation/operations/release_structure.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator DOCUMENTATION_CONTRACTS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/documentation/contracts.py"
+    ],
+    "execution_result": null,
+    "id": "validator-documentation-contracts-851aac6774",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "DOCUMENTATION_CONTRACTS",
+    "source": [
+      "tools/python/validation/documentation/contracts.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator DEPENDENCY_BOUNDARIES",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/shared/dependency_boundaries.py"
+    ],
+    "execution_result": null,
+    "id": "validator-dependency-boundaries-ccaabe92cf",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "DEPENDENCY_BOUNDARIES",
+    "source": [
+      "tools/python/validation/shared/dependency_boundaries.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator RUNTIME_INTEGRITY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/qualification/runtime_integrity.py"
+    ],
+    "execution_result": null,
+    "id": "validator-runtime-integrity-4fbe62429a",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "RUNTIME_INTEGRITY",
+    "source": [
+      "tools/python/validation/qualification/runtime_integrity.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator STATIC_EXPORT_DRY_RUN",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/qualification/static_export_dry_run.py"
+    ],
+    "execution_result": null,
+    "id": "validator-static-export-dry-run-e315597537",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "STATIC_EXPORT_DRY_RUN",
+    "source": [
+      "tools/python/validation/qualification/static_export_dry_run.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator BACKUP_RESTORE_ROUNDTRIP",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/qualification/backup_restore_roundtrip.py"
+    ],
+    "execution_result": null,
+    "id": "validator-backup-restore-roundtrip-68afdc9574",
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "BACKUP_RESTORE_ROUNDTRIP",
+    "source": [
+      "tools/python/validation/qualification/backup_restore_roundtrip.py"
+    ],
+    "status": "unverified"
+  }
+]

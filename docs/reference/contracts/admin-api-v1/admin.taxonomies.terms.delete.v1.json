@@ -1,0 +1,30 @@
+{
+  "contract": "admin.taxonomies.terms.delete.v1",
+  "method": "DELETE",
+  "path": "/admin/api/taxonomies/{key}/terms/{id}",
+  "permission": "taxonomy.manage",
+  "response": {
+    "data": {
+      "deleted": true,
+      "taxonomy_key": "category",
+      "term_id": 1
+    },
+    "meta": {
+      "contract": "admin.taxonomies.terms.delete.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "SITE_NOT_FOUND",
+    "TAXONOMY_NOT_FOUND",
+    "TAXONOMY_TERM_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

@@ -1,0 +1,63 @@
+APP_ENV=production
+APP_DEBUG=0
+APP_BASE_PATH=/mod
+APP_LOCALE=fr
+APP_FALLBACK_LOCALE=en
+APP_TEMPLATE_ENGINE=twig
+APP_THEME=theme-default
+APP_TWIG_CACHE=storage/cache/twig
+
+# Chemins de dépendances résolus depuis la racine du projet.
+# Valeurs par défaut si absentes: ./vendor/node_modules/ et ./vendor/twig/.
+APP_VUE_NODE_MODULES_PATH=./vendor/node_modules/
+APP_TWIG_VENDOR_PATH=./vendor/twig/
+# Recommandé en production : valeur aléatoire stable d’au moins 32 caractères.
+# Si absent ou laissé à change-this-preview-key, le CMS génère storage/security/preview_signing.key.
+APP_PREVIEW_SIGNING_KEY=
+APP_WORKER_MAX_ATTEMPTS=5
+
+
+# Runtime public léger en production.
+# En production, garder APP_AUTO_MAINTENANCE=0 : migrations, seeds, modules et
+# content types doivent être préparés par les scripts de préflight/console.
+APP_AUTO_MAINTENANCE=0
+APP_PUBLIC_MODULE_ROUTES=0
+APP_PUBLIC_API_MODULE_ROUTES=0
+APP_ADMIN_MODULE_ROUTES=1
+APP_START_SESSION_FOR_PUBLIC=0
+
+# Password reset / mail
+APP_PUBLIC_BASE_URL=https://exemple.test
+APP_PASSWORD_RESET_LIFETIME_MINUTES=30
+APP_PASSWORD_RESET_COOLDOWN_SECONDS=600
+APP_PASSWORD_MIN_LENGTH=10
+APP_PASSWORD_RESET_REVOKE_SESSIONS=1
+APP_PASSWORD_RESET_RATE_LIMIT_ATTEMPTS=5
+APP_PASSWORD_RESET_RATE_LIMIT_WINDOW=900
+MAIL_TRANSPORT=mail
+MAIL_FROM_EMAIL=no-reply@exemple.test
+MAIL_FROM_NAME="DEC CMS"
+
+# Public headless API rate limiting (/api/v1/*)
+
+# CORS headless v1 par site : les origines cross-site se configurent aussi dans
+# site_settings(namespace=api, setting_key=cors_allowed_origins).
+APP_PUBLIC_API_CORS_ENABLED=1
+APP_PUBLIC_API_CORS_ALLOW_CURRENT_SITE=1
+APP_PUBLIC_API_CORS_DEFAULT_ORIGINS=[]
+APP_PUBLIC_API_CORS_MAX_AGE=600
+
+APP_PUBLIC_API_RATE_LIMIT_ENABLED=1
+APP_PUBLIC_API_RATE_LIMIT_DEFAULT_MAX=120
+APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW=60
+APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX=60
+APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW=60
+APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX=240
+APP_PUBLIC_API_RATE_LIMIT_MEDIA_WINDOW=60
+APP_PUBLIC_API_RATE_LIMIT_CLEANUP_PROBABILITY=5
+APP_PUBLIC_API_RATE_LIMIT_TRUST_PROXY_HEADERS=0
+
+# Headless API Bearer auth (/api/v1/*)
+APP_PUBLIC_API_AUTH_ENABLED=1
+APP_PUBLIC_API_AUTH_PROTECT_ALL=1
+APP_PUBLIC_API_AUTH_DEFAULT_SCOPE=content:read

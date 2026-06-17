@@ -1,0 +1,12 @@
+# Exports are private in the PHP runtime package.
+# Static sites or static ZIP exports must be published through an explicit release/export process,
+# not by exposing storage/exports directly.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Deny from all
+</IfModule>

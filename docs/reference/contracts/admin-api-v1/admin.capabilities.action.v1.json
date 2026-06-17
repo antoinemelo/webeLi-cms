@@ -1,0 +1,52 @@
+{
+  "contract": "admin.capabilities.action.v1",
+  "methods": ["POST"],
+  "paths": [
+    "/admin/api/capabilities/{key}/dry-run",
+    "/admin/api/capabilities/{key}/apply"
+  ],
+  "permission": "fields.read",
+  "supported_versions": ["admin-api-v1"],
+  "headers": {
+    "Content-Type": "application/json",
+    "X-CSRF-Token": "required",
+    "X-Contract-Version": "admin-api-v1"
+  },
+  "request": {
+    "data": {
+      "site_id": "optional integer",
+      "input": "optional object; capability-specific input. If omitted, data itself is used as input.",
+      "confirm": "optional boolean; required for apply when the capability requires confirmation",
+      "confirmed": "optional boolean alias"
+    }
+  },
+  "response": {
+    "data": {
+      "ok": "boolean",
+      "action": "capability key",
+      "mode": "dry_run | apply",
+      "status": "success | not_found | forbidden | validation_failed | confirmation_required | failed | not_implemented",
+      "data": "object; dry-run details or execution output",
+      "warnings": "array",
+      "errors": "array"
+    },
+    "meta": {
+      "contract": "admin.capabilities.action.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "INVALID_JSON",
+    "VALIDATION_FAILED",
+    "ROUTE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ]
+}

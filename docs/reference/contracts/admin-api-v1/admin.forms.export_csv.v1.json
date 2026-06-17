@@ -1,0 +1,27 @@
+{
+  "contract": "admin.forms.export_csv.v1",
+  "method": "GET",
+  "path": "/admin/api/forms/{id}/export.csv",
+  "permission": "forms.read",
+  "response_format": "text/csv; charset=utf-8",
+  "download_filename": "form-{id}-submissions.csv",
+  "response": {
+    "data": {
+      "csv": "semicolon separated CSV stream containing submission rows"
+    },
+    "meta": {
+      "contract": "admin.forms.export_csv.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "ROUTE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

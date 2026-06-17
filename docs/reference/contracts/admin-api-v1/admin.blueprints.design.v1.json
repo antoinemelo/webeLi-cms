@@ -1,0 +1,105 @@
+{
+  "contract": "admin.blueprints.design.v1",
+  "methods": [
+    "GET",
+    "PUT"
+  ],
+  "paths": [
+    "/admin/api/blueprints/{key}/design"
+  ],
+  "response": {
+    "data": {
+      "blueprint": {
+        "blueprint_key": "page",
+        "resource_type": "content_type",
+        "label": "Page"
+      },
+      "sections": [
+        {
+          "section_key": "content",
+          "label": "Contenu",
+          "fields": [
+            {
+              "field_handle": "title",
+              "field_type": "text",
+              "label": "Titre",
+              "width": 100,
+              "is_system": true
+            }
+          ]
+        }
+      ],
+      "fieldsets": [],
+      "audit": {
+        "score": 92,
+        "status": "ok|warnings|blocking",
+        "blocking_errors": [],
+        "warnings": [],
+        "optimizations": [],
+        "items": [
+          {
+            "blueprint_key": "page",
+            "resource_type": "content_type",
+            "score": 92,
+            "status": "warnings",
+            "blocking_errors": [],
+            "warnings": [],
+            "optimizations": [],
+            "notes": []
+          }
+        ],
+        "notes": [],
+        "help": {
+          "blocking": "Bloque uniquement ce qui rendrait le modèle non publiable, ambigu ou destructeur.",
+          "warning": "Signale un risque réel sans empêcher le travail éditorial.",
+          "optimization": "Amélioration actionnable qui ajoute une capacité absente.",
+          "note": "Fallback natif ou simplification éditoriale assumée."
+        }
+      },
+      "governance": [
+        {
+          "key": "protected_system_fields",
+          "level": "blocking",
+          "message": "Les champs système protégés ne peuvent pas être supprimés brutalement."
+        }
+      ],
+      "presets": [
+        {
+          "preset_key": "page_standard_seo",
+          "label": "Page standard SEO",
+          "description": "Page classique avec titre, slug et SEO explicite lorsque l’éditeur veut surcharger les fallbacks.",
+          "recommended_fields": [
+            "title",
+            "slug",
+            "seo_title",
+            "seo_description",
+            "canonical_url",
+            "robots",
+            "og_title",
+            "og_description",
+            "og_image"
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.blueprints.design.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "VALIDATION_ERROR",
+    "CONTENT_TYPE_NOT_FOUND",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "permissions": {
+    "GET": "blueprints.read",
+    "PUT": "blueprints.manage"
+  }
+}

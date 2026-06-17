@@ -1,0 +1,64 @@
+{
+  "contract": "admin.visual.translation_status.v1",
+  "method": "GET",
+  "path": "/admin/api/visual/entries/{id}/translation-status",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer; defaults to the resolved current site",
+    "language_code": "optional enabled language code; defaults to the resolved site default language"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "site_id": 1,
+      "language_code": "fr",
+      "languages": [
+        {
+          "language_code": "fr",
+          "label": "Français",
+          "is_current": true,
+          "has_draft": true,
+          "working_revision_id": 57,
+          "published_revision_id": 55,
+          "missing": [],
+          "status": "complete",
+          "completed_at": "2026-05-14 08:18:49"
+        },
+        {
+          "language_code": "en",
+          "label": "English",
+          "is_current": false,
+          "has_draft": false,
+          "working_revision_id": 0,
+          "published_revision_id": 0,
+          "missing": [
+            "title",
+            "slug",
+            "meta_title",
+            "meta_description",
+            "blocks"
+          ],
+          "status": "missing",
+          "completed_at": null
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.visual.translation_status.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

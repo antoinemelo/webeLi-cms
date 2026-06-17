@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "alt_texts": {
+        "fr": "Illustration"
+      },
+      "filename": "hero.txt",
+      "media_key": "media.hero",
+      "metadata": {},
+      "mime_type": "text/plain",
+      "path": "media/files/hero.txt",
+      "references": [
+        "page.home"
+      ],
+      "sha256": "db16d7d3ca40ab2cf833db650ae85b5956792b70470c08f5c7f34e46524673b4",
+      "size": 14
+    }
+  ]
+}

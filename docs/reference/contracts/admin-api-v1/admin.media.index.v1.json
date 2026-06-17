@@ -1,0 +1,75 @@
+{
+  "contract": "admin.media.index.v1",
+  "method": "GET",
+  "path": "/admin/api/media",
+  "permission": "media.read",
+  "query": {
+    "site_id": "optional integer",
+    "type": "optional enum:image,video,audio,document,binary",
+    "q": "optional string",
+    "status": "optional string default ready",
+    "limit": "optional integer default 80 max 200"
+  },
+  "response": {
+    "data": {
+      "assets": [
+        {
+          "id": 1,
+          "filename": "image.jpg",
+          "mime_type": "image/jpeg",
+          "media_type": "image",
+          "folder_name": "Images",
+          "public_url": "/storage/media/public/1/2026/05/image.jpg",
+          "thumbnail_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp",
+          "variants": [
+            {
+              "variant_key": "content_480",
+              "public_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp",
+              "width": 480,
+              "format": "webp"
+            }
+          ],
+          "responsive_sets": {
+            "content": [
+              {
+                "variant_key": "content_480",
+                "public_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp",
+                "width": 480
+              }
+            ],
+            "hero": [
+              {
+                "variant_key": "hero_1280",
+                "public_url": "/storage/media/public/1/2026/05/variants/image-hero_1280.webp",
+                "width": 1280
+              }
+            ],
+            "open_graph": [
+              {
+                "variant_key": "og_1200x630",
+                "public_url": "/storage/media/public/1/2026/05/variants/image-og_1200x630.webp",
+                "width": 1200,
+                "height": 630
+              }
+            ]
+          },
+          "created_at": "2026-04-30T10:00:00Z"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.media.index.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "MEDIA_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

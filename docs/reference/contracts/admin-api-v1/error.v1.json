@@ -1,0 +1,52 @@
+{
+  "contract": "error.v1",
+  "response": {
+    "error": {
+      "code": "VALIDATION_FAILED",
+      "message": "Le contenu contient des erreurs.",
+      "details": {},
+      "fields": {
+        "title": [
+          "title est obligatoire."
+        ]
+      },
+      "request_id": "20260430000000-0123456789abcdef"
+    },
+    "meta": {
+      "contract": "error.v1",
+      "request_id": "20260430000000-0123456789abcdef"
+    }
+  },
+  "status_by_code": {
+    "AUTH_REQUIRED": 401,
+    "AUTHZ_FORBIDDEN": 403,
+    "CSRF_TOKEN_REJECTED": 403,
+    "CONTRACT_VERSION_UNSUPPORTED": 415,
+    "JSON_CONTENT_TYPE_REQUIRED": 415,
+    "INVALID_JSON": 422,
+    "VALIDATION_FAILED": 422,
+    "SITE_NOT_FOUND": 404,
+    "CONTENT_ENTRY_NOT_FOUND": 404,
+    "CONTENT_TYPE_NOT_FOUND": 404,
+    "MEDIA_NOT_FOUND": 404,
+    "MENU_NOT_FOUND": 404,
+    "PREVIEW_NOT_FOUND": 404,
+    "ROUTE_NOT_FOUND": 404,
+    "LANGUAGE_NOT_ENABLED": 409,
+    "REVISION_CONFLICT": 409,
+    "PUBLICATION_CONFLICT": 409,
+    "ROUTE_CONFLICT": 409,
+    "RESOURCE_LOCKED": 409,
+    "MEDIA_UPLOAD_FAILED": 400,
+    "API_ERROR": 400,
+    "INTERNAL_SERVER_ERROR": 500,
+    "JSON_ENCODING_FAILED": 500
+  },
+  "notes": [
+    "Toutes les erreurs admin/API utilisent l'enveloppe error + meta avec meta.contract = error.v1.",
+    "error.details est toujours présent, y compris pour les erreurs de validation.",
+    "error.fields est présent uniquement pour VALIDATION_FAILED.",
+    "request_id est présent dans error.request_id, meta.request_id et le header X-Request-Id.",
+    "Les codes inconnus sont normalisés défensivement en API_ERROR par le runtime."
+  ]
+}

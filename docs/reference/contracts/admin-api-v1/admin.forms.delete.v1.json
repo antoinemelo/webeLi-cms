@@ -1,0 +1,27 @@
+{
+  "contract": "admin.forms.delete.v1",
+  "method": "DELETE",
+  "path": "/admin/api/forms/{id}",
+  "permission": "forms.manage",
+  "response": {
+    "data": {
+      "deleted": true,
+      "id": 1
+    },
+    "meta": {
+      "contract": "admin.forms.delete.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "ROUTE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

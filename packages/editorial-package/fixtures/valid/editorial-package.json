@@ -1,0 +1,51 @@
+{
+  "contains_drafts": false,
+  "contains_history": false,
+  "counts": {
+    "blueprints": 1,
+    "entries": 1,
+    "media": 1
+  },
+  "files": [
+    {
+      "path": "site.json",
+      "sha256": "f2c62751ec136a6ca36175dcc5d4713214dfc2b4a11ba2bb79d1923459439500",
+      "size": 120
+    },
+    {
+      "path": "blueprints/page.json",
+      "sha256": "7c17741735665ca1ed0476eb9e6ae8fadf8e4a2e8013a932ebe1b148bff7fad0",
+      "size": 488
+    },
+    {
+      "path": "entries/page.home.json",
+      "sha256": "00582970769a54023e53bfc5276dd70db4eed768abcdd0a457ef0962d3e532c4",
+      "size": 1173
+    },
+    {
+      "path": "media/manifest.json",
+      "sha256": "e13e4f467663d22b66f822b33674577e9dc4231259daa1eca033b4e052036ee9",
+      "size": 400
+    },
+    {
+      "path": "media/files/hero.txt",
+      "sha256": "db16d7d3ca40ab2cf833db650ae85b5956792b70470c08f5c7f34e46524673b4",
+      "size": 14
+    }
+  ],
+  "format": "Editorial Package",
+  "format_version": "1.0",
+  "generated_at": "2026-06-12T00:00:00Z",
+  "hash_algorithm": "sha256",
+  "languages": [
+    "fr"
+  ],
+  "minimum_cms_version": "0.5",
+  "published_only": true,
+  "release_id": "fixture-1",
+  "scope": {
+    "type": "site",
+    "value": "demo"
+  },
+  "source_site_key": "demo"
+}

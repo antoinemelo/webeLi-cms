@@ -1,0 +1,63 @@
+{
+  "contract": "admin.iam.sessions.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "permission": "sessions.read",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "sessions": [
+        {
+          "id": 10,
+          "user_id": 1,
+          "email": "admin@example.test",
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0",
+          "last_seen_at": "2026-05-05 10:00:00",
+          "expires_at": "2026-05-06 10:00:00",
+          "is_active": true
+        }
+      ],
+      "pagination": {
+        "total": 1,
+        "limit": 50,
+        "offset": 0
+      },
+      "filters": {
+        "user_id": 1,
+        "is_active": true
+      },
+      "actions": {
+        "revoke": {
+          "method": "DELETE",
+          "path": "/admin/api/iam/sessions/{id}"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.iam.sessions.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/sessions"
+}

@@ -1,0 +1,21 @@
+{% set has_published_at = entry_published_at|default('') is not empty %}
+{% set has_updated_at = entry_updated_at|default('') is not empty %}
+{% set has_type = type_key|default(entry_type|default('')) is not empty %}
+{% set has_reading_time = reading_time|default(0) > 0 %}
+
+{% if has_published_at or has_updated_at or has_type or has_reading_time %}
+  <div class="content-meta mb-3" aria-label="{{ ui.content_meta }}">
+{% if has_type %}
+    <span class="badge rounded-pill text-bg-light border">{{ type_key|default(entry_type) }}</span>
+{% endif %}
+{% if has_published_at %}
+    <time datetime="{{ entry_published_at }}"{% if itemprop is defined %} itemprop="datePublished"{% endif %}>{{ entry_published_at|date('d.m.Y') }}</time>
+{% endif %}
+{% if has_updated_at and entry_updated_at != entry_published_at %}
+    <time datetime="{{ entry_updated_at }}"{% if itemprop is defined %} itemprop="dateModified"{% endif %}>{{ entry_updated_at|date('d.m.Y') }}</time>
+{% endif %}
+{% if has_reading_time %}
+    <span>{{ reading_time }} min</span>
+{% endif %}
+  </div>
+{% endif %}

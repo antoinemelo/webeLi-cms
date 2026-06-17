@@ -1,0 +1,55 @@
+{% set blocks = entry_blocks|default([]) %}
+{% set first_block = blocks|first %}
+{% set has_hero = first_block and first_block.type|default('') == 'hero' %}
+{% set hero_data = has_hero ? first_block.data|default({}) : {} %}
+
+<article class="page-document aurora-document{% if is_home|default(false) %} aurora-document--home{% endif %}" data-entry-key="{{ entry_key }}">
+  {% if is_preview %}
+    <span class="badge aurora-preview-badge">{{ ui.preview }}</span>
+  {% endif %}
+
+  {% if has_hero %}
+    <header class="aurora-hero" aria-labelledby="page-title"{% if hero_data.image_src|default('') %} style="--aurora-hero-image:url('{{ hero_data.image_src }}')"{% endif %}>
+      {% if hero_data.image_src|default('') %}
+        <picture class="aurora-hero__image" aria-hidden="true">
+          <img src="{{ hero_data.image_src }}"{% if hero_data.image_srcset|default('') %} srcset="{{ hero_data.image_srcset }}"{% endif %}{% if hero_data.image_sizes|default('') %} sizes="{{ hero_data.image_sizes }}"{% endif %} width="{{ hero_data.image_width|default(1920) }}" height="{{ hero_data.image_height|default(1080) }}" alt="" loading="eager" fetchpriority="high">
+        </picture>
+      {% endif %}
+      <div class="aurora-hero__shade" aria-hidden="true"></div>
+      <div class="aurora-hero__content"{% if visual_editing|default(false) and first_block.id|default('') %} data-amcms-block="1" data-amcms-block-id="{{ first_block.id|e('html_attr') }}" data-amcms-block-type="hero" data-amcms-label="{{ first_block.label|default('Hero')|e('html_attr') }}"{% endif %}>
+        {% if hero_data.eyebrow|default('') %}<p class="eyebrow">{{ hero_data.eyebrow }}</p>{% endif %}
+        <h1 id="page-title"{% if visual_editing|default(false) and first_block.id|default('') %} data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="{{ first_block.id|e('html_attr') }}" data-amcms-field-path="data.title" data-amcms-editor="inline_text" data-amcms-label="Titre"{% endif %}>{{ hero_data.title|default(entry_title) }}</h1>
+        {% if hero_data.lead|default('') %}<p class="lead"{% if visual_editing|default(false) and first_block.id|default('') %} data-amcms-editable="1" data-amcms-kind="block" data-amcms-block-id="{{ first_block.id|e('html_attr') }}" data-amcms-field-path="data.lead" data-amcms-editor="inline_textarea" data-amcms-label="Texte"{% endif %}>{{ hero_data.lead }}</p>{% endif %}
+        {% if hero_data.buttons|default([]) %}<div class="actions">{% for btn in hero_data.buttons %}<a class="btn btn--{{ btn.style|default('primary') }}" href="{{ btn.url }}"{% if btn.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}>{{ btn.label }}</a>{% endfor %}</div>{% endif %}
+      </div>
+      <a class="aurora-hero__scroll" href="#aurora-content" aria-label="Voir le contenu">↓</a>
+    </header>
+  {% else %}
+    <header class="aurora-hero aurora-hero--plain" aria-labelledby="page-title">
+      <div class="aurora-hero__shade" aria-hidden="true"></div>
+      <div class="aurora-hero__content">
+        <p class="eyebrow">{{ entry_type_label }}</p>
+        <h1 id="page-title">{{ entry_title }}</h1>
+      </div>
+    </header>
+  {% endif %}
+
+  <div id="aurora-content" class="aurora-content-shell">
+    {% include 'partials/breadcrumbs.twig' %}
+    {% if blocks %}
+      <div class="content-blocks" data-content-blocks>
+        {% for block in blocks %}
+          {% if not (has_hero and loop.first) %}
+            {% include 'partials/content-block.twig' with { block: block, block_index: loop.index0, is_preview: is_preview|default(false), visual_editing: visual_editing|default(false) } only %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if cookie_policy|default(null) %}
+      {% include 'partials/cookie-policy.twig' %}
+    {% endif %}
+
+    {% include 'partials/social-share.twig' %}
+  </div>
+</article>

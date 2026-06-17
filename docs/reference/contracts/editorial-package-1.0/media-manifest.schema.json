@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://am-cms.local/schemas/editorial-package/1.0/media-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "media_key",
+          "path",
+          "filename",
+          "mime_type",
+          "size",
+          "sha256",
+          "metadata",
+          "alt_texts",
+          "references"
+        ],
+        "properties": {
+          "media_key": {
+            "$ref": "definitions.schema.json#/$defs/portableKey"
+          },
+          "path": {
+            "$ref": "definitions.schema.json#/$defs/relativePath"
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mime_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "$ref": "definitions.schema.json#/$defs/sha256"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "alt_texts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "definitions.schema.json#/$defs/portableKey"
+            }
+          }
+        }
+      }
+    }
+  }
+}

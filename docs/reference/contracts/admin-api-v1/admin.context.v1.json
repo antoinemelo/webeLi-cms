@@ -1,0 +1,185 @@
+{
+  "contract": "admin.context.v1",
+  "method": "GET",
+  "path": "/admin/api/context",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer",
+    "content_language_code": "optional enabled content language code",
+    "ui_language_code": "optional admin interface language code: fr | en"
+  },
+  "response": {
+    "data": {
+      "api": {
+        "contract_version": "admin-api-v1",
+        "contract_header": "X-Contract-Version",
+        "csrf": {
+          "header": "X-CSRF-Token",
+          "required_for": [
+            "POST",
+            "PATCH",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "response_envelope": {
+          "success": "data + meta",
+          "error": "error + meta"
+        }
+      },
+      "site": {
+        "id": 1,
+        "site_key": "main",
+        "name": "Main site",
+        "host": "example.test",
+        "base_path": "/mod",
+        "request_base_path": "",
+        "default_language_code": "fr",
+        "is_active": true,
+        "public_path": "/mod/",
+        "public_url": "https://example.test/mod"
+      },
+      "user": {
+        "id": 1,
+        "email": "admin@example.test",
+        "name": "Admin"
+      },
+      "permissions": [
+        "content.read",
+        "content.update",
+        "content.publish"
+      ],
+      "capabilities": {
+        "content.read": true,
+        "content.create": true,
+        "content.update": true,
+        "content.publish": false,
+        "modules.read": true,
+        "modules.manage": false
+      },
+      "site_roles": [
+        {
+          "site_id": 1,
+          "role_key": "editor",
+          "role_name": "Editor"
+        }
+      ],
+      "csrf_token": "opaque-token",
+      "features": {
+        "multisite": true,
+        "multilingual": true,
+        "media": true,
+        "menus": true,
+        "taxonomies": true,
+        "forms": false,
+        "modules": true
+      },
+      "endpoints": [
+        {
+          "key": "admin.entries.show",
+          "method": "GET",
+          "path": "/admin/api/entries/{id}"
+        },
+        {
+          "key": "admin.entries.archive",
+          "method": "POST",
+          "path": "/admin/api/entries/{id}/archive"
+        },
+        {
+          "key": "admin.entries.destroy",
+          "method": "DELETE",
+          "path": "/admin/api/entries/{id}"
+        },
+        {
+          "key": "admin.modules.index",
+          "method": "GET",
+          "path": "/admin/api/modules"
+        },
+        {
+          "key": "admin.modules.show",
+          "method": "GET",
+          "path": "/admin/api/modules/{key}"
+        },
+        {
+          "key": "admin.modules.install",
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/install"
+        },
+        {
+          "key": "admin.modules.enable",
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/enable"
+        },
+        {
+          "key": "admin.modules.disable",
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/disable"
+        },
+        {
+          "key": "admin.modules.migrate",
+          "method": "POST",
+          "path": "/admin/api/modules/{key}/migrate"
+        },
+        {
+          "key": "admin.modules.health",
+          "method": "GET",
+          "path": "/admin/api/modules/{key}/health"
+        }
+      ],
+      "content_languages": [
+        {
+          "code": "fr",
+          "name": "Français",
+          "url_prefix": "",
+          "is_default": true,
+          "is_enabled": true,
+          "is_current": true
+        }
+      ],
+      "current_content_language_code": "fr",
+      "languages": "deprecated alias of content_languages during admin API v1 transition",
+      "current_language_code": "deprecated alias of current_content_language_code during admin API v1 transition",
+      "ui": {
+        "language_code": "fr",
+        "available_languages": [
+          {
+            "code": "fr",
+            "name": "Français",
+            "is_current": true
+          },
+          {
+            "code": "en",
+            "name": "English",
+            "is_current": false
+          }
+        ]
+      },
+      "modules": {
+        "installed": "array of installed module contracts returned by ModuleLifecycleService",
+        "active": "array of enabled module contracts returned by ModuleLifecycleService",
+        "features": "object keyed by active module key",
+        "permissions": "unique list of permission keys declared by active modules",
+        "navigation": "admin navigation entries declared by active modules",
+        "endpoints": "admin/api/headless endpoints declared by active modules",
+        "contracts": "API contracts declared by active modules",
+        "dependency_alerts": "array of dependency or provider health warnings"
+      }
+    },
+    "meta": {
+      "contract": "admin.context.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

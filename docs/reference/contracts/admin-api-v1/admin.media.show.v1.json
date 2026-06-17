@@ -1,0 +1,119 @@
+{
+  "contract": "admin.media.show.v1",
+  "method": "GET",
+  "path": "/admin/api/media/{id}",
+  "permission": "media.read",
+  "query": {
+    "site_id": "optional integer",
+    "lang": "optional content language code"
+  },
+  "response": {
+    "data": {
+      "asset": {
+        "id": 1,
+        "filename": "image.jpg",
+        "mime_type": "image/jpeg",
+        "public_url": "/storage/media/public/1/2026/05/image.jpg",
+        "thumbnail_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp",
+        "alt_text": "Texte alternatif dans la langue demandée",
+        "caption": "Légende dans la langue demandée",
+        "title": "Titre média dans la langue demandée",
+        "responsive_sets": {
+          "content": [
+            {
+              "variant_key": "content_480",
+              "public_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp",
+              "width": 480
+            }
+          ],
+          "hero": [
+            {
+              "variant_key": "hero_1280",
+              "public_url": "/storage/media/public/1/2026/05/variants/image-hero_1280.webp",
+              "width": 1280
+            }
+          ],
+          "open_graph": [
+            {
+              "variant_key": "og_1200x630",
+              "public_url": "/storage/media/public/1/2026/05/variants/image-og_1200x630.webp",
+              "width": 1200,
+              "height": 630
+            }
+          ]
+        },
+        "usage_count": "integer; total usages across all languages"
+      },
+      "localizations": [
+        {
+          "language_code": "fr",
+          "alt_text": "Texte alternatif FR",
+          "caption": "Légende FR",
+          "title": "Titre FR",
+          "is_alt_verified": 1
+        },
+        {
+          "language_code": "en",
+          "alt_text": "English alt text",
+          "caption": "English caption",
+          "title": "English title",
+          "is_alt_verified": 1
+        }
+      ],
+      "variants": [
+        {
+          "variant_key": "content_480",
+          "format": "webp",
+          "mime_type": "image/webp",
+          "width": 480,
+          "height": 320,
+          "size_bytes": 24500,
+          "public_url": "/storage/media/public/1/2026/05/variants/image-content_480.webp"
+        },
+        {
+          "variant_key": "og_1200x630",
+          "format": "webp",
+          "mime_type": "image/webp",
+          "width": 1200,
+          "height": 630,
+          "size_bytes": 78000,
+          "public_url": "/storage/media/public/1/2026/05/variants/image-og_1200x630.webp"
+        }
+      ],
+      "variant_presets": [],
+      "usages": [
+        {
+          "resource_type": "content_entry",
+          "resource_id": 1,
+          "entry_title": "Accueil",
+          "entry_path": "/",
+          "field_key": "blocks",
+          "language_code": "fr",
+          "usage_context": "content",
+          "source_revision_id": 12,
+          "alt_policy": "decorative_allowed",
+          "alt_text_snapshot": ""
+        }
+      ],
+      "usages_note": "Filtered to the requested query.lang; use asset.usage_count for the global total."
+    },
+    "meta": {
+      "contract": "admin.media.show.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "MEDIA_NOT_FOUND",
+    "MEDIA_UPLOAD_FAILED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

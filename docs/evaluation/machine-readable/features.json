@@ -1,0 +1,592 @@
+[
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "IAM",
+    "evidence": [
+      "backend/src/Application/Admin/AdminAuthController.php",
+      "database/iam.sql"
+    ],
+    "feature": "accounts-authentication",
+    "id": "feature-accounts-authentication-7de5db5f80",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Administrative authentication is implemented; all deployment flows remain environment-dependent."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Admin/AdminAuthController.php",
+      "database/iam.sql"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "IAM",
+    "evidence": [
+      "database/migrations/iam/0004_totp_2fa.sql",
+      "tools/python/validation/security/baseline.py"
+    ],
+    "feature": "totp-two-factor",
+    "id": "feature-totp-two-factor-111c2f0197",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Recovery and all mail-dependent paths require scenario testing."
+    ],
+    "permission": null,
+    "source": [
+      "database/migrations/iam/0004_totp_2fa.sql",
+      "tools/python/validation/security/baseline.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "IAM",
+    "evidence": [
+      "tools/python/validation/security/baseline.py",
+      "tools/python/validation/security/baseline.py"
+    ],
+    "feature": "email-two-factor-passwordless",
+    "id": "feature-email-two-factor-passwordless-be54028fe1",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Depends on external mail configuration."
+    ],
+    "permission": null,
+    "source": [
+      "tools/python/validation/security/baseline.py",
+      "tools/python/validation/security/baseline.py"
+    ],
+    "status": "partial",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "IAM",
+    "evidence": [
+      "database/seeds/default/iam_default_seed.sql",
+      "backend/src/Application/Iam/IamAdminRepository.php"
+    ],
+    "feature": "roles-permissions",
+    "id": "feature-roles-permissions-d0745d2227",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Custom roles and site scope must be verified on the deployed data."
+    ],
+    "permission": null,
+    "source": [
+      "database/seeds/default/iam_default_seed.sql",
+      "backend/src/Application/Iam/IamAdminRepository.php"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "sites",
+    "evidence": [
+      "database/schema/core.sql",
+      "tools/python/validation/content/site_locale.py"
+    ],
+    "feature": "multisite-multilingual",
+    "id": "feature-multisite-multilingual-5992eb9372",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Not every domain and language combination is covered."
+    ],
+    "permission": null,
+    "source": [
+      "database/schema/core.sql",
+      "tools/python/validation/content/site_locale.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "content-model",
+    "evidence": [
+      "database/schema/core.sql",
+      "backend/src/Application/Schema/NativeFieldBlueprintRegistry.php"
+    ],
+    "feature": "content-types-blueprints-fields-blocks",
+    "id": "feature-content-types-blueprints-fields-blocks-5982e62470",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Third-party extension compatibility is not fully qualified."
+    ],
+    "permission": null,
+    "source": [
+      "database/schema/core.sql",
+      "backend/src/Application/Schema/NativeFieldBlueprintRegistry.php"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "workflow",
+    "evidence": [
+      "backend/src/Domain/Content/ContentRevision.php",
+      "backend/src/Application/Api/Admin/PreviewApiController.php"
+    ],
+    "feature": "drafts-revisions-preview",
+    "id": "feature-drafts-revisions-preview-63cfad0c32",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Concurrent editing behavior requires targeted tests."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Domain/Content/ContentRevision.php",
+      "backend/src/Application/Api/Admin/PreviewApiController.php"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "workflow",
+    "evidence": [
+      "backend/src/Application/Publication/PublishedProjectionPipeline.php",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "feature": "publication-projections",
+    "id": "feature-publication-projections-e244231cb3",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "High-concurrency publication is not benchmarked."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Publication/PublishedProjectionPipeline.php",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "media",
+    "evidence": [
+      "backend/src/Application/Media/GenerateMediaVariants.php",
+      "backend/src/Application/Media/Storage/LocalStorageDriver.php"
+    ],
+    "feature": "media-variants-local-storage",
+    "id": "feature-media-variants-local-storage-7a3ff6a00f",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Malware scanning is not demonstrated."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Media/GenerateMediaVariants.php",
+      "backend/src/Application/Media/Storage/LocalStorageDriver.php"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "media",
+    "evidence": [
+      "backend/src/Application/Media/Storage/S3StorageDriver.php",
+      "tools/python/validation/operations/media.py"
+    ],
+    "feature": "media-s3-storage",
+    "id": "feature-media-s3-storage-86c7c22eda",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "External provider integration was not executed by this generator."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Media/Storage/S3StorageDriver.php",
+      "tools/python/validation/operations/media.py"
+    ],
+    "status": "partial",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "navigation",
+    "evidence": [
+      "backend/src/Application/Api/Admin/MenuApiController.php",
+      "backend/src/Application/Taxonomy/AssignTaxonomyTerms.php"
+    ],
+    "feature": "menus-taxonomies",
+    "id": "feature-menus-taxonomies-b4b59427d6",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "End-user usability requires manual testing."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Api/Admin/MenuApiController.php",
+      "backend/src/Application/Taxonomy/AssignTaxonomyTerms.php"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "seo",
+    "evidence": [
+      "backend/src/Application/Seo/RunSeoAudit.php",
+      "database/views/seo_views.sql"
+    ],
+    "feature": "seo-runtime-audit",
+    "id": "feature-seo-runtime-audit-e0156682bd",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Internal SEO scores do not predict search rankings."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Seo/RunSeoAudit.php",
+      "database/views/seo_views.sql"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "search",
+    "evidence": [
+      "backend/src/Application/Search/PublicSearchReadRepository.php",
+      "tools/python/validation/database/projections.py"
+    ],
+    "feature": "native-search",
+    "id": "feature-native-search-50c8b82c68",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Distributed or semantic search is not demonstrated."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/Search/PublicSearchReadRepository.php",
+      "tools/python/validation/database/projections.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "forms",
+    "evidence": [
+      "database/modules/forms.sql",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "feature": "forms",
+    "id": "feature-forms-453ca94c1e",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "External anti-spam and privacy operations require configuration."
+    ],
+    "permission": null,
+    "source": [
+      "database/modules/forms.sql",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "consent",
+    "evidence": [
+      "database/modules/cookies.sql",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "feature": "cookies-consent",
+    "id": "feature-cookies-consent-010f10d787",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "No legal compliance certification is claimed."
+    ],
+    "permission": null,
+    "source": [
+      "database/modules/cookies.sql",
+      "tools/python/validation/content/contracts.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "operations",
+    "evidence": [
+      "backend/src/EditorialPackage/EditorialExportService.php",
+      "tools/python/validation/operations/manifests.py"
+    ],
+    "feature": "editorial-import-export",
+    "id": "feature-editorial-import-export-4dbb0bed62",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Cross-version interoperability must be tested."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/EditorialPackage/EditorialExportService.php",
+      "tools/python/validation/operations/manifests.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "operations",
+    "evidence": [
+      "tools/python/validation/operations/manifests.py",
+      "tools/python/validation/operations/release_structure.py"
+    ],
+    "feature": "static-export",
+    "id": "feature-static-export-8ebcbff191",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Target hosting and full runtime parity require scenario testing."
+    ],
+    "permission": null,
+    "source": [
+      "tools/python/validation/operations/manifests.py",
+      "tools/python/validation/operations/release_structure.py"
+    ],
+    "status": "partial",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "ai",
+    "evidence": [
+      "database/modules/ai.sql",
+      "backend/src/Application/Api/Admin/AiAssistantApiController.php"
+    ],
+    "feature": "ai-assistant",
+    "id": "feature-ai-assistant-a0ea499bcb",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Provider availability, costs, data protection and output quality are external concerns."
+    ],
+    "permission": null,
+    "source": [
+      "database/modules/ai.sql",
+      "backend/src/Application/Api/Admin/AiAssistantApiController.php"
+    ],
+    "status": "experimental",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "headless",
+    "evidence": [
+      "backend/src/Application/PublicApi/PublicApiKernel.php",
+      "docs/public-api/"
+    ],
+    "feature": "public-api-v1",
+    "id": "feature-public-api-v1-02da5f7638",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Long-term SLA and all client integrations are not demonstrated."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Application/PublicApi/PublicApiKernel.php",
+      "docs/public-api/"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "operations",
+    "evidence": [
+      "tools/python/commands/backup.py"
+    ],
+    "feature": "backup-restore",
+    "id": "feature-backup-restore-61aa113763",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "A backup is not proven until restoration is tested on a copy."
+    ],
+    "permission": null,
+    "source": [
+      "tools/python/commands/backup.py"
+    ],
+    "status": "supported",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "operations",
+    "evidence": [
+      "tools/python/operations/deployment/d2_package_release.py",
+      ".github/workflows/release.yml"
+    ],
+    "feature": "release-packaging-deployment",
+    "id": "feature-release-packaging-deployment-ea2dc45e2a",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Production infrastructure was not exercised by this generation."
+    ],
+    "permission": null,
+    "source": [
+      "tools/python/operations/deployment/d2_package_release.py",
+      ".github/workflows/release.yml"
+    ],
+    "status": "partial",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
+    "domain": "operations",
+    "evidence": [
+      "backend/src/Core/Logger.php"
+    ],
+    "feature": "centralized-observability",
+    "id": "feature-centralized-observability-0c2b718de5",
+    "interface": null,
+    "last_verified": "2026-06-14",
+    "limitations": [
+      "Local logging exists, but a native centralized metrics/tracing stack is not demonstrated."
+    ],
+    "permission": null,
+    "source": [
+      "backend/src/Core/Logger.php"
+    ],
+    "status": "not-supported",
+    "tests": [],
+    "validators": []
+  }
+]

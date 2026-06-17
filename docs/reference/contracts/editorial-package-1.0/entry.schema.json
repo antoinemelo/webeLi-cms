@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://am-cms.local/schemas/editorial-package/1.0/entry.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entry_key",
+    "content_type_key",
+    "blueprint_key",
+    "status",
+    "source_site_key",
+    "languages",
+    "localizations",
+    "fields",
+    "blocks",
+    "seo",
+    "relations",
+    "media_keys",
+    "dates"
+  ],
+  "properties": {
+    "entry_key": {
+      "$ref": "definitions.schema.json#/$defs/portableKey"
+    },
+    "content_type_key": {
+      "$ref": "definitions.schema.json#/$defs/portableKey"
+    },
+    "blueprint_key": {
+      "$ref": "definitions.schema.json#/$defs/portableKey"
+    },
+    "status": {
+      "const": "published"
+    },
+    "source_site_key": {
+      "$ref": "definitions.schema.json#/$defs/portableKey"
+    },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "definitions.schema.json#/$defs/language"
+      }
+    },
+    "localizations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "localization_key",
+          "language",
+          "slug",
+          "route",
+          "title"
+        ],
+        "properties": {
+          "localization_key": {
+            "$ref": "definitions.schema.json#/$defs/portableKey"
+          },
+          "language": {
+            "$ref": "definitions.schema.json#/$defs/language"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string",
+            "pattern": "^/(?!admin(?:/|$)|api(?:/|$)|preview(?:/|$))(?!.*\\.\\.).*$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "fields": {
+      "type": "object"
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "block.schema.json"
+      }
+    },
+    "seo": {
+      "$ref": "definitions.schema.json#/$defs/seo"
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_entry_key",
+          "relation_type"
+        ],
+        "properties": {
+          "target_entry_key": {
+            "$ref": "definitions.schema.json#/$defs/portableKey"
+          },
+          "relation_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "sort_order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "media_keys": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "definitions.schema.json#/$defs/portableKey"
+      }
+    },
+    "dates": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "published_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "localized_content": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "definitions.schema.json#/$defs/language"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fields",
+          "blocks",
+          "seo",
+          "media_keys"
+        ],
+        "properties": {
+          "fields": {
+            "type": "object"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "block.schema.json"
+            }
+          },
+          "seo": {
+            "$ref": "definitions.schema.json#/$defs/seo"
+          },
+          "media_keys": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "definitions.schema.json#/$defs/portableKey"
+            }
+          }
+        }
+      }
+    }
+  }
+}

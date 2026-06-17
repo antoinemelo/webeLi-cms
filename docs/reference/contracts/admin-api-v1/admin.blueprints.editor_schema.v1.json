@@ -1,0 +1,130 @@
+{
+  "contract": "admin.blueprints.editor_schema.v1",
+  "method": "GET",
+  "path": "/admin/api/blueprints/{key}/editor-schema",
+  "permission": "blueprints.read",
+  "response": {
+    "data": {
+      "blueprint": {
+        "blueprint_key": "page",
+        "resource_type": "content_type",
+        "version": 1
+      },
+      "content_type": {
+        "type_key": "page",
+        "name": "Page",
+        "capabilities": {
+          "seo": true,
+          "taxonomies": true,
+          "layout": true
+        }
+      },
+      "fields": [],
+      "editor_tabs": [
+        {
+          "key": "content",
+          "label": "Structure",
+          "fields": []
+        },
+        {
+          "key": "taxonomies",
+          "label": "Taxonomie",
+          "fields": []
+        },
+        {
+          "key": "seo",
+          "label": "SEO",
+          "fields": []
+        }
+      ],
+      "validation": {},
+      "seo_policy": {},
+      "routing_policy": {},
+      "workflow_policy": {},
+      "translation_policy": {},
+      "permissions_policy": {},
+      "headless": {
+        "enabled": true
+      },
+      "taxonomy_policy": {
+        "enabled": true,
+        "taxonomies": [
+          {
+            "id": 1,
+            "site_id": 1,
+            "taxonomy_key": "categories",
+            "name": "Categories",
+            "is_hierarchical": true,
+            "is_localized": true,
+            "seo_enabled": true,
+            "archive_enabled": true,
+            "is_required": false,
+            "max_terms": 1,
+            "terms": [
+              {
+                "id": 1,
+                "taxonomy_id": 1,
+                "parent_id": null,
+                "term_key": "actualites",
+                "name": "Actualités",
+                "slug": "actualites",
+                "full_path": "/categories/actualites",
+                "sort_order": 10,
+                "localizations": {
+                  "fr": {
+                    "name": "Actualités",
+                    "slug": "actualites",
+                    "full_path": "/categories/actualites"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "site_id": 1,
+            "taxonomy_key": "tags",
+            "name": "Tags",
+            "is_hierarchical": false,
+            "is_localized": true,
+            "seo_enabled": true,
+            "archive_enabled": true,
+            "is_required": false,
+            "max_terms": null,
+            "terms": [
+              {
+                "id": 3,
+                "taxonomy_id": 2,
+                "parent_id": null,
+                "term_key": "cms",
+                "name": "CMS",
+                "slug": "cms",
+                "full_path": "/tags/cms",
+                "sort_order": 10,
+                "localizations": {
+                  "fr": {
+                    "name": "CMS",
+                    "slug": "cms",
+                    "full_path": "/tags/cms"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "meta": {
+      "contract": "admin.blueprints.editor_schema.v1",
+      "request_id": "..."
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CONTENT_TYPE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

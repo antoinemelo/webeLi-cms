@@ -1,0 +1,153 @@
+{
+  "contract": "public.languages.index.v1",
+  "kind": "schema",
+  "summary": "Lister les langues actives du site.",
+  "description": "Retourne les langues configurées pour le site courant, avec statut actif/défaut/courant et informations hreflang.",
+  "method": "GET",
+  "source": "site_languages + languages",
+  "security": "Public read endpoint; may be protected by bearer scope content:read; site language config only.",
+  "path": "/api/v1/languages",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "items"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "name",
+                  "native_name",
+                  "url_prefix",
+                  "hreflang",
+                  "is_default",
+                  "is_active",
+                  "is_current"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "native_name": {
+                    "type": "string"
+                  },
+                  "url_prefix": {
+                    "type": "string"
+                  },
+                  "hreflang": {
+                    "type": "string"
+                  },
+                  "is_default": {
+                    "type": "boolean"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  },
+                  "is_current": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.languages.index.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Contexte site/langue invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/languages?site=main&lang=fr",
+    "response": {
+      "data": {
+        "items": [
+          {
+            "code": "fr",
+            "name": "Français",
+            "native_name": "Français",
+            "url_prefix": "",
+            "hreflang": "fr",
+            "is_default": true,
+            "is_active": true,
+            "is_current": true
+          }
+        ]
+      },
+      "meta": {
+        "contract": "public.languages.index.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr"
+      }
+    }
+  }
+}

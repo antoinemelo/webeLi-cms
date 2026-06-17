@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{ languageCode|default('fr') }}" class="theme-pulse"{% if is_preview|default(false) %} data-amcms-preview="1"{% endif %}{% if visual_editing|default(false) %} data-amcms-visual="1"{% endif %}{% if theme_preview|default(false) %} data-theme-preview="1"{% endif %}>
+{% include 'partials/head.twig' %}
+<body>
+  <a class="skip-link" href="#main-content">{{ ui.skip_to_content }}</a>
+
+  {% include 'partials/site-header.twig' %}
+
+  {% if theme_preview|default(false) %}
+    <aside class="amcms-theme-preview-banner" role="status" aria-live="polite">
+      Aperçu du template « {{ active_theme.name|default('Pulse') }} » — il n’est pas appliqué tant que vous ne l’enregistrez pas dans Configuration.
+    </aside>
+  {% endif %}
+
+  {% if is_preview|default(false) %}
+    <aside class="amcms-preview-banner" role="status" aria-live="polite">
+      Aperçu de brouillon — cette page reflète la révision de travail courante et n’est pas la version publiée.
+    </aside>
+  {% endif %}
+
+  <main id="main-content" class="main-content">
+    {{ content|raw }}
+  </main>
+
+  {% include 'partials/site-footer.twig' %}
+  {% include 'partials/cookie-consent.twig' %}
+
+  <script src="{{ asset('/frontend/theme-pulse/assets/js/app.js') }}" defer></script>
+  <script src="{{ asset('/frontend/theme-pulse/assets/js/cookie-consent.js') }}" defer></script>
+  {% if visual_editing|default(false) %}<script src="{{ asset('/frontend/theme-pulse/assets/js/visual-editing-bridge.js') }}" defer></script>{% endif %}
+</body>
+</html>

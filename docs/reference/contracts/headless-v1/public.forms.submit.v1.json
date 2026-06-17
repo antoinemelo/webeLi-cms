@@ -1,0 +1,70 @@
+{
+  "contract": "public.forms.submit.v1",
+  "kind": "schema",
+  "summary": "Soumettre un formulaire public.",
+  "description": "Valide et enregistre une soumission selon les règles du module Forms.",
+  "method": "POST",
+  "source": "canonical public application use case",
+  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "path": "/api/v1/forms/{key}/submit",
+  "query_params": {
+    "lang": {
+      "type": "string",
+      "required": false,
+      "description": "Langue active du site."
+    }
+  },
+  "path_params": {
+    "key": {
+      "type": "string",
+      "required": true,
+      "description": "Clé publique de la ressource."
+    }
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.forms.submit.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Champs invalides."
+    },
+    {
+      "code": "ROUTE_NOT_FOUND",
+      "status": 404,
+      "description": "Formulaire introuvable."
+    }
+  ],
+  "examples": {
+    "request": "POST /api/v1/forms/contact/submit?lang=fr",
+    "response": {
+      "data": {
+        "submitted": true
+      },
+      "meta": {
+        "contract": "public.forms.submit.v1",
+        "site_id": 1,
+        "language_code": "fr"
+      }
+    }
+  }
+}

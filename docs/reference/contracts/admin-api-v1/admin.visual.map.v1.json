@@ -1,0 +1,75 @@
+{
+  "contract": "admin.visual.map.v1",
+  "method": "GET",
+  "path": "/admin/api/visual/entries/{id}/map",
+  "permission": "content.read",
+  "query": {
+    "site_id": "optional integer; defaults to the resolved current site",
+    "language_code": "optional enabled language code; defaults to the resolved site default language"
+  },
+  "response": {
+    "data": {
+      "entry_id": 12,
+      "site_id": 1,
+      "language_code": "fr",
+      "content_type_key": "page",
+      "working_revision_id": 56,
+      "published_revision_id": 45,
+      "fields": [
+        {
+          "key": "block:block_abc:editorial_status",
+          "kind": "block",
+          "block_id": "block_abc",
+          "block_type": "hero",
+          "block_index": 0,
+          "field_path": "editorial_status",
+          "editor": "editorial_status",
+          "label": "État éditorial",
+          "value": "review",
+          "editable": true
+        },
+        {
+          "key": "block:block_abc:data.title",
+          "kind": "block",
+          "block_id": "block_abc",
+          "block_type": "hero",
+          "block_index": 0,
+          "field_path": "data.title",
+          "editor": "inline_text",
+          "label": "Titre",
+          "value": "Bienvenue",
+          "editable": true
+        }
+      ],
+      "blocks": [
+        {
+          "id": "block_abc",
+          "type": "hero",
+          "block_index": 0,
+          "label": "Hero",
+          "enabled": true,
+          "editorial_status": "review",
+          "visual_status": "review",
+          "is_modified_since_publish": true
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.visual.map.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "CONTENT_ENTRY_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

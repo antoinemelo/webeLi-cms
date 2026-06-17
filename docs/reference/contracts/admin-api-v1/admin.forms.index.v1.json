@@ -1,0 +1,38 @@
+{
+  "contract": "admin.forms.index.v1",
+  "method": "GET",
+  "path": "/admin/api/forms",
+  "permission": "forms.read",
+  "query": {
+    "q": "optional string"
+  },
+  "response": {
+    "data": {
+      "forms": [
+        {
+          "id": 1,
+          "form_key": "contact",
+          "status": "published",
+          "is_active": true,
+          "name": "Contact",
+          "fields_count": 2,
+          "submissions_count": 12,
+          "updated_at": "2026-05-07T10:00:00Z"
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.forms.index.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

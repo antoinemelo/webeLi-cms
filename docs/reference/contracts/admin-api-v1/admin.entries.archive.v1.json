@@ -1,0 +1,56 @@
+{
+  "contract": "admin.entries.archive.v1",
+  "method": "POST",
+  "path": "/admin/api/entries/{id}/archive",
+  "permission": "content.archive",
+  "headers": {
+    "X-CSRF-Token": "required",
+    "X-Contract-Version": "admin-api-v1"
+  },
+  "request": {
+    "data": {
+      "site_id": "optional integer",
+      "language_code": "optional string; when present only the requested language/public route is unpublished, while the entry is marked archived",
+      "redirect_to": "optional internal absolute path such as /nouvelle-page; when omitted, old URLs become 410 tombstones",
+      "http_code": "optional integer: 301, 302, 307 or 308; default 301"
+    }
+  },
+  "response": {
+    "data": {
+      "status": "archived",
+      "entry_id": 1,
+      "site_id": 1,
+      "archived_by_user_id": 1,
+      "archived_at": "2026-05-12T12:00:00Z",
+      "scope": "entry",
+      "language_code": null,
+      "affected_languages": [
+        "fr"
+      ],
+      "removed_routes": [
+        "/ancienne-page"
+      ],
+      "redirect_to": null,
+      "http_code": null
+    },
+    "meta": {
+      "contract": "admin.entries.archive.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "PUBLICATION_CONFLICT"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

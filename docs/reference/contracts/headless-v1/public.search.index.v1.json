@@ -1,0 +1,243 @@
+{
+  "contract": "public.search.index.v1",
+  "kind": "schema",
+  "summary": "Rechercher dans les contenus publiés.",
+  "description": "Recherche publique sur les documents indexés cohérents avec les snapshots publiés, filtrable par type, taxonomie et terme. Une requête vide retourne une liste vide.",
+  "method": "GET",
+  "source": "search_documents + public_content_snapshots",
+  "security": "Public read endpoint; may be protected by bearer scope search:read; published snapshots only; q truncated to 120 chars.",
+  "path": "/api/v1/search",
+  "query_params": {
+    "site": {
+      "type": "string",
+      "required": false,
+      "description": "Site key actif à cibler explicitement. Si absent, résolution par domaine/base path."
+    },
+    "site_id": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Identifiant technique d'un site actif. Prioritaire sur site si fourni."
+    },
+    "lang": {
+      "type": "string",
+      "required": false,
+      "pattern": "^[a-z]{2}(?:-[a-z0-9]{2,8})?$",
+      "description": "Code langue demandé. Si la langue n'est pas active, fallback sur la langue par défaut du site."
+    },
+    "limit": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "maximum": 100,
+      "default": 24,
+      "description": "Nombre maximum d'éléments retournés."
+    },
+    "offset": {
+      "type": "integer",
+      "required": false,
+      "minimum": 0,
+      "default": 0,
+      "description": "Décalage zéro-indexé."
+    },
+    "page": {
+      "type": "integer",
+      "required": false,
+      "minimum": 1,
+      "description": "Alternative à offset. Si présent, offset=(page-1)*limit."
+    },
+    "q": {
+      "type": "string",
+      "required": false,
+      "maxLength": 120,
+      "description": "Texte recherché, tronqué à 120 caractères."
+    },
+    "type": {
+      "type": "string",
+      "required": false
+    },
+    "taxonomy": {
+      "type": "string",
+      "required": false
+    },
+    "term": {
+      "type": "string",
+      "required": false
+    }
+  },
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": [
+        "data",
+        "meta"
+      ],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": [
+            "query",
+            "items",
+            "pagination"
+          ],
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "type",
+                  "title",
+                  "summary",
+                  "path",
+                  "updated_at",
+                  "seo"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "updated_at": {
+                    "type": "string"
+                  },
+                  "seo": {
+                    "type": "object",
+                    "required": [
+                      "title",
+                      "description",
+                      "robots"
+                    ],
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "robots": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "pagination": {
+              "type": "object",
+              "required": [
+                "total",
+                "limit",
+                "offset",
+                "has_more"
+              ],
+              "properties": {
+                "total": {
+                  "type": "integer"
+                },
+                "limit": {
+                  "type": "integer"
+                },
+                "offset": {
+                  "type": "integer"
+                },
+                "has_more": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": [
+            "contract",
+            "request_id"
+          ],
+          "properties": {
+            "contract": {
+              "type": "string"
+            },
+            "request_id": {
+              "type": "string"
+            },
+            "site_id": {
+              "type": "integer"
+            },
+            "language_code": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.search.index.v1"
+  },
+  "errors": [
+    {
+      "code": "VALIDATION_FAILED",
+      "status": 422,
+      "description": "Contexte site/langue ou pagination invalide.",
+      "schema": {
+        "$ref": "../admin-api-v1/error.v1.json"
+      }
+    }
+  ],
+  "examples": {
+    "request": "GET /api/v1/search?q=parapente&lang=fr&limit=10",
+    "response": {
+      "data": {
+        "query": "parapente",
+        "items": [
+          {
+            "id": 42,
+            "type": "article",
+            "title": "Vol parapente",
+            "summary": "Résumé",
+            "path": "/articles/vol-parapente",
+            "updated_at": "2026-05-02 10:00:00",
+            "seo": {
+              "title": "Vol parapente",
+              "description": "Résumé",
+              "robots": "index,follow"
+            }
+          }
+        ],
+        "pagination": {
+          "total": 1,
+          "limit": 10,
+          "offset": 0,
+          "has_more": false
+        }
+      },
+      "meta": {
+        "contract": "public.search.index.v1",
+        "request_id": "20260604120000-abc",
+        "site_id": 1,
+        "language_code": "fr",
+        "source": "search_documents + public_content_snapshots"
+      }
+    }
+  }
+}

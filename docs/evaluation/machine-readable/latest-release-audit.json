@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "technical_version": "dec_v06-e04a",
+  "release_type": "minor",
+  "release_name": "Beta",
+  "bound_at": "2026-06-15T20:54:33Z",
+  "audit_profile": "release",
+  "audit_status": "PASS",
+  "audit_steps_passed": 21,
+  "release_archive": "dec_v06-e04a.zip",
+  "release_sha256": "efdb327a79e4b437e8a01b12231bd29155b5d72faafae93e0625ae8ae6c99c00",
+  "release_checksum_file": "dec_v06-e04a.zip.sha256",
+  "evidence_archive": "dec_v06-e04a-audit-evidence.zip",
+  "evidence_sha256": "91618cf4ac8925541f4ad45e62d630adc30cf5b3df1586ff1ac4408e3a4c18a2",
+  "evidence_checksum_file": "dec_v06-e04a-audit-evidence.zip.sha256",
+  "policy": {
+    "applies_to": [
+      "minor",
+      "major"
+    ],
+    "patches_require_reproducible_audit": false,
+    "evidence_embedded_in_runtime_archive": false
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "contract": "admin.forms.write.v1",
+  "request": {
+    "data": {
+      "form_key": "contact",
+      "status": "published",
+      "is_active": true,
+      "store_submissions": true,
+      "notification_enabled": true,
+      "notification_recipients": ["admin@example.test"],
+      "notification_subject": "Nouvelle demande de contact",
+      "honeypot_field": "website",
+      "min_submit_seconds": 2,
+      "rate_limit_max_attempts": 5,
+      "rate_limit_window_seconds": 900,
+      "translations": [
+        {
+          "language_code": "fr",
+          "name": "Contact",
+          "description_text": "",
+          "submit_label": "Envoyer",
+          "success_message": "Merci, votre message a été envoyé."
+        }
+      ],
+      "fields": [
+        {
+          "field_key": "email",
+          "field_type": "email",
+          "is_required": true,
+          "width": "half",
+          "validation": { "max": 190 },
+          "translations": [
+            { "language_code": "fr", "label": "Email", "placeholder": "nom@example.org", "options": [] }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "data": { "form": "FormDefinition" },
+    "meta": { "contract": "admin.forms.write.v1", "site_id": 1, "language_code": "fr" }
+  }
+}

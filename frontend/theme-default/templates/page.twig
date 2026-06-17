@@ -1,0 +1,22 @@
+{% set blocks = entry_blocks|default([]) %}
+
+<article class="page-document{% if is_home|default(false) %} page-document--home{% endif %}" data-entry-key="{{ entry_key }}">
+  {% if is_preview %}
+    <span class="badge">{{ ui.preview }}</span>
+  {% endif %}
+
+  {% if blocks %}
+    {% include 'partials/content-blocks.twig' %}
+  {% else %}
+    <header class="hero" aria-labelledby="page-title">
+      <div class="meta">{{ entry_type_label }}</div>
+      <h1 id="page-title">{{ entry_title }}</h1>
+    </header>
+  {% endif %}
+
+  {% if cookie_policy|default(null) %}
+    {% include 'partials/cookie-policy.twig' %}
+  {% endif %}
+
+  {% include 'partials/social-share.twig' %}
+</article>

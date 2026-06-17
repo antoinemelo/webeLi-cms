@@ -1,0 +1,51 @@
+{
+  "contract": "admin.entries.destroy.v1",
+  "method": "DELETE",
+  "path": "/admin/api/entries/{id}",
+  "permission": "content.delete",
+  "headers": {
+    "X-CSRF-Token": "required",
+    "X-Contract-Version": "admin-api-v1"
+  },
+  "request": {
+    "data": {
+      "site_id": "optional integer",
+      "language_code": "optional string for context validation",
+      "confirm": "required literal DELETE",
+      "redirect_to": "optional internal absolute path such as /nouvelle-page; when omitted, old URLs become independent 410 tombstones",
+      "http_code": "optional integer: 301, 302, 307 or 308; default 301"
+    }
+  },
+  "response": {
+    "data": {
+      "status": "deleted",
+      "entry_id": 1,
+      "site_id": 1,
+      "deleted_by_user_id": 1,
+      "deleted_at": "2026-05-12T12:00:00Z",
+      "removed_routes": [
+        "/ancienne-page"
+      ],
+      "redirect_to": "/nouvelle-page",
+      "http_code": 301
+    },
+    "meta": {
+      "contract": "admin.entries.destroy.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "CONTENT_ENTRY_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

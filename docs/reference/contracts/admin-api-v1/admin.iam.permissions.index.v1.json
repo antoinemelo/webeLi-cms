@@ -1,0 +1,51 @@
+{
+  "contract": "admin.iam.permissions.index.v1",
+  "methods": [
+    "GET"
+  ],
+  "permission": "roles.read",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {},
+  "response": {
+    "data": {
+      "permissions": [
+        {
+          "id": 1,
+          "permission_key": "iam.users.manage",
+          "name": "Gérer les utilisateurs",
+          "description": "Créer, modifier, activer et désactiver les utilisateurs."
+        }
+      ],
+      "groups": {
+        "iam": [
+          "iam.users.manage",
+          "iam.roles.manage",
+          "iam.audit.view"
+        ]
+      }
+    },
+    "meta": {
+      "contract": "admin.iam.permissions.index.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/permissions"
+}

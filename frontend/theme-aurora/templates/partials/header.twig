@@ -1,0 +1,29 @@
+<header class="site-header border-bottom bg-white sticky-top">
+  <nav class="navbar navbar-expand-lg" aria-label="{{ ui.main_navigation }}">
+    <div class="container gap-2">
+      <a class="navbar-brand brand d-inline-flex align-items-center gap-2 me-lg-3" href="{{ localized_home_url|default(url('/')) }}" aria-label="{{ site_localization.site_title|default(app_name) }} — {{ ui.home }}">
+        {% if site_logo_url|default('') %}<img class="brand__logo" src="{{ site_logo_url }}" alt="" loading="eager" decoding="async">{% else %}<span class="brand__mark" aria-hidden="true">CMS</span>{% endif %}
+        {% if show_site_title_in_header is not defined or show_site_title_in_header %}<span class="brand__text">{{ site_localization.site_title|default(app_name) }}</span>{% endif %}
+      </a>
+
+      <form class="header-search d-none d-lg-flex flex-grow-1 me-lg-3" action="{{ localized_search_url|default(url('/search')) }}" method="get" role="search">
+        <label class="visually-hidden" for="header-search-q">{{ ui.search }}</label>
+        <input id="header-search-q" class="form-control rounded-pill" name="q" value="{{ search_query|default('') }}" placeholder="{{ ui.search_placeholder }}" autocomplete="search" inputmode="search">
+      </form>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#site-navigation" aria-controls="site-navigation" aria-expanded="false" aria-label="{{ ui.menu }}">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="site-navigation" class="collapse navbar-collapse">
+        {% include 'partials/navigation.twig' %}
+        {% include 'partials/language-switcher.twig' %}
+
+        <form class="header-search d-lg-none mt-3" action="{{ localized_search_url|default(url('/search')) }}" method="get" role="search">
+          <label class="visually-hidden" for="header-search-q-mobile">{{ ui.search }}</label>
+          <input id="header-search-q-mobile" class="form-control rounded-pill" name="q" value="{{ search_query|default('') }}" placeholder="{{ ui.search_placeholder }}" autocomplete="search" inputmode="search">
+        </form>
+      </div>
+    </div>
+  </nav>
+</header>

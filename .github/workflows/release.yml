@@ -1,0 +1,92 @@
+name: DEC CMS release qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Déployer après qualification"
+        required: true
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+      deploy_protocol:
+        description: "Protocole de déploiement"
+        required: true
+        default: "none"
+        type: choice
+        options: ["none", "ftp", "sftp"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dec-cms-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualify-package-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "true"
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+      E2E_WEBHOOK_URL: ${{ secrets.E2E_WEBHOOK_URL }}
+      FTP_HOST: ${{ secrets.FTP_HOST }}
+      FTP_PORT: ${{ secrets.FTP_PORT }}
+      FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+      FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      FTP_REMOTE_ROOT: ${{ secrets.FTP_REMOTE_ROOT }}
+      FTP_TLS: ${{ secrets.FTP_TLS }}
+      FTP_PASSIVE: ${{ secrets.FTP_PASSIVE }}
+      SFTP_HOST: ${{ secrets.SFTP_HOST }}
+      SFTP_PORT: ${{ secrets.SFTP_PORT }}
+      SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+      SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+      SFTP_REMOTE_ROOT: ${{ secrets.SFTP_REMOTE_ROOT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: sqlite3, pdo_sqlite, mbstring, intl, gd
+          tools: composer:v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: frontend/admin-vue/package-lock.json
+      - name: Install PHP dependencies
+        run: composer install --working-dir backend --no-interaction --prefer-dist --no-progress
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend/admin-vue
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend/admin-vue
+      - name: Run release qualification
+        run: python3 tools/cms.py --command-timeout 1200 --evidence-dir storage/qualification/command-evidence qualify --profile release
+      - name: Upload qualification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualification-release
+          path: storage/qualification/*
+          if-no-files-found: error
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dec-cms-release
+          path: storage/exports/**/*.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Optional FTP deploy
+        if: ${{ inputs.deploy == 'true' && inputs.deploy_protocol == 'ftp' }}
+        run: python3 tools/cms.py release --ci --deploy ftp
+      - name: Optional SFTP deploy
+        if: ${{ inputs.deploy == 'true' && inputs.deploy_protocol == 'sftp' }}
+        run: python3 tools/cms.py release --ci --deploy sftp

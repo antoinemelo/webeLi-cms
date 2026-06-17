@@ -1,0 +1,10 @@
+# Storage is private by default. Public media are explicitly reopened in storage/media/.htaccess.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Deny from all
+</IfModule>

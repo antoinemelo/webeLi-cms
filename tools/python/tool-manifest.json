@@ -1,0 +1,2345 @@
+{
+  "schema_version": 2,
+  "generated_by": "tools/python/generators/generate_tool_manifest.py",
+  "public_cli": "python3 tools/cms.py",
+  "tools": [
+    {
+      "path": "tools/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/admin.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/cms.py",
+      "category": "cli",
+      "public": true,
+      "entrypoint": true,
+      "called_by": [
+        ".github/workflows/quality.yml",
+        ".github/workflows/release.yml",
+        "README.md",
+        "database/00-overview.md",
+        "docs/README.md",
+        "docs/administration/content-model/blueprints.md",
+        "docs/administration/imports-exports/editorial-static.md",
+        "docs/administration/modules/manage-modules.md",
+        "docs/administration/security/tokens-cors-webhooks.md",
+        "docs/administration/users-roles-permissions/sessions-and-2fa.md",
+        "docs/development/architecture/README.md",
+        "docs/development/backoffice/visual-editor.md",
+        "docs/development/command-reliability.md",
+        "docs/development/contributing-documentation.md",
+        "docs/development/database/README.md",
+        "docs/development/extending/README.md",
+        "docs/development/extending/command-validator.md",
+        "docs/development/getting-started.md",
+        "docs/development/python-tooling/cli.md",
+        "docs/development/testing-validation/CI_VALIDATION_RESULTS.md",
+        "docs/development/testing-validation/E2E_RESULTS.md",
+        "docs/development/testing-validation/FRONTEND_DEPENDENCIES.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/development/testing-validation/README.md",
+        "docs/evaluation/audit-evidence-troubleshooting.md",
+        "docs/evaluation/evidence-index.md",
+        "docs/evaluation/machine-readable/cms-evaluation-manifest.json",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/evaluation/release-audit-policy.md",
+        "docs/evaluation/reproducible-checks.md",
+        "docs/getting-started/README.md",
+        "docs/installation/README.md",
+        "docs/installation/install-release.md",
+        "docs/installation/requirements.md",
+        "docs/operations/README.md",
+        "docs/operations/backup-restore.md",
+        "docs/operations/runbook.md",
+        "docs/public-api/quickstart.md",
+        "docs/reference/README.md",
+        "docs/reference/contracts/admin-api-v1/README.md",
+        "docs/reference/contracts/headless-v1/README.md",
+        "docs/reference/generated/cli-commands.md",
+        "docs/user-guide/publication/review-publish.md",
+        "docs/user-guide/publication/unpublish-archive-delete-restore.md",
+        "docs/user-guide/seo/audit-redirects-troubleshooting.md",
+        "docs/user-guide/seo/seo-workflow.md",
+        "ops/deployment-notes.md",
+        "packages/amcms-client/README.md",
+        "tools/admin.py",
+        "tools/audit/run-audit.sh",
+        "tools/python/ARCHITECTURE.md",
+        "tools/python/README.md",
+        "tools/python/archive/README.md",
+        "tools/python/archive/c_validate.py",
+        "tools/python/archive/consolidation_inventory.py",
+        "tools/python/cms/cli.py",
+        "tools/python/commands/__init__.py",
+        "tools/python/diagnostics/list_python_tools.py",
+        "tools/python/generators/c40_generate_openapi_headless_v1.py",
+        "tools/python/generators/c44_generate_sdk_types_from_openapi.py",
+        "tools/python/generators/g13_export_schema.py",
+        "tools/python/generators/generate_documentation.py",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/operations/ai/create_ai_database.py",
+        "tools/python/operations/ai/reset_ai_database.py",
+        "tools/python/operations/audit/a1_collect_evidence.py",
+        "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/backup/d7_restore_sqlite.py",
+        "tools/python/operations/database/a_db_init.py",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/b1_rebuild_projections.py",
+        "tools/python/operations/database/b2_cleanup_noindex_search_documents.py",
+        "tools/python/operations/database/b3_rebuild_search.py",
+        "tools/python/operations/database/b6_normalize_editorial_status.py",
+        "tools/python/operations/database/d10_rebase_sqlite_data.py",
+        "tools/python/operations/database/d9_migrate_sqlite.py",
+        "tools/python/operations/database/g1_seed_native_blueprints.py",
+        "tools/python/operations/database/g7_add_site.py",
+        "tools/python/operations/deployment/d0_prepare_release.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d12_quality_gate.py",
+        "tools/python/operations/deployment/d13_bind_release_evidence.py",
+        "tools/python/operations/deployment/d1_preflight_local.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/operations/deployment/d4_verify_release_archive.py",
+        "tools/python/operations/deployment/d5_smoke_test_release_structure.py",
+        "tools/python/operations/deployment/d8_deploy_web_update.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/operations/maintenance/g0_iam_reference_audit.py",
+        "tools/python/operations/maintenance/g12_seo_audit.py",
+        "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tests/test_cms_cli.py",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/configuration/repository_layout.py",
+        "tools/python/validation/documentation/contracts.py",
+        "tools/python/validators/__init__.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Point d’entrée public unique"
+    },
+    {
+      "path": "tools/python/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/archive/__init__.py",
+      "category": "archive",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "archived",
+      "destructive": true,
+      "archived_at": "2026-06-13",
+      "reason": "Traçabilité historique uniquement; utilisation en production interdite"
+    },
+    {
+      "path": "tools/python/archive/c_validate.py",
+      "category": "archive",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/archive/README.md",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py validate --full",
+      "status": "archived",
+      "destructive": false,
+      "archived_at": "2026-06-13",
+      "reason": "Traçabilité historique uniquement; utilisation en production interdite"
+    },
+    {
+      "path": "tools/python/archive/consolidation_inventory.py",
+      "category": "archive",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "archived",
+      "destructive": false,
+      "archived_at": "2026-06-13",
+      "reason": "Traçabilité historique uniquement; utilisation en production interdite"
+    },
+    {
+      "path": "tools/python/baseline/capture_baseline.py",
+      "category": "diagnostic-baseline",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tests/test_characterization_baseline.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/baseline/compare_baseline.py",
+      "category": "diagnostic-baseline",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/cms/__init__.py",
+      "category": "cli-framework",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/cms/cli.py",
+      "category": "cli-framework",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/cms.py",
+        "tools/python/ARCHITECTURE.md",
+        "tools/python/archive/c_validate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/cms/evidence.py",
+      "category": "cli-framework",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/command-reliability.md",
+        "docs/evaluation/audit-evidence-troubleshooting.md",
+        "docs/evaluation/latest-release-audit.md",
+        "docs/evaluation/release-audit-policy.md",
+        "tools/audit/run-audit.sh",
+        "tools/python/operations/deployment/d13_bind_release_evidence.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/cms/runtime.py",
+      "category": "cli-framework",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/command-reliability.md",
+        "tools/python/commands/audit.py",
+        "tools/python/commands/backup.py",
+        "tools/python/commands/docs.py",
+        "tools/python/commands/export.py",
+        "tools/python/commands/init.py",
+        "tools/python/commands/qualify.py",
+        "tools/python/commands/release.py",
+        "tools/python/commands/test.py",
+        "tools/python/tests/test_command_runtime_reliability.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/__init__.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/audit.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/backup.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/docs.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/python-tooling/cli.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/export.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/init.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "database/00-overview.md",
+        "tools/python/lib/database_inventory.py",
+        "tools/python/operations/database/a_db_init.py",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/g7_add_site.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/maintenance/g0_iam_reference_audit.py",
+        "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/inventory.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/qualify.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/release.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/release-contents.json",
+        "docs/reference/generated/cli-commands.md",
+        "docs/reference/generated/configuration.md",
+        "tools/python/README.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/operations/release_structure.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/test.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/validate.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "frontend/admin-vue/src/components/editor/BlockEditor.vue",
+        "tools/python/archive/README.md",
+        "tools/python/archive/c_validate.py",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/diagnostics/__init__.py",
+      "category": "diagnostic",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/diagnostics/list_python_tools.py",
+      "category": "diagnostic",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/__init__.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/c40_generate_openapi_headless_v1.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/python-tooling/cli.md",
+        "docs/public-api/quickstart.md",
+        "packages/amcms-client/README.md",
+        "tools/python/commands/docs.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/c44_generate_sdk_types_from_openapi.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/python-tooling/cli.md",
+        "packages/amcms-client/README.md",
+        "packages/amcms-client/src/generated/openapi-types.ts",
+        "tools/python/commands/docs.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/g13_export_schema.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/generate_documentation.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/python-tooling/cli.md",
+        "docs/reference/generated/README.md",
+        "docs/reference/generated/cli-commands.md",
+        "docs/reference/generated/configuration.md",
+        "docs/reference/generated/database-schema.md",
+        "docs/reference/generated/field-types.md",
+        "docs/reference/generated/modules.md",
+        "docs/reference/generated/native-blueprints.md",
+        "docs/reference/generated/permissions.md",
+        "docs/reference/generated/release-contents.md",
+        "docs/reference/generated/routes.md",
+        "docs/reference/generated/schema-versions.md",
+        "docs/reference/generated/validators.md",
+        "tools/python/commands/docs.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/generate_evaluation_documentation.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/commands/docs.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/generators/generate_tool_manifest.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/lib/__init__.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/lib/database_inventory.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/backup/d7_restore_sqlite.py",
+        "tools/python/operations/deployment/d1_preflight_local.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d4_verify_release_archive.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/inventory.py",
+        "tools/python/validation/qualification/runtime_integrity.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/lib/deploylib.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/lib/processes.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/b1_rebuild_projections.py",
+        "tools/python/operations/database/b3_rebuild_search.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/lib/release_metadata.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/cms/cli.py",
+        "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/deployment/d0_prepare_release.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d13_bind_release_evidence.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d4_verify_release_archive.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/ai/__init__.py",
+      "category": "operation-ai",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/ai/create_ai_database.py",
+      "category": "operation-ai",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "database/00-overview.md",
+        "tools/python/operations/ai/reset_ai_database.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/inventory.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/ai/reset_ai_database.py",
+      "category": "operation-ai",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "database/00-overview.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/audit/__init__.py",
+      "category": "operation-audit",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/audit/a1_collect_evidence.py",
+      "category": "operation-audit",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/audit-evidence-troubleshooting.md",
+        "docs/evaluation/release-audit-policy.md",
+        "tools/audit/run-audit.sh",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/audit/a2_verify_evidence.py",
+      "category": "operation-audit",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/audit/run-audit.sh",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/backup/__init__.py",
+      "category": "operation-backup",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py backup",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/backup/d6_backup_sqlite.py",
+      "category": "operation-backup",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/commands/backup.py",
+        "tools/python/operations/backup/d7_restore_sqlite.py",
+        "tools/python/operations/database/d9_migrate_sqlite.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py"
+      ],
+      "replacement": "python3 tools/cms.py backup",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/backup/d7_restore_sqlite.py",
+      "category": "operation-backup",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/commands/backup.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py"
+      ],
+      "replacement": "python3 tools/cms.py backup",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/__init__.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/a_db_init.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "database/00-overview.md",
+        "tools/python/commands/init.py",
+        "tools/python/lib/database_inventory.py",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/g7_add_site.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/maintenance/g0_iam_reference_audit.py",
+        "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/inventory.py"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/b0_db_seed.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "database/00-overview.md",
+        "tools/python/operations/database/a_db_init.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/b1_rebuild_projections.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/projections.py"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/b2_cleanup_noindex_search_documents.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/reference/generated/configuration.md",
+        "tools/python/operations/database/b3_rebuild_search.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/b3_rebuild_search.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/operations/database/d10_rebase_sqlite_data.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/database/projections.py"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/b6_normalize_editorial_status.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/d10_rebase_sqlite_data.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/d9_migrate_sqlite.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/operations/deployment/d8_deploy_web_update.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/g1_seed_native_blueprints.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/database/g7_add_site.py",
+      "category": "operation-database",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py init|rebuild",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/__init__.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d0_prepare_release.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/reference/generated/cli-commands.md",
+        "tools/python/commands/release.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d11_ci_release.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/reference/generated/configuration.md",
+        "tools/python/commands/release.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d12_quality_gate.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d13_bind_release_evidence.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/latest-release-audit.md",
+        "docs/evaluation/release-audit-policy.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d1_preflight_local.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "backend/public/index.php",
+        "ops/deployment-notes.md",
+        "tools/python/README.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d2_package_release.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/release-contents.json",
+        "tools/python/README.md",
+        "tools/python/generators/generate_documentation.py",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/release_structure.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d3_deploy_ftp.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d2_package_release.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d4_verify_release_archive.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/release-contents.json",
+        "ops/deployment-notes.md",
+        "tools/python/README.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_release_archive_vendor_contract.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/release_structure.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d5_smoke_test_release_structure.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d8_deploy_web_update.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/README.md",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/deployment/d_deploy.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "database/00-overview.md",
+        "docs/evaluation/release-audit-policy.md",
+        "docs/reference/generated/configuration.md",
+        "ops/deployment-notes.md",
+        "tools/python/commands/release.py",
+        "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/maintenance/__init__.py",
+      "category": "operation-maintenance",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/maintenance/g0_iam_reference_audit.py",
+      "category": "operation-maintenance",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/maintenance/g12_seo_audit.py",
+      "category": "operation-maintenance",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/maintenance/g14_media_maintenance.py",
+      "category": "operation-maintenance",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/run_all.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/README.md",
+        "docs/evaluation/evidence-index.md",
+        "docs/evaluation/feature-matrix.md",
+        "docs/evaluation/limitations.md",
+        "docs/evaluation/product-scope.md",
+        "docs/evaluation/reproducible-checks.md",
+        "docs/operations/backup-restore.md",
+        "docs/operations/deployment.md",
+        "docs/operations/production-checklist.md",
+        "docs/operations/runbook.md",
+        "docs/operations/static-export.md",
+        "docs/operations/troubleshooting.md",
+        "tools/python/commands/qualify.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d12_quality_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/integration/__init__.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/integration/test_php_functional_suites.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_audit_and_release_export_layout.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_audit_evidence_collection.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/audit-evidence-troubleshooting.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_characterization_baseline.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_cli_rationalization.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_cms_cli.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_command_runtime_reliability.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_content_repository_architecture.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_public_route_repository_wiring.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_qualification_orchestrator.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_release_archive_vendor_contract.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_release_package_cli.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_runtime_bootstrap_and_audit_evidence.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_test_suite_structure.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/api/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/api/specification.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/checks.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/api/specification.py",
+        "tools/python/validation/configuration/config_consistency.py",
+        "tools/python/validation/configuration/repository_layout.py",
+        "tools/python/validation/content/blueprints.py",
+        "tools/python/validation/content/contracts.py",
+        "tools/python/validation/content/site_locale.py",
+        "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/schema.py",
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/operations/media.py",
+        "tools/python/validation/operations/release_structure.py",
+        "tools/python/validation/permissions/model.py",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py",
+        "tools/python/validation/qualification/runtime_integrity.py",
+        "tools/python/validation/qualification/static_export_dry_run.py",
+        "tools/python/validation/security/baseline.py",
+        "tools/python/validation/shared/dependency_boundaries.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/configuration/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/configuration/config_consistency.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/configuration/repository_layout.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/content/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/content/blueprints.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/g1_seed_native_blueprints.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/content/contracts.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "backend/src/Application/Api/Admin/FormApiController.php",
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "frontend/admin-vue/README.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/content/site_locale.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/inventory.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/archive/consolidation_inventory.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/projections.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/schema.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/documentation/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/documentation/contracts.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "backend/src/Application/Api/Admin/FormApiController.php",
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "frontend/admin-vue/README.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/model.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/api/specification.py",
+        "tools/python/validation/configuration/config_consistency.py",
+        "tools/python/validation/configuration/repository_layout.py",
+        "tools/python/validation/content/blueprints.py",
+        "tools/python/validation/content/contracts.py",
+        "tools/python/validation/content/site_locale.py",
+        "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/schema.py",
+        "tools/python/validation/documentation/contracts.py",
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/operations/media.py",
+        "tools/python/validation/operations/release_structure.py",
+        "tools/python/validation/permissions/model.py",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py",
+        "tools/python/validation/qualification/runtime_integrity.py",
+        "tools/python/validation/qualification/static_export_dry_run.py",
+        "tools/python/validation/security/baseline.py",
+        "tools/python/validation/shared/dependency_boundaries.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/operations/__init__.py",
+      "category": "operation-__init__.py",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/operations/manifests.py",
+      "category": "operation-manifests.py",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/operations/media.py",
+      "category": "operation-media.py",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/operations/release_structure.py",
+      "category": "operation-release_structure.py",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/README.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/permissions/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/permissions/model.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/qualification/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/qualification/backup_restore_roundtrip.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/qualification/runtime_integrity.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/qualification/static_export_dry_run.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/registry.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/ARCHITECTURE.md",
+        "tools/python/commands/validate.py",
+        "tools/python/generators/generate_documentation.py",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validators/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/runner.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/commands/docs.py",
+        "tools/python/commands/validate.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validators/__init__.py",
+        "tools/python/validators/runner.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/security/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/security/baseline.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/features.json",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tests/test_characterization_baseline.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/shared/__init__.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/shared/dependency_boundaries.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validators/__init__.py",
+      "category": "validator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py validate",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validators/registry.py",
+      "category": "validator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/ARCHITECTURE.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py validate",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validators/runner.py",
+      "category": "validator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py validate",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    }
+  ]
+}

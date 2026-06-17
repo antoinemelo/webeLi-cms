@@ -1,0 +1,60 @@
+{
+  "contract": "admin.iam.roles.show.v1",
+  "methods": [
+    "POST",
+    "PATCH"
+  ],
+  "paths": {
+    "store": "/admin/api/iam/roles",
+    "update": "/admin/api/iam/roles/{id}"
+  },
+  "permission": "roles.manage",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "POST/PATCH": {
+      "role_key": "required for creation, lowercase snake_case, immutable for system roles",
+      "name": "required string, max 120",
+      "description": "optional string, max 500",
+      "permission_ids": "array of existing permission ids"
+    }
+  },
+  "response": {
+    "data": {
+      "role": {
+        "id": 1,
+        "role_key": "super_admin",
+        "name": "Super admin",
+        "description": "Accès complet au CMS.",
+        "permission_ids": [
+          1,
+          2,
+          3
+        ],
+        "is_system": true
+      },
+      "message": "Rôle mis à jour."
+    },
+    "meta": {
+      "contract": "admin.iam.roles.show.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

@@ -1,0 +1,42 @@
+name: DEC CMS quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  standard-qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: sqlite3, pdo_sqlite, mbstring, intl, gd
+          tools: composer:v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: frontend/admin-vue/package-lock.json
+      - name: Install PHP dependencies
+        run: composer install --working-dir backend --no-interaction --prefer-dist --no-progress
+      - name: Install frontend dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: frontend/admin-vue
+      - name: Run standard qualification
+        run: python3 tools/cms.py --command-timeout 900 --evidence-dir storage/qualification/command-evidence qualify --profile standard
+      - name: Upload qualification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualification-standard
+          path: storage/qualification/*
+          if-no-files-found: error

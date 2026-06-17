@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://am-cms.local/schemas/editorial-package/1.0/definitions.schema.json",
+  "$defs": {
+    "portableKey": {"type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._:-]{0,126}[a-z0-9])?$"},
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$"},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "relativePath": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"},
+    "seo": {
+      "type": "object",
+      "required": ["title", "description", "canonical", "robots", "open_graph", "twitter", "structured_data", "blueprint_metadata", "image_media_keys"],
+      "properties": {
+        "title": {"type": ["string", "null"]}, "description": {"type": ["string", "null"]}, "canonical": {"type": ["string", "null"]},
+        "robots": {"type": "object", "required": ["index", "follow"], "properties": {"index": {"type": "boolean"}, "follow": {"type": "boolean"}}},
+        "open_graph": {"type": "object"}, "twitter": {"type": "object"}, "structured_data": {"type": "array"},
+        "blueprint_metadata": {"type": "object"}, "image_media_keys": {"type": "array", "items": {"$ref": "#/$defs/portableKey"}, "uniqueItems": true}
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "contract": "public.forms.submit.v1",
+  "request": {
+    "data": {
+      "email": "nom@example.org",
+      "message": "Bonjour",
+      "website": "",
+      "_started_at": 1770000000
+    }
+  },
+  "response": {
+    "data": {
+      "accepted": true,
+      "status": "received",
+      "submission_id": 12,
+      "message": "Merci, votre message a été envoyé."
+    },
+    "meta": { "contract": "public.forms.submit.v1", "site_id": 1, "language_code": "fr" }
+  },
+  "validation_error": {
+    "error": {
+      "code": "VALIDATION_FAILED",
+      "message": "Veuillez corriger les champs indiqués.",
+      "fields": { "email": ["Adresse email invalide."] }
+    }
+  }
+}

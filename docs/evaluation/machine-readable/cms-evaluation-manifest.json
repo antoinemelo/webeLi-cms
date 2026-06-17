@@ -1,0 +1,102 @@
+{
+  "audiences": [
+    "editor",
+    "publisher",
+    "seo-manager",
+    "administrator",
+    "superadministrator",
+    "installer",
+    "operator",
+    "api-integrator",
+    "developer",
+    "evaluator",
+    "ai-evaluator"
+  ],
+  "commands": [
+    "python3 tools/cms.py rebuild",
+    "python3 tools/cms.py test",
+    "python3 tools/cms.py validate",
+    "python3 tools/cms.py docs generate",
+    "python3 tools/cms.py docs check",
+    "python3 tools/cms.py docs evaluation-generate",
+    "python3 tools/cms.py docs evaluation-check",
+    "python3 tools/cms.py backup --help",
+    "python3 tools/cms.py release --help"
+  ],
+  "commit": null,
+  "confidence": "high",
+  "databases": [
+    "core",
+    "iam",
+    "modules"
+  ],
+  "dirty": false,
+  "evaluated_version": "working-tree",
+  "evaluation_documents": [
+    "docs/evaluation/README.md",
+    "docs/evaluation/evidence-index.md",
+    "docs/evaluation/feature-matrix.md",
+    "docs/evaluation/limitations.md",
+    "docs/evaluation/product-scope.md",
+    "docs/evaluation/reproducible-checks.md"
+  ],
+  "evidence": [
+    "backend/composer.json",
+    "frontend/admin-vue/package.json",
+    "database/",
+    "tools/cms.py",
+    "docs/evaluation/"
+  ],
+  "generated_at": "2026-06-14",
+  "id": "cms-evaluation-manifest",
+  "last_verified": "2026-06-14",
+  "limitations": [
+    "Generated inventories prove source presence and structure, not complete end-to-end usability."
+  ],
+  "machine_readable_documents": [
+    "api-endpoints.json",
+    "architecture.json",
+    "cms-evaluation-manifest.json",
+    "databases.json",
+    "features.json",
+    "permissions.json",
+    "release-contents.json",
+    "routes.json",
+    "tests.json",
+    "validators.json"
+  ],
+  "modules": [
+    "forms",
+    "cookies/consent",
+    "ai",
+    "analytics"
+  ],
+  "product_name": "DEC CMS",
+  "scope": [
+    "runtime",
+    "backoffice",
+    "public-api",
+    "databases",
+    "python-tooling",
+    "documentation",
+    "release"
+  ],
+  "source": [
+    "backend/composer.json",
+    "frontend/admin-vue/package.json",
+    "database/",
+    "tools/cms.py",
+    "docs/evaluation/"
+  ],
+  "status": "supported",
+  "technologies": [
+    "PHP 8.2+",
+    "Twig 3",
+    "Vue 3",
+    "TypeScript",
+    "Pinia",
+    "Vite",
+    "SQLite",
+    "Python 3"
+  ]
+}

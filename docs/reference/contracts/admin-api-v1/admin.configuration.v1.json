@@ -1,0 +1,100 @@
+{
+  "contract": "admin.configuration.v1",
+  "methods": [
+    "GET",
+    "PATCH"
+  ],
+  "paths": [
+    "/admin/api/configuration"
+  ],
+  "permissions": {
+    "read": "settings.read",
+    "update": "settings.manage"
+  },
+  "headers": {
+    "PATCH": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "query": {
+    "site_id": "optional integer; defaults to resolved current site",
+    "content_language_code": "optional content language code; defaults to site default content language",
+    "ui_language_code": "optional admin interface language code: fr | en"
+  },
+  "request": {
+    "data": {
+      "group_key": "site | languages | backoffice | public_ui | localization | seo | media | articles | relations",
+      "language_code": "optional language code used by localization updates",
+      "values": "object matching the selected schema group; server-side validation is authoritative",
+      "content_language_code": "optional content language code used by localization updates",
+      "ui_language_code": "optional admin interface language code used to localize configuration labels"
+    }
+  },
+  "response": {
+    "data": {
+      "schema_version": "string",
+      "groups": [
+        {
+          "key": "string",
+          "label": "string",
+          "description": "string",
+          "permission": "string",
+          "fields": [
+            {
+              "key": "string",
+              "label": "string",
+              "type": "text | textarea | number | boolean | select | language | media | array | site_asset | color",
+              "required": "boolean",
+              "validation": "object; select fields may expose options, preview_query_parameter and, for public_ui.active_theme_key, appearance_defaults"
+            }
+          ]
+        }
+      ],
+      "values": {
+        "site": "object",
+        "languages": "object",
+        "localization": "object",
+        "seo": "object",
+        "media": "object",
+        "relations": "object",
+        "articles": "object containing article detail defaults: visible metadata toggles, date format and JSON-LD author policy",
+        "backoffice": "object",
+        "public_ui": "object containing show_login_shortcut, show_site_title_in_header, active_theme_key, body_font_family, heading_font_family, main_heading_font_family, main_heading_letter_spacing and hex color fields; active_theme_key may expose validation.appearance_defaults keyed by theme"
+      },
+      "actions": {
+        "read": {
+          "method": "GET",
+          "path": "/admin/api/configuration"
+        },
+        "update": {
+          "method": "PATCH",
+          "path": "/admin/api/configuration"
+        }
+      }
+    },
+    "meta": {
+      "contract": "admin.configuration.v1",
+      "contract_version": "admin-api-v1",
+      "site_id": "integer",
+      "language_code": "string",
+      "request_id": "string"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "INVALID_JSON",
+    "JSON_CONTENT_TYPE_REQUIRED",
+    "CONTRACT_VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

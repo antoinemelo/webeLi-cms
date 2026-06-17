@@ -1,0 +1,37 @@
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <div>
+      <strong>{{ site_localization.site_title|default(site.name|default(app_name)) }}</strong>
+      <p>{{ site_localization.footer_text|default('CMS éditorial SEO-first, runtime léger.') }}</p>
+    </div>
+
+    {% set footer_top = footer_top_menu_items|default([]) %}
+    {% set footer_bottom = footer_bottom_menu_items|default([]) %}
+    {% if footer_top is empty and footer_bottom is empty and footer_menu_items|default([]) is not empty %}
+      {% set footer_top = footer_menu_items|slice(0, 3) %}
+      {% set footer_bottom = footer_menu_items|slice(3) %}
+    {% endif %}
+
+    <nav class="footer-links" aria-label="{{ ui.footer_navigation }}">
+      <div class="footer-links__row footer-links__row--top" aria-label="{{ ui.footer_navigation }} — légal">
+{% for item in footer_top %}
+        <a class="{{ item.css_class|default('') }}" href="{{ item.url }}"{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if item.title_attr|default('') %} title="{{ item.title_attr }}"{% endif %}>{{ item.label }}</a>
+{% else %}
+        <a href="{{ localized_url('/mentions-legales', languageCode) }}">{{ ui.legal }}</a>
+        <a href="{{ localized_url('/politique-confidentialite', languageCode) }}">{{ ui.privacy }}</a>
+        <a href="{{ localized_url('/cookies', languageCode) }}">{{ ui.cookies }}</a>
+        <button type="button" class="footer-cookie-link" data-cookie-consent-manage>{{ ui.cookies|default('Cookies') }}</button>
+{% endfor %}
+      </div>
+
+      <div class="footer-links__row footer-links__row--bottom" aria-label="{{ ui.footer_navigation }} — secondaire">
+{% for item in footer_bottom %}
+        <a class="{{ item.css_class|default('') }}" href="{{ item.url }}"{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if item.title_attr|default('') %} title="{{ item.title_attr }}"{% endif %}>{{ item.label }}</a>
+{% else %}
+        <a href="{{ localized_url('/contact', languageCode) }}">{{ ui.contact }}</a>
+        <a href="{{ localized_url('/sitemap', languageCode) }}">{{ ui.sitemap }}</a>
+{% endfor %}
+      </div>
+    </nav>
+  </div>
+</footer>

@@ -1,0 +1,183 @@
+{
+  "contract": "admin.blueprints.model.v1",
+  "method": "GET",
+  "path": "/admin/api/blueprints/model",
+  "permission": "blueprints.read",
+  "query": {
+    "site_id": "optional integer",
+    "language_code": "optional enabled content language code"
+  },
+  "response": {
+    "data": {
+      "summary": {
+        "blueprints": 0,
+        "sections": 0,
+        "fields": 0,
+        "fieldsets": 0
+      },
+      "blueprints": [
+        {
+          "id": 1,
+          "handle": "page",
+          "name": "Page",
+          "content_type": "page",
+          "site_id": null,
+          "language_code": null,
+          "is_system": 1,
+          "is_active": 1,
+          "sections": [
+            {
+              "id": 1,
+              "handle": "content",
+              "label": "Contenu",
+              "ui_kind": "tab",
+              "sort_order": 10,
+              "fields": [
+                {
+                  "id": 1,
+                  "handle": "title",
+                  "field_type": "text",
+                  "label": "Titre",
+                  "help_text": "Titre éditorial principal.",
+                  "group_key": "content",
+                  "width": 100,
+                  "sort_order": 10,
+                  "is_required": 1,
+                  "is_system": 1,
+                  "is_translatable": 1,
+                  "is_localizable": 1,
+                  "is_revisionable": 1,
+                  "options_json": {},
+                  "conditions_json": null,
+                  "validations": [
+                    {
+                      "rule": "required",
+                      "parameters_json": {},
+                      "message": null
+                    }
+                  ],
+                  "pivot": {
+                    "source": "direct",
+                    "is_required_override": null,
+                    "width_override": null,
+                    "sort_order": 10
+                  }
+                }
+              ]
+            }
+          ],
+          "fieldsets": [
+            {
+              "handle": "seo_basic",
+              "label": "SEO de base",
+              "sort_order": 100,
+              "fields": [
+                "seo_title",
+                "seo_description",
+                "canonical_url",
+                "robots"
+              ]
+            }
+          ]
+        }
+      ],
+      "fieldsets": [
+        {
+          "id": 1,
+          "handle": "seo_basic",
+          "label": "SEO de base",
+          "description": "Champs SEO réutilisables.",
+          "fields": [
+            {
+              "handle": "seo_title",
+              "field_type": "text",
+              "label": "Titre SEO"
+            }
+          ]
+        }
+      ],
+      "system_fields": [
+        "title",
+        "slug",
+        "status",
+        "language",
+        "site",
+        "seo_title",
+        "seo_description",
+        "canonical_url",
+        "robots",
+        "og_title",
+        "og_description",
+        "og_image"
+      ],
+      "audit": {
+        "score": 92,
+        "status": "ok|warnings|blocking",
+        "blocking_errors": [],
+        "warnings": [],
+        "optimizations": [],
+        "items": [
+          {
+            "blueprint_key": "page",
+            "resource_type": "content_type",
+            "score": 92,
+            "status": "warnings",
+            "blocking_errors": [],
+            "warnings": [],
+            "optimizations": [],
+            "notes": []
+          }
+        ],
+        "notes": [],
+        "help": {
+          "blocking": "Bloque uniquement ce qui rendrait le modèle non publiable, ambigu ou destructeur.",
+          "warning": "Signale un risque réel sans empêcher le travail éditorial.",
+          "optimization": "Amélioration actionnable qui ajoute une capacité absente.",
+          "note": "Fallback natif ou simplification éditoriale assumée."
+        }
+      },
+      "governance": [
+        {
+          "key": "protected_system_fields",
+          "level": "blocking",
+          "message": "Les champs système protégés ne peuvent pas être supprimés brutalement."
+        }
+      ],
+      "presets": [
+        {
+          "preset_key": "page_standard_seo",
+          "label": "Page standard SEO",
+          "description": "Page classique avec titre, slug et SEO explicite lorsque l’éditeur veut surcharger les fallbacks.",
+          "recommended_fields": [
+            "title",
+            "slug",
+            "seo_title",
+            "seo_description",
+            "canonical_url",
+            "robots",
+            "og_title",
+            "og_description",
+            "og_image"
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "contract": "admin.blueprints.model.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "SITE_NOT_FOUND",
+    "LANGUAGE_NOT_ENABLED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

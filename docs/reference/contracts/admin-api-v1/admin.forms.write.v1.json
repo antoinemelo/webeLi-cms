@@ -1,0 +1,128 @@
+{
+  "contract": "admin.forms.write.v1",
+  "methods": [
+    "POST",
+    "PATCH"
+  ],
+  "paths": [
+    "/admin/api/forms",
+    "/admin/api/forms/{id}"
+  ],
+  "permission": "forms.manage",
+  "request": {
+    "data": {
+      "form_key": "contact",
+      "status": "published",
+      "is_active": true,
+      "store_submissions": true,
+      "notification_enabled": true,
+      "notification_recipients": [
+        "admin@example.test"
+      ],
+      "notification_subject": "Nouvelle demande de contact",
+      "honeypot_field": "website",
+      "min_submit_seconds": 2,
+      "rate_limit_max_attempts": 5,
+      "rate_limit_window_seconds": 900,
+      "translations": [
+        {
+          "language_code": "fr",
+          "name": "Contact",
+          "description_text": "",
+          "submit_label": "Envoyer",
+          "success_message": "Merci, votre message a été envoyé."
+        }
+      ],
+      "fields": [
+        {
+          "field_key": "email",
+          "field_type": "email",
+          "is_required": true,
+          "sort_order": 10,
+          "width": "half",
+          "validation": {
+            "max": 190
+          },
+          "translations": [
+            {
+              "language_code": "fr",
+              "label": "Email",
+              "placeholder": "nom@example.org",
+              "help_text": "",
+              "options": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "data": {
+      "form": {
+        "id": 1,
+        "form_key": "contact",
+        "status": "published",
+        "is_active": true,
+        "store_submissions": true,
+        "notification_enabled": true,
+        "notification_recipients": [
+          "admin@example.test"
+        ],
+        "notification_subject": "Nouvelle demande de contact",
+        "honeypot_field": "website",
+        "min_submit_seconds": 2,
+        "rate_limit_max_attempts": 5,
+        "rate_limit_window_seconds": 900,
+        "translations": [
+          {
+            "language_code": "fr",
+            "name": "Contact",
+            "description_text": "",
+            "submit_label": "Envoyer",
+            "success_message": "Merci, votre message a été envoyé."
+          }
+        ],
+        "fields": [
+          {
+            "id": 1,
+            "field_key": "email",
+            "field_type": "email",
+            "is_required": true,
+            "sort_order": 10,
+            "width": "half",
+            "validation": {
+              "max": 190
+            },
+            "translations": [
+              {
+                "language_code": "fr",
+                "label": "Email",
+                "placeholder": "nom@example.org",
+                "help_text": "",
+                "options": []
+              }
+            ]
+          }
+        ],
+        "created_at": "2026-05-07T09:00:00Z",
+        "updated_at": "2026-05-07T10:00:00Z"
+      }
+    },
+    "meta": {
+      "contract": "admin.forms.write.v1",
+      "request_id": "...",
+      "site_id": 1,
+      "language_code": "fr"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "ROUTE_NOT_FOUND"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ]
+}

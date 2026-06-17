@@ -1,0 +1,59 @@
+{% macro nav_item(item, level) %}
+  {% set children = item.children|default([]) %}
+  {% set has_children = children|length > 0 %}
+  {% set item_id = 'nav-item-' ~ item.id|default(loop.index|default(0)) %}
+  {% if has_children %}
+          <li class="nav-item dropdown nav-item--has-children">
+            <div class="nav-parent-control">
+              <a class="nav-link nav-parent-link{% if item.css_class|default('') %} {{ item.css_class }}{% endif %}{% if item.is_current|default(false) or item.is_ancestor|default(false) %} active{% endif %}" href="{{ item.url|default('#') }}" id="{{ item_id }}" aria-haspopup="true" aria-expanded="false"{% if item.is_current|default(false) %} aria-current="page"{% endif %}{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if item.title_attr|default('') %} title="{{ item.title_attr }}"{% endif %}>{{ item.label }}</a>
+              <button class="nav-submenu-toggle dropdown-toggle" type="button" data-submenu-toggle aria-controls="{{ item_id }}-menu" aria-expanded="false" aria-label="{{ ui.open_submenu|default('Ouvrir le sous-menu') }} {{ item.label }}"></button>
+            </div>
+            <ul class="dropdown-menu" id="{{ item_id }}-menu" aria-labelledby="{{ item_id }}">
+{% for child in children %}
+  {% set child_children = child.children|default([]) %}
+  {% set is_separator = child.url|default('#') == '#' and ('dropdown-header' in child.css_class|default('')) %}
+  {% if is_separator %}
+              <li><span class="dropdown-header{% if child.css_class|default('') %} {{ child.css_class|replace({'dropdown-header': ''})|trim }}{% endif %}">{{ child.label }}</span></li>
+  {% elseif child_children|length > 0 %}
+              <li><h6 class="dropdown-header">{{ child.label }}</h6></li>
+    {% for grandchild in child_children %}
+              <li><a class="dropdown-item{% if grandchild.css_class|default('') %} {{ grandchild.css_class }}{% endif %}{% if grandchild.is_current|default(false) %} active{% endif %}" href="{{ grandchild.url }}"{% if grandchild.is_current|default(false) %} aria-current="page"{% endif %}{% if grandchild.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if grandchild.title_attr|default('') %} title="{{ grandchild.title_attr }}"{% endif %}>{{ grandchild.label }}</a></li>
+    {% endfor %}
+  {% else %}
+              <li><a class="dropdown-item{% if child.css_class|default('') %} {{ child.css_class }}{% endif %}{% if child.is_current|default(false) %} active{% endif %}" href="{{ child.url }}"{% if child.is_current|default(false) %} aria-current="page"{% endif %}{% if child.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if child.title_attr|default('') %} title="{{ child.title_attr }}"{% endif %}>{{ child.label }}</a></li>
+  {% endif %}
+{% endfor %}
+            </ul>
+          </li>
+  {% else %}
+          <li class="nav-item">
+            <a class="nav-link{% if item.css_class|default('') %} {{ item.css_class }}{% endif %}{% if item.is_current|default(false) %} active{% endif %}" href="{{ item.url }}"{% if item.is_current|default(false) %} aria-current="page"{% endif %}{% if item.target|default('_self') == '_blank' %} target="_blank" rel="noopener noreferrer"{% endif %}{% if item.title_attr|default('') %} title="{{ item.title_attr }}"{% endif %}>{{ item.label }}</a>
+          </li>
+  {% endif %}
+{% endmacro %}
+<header class="site-header" data-site-header>
+  <nav class="navbar navbar-expand-lg" aria-label="{{ ui.main_navigation }}">
+    <div class="container site-header__inner">
+      <a class="navbar-brand brand" href="{{ localized_home_url|default(url('/')) }}" aria-label="{{ site_localization.site_title|default(app_name) }} — {{ ui.home }}">
+        {% if site_logo_url|default('') %}<img class="brand__logo" src="{{ site_logo_url }}" alt="" loading="eager" decoding="async" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="brand__mark brand__mark--fallback" hidden>{{ site_brand_initials|default('CMS') }}</span>{% else %}<span class="brand__mark">{{ site_brand_initials|default('CMS') }}</span>{% endif %}
+        {% if show_site_title_in_header is not defined or show_site_title_in_header %}<span class="brand__text">{{ site_localization.site_title|default(app_name) }}</span>{% endif %}
+      </a>
+
+      {% include 'partials/header-search.twig' with { search_id: 'header-search-q', search_class: 'header-search header-search--primary' } %}
+
+      <button class="navbar-toggler nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#site-navigation" data-nav-toggle="site-navigation" aria-controls="site-navigation" aria-expanded="false" aria-label="{{ ui.menu }}">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div id="site-navigation" class="collapse navbar-collapse site-navigation">
+        <ul class="navbar-nav ms-lg-auto align-items-lg-center">
+{% for item in menu_items|default([]) %}
+{{ _self.nav_item(item, 0) }}
+{% endfor %}
+        </ul>
+
+        {% include 'partials/language-switch.twig' %}
+      </div>
+    </div>
+  </nav>
+</header>

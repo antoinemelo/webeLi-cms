@@ -1,0 +1,10 @@
+<section class="hero hero--compact status-page">
+  <div class="status-code">410</div>
+  <h1>{{ ui.gone_title }}</h1>
+  <p>{{ ui.gone_text }}</p>
+  {% if replacement_url %}
+    <a class="btn btn--primary" href="{{ replacement_url }}">{{ ui.replacement }}</a>
+  {% else %}
+    <a class="btn btn--primary" href="{{ localized_home_url }}">{{ ui.back_home }}</a>
+  {% endif %}
+</section>

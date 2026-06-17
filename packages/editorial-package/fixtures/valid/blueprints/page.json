@@ -1,0 +1,26 @@
+{
+  "block_blueprints": [
+    {
+      "block_type": "hero",
+      "schema_version": 1
+    }
+  ],
+  "blueprint_key": "page",
+  "definition": {
+    "permissions_policy": {},
+    "routing_policy": {},
+    "schema": {
+      "type": "object"
+    },
+    "seo_policy": {},
+    "translation_policy": {},
+    "ui_schema": {},
+    "validation": {},
+    "workflow_policy": {}
+  },
+  "is_active": true,
+  "label": "Page",
+  "resource_type": "content_entry",
+  "status": "published",
+  "version": 1
+}
