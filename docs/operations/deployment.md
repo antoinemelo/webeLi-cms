@@ -105,6 +105,8 @@ python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
 
 Le transfert FTP publie le staging de release préparé sous `storage/exports/release_stage`. Il ne doit pas écraser les fichiers runtime protégés sans sauvegarde et vérification explicites.
 
+Depuis `python3 tools/admin.py`, un déploiement FTP réussi déclenche ensuite une proposition Git optionnelle : commit des changements locaux, puis push si la branche suit déjà une upstream. Cette étape permet de garder GitHub cohérent avec ce qui vient d'être validé et transféré, sans imposer Git aux environnements qui utilisent uniquement FTP.
+
 ## Configuration minimale
 
 - `APP_ENV=production` ;

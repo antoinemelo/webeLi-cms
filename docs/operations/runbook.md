@@ -160,6 +160,8 @@ Deux modes d'exploitation sont supportés :
 - `Git sur serveur` : le serveur suit une branche GitHub (`staging` pour `/mod`, `main` pour `/eve`) et l'opérateur exécute `git pull --ff-only`, puis le préflight local ;
 - `FTP/FTPS piloté` : le poste de développement prépare une release avec les scripts Python, puis `d_deploy.py ftp-dry-run` et `d_deploy.py ftp-deploy` transfèrent le staging validé.
 
+Après un FTP réussi depuis `tools/admin.py`, le menu peut proposer de créer un commit puis de pousser la branche si le dépôt Git local est configuré pour cela. Acceptez uniquement après avoir vérifié que l'état Git affiché correspond bien aux fichiers à conserver.
+
 Pour Hostpoint et les chemins `webe.li/mod` et `webe.li/eve`, suivez la procédure dédiée : [Déployer sur Hostpoint avec Git ou FTP](hostpoint-git-ftp.md).
 
 Dans les deux cas, une publication de code ne remplace pas une sauvegarde. Avant les migrations, restaurations, changements de configuration ou mises à jour majeures, créez une sauvegarde SQLite et notez le point Git ou la release associée.

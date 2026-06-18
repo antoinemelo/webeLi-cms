@@ -197,6 +197,20 @@ python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
 
 Le déploiement FTP envoie le staging de release préparé sous `storage/exports/release_stage` et écrit les marqueurs de déploiement dans `storage/deployments/`. Il ne doit pas être remplacé par une copie manuelle du répertoire de développement.
 
+Lorsque le transfert FTP est lancé depuis le menu interactif :
+
+```bash
+python3 tools/admin.py
+```
+
+et que l'opération réussit, le menu propose aussi une synchronisation Git optionnelle :
+
+1. afficher l'état Git local ;
+2. créer un commit avec les changements actuels si le dépôt contient des modifications ;
+3. pousser la branche si une upstream est configurée et que des commits locaux sont en avance.
+
+Cette étape ne remplace pas le transfert FTP. Elle sert à garder GitHub aligné avec les changements validés localement, afin que le serveur Git ou les autres postes puissent les récupérer ensuite.
+
 ## Choisir entre Git et FTP
 
 Utilisez Git sur Hostpoint lorsque vous voulez une synchronisation simple du code et des rollbacks de code rapides. C'est le meilleur choix pour `/mod` tant que les préflights passent sur le serveur.
