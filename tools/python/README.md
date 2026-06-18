@@ -8,7 +8,7 @@ Le seul point d’entrée public est :
 python3 tools/cms.py <commande>
 ```
 
-Commandes : `init`, `rebuild`, `validate`, `test`, `export`, `backup`, `release`, `docs`.
+Commandes : `init`, `rebuild`, `validate`, `test`, `export`, `backup`, `release`, `docs`, `instance`.
 
 ## Architecture interne
 
