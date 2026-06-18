@@ -28,8 +28,8 @@ Le profil `complete` remplace l’ancien libellé `standard` dans la CI. L’orc
 
 ## Comportement attendu en CI
 
-- `.github/workflows/quality.yml` installe Composer et npm, puis exécute le profil `complete` ;
-- `.github/workflows/release.yml` installe également Chromium pour Playwright et exécute le profil `release` ;
+- `.github/workflows/quality.yml` installe Composer et npm, reconstruit les bases SQLite temporaires, puis exécute le profil `complete` ;
+- `.github/workflows/release.yml` installe également Chromium pour Playwright, reconstruit les bases SQLite temporaires et exécute le profil `release` ;
 - les rapports `storage/qualification/latest.json` et `latest.md` sont publiés comme artefacts, même en cas d’échec ;
 - un code `2` signifie « qualification incomplète » et fait échouer le job comme un code `1`.
 

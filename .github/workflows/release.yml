@@ -68,6 +68,8 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
         working-directory: frontend/admin-vue
+      - name: Initialize SQLite runtime
+        run: python3 tools/cms.py rebuild
       - name: Run release qualification
         run: python3 tools/cms.py --command-timeout 1200 --evidence-dir storage/qualification/command-evidence qualify --profile release
       - name: Upload qualification reports
