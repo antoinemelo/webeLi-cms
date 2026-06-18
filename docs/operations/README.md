@@ -24,6 +24,7 @@ Les procédures de cette section concernent une instance installée ou une relea
 - [Checklist de production](production-checklist.md)
 - [Déploiement et qualification](deployment.md)
 - [Déploiement Hostpoint Git ou FTP](hostpoint-git-ftp.md)
+- [Clonage local d’instance](instance-clone.md)
 - [Sauvegarde, restauration et rollback](backup-restore.md)
 - [Export statique](static-export.md)
 - [Contrôles de santé natifs](health-checks.md)

@@ -171,6 +171,7 @@ def print_menu() -> None:
     print(" 7. Créer une sauvegarde")
     print(" 8. Lancer l'export statique")
     print(" 9. Exécuter uniquement les tests")
+    print("10. Créer un clone local d'instance")
     print(" 0. Quitter")
     print()
 
@@ -357,6 +358,86 @@ def maybe_commit_after_ftp() -> None:
         print("Push Git ignoré.")
 
 
+def prompt_text(label: str, default: str = "") -> str:
+    suffix = f" [{default}]" if default else ""
+    try:
+        value = input(f"{label}{suffix} : ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return ""
+    return value or default
+
+
+def default_sibling_destination() -> Path:
+    return PROJECT_ROOT.parent / f"{PROJECT_ROOT.name}2"
+
+
+def run_instance_clone() -> int:
+    print()
+    print("Créer un clone local d'instance")
+    print("-" * 34)
+    print("Le dossier de destination et le APP_BASE_PATH cible sont indépendants.")
+    print("Exemple: destination ../mod2 avec APP_BASE_PATH /mod.")
+    print()
+
+    source = prompt_text("Répertoire source", str(PROJECT_ROOT))
+    if not source:
+        print("Opération annulée.")
+        return 0
+
+    destination = prompt_text("Répertoire destination", str(default_sibling_destination()))
+    if not destination:
+        print("Opération annulée.")
+        return 0
+
+    target_base_path = prompt_text(
+        "APP_BASE_PATH cible (vide = dérivé du dossier destination)",
+        "",
+    )
+    public_url = prompt_text("APP_PUBLIC_BASE_URL cible optionnel", "")
+    force = confirm_optional("Remplacer la destination si elle existe")
+
+    command = [
+        sys.executable,
+        str(CMS_ENTRYPOINT),
+        "instance",
+        "clone",
+        "--source",
+        source,
+        "--destination",
+        destination,
+    ]
+    if target_base_path:
+        command.extend(["--new-base-path", target_base_path])
+    if public_url:
+        command.extend(["--new-public-base-url", public_url])
+    if force:
+        command.append("--force")
+
+    dry_run_command = [*command[:2], "--dry-run", *command[2:]]
+    print()
+    print("Simulation exécutée :")
+    print(f"  {format_command(dry_run_command)}")
+    dry_run = subprocess.run(dry_run_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if dry_run.returncode != 0:
+        print(f"\nSimulation en échec — code de retour {dry_run.returncode}")
+        return dry_run.returncode
+
+    if not confirm_destructive():
+        print("Clone local annulé après simulation.")
+        return 0
+
+    print()
+    print("Commande exécutée :")
+    print(f"  {format_command(command)}")
+    result = subprocess.run(command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if result.returncode == 0:
+        print("\nOK — clone local d'instance créé")
+    else:
+        print(f"\nERREUR — code de retour {result.returncode}")
+    return result.returncode
+
+
 def run_action(action: Action) -> int:
     print_action_details(action)
 
@@ -415,6 +496,12 @@ def main() -> int:
         if choice == "0":
             print("Fin de l'administration DEC CMS.")
             return 0
+
+        if choice == "10":
+            run_instance_clone()
+            if not pause_before_menu():
+                return 0
+            continue
 
         if choice == "2":
             action = choose_qualification()

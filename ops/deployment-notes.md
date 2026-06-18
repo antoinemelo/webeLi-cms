@@ -79,6 +79,17 @@ Pour Hostpoint `/mod`, `ops/ftp.deploy.json` doit pointer vers le répertoire di
 
 Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi propose ensuite de commiter les changements locaux, puis de pousser la branche si une upstream Git est configurée. Cette proposition est optionnelle et doit être acceptée uniquement après lecture de l'état Git affiché.
 
+## Clone local d'instance
+
+Pour préparer un dossier temporaire en séparant le nom du dossier et la configuration publique :
+
+```bash
+python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+```
+
+Le clone copie aussi les bases SQLite et médias locaux. Pour préparer une future instance `/eve` dans un dossier `eve2`, utilisez `--destination ../eve2 --new-base-path /eve`.
+
 ## Release v1
 
 Une release v1 standard inclut les bases SQLite seedées sous `storage/database/*.sqlite`. Le packaging exclut d’abord les bases locales du parcours générique, puis injecte explicitement les quatre bases attendues (`core`, `iam`, `forms`, `cookies`) après contrôle d’intégrité. Cela évite d’embarquer silencieusement des bases locales accidentelles tout en conservant une installation propre sans migration obligatoire.

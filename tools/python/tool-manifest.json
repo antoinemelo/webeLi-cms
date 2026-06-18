@@ -29,6 +29,7 @@
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/operations/deployment.md",
         "docs/operations/hostpoint-git-ftp.md",
+        "docs/operations/instance-clone.md",
         "docs/operations/runbook.md",
         "ops/deployment-notes.md",
         "tools/python/tool-manifest.json"
@@ -85,6 +86,7 @@
         "docs/operations/backup-restore.md",
         "docs/operations/deployment.md",
         "docs/operations/hostpoint-git-ftp.md",
+        "docs/operations/instance-clone.md",
         "docs/operations/runbook.md",
         "docs/public-api/quickstart.md",
         "docs/reference/README.md",
@@ -132,6 +134,7 @@
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d12_quality_gate.py",
         "tools/python/operations/deployment/d13_bind_release_evidence.py",
+        "tools/python/operations/deployment/d14_clone_instance.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
@@ -320,6 +323,7 @@
         "tools/python/commands/docs.py",
         "tools/python/commands/export.py",
         "tools/python/commands/init.py",
+        "tools/python/commands/instance.py",
         "tools/python/commands/qualify.py",
         "tools/python/commands/release.py",
         "tools/python/commands/test.py",
@@ -434,6 +438,21 @@
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
       "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/instance.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/operations/instance-clone.md",
+        "tools/python/tests/test_instance_clone.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -1200,6 +1219,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/operations/deployment/d14_clone_instance.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/operations/instance-clone.md",
+        "tools/python/commands/instance.py",
+        "tools/python/tests/test_instance_clone.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/operations/deployment/d1_preflight_local.py",
       "category": "operation-deployment",
       "public": false,
@@ -1584,6 +1619,18 @@
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_instance_clone.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,

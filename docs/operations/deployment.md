@@ -107,6 +107,16 @@ Le transfert FTP publie le staging de release préparé sous `storage/exports/re
 
 Depuis `python3 tools/admin.py`, un déploiement FTP réussi déclenche ensuite une proposition Git optionnelle : commit des changements locaux, puis push si la branche suit déjà une upstream. Cette étape permet de garder GitHub cohérent avec ce qui vient d'être validé et transféré, sans imposer Git aux environnements qui utilisent uniquement FTP.
 
+## Clonage local d'une instance
+
+Pour préparer une copie locale exploitable sous un autre dossier, utilisez `tools/cms.py instance clone`. Cette commande sépare le dossier créé du chemin public configuré :
+
+```bash
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+```
+
+L'exemple crée `../mod2`, mais conserve la configuration publique `/mod`. Cette séparation est utile pour préparer un dossier temporaire qui sera renommé plus tard. Voir [Cloner une instance locale](instance-clone.md).
+
 ## Configuration minimale
 
 - `APP_ENV=production` ;

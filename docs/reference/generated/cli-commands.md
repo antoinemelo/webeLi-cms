@@ -23,13 +23,13 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,export,backup,release,docs}
+                    {init,rebuild,validate,qualify,audit,test,export,backup,release,docs,instance}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,export,backup,release,docs}
+  {init,rebuild,validate,qualify,audit,test,export,backup,release,docs,instance}
     init                Créer les structures SQLite sans données métier.
     rebuild             Reconstruire les bases et appliquer les seeds natifs.
     validate            Exécuter les validateurs du CMS.
@@ -41,6 +41,7 @@ positional arguments:
     backup              Créer ou restaurer une sauvegarde SQLite.
     release             Préparer et vérifier une release.
     docs                Générer ou vérifier la documentation de référence.
+    instance            Préparer ou cloner une instance locale.
 
 options:
   -h, --help            show this help message and exit

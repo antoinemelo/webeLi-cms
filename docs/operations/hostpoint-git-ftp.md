@@ -211,6 +211,33 @@ et que l'opération réussit, le menu propose aussi une synchronisation Git opti
 
 Cette étape ne remplace pas le transfert FTP. Elle sert à garder GitHub aligné avec les changements validés localement, afin que le serveur Git ou les autres postes puissent les récupérer ensuite.
 
+## Option C : préparer un clone local avant renommage ou transfert
+
+Pour les phases de test, il est possible de créer une copie locale dans un dossier temporaire tout en conservant ou en choisissant séparément la configuration publique.
+
+Exemple : créer `../mod2`, mais garder la configuration publique `/mod` :
+
+```bash
+python3 tools/cms.py --dry-run instance clone \
+  --destination ../mod2 \
+  --new-base-path /mod
+
+python3 tools/cms.py instance clone \
+  --destination ../mod2 \
+  --new-base-path /mod
+```
+
+Exemple : préparer un dossier temporaire `../eve2`, mais configurer l'instance comme future `/eve` :
+
+```bash
+python3 tools/cms.py instance clone \
+  --destination ../eve2 \
+  --new-base-path /eve \
+  --new-public-base-url https://webe.li/eve
+```
+
+Cette option copie aussi les données runtime locales comme les bases SQLite et les médias. Elle sert à préparer ou tester une instance, pas à remplacer la chaîne de release. La procédure détaillée est documentée dans [Cloner une instance locale](instance-clone.md).
+
 ## Choisir entre Git et FTP
 
 Utilisez Git sur Hostpoint lorsque vous voulez une synchronisation simple du code et des rollbacks de code rapides. C'est le meilleur choix pour `/mod` tant que les préflights passent sur le serveur.

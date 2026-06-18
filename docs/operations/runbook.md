@@ -166,6 +166,17 @@ Pour Hostpoint et les chemins `webe.li/mod` et `webe.li/eve`, suivez la procédu
 
 Dans les deux cas, une publication de code ne remplace pas une sauvegarde. Avant les migrations, restaurations, changements de configuration ou mises à jour majeures, créez une sauvegarde SQLite et notez le point Git ou la release associée.
 
+## Cloner une instance locale
+
+Pour créer un environnement temporaire ou préparer un renommage de dossier, utilisez :
+
+```bash
+python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+```
+
+La destination `../mod2` et la configuration `/mod` sont indépendantes. Cette commande copie les données runtime locales ; elle doit donc être précédée d'une simulation et ne remplace pas une release officielle.
+
 ## Après une intervention
 
 1. Vérifiez le site public et le back-office.
