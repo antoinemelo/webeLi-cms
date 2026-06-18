@@ -88,12 +88,6 @@ ACTIONS: tuple[Action, ...] = (
         ("export",),
         "Génère l'export statique du site.",
     ),
-    Action(
-        "9",
-        "Exécuter uniquement les tests",
-        ("test",),
-        "Lance uniquement les suites de tests, sans qualification complète.",
-    ),
 )
 
 
@@ -170,8 +164,7 @@ def print_menu() -> None:
     print(" 6. Déployer la release par FTP")
     print(" 7. Créer une sauvegarde")
     print(" 8. Lancer l'export statique")
-    print(" 9. Exécuter uniquement les tests")
-    print("10. Créer un clone local d'instance")
+    print(" 9. Créer un clone local d'instance")
     print(" 0. Quitter")
     print()
 
@@ -497,7 +490,7 @@ def main() -> int:
             print("Fin de l'administration DEC CMS.")
             return 0
 
-        if choice == "10":
+        if choice == "9":
             run_instance_clone()
             if not pause_before_menu():
                 return 0
