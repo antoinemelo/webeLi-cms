@@ -41,6 +41,13 @@ backend/vendor/
 __pycache__/
 *.pyc
 
+# Tests de charge locaux
+tools/tests/.venv/
+tools/tests/users.csv
+tools/tests/*_credentials.csv
+tools/tests/*.zip
+tools/tests/webeLi-evidence-*/
+
 # Rapports locaux de qualification
 storage/qualification/*
 !storage/qualification/.gitkeep

@@ -27,6 +27,10 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/operations/deployment.md",
+        "docs/operations/hostpoint-git-ftp.md",
+        "docs/operations/runbook.md",
+        "ops/deployment-notes.md",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -65,6 +69,7 @@
         "docs/development/testing-validation/FRONTEND_DEPENDENCIES.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/development/testing-validation/README.md",
+        "docs/development/testing-validation/load-testing.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/evidence-index.md",
         "docs/evaluation/machine-readable/cms-evaluation-manifest.json",
@@ -78,6 +83,8 @@
         "docs/installation/requirements.md",
         "docs/operations/README.md",
         "docs/operations/backup-restore.md",
+        "docs/operations/deployment.md",
+        "docs/operations/hostpoint-git-ftp.md",
         "docs/operations/runbook.md",
         "docs/public-api/quickstart.md",
         "docs/reference/README.md",
@@ -412,6 +419,7 @@
       "called_by": [
         "TREE.txt",
         "database/00-overview.md",
+        "docs/operations/hostpoint-git-ftp.md",
         "tools/python/lib/database_inventory.py",
         "tools/python/operations/database/a_db_init.py",
         "tools/python/operations/database/b0_db_seed.py",
@@ -479,7 +487,11 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "tools/python/tool-manifest.json"
+        "docs/development/testing-validation/load-testing.md",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_LOAD-TEST.md",
+        "tools/tests/load_test.py"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -934,6 +946,7 @@
       "called_by": [
         "TREE.txt",
         "database/00-overview.md",
+        "docs/operations/hostpoint-git-ftp.md",
         "tools/python/commands/init.py",
         "tools/python/lib/database_inventory.py",
         "tools/python/operations/database/b0_db_seed.py",
@@ -1194,6 +1207,8 @@
       "called_by": [
         "TREE.txt",
         "backend/public/index.php",
+        "docs/operations/deployment.md",
+        "docs/operations/hostpoint-git-ftp.md",
         "ops/deployment-notes.md",
         "tools/python/README.md",
         "tools/python/operations/deployment/d_deploy.py",
@@ -1239,6 +1254,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/operations/hostpoint-git-ftp.md",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
@@ -1316,6 +1332,9 @@
         "TREE.txt",
         "database/00-overview.md",
         "docs/evaluation/release-audit-policy.md",
+        "docs/operations/deployment.md",
+        "docs/operations/hostpoint-git-ftp.md",
+        "docs/operations/runbook.md",
         "docs/reference/generated/configuration.md",
         "ops/deployment-notes.md",
         "tools/python/commands/release.py",
@@ -2336,6 +2355,23 @@
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py validate",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/tests/load_test.py",
+      "category": "load-test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/load-testing.md",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_LOAD-TEST.md"
+      ],
+      "replacement": "python3 tools/tests/load_test.py --help",
       "status": "active",
       "destructive": false,
       "archived_at": null,

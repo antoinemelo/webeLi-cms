@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / "tools/cms.py"
+MANIFEST_EXCLUDED_PARTS = {".git", ".venv", "node_modules", "vendor", "storage", "admin-app", "__pycache__"}
 
 
 class CliRationalizationTest(unittest.TestCase):
@@ -49,6 +50,7 @@ class CliRationalizationTest(unittest.TestCase):
         actual = {
             path.relative_to(ROOT).as_posix()
             for path in ROOT.glob("tools/**/*.py")
+            if not any(part in MANIFEST_EXCLUDED_PARTS for part in path.parts)
         }
         self.assertEqual(listed, actual)
 

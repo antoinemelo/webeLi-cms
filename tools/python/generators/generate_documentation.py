@@ -17,6 +17,17 @@ OUT = ROOT / "docs" / "reference" / "generated"
 ROUTE_RE = re.compile(r"\['(GET|POST|PUT|PATCH|DELETE)',\s*'([^']+)'\s*,")
 PERM_RE = re.compile(r"['\"]([a-z][a-z0-9_.-]+\.(?:read|write|create|update|delete|publish|approve|manage|run|export|restore|admin))['\"]")
 ENV_RE = re.compile(r"(?:getenv|env)\(\s*['\"]([A-Z][A-Z0-9_]+)['\"]")
+GENERATED_SCAN_EXCLUDED_PARTS = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "vendor",
+}
+
+
+def is_generated_scan_excluded(path: Path) -> bool:
+    return any(part in GENERATED_SCAN_EXCLUDED_PARTS for part in path.relative_to(ROOT).parts)
 
 
 def release_metadata() -> dict:
@@ -100,6 +111,8 @@ def render_permissions() -> str:
         if not base.exists():
             continue
         for path in base.rglob("*"):
+            if is_generated_scan_excluded(path):
+                continue
             if path.is_file() and path.suffix.lower() in {".php", ".sql", ".ts", ".vue", ".json"}:
                 found.update(PERM_RE.findall(path.read_text(encoding="utf-8", errors="ignore")))
     return header("Permissions détectées") + "| Permission |\n|---|\n" + "".join(f"| `{name}` |\n" for name in sorted(found))
@@ -111,6 +124,8 @@ def render_configuration() -> str:
         if not base.exists():
             continue
         for path in base.rglob("*"):
+            if is_generated_scan_excluded(path):
+                continue
             if not path.is_file() or path.suffix.lower() not in {".php", ".py", ".json", ".yml", ".yaml", ".env", ".example"}:
                 continue
             rel = path.relative_to(ROOT).as_posix()

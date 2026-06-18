@@ -9,6 +9,7 @@ source_of_truth: procedure
 source_paths:
   - tools/python/operations
   - tools/python/qualification/run_all.py
+  - tools/admin.py
 
 owners:
   - operations
@@ -19,7 +20,90 @@ generated: false
 
 # Déployer le CMS
 
-Une release vérifiée peut être transférée par SFTP, rsync, Git ou un pipeline adapté, mais le dépôt source ne doit pas être confondu avec l’artefact de production.
+Une release vérifiée peut être transférée par SFTP, rsync, Git, FTP/FTPS ou un pipeline adapté, mais le dépôt source ne doit pas être confondu avec l’artefact de production.
+
+## Workflow GitHub recommandé
+
+Pour les environnements `webe.li/mod` et `webe.li/eve`, le dépôt GitHub peut servir à synchroniser le code lorsque l'hébergement donne accès à SSH et Git. Lorsque l'hébergement ne doit pas exécuter Git, les scripts Python préparent une release et le transfert FTP/FTPS publie l'artefact vérifié. La procédure Hostpoint détaillée est documentée dans [Déployer sur Hostpoint avec Git ou FTP](hostpoint-git-ftp.md).
+
+Le modèle recommandé est :
+
+```text
+staging -> webe.li/mod
+main    -> webe.li/eve
+```
+
+Avant de pousser une modification vers GitHub, exécutez les contrôles depuis la racine du projet, idéalement via le menu officiel :
+
+```bash
+python3 tools/admin.py
+```
+
+Utilisez ensuite les actions de qualification, préparation de release et sauvegarde selon l'intervention. La façade `tools/admin.py` appelle `tools/cms.py`, qui reste le point d'entrée stable des contrôles automatisables.
+
+Sur l'environnement de test local :
+
+```bash
+git checkout staging
+git pull --ff-only
+python3 tools/admin.py
+git push origin staging
+```
+
+Sur le serveur `webe.li/mod`, si Git est disponible :
+
+```bash
+git fetch origin
+git checkout staging
+git pull --ff-only
+python3 tools/python/operations/deployment/d1_preflight_local.py --target staging
+```
+
+Pour promouvoir une version testée vers la production, créez une pull request `staging -> main`, validez-la, puis mettez à jour `webe.li/eve` depuis `main`.
+
+Git versionne le code, les scripts, les templates, les assets compilés, les migrations et les seeds. Il ne doit pas versionner l'état runtime local :
+
+```text
+ops/.env
+ops/ftp.deploy.json
+storage/database/*.sqlite
+storage/media/
+storage/uploads/
+storage/security/
+storage/logs/
+storage/backups/
+storage/exports/
+```
+
+Un retour à un ancien commit restaure le code, mais pas automatiquement les bases SQLite ni les médias. Pour un rollback complet, restaurez aussi la sauvegarde SQLite et les fichiers runtime associés.
+
+## Déploiement FTP/FTPS par les scripts Python
+
+Le workflow FTP/FTPS part d'une release préparée localement, pas d'une copie manuelle du répertoire de travail. Il est piloté par `tools/python/operations/deployment/d_deploy.py` et par la configuration locale ignorée `ops/ftp.deploy.json`.
+
+Préparer et vérifier l'artefact :
+
+```bash
+python3 tools/admin.py
+python3 tools/cms.py release --package --verify-archive
+```
+
+Configurer le transfert :
+
+```bash
+cp ops/ftp.deploy.example.json ops/ftp.deploy.json
+```
+
+Le fichier `ops/ftp.deploy.json` doit contenir le serveur FTP/FTPS, l'utilisateur, le mot de passe, le mode TLS et le `remote_root`, par exemple `/www/webe.li/mod` pour l'environnement de test.
+
+Simuler puis appliquer :
+
+```bash
+python3 tools/python/operations/deployment/d_deploy.py ftp-dry-run
+python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
+```
+
+Le transfert FTP publie le staging de release préparé sous `storage/exports/release_stage`. Il ne doit pas écraser les fichiers runtime protégés sans sauvegarde et vérification explicites.
 
 ## Configuration minimale
 

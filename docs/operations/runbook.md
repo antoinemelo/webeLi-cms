@@ -45,6 +45,14 @@ Cette page s’adresse aux administrateurs techniques, aux superadministrateurs 
 
 Utilisez la façade `python3 tools/cms.py` lorsqu’une commande équivalente existe. Elle centralise les contrôles et limite les écarts entre une intervention locale, la CI et la préparation d’une release.
 
+Pour une intervention interactive, utilisez le menu officiel :
+
+```bash
+python3 tools/admin.py
+```
+
+Ce menu appelle la façade stable `tools/cms.py` pour les qualifications, tests, sauvegardes, préparations de release et déploiements FTP.
+
 ## Contrôle rapide de l’instance
 
 Depuis la racine du projet :
@@ -127,7 +135,13 @@ Conservez les journaux selon la politique de l’instance. Ne les supprimez pas 
 
 ## Préparer une release
 
-Avant de créer une release :
+Pour suivre l'assistant interactif :
+
+```bash
+python3 tools/admin.py
+```
+
+Pour exécuter les contrôles séparément ou dans une automatisation :
 
 ```bash
 python3 tools/cms.py docs generate
@@ -138,6 +152,17 @@ python3 tools/cms.py release --help
 ```
 
 La release doit être créée depuis un état propre. Son archive doit ensuite être vérifiée avec l’outil prévu par le projet. Une archive créée mais non vérifiée ne doit pas être déployée.
+
+## Publier une mise à jour
+
+Deux modes d'exploitation sont supportés :
+
+- `Git sur serveur` : le serveur suit une branche GitHub (`staging` pour `/mod`, `main` pour `/eve`) et l'opérateur exécute `git pull --ff-only`, puis le préflight local ;
+- `FTP/FTPS piloté` : le poste de développement prépare une release avec les scripts Python, puis `d_deploy.py ftp-dry-run` et `d_deploy.py ftp-deploy` transfèrent le staging validé.
+
+Pour Hostpoint et les chemins `webe.li/mod` et `webe.li/eve`, suivez la procédure dédiée : [Déployer sur Hostpoint avec Git ou FTP](hostpoint-git-ftp.md).
+
+Dans les deux cas, une publication de code ne remplace pas une sauvegarde. Avant les migrations, restaurations, changements de configuration ou mises à jour majeures, créez une sauvegarde SQLite et notez le point Git ou la release associée.
 
 ## Après une intervention
 
