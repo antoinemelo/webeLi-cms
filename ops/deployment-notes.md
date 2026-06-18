@@ -127,7 +127,7 @@ APP_VUE_NODE_MODULES_PATH=../vendor/node_modules/
 APP_TWIG_VENDOR_PATH=../vendor/twig/
 ```
 
-Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases.
+Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. Sur un hébergement avec plusieurs instances (`/mod`, `/eve`, `/edu`), `APP_TWIG_VENDOR_PATH=../vendor/twig/` permet de partager Twig depuis le dossier parent lorsque l'instance ne contient pas `vendor/`. Le runtime ne charge pas un Composer parent déclarant `App\\`; le préflight signale ce cas comme point à vérifier.
 
 ## Préflight conseillé
 

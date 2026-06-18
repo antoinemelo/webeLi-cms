@@ -109,6 +109,14 @@ tools/tests/*.zip
 
 Les fichiers `.gitkeep` utiles sont recréés dans les dossiers runtime attendus.
 
+Si le clone ne doit pas embarquer `vendor/`, configurez Twig vers un dossier partagé parent :
+
+```env
+APP_TWIG_VENDOR_PATH=../vendor/twig/
+```
+
+Le préflight vérifie `APP_TWIG_VENDOR_PATH`, puis `./vendor/twig/`, puis `../vendor/twig/`.
+
 ## Remplacements effectués
 
 La commande remplace :

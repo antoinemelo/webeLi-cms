@@ -101,12 +101,19 @@ function cms_register_twig_fallback(string $configuredPath): void
         return;
     }
 
-    $twigRoot = cms_project_path($configuredPath ?: './vendor/twig/');
-    $autoloadCandidates = [
-        $twigRoot . '/autoload.php',
-        $twigRoot . '/twig/autoload.php',
-        dirname($twigRoot) . '/autoload.php',
-    ];
+    $configuredRoot = cms_project_path($configuredPath ?: './vendor/twig/');
+    $twigRoots = array_values(array_unique([
+        $configuredRoot,
+        cms_project_path('./vendor/twig/'),
+        cms_project_path('../vendor/twig/'),
+    ]));
+
+    $autoloadCandidates = [];
+    foreach ($twigRoots as $twigRoot) {
+        $autoloadCandidates[] = $twigRoot . '/autoload.php';
+        $autoloadCandidates[] = $twigRoot . '/twig/autoload.php';
+        $autoloadCandidates[] = dirname($twigRoot) . '/autoload.php';
+    }
 
     foreach ($autoloadCandidates as $autoload) {
         if (!is_file($autoload) || cms_autoload_maps_prefix($autoload, 'App\\')) {
@@ -119,11 +126,12 @@ function cms_register_twig_fallback(string $configuredPath): void
         }
     }
 
-    $srcCandidates = [
-        $twigRoot . '/src',
-        $twigRoot . '/twig/src',
-        $twigRoot . '/twig/twig/src',
-    ];
+    $srcCandidates = [];
+    foreach ($twigRoots as $twigRoot) {
+        $srcCandidates[] = $twigRoot . '/src';
+        $srcCandidates[] = $twigRoot . '/twig/src';
+        $srcCandidates[] = $twigRoot . '/twig/twig/src';
+    }
 
     foreach ($srcCandidates as $src) {
         if (!is_file($src . '/Environment.php')) {

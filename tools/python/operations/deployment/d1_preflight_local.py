@@ -51,6 +51,7 @@ SENSITIVE_PATHS = [
 TWIG_MARKERS = [
     ROOT / "backend" / "vendor" / "twig" / "twig" / "src" / "Environment.php",
     ROOT / "vendor" / "twig" / "twig" / "src" / "Environment.php",
+    ROOT.parent / "vendor" / "twig" / "twig" / "src" / "Environment.php",
 ]
 
 
@@ -70,6 +71,41 @@ def load_dotenv() -> dict[str, str]:
 
 def env_value(name: str, default: str = "") -> str:
     return os.getenv(name) or load_dotenv().get(name, default)
+
+
+def path_is_absolute(path: str) -> bool:
+    return path.startswith(os.sep) or bool(re.match(r"^[A-Z]:[\\/]", path, re.IGNORECASE))
+
+
+def project_path(path: str) -> Path:
+    value = path.strip()
+    if not value:
+        return ROOT
+    candidate = Path(value).expanduser()
+    if candidate.is_absolute() or path_is_absolute(value):
+        return candidate
+    return (ROOT / re.sub(r"^[.][\\/]", "", value)).resolve()
+
+
+def twig_environment_candidates(configured_path: str) -> list[Path]:
+    roots = [
+        project_path(configured_path or "./vendor/twig/"),
+        project_path("./vendor/twig/"),
+        project_path("../vendor/twig/"),
+    ]
+    candidates: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        for candidate in [
+            root / "src" / "Environment.php",
+            root / "twig" / "src" / "Environment.php",
+            root / "twig" / "twig" / "src" / "Environment.php",
+        ]:
+            resolved = candidate.resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                candidates.append(candidate)
+    return candidates
 
 
 def run(command: list[str], *, timeout: int = 60) -> tuple[int, str]:
@@ -254,6 +290,21 @@ def check_runtime_config(errors: list[str], warnings: list[str], target: str = "
         errors.append("APP_BASE_PATH doit être vide ou commencer par '/'.")
     if "//" in base_path:
         errors.append("APP_BASE_PATH ne doit pas contenir de double slash.")
+
+    twig_configured_path = env_value("APP_TWIG_VENDOR_PATH", env_value("APP_TWIG_PATH", "./vendor/twig/"))
+    twig_candidates = twig_environment_candidates(twig_configured_path)
+    existing_twig = [path for path in twig_candidates if path.exists()]
+    if existing_twig:
+        parent_vendor = (ROOT.parent / "vendor").resolve()
+        if any(parent_vendor in path.resolve().parents for path in existing_twig):
+            warnings.append(
+                "Twig est résolu depuis le vendor parent. Vérifiez que ce vendor ne charge pas un autoloader Composer déclarant App\\."
+            )
+    else:
+        warnings.append(
+            "Twig introuvable dans APP_TWIG_VENDOR_PATH, ./vendor/twig ou ../vendor/twig. "
+            "Le runtime natif peut fonctionner, mais les templates Twig doivent être vérifiés."
+        )
 
 
 def check_server_security(errors: list[str]) -> None:
