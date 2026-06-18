@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 PYTHON_DIR = ROOT / "tools" / "python"
 TEXT_SUFFIXES = {".py", ".md", ".json", ".yml", ".yaml", ".php", ".js", ".ts", ".vue", ".sh", ".txt"}
-EXCLUDED_PARTS = {".git", "node_modules", "vendor", "storage", "admin-app", "__pycache__"}
+EXCLUDED_PARTS = {".git", ".venv", "node_modules", "vendor", "storage", "admin-app", "__pycache__"}
 DESTRUCTIVE_MARKERS = ("delete", "reset", "restore", "migrate", "rebase", "deploy", "cleanup", "init", "rebuild")
 ARCHIVE_DATE = "2026-06-13"
 
@@ -17,6 +17,7 @@ ARCHIVE_DATE = "2026-06-13"
 def category(rel: str) -> str:
     parts = Path(rel).parts
     if rel == "tools/cms.py": return "cli"
+    if rel.startswith("tools/tests/"): return "load-test"
     if "archive" in parts: return "archive"
     if "tests" in parts: return "test"
     if "validators" in parts: return "validator"
@@ -37,6 +38,7 @@ def category(rel: str) -> str:
 
 def replacement_for(cat: str, name: str) -> str | None:
     if cat == "cli": return None
+    if cat == "load-test": return "python3 tools/tests/load_test.py --help"
     if cat == "validator": return "python3 tools/cms.py validate"
     if cat == "test": return "python3 tools/cms.py test"
     if cat == "generator": return "python3 tools/cms.py docs"
@@ -62,6 +64,14 @@ def searchable_files() -> list[Path]:
     return files
 
 
+def manifest_python_files() -> list[Path]:
+    return [
+        path
+        for path in sorted(ROOT.glob("tools/**/*.py"))
+        if not any(part in EXCLUDED_PARTS for part in path.parts)
+    ]
+
+
 def incoming_refs(path: Path, files: list[Path]) -> list[str]:
     rel = path.relative_to(ROOT).as_posix()
     module = rel[:-3].replace("/", ".") if rel.endswith(".py") else ""
@@ -77,7 +87,7 @@ def incoming_refs(path: Path, files: list[Path]) -> list[str]:
 
 
 def main() -> int:
-    pyfiles = sorted(ROOT.glob("tools/**/*.py"))
+    pyfiles = manifest_python_files()
     files = searchable_files()
     rows = []
     for path in pyfiles:

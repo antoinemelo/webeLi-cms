@@ -41,3 +41,7 @@ python3 tools/cms.py qualify --profile release
 Cette qualification ne reconstruit jamais les bases de données.
 
 Les qualifications lentes couvrent notamment l’intégrité des bases actives, la cohérence des projections publiques, le vrai mécanisme de backup, ainsi qu’un dry-run de l’export statique. Ces contrôles remplacent les anciens validateurs numérotés de production sans réintroduire les recherches de textes, classes CSS ou détails d’interface non contractuels.
+
+## Tests spécialisés
+
+- [Tests de charge traçables](load-testing.md) : campagnes HTTP manuelles sous `tools/tests/`, hors suites automatisées `tools/cms.py test`.

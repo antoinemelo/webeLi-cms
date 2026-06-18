@@ -58,6 +58,7 @@ La CLI expose les familles suivantes :
 - `export` : générer ou simuler un export statique ;
 - `backup` : créer ou restaurer une sauvegarde ;
 - `release` : préparer ou vérifier une release ;
+- `instance` : cloner ou préparer une instance locale ;
 - `docs` : générer ou contrôler les références documentaires.
 
 Pour connaître les paramètres d’une famille :
@@ -190,6 +191,26 @@ Le flux attendu est toujours le même :
 6. tester son extraction dans un répertoire distinct.
 
 Utilisez `--dry-run` lorsqu’il est proposé pour contrôler la sélection de fichiers avant de produire une archive distribuable.
+
+## Cloner une instance locale
+
+La commande `instance clone` prépare une copie locale dans un autre répertoire. Elle sépare le dossier créé de la configuration publique :
+
+```bash
+python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+```
+
+Dans cet exemple, le dossier s'appelle `mod2`, mais `APP_BASE_PATH` reste `/mod`. Pour une future instance `/eve` préparée dans un dossier temporaire :
+
+```bash
+python3 tools/cms.py instance clone \
+  --destination ../eve2 \
+  --new-base-path /eve \
+  --new-public-base-url https://webe.li/eve
+```
+
+La commande copie les bases SQLite et les fichiers runtime locaux. Elle doit être utilisée pour des préparations contrôlées, pas comme substitut à une release publique.
 
 ## Sauvegarder et restaurer
 

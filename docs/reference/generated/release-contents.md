@@ -42,6 +42,7 @@ generated: true
 - `storage/exports/static/.htaccess`
 - `storage/logs/.gitkeep`
 - `storage/logs/.htaccess`
+- `storage/security/.gitkeep`
 - `storage/uploads/.gitkeep`
 
 ## Exclusions du package
@@ -55,6 +56,7 @@ generated: true
 - `backend/vendor`
 - `backend/vendor/*`
 - `admin-app/assets/*.js.map`
+- `ops/.env`
 - `ops/ftp.deploy.json`
 - `backend/storage`
 - `backend/storage/*`
@@ -64,6 +66,7 @@ generated: true
 - `storage/backups/*`
 - `storage/backups/**`
 - `storage/uploads/*`
+- `storage/security/*`
 - `storage/exports`
 - `storage/exports/*`
 - `storage/exports/**`

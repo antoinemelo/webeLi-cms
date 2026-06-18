@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .evidence import CommandEvidence
 from .runtime import Context
-from tools.python.commands import audit, backup, docs, export, init, qualify, release, test, validate
+from tools.python.commands import audit, backup, docs, export, init, instance, qualify, release, test, validate
 from tools.python.lib.release_metadata import load_release_metadata
 
-COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'release': release.run, 'docs': docs.run}
+COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'release': release.run, 'docs': docs.run, 'instance': instance.run}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -33,6 +33,7 @@ def parser() -> argparse.ArgumentParser:
     backup.configure(sub.add_parser('backup', help='Créer ou restaurer une sauvegarde SQLite.'))
     release.configure(sub.add_parser('release', help='Préparer et vérifier une release.'))
     docs.configure(sub.add_parser('docs', help='Générer ou vérifier la documentation de référence.'))
+    instance.configure(sub.add_parser('instance', help='Préparer ou cloner une instance locale.'))
     return p
 
 

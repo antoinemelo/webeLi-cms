@@ -31,8 +31,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --no-audit --no-fund
         working-directory: frontend/admin-vue
+      - name: Initialize SQLite runtime
+        run: python3 tools/cms.py rebuild
       - name: Run standard qualification
-        run: python3 tools/cms.py --command-timeout 900 --evidence-dir storage/qualification/command-evidence qualify --profile standard
+        run: python3 tools/cms.py --command-timeout 900 --evidence-dir storage/qualification/command-evidence qualify --profile complete
       - name: Upload qualification reports
         if: always()
         uses: actions/upload-artifact@v4

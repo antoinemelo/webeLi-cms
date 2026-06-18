@@ -11,8 +11,8 @@
 
 ## Déploiement minimal
 
-1. Décompresser l’archive release.
-2. Copier `ops/_env.example` vers `ops/.env` ou définir les variables dans l’hébergement.
+1. Décompresser l’archive release ou cloner la branche Git attendue lorsque le serveur est administré par Git.
+2. Copier `ops/.env.example` vers `ops/.env` ou définir les variables dans l’hébergement.
 3. Garder en production :
 
 ```env
@@ -37,9 +37,58 @@ chmod -R ug+rwX storage/database storage/cache storage/uploads storage/logs stor
 8. Lancer :
 
 ```bash
-APP_ENV=production APP_PUBLIC_BASE_URL=https://example.org python3 tools/python/d1_preflight_local.py --target production
+APP_ENV=production APP_PUBLIC_BASE_URL=https://example.org python3 tools/python/operations/deployment/d1_preflight_local.py --target production
 python3 tools/cms.py qualify --profile release
 ```
+
+## Option Git sur Hostpoint
+
+Pour `webe.li/mod`, le serveur peut suivre la branche `staging` si SSH, Git et l'accès GitHub sont configurés :
+
+```bash
+cd ~/www/webe.li
+git clone --branch staging --single-branch git@github.com:antoinemelo/webeLi-cms.git mod
+cd mod
+cp ops/.env.example ops/.env
+python3 tools/python/operations/deployment/d1_preflight_local.py --target staging
+```
+
+Les mises à jour suivantes se font par :
+
+```bash
+cd ~/www/webe.li/mod
+git pull --ff-only
+python3 tools/python/operations/deployment/d1_preflight_local.py --target staging
+```
+
+Git synchronise le code. Les bases SQLite, médias, secrets, logs, sauvegardes et exports restent propres à chaque environnement.
+
+## Option FTP/FTPS pilotée par Python
+
+Lorsque Git n'est pas utilisé sur le serveur, préparez l'artefact localement puis transférez le staging de release :
+
+```bash
+python3 tools/admin.py
+python3 tools/cms.py release --package --verify-archive
+cp ops/ftp.deploy.example.json ops/ftp.deploy.json
+python3 tools/python/operations/deployment/d_deploy.py ftp-dry-run
+python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
+```
+
+Pour Hostpoint `/mod`, `ops/ftp.deploy.json` doit pointer vers le répertoire distant `/www/webe.li/mod`. Ce fichier contient des identifiants et doit rester hors Git.
+
+Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi propose ensuite de commiter les changements locaux, puis de pousser la branche si une upstream Git est configurée. Cette proposition est optionnelle et doit être acceptée uniquement après lecture de l'état Git affiché.
+
+## Clone local d'instance
+
+Pour préparer un dossier temporaire en séparant le nom du dossier et la configuration publique :
+
+```bash
+python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+```
+
+Le clone copie aussi les bases SQLite et médias locaux. Pour préparer une future instance `/eve` dans un dossier `eve2`, utilisez `--destination ../eve2 --new-base-path /eve`.
 
 ## Release v1
 
@@ -48,15 +97,15 @@ Une release v1 standard inclut les bases SQLite seedées sous `storage/database/
 Packaging et vérification :
 
 ```bash
-python3 tools/python/d_deploy.py
-python3 tools/python/d_deploy.py verify
+python3 tools/python/operations/deployment/d_deploy.py
+python3 tools/python/operations/deployment/d_deploy.py verify
 ```
 
 Archive source sans bases, uniquement si nécessaire :
 
 ```bash
-python3 tools/python/d_deploy.py package --exclude-databases
-python3 tools/python/d4_verify_release_archive.py --allow-without-databases
+python3 tools/python/operations/deployment/d_deploy.py package --exclude-databases
+python3 tools/python/operations/deployment/d4_verify_release_archive.py --allow-without-databases
 ```
 
 Le packaging exclut les logs, caches, uploads locaux, exports, secrets, fichiers SQLite temporaires, `vendor/`, `backend/vendor/` et `node_modules/` sauf option explicite.
@@ -78,12 +127,12 @@ APP_VUE_NODE_MODULES_PATH=../vendor/node_modules/
 APP_TWIG_VENDOR_PATH=../vendor/twig/
 ```
 
-Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases.
+Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. Sur un hébergement avec plusieurs instances (`/mod`, `/eve`, `/edu`), `APP_TWIG_VENDOR_PATH=../vendor/twig/` permet de partager Twig depuis le dossier parent lorsque l'instance ne contient pas `vendor/`. Le runtime ne charge pas un Composer parent déclarant `App\\`; le préflight signale ce cas comme point à vérifier.
 
 ## Préflight conseillé
 
 ```bash
-python3 tools/python/d_deploy.py preflight
+python3 tools/python/operations/deployment/d_deploy.py preflight
 ```
 
 Le préflight vérifie notamment :
@@ -103,13 +152,13 @@ Le préflight vérifie notamment :
 Sauvegarde avant mise à jour :
 
 ```bash
-python3 tools/python/d_deploy.py backup
+python3 tools/python/operations/deployment/d_deploy.py backup
 ```
 
 Restauration :
 
 ```bash
-python3 tools/python/d_deploy.py restore --archive storage/backups/sqlite/<backup>.zip --yes
+python3 tools/python/operations/deployment/d_deploy.py restore --archive storage/backups/sqlite/<backup>.zip --yes
 ```
 
 Rollback manuel :

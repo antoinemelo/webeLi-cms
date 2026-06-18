@@ -26,6 +26,11 @@ class RuntimeBootstrapAndAuditEvidenceTest(unittest.TestCase):
         self.assertNotIn("dirname(__DIR__, 2) . '/vendor/autoload.php'", self.runtime)
         self.assertNotIn("cms_choose_composer_autoload", self.runtime)
 
+    def test_runtime_can_use_parent_twig_vendor_without_parent_app_autoload(self) -> None:
+        self.assertIn("cms_project_path('../vendor/twig/')", self.runtime)
+        self.assertIn("cms_autoload_maps_prefix($autoload, 'App\\\\')", self.runtime)
+        self.assertNotIn("dirname(__DIR__, 2) . '/vendor/autoload.php'", self.runtime)
+
     def test_registry_deduplicates_config_and_database_provider_classes(self) -> None:
         self.assertIn("array_merge(", self.registry)
         self.assertIn("$this->providerClassesFromConfig()", self.registry)

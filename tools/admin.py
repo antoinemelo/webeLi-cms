@@ -24,6 +24,7 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
@@ -86,12 +87,6 @@ ACTIONS: tuple[Action, ...] = (
         "Lancer l'export statique",
         ("export",),
         "Génère l'export statique du site.",
-    ),
-    Action(
-        "9",
-        "Exécuter uniquement les tests",
-        ("test",),
-        "Lance uniquement les suites de tests, sans qualification complète.",
     ),
 )
 
@@ -169,7 +164,7 @@ def print_menu() -> None:
     print(" 6. Déployer la release par FTP")
     print(" 7. Créer une sauvegarde")
     print(" 8. Lancer l'export statique")
-    print(" 9. Exécuter uniquement les tests")
+    print(" 9. Créer un clone local d'instance")
     print(" 0. Quitter")
     print()
 
@@ -239,6 +234,203 @@ def confirm_destructive() -> bool:
     return answer == "O"
 
 
+def confirm_optional(prompt: str) -> bool:
+    try:
+        answer = input(f"{prompt} [o/N] : ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer in {"o", "oui", "y", "yes"}
+
+
+def git_command(*args: str, capture: bool = True) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ("git", *args),
+        cwd=str(PROJECT_ROOT),
+        env=os.environ.copy(),
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE if capture else None,
+        stderr=subprocess.PIPE if capture else None,
+    )
+
+
+def git_output(*args: str) -> str | None:
+    result = git_command(*args)
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def is_git_repository() -> bool:
+    result = git_command("rev-parse", "--is-inside-work-tree")
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def git_has_changes() -> bool:
+    result = git_command("status", "--porcelain")
+    return result.returncode == 0 and bool(result.stdout.strip())
+
+
+def git_upstream() -> str | None:
+    return git_output("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+
+
+def git_ahead_count() -> int | None:
+    result = git_command("rev-list", "--count", "@{u}..HEAD")
+    if result.returncode != 0:
+        return None
+    try:
+        return int(result.stdout.strip())
+    except ValueError:
+        return None
+
+
+def print_git_status() -> None:
+    result = git_command("status", "--short", "--branch")
+    if result.returncode == 0 and result.stdout.strip():
+        print(result.stdout.rstrip())
+
+
+def maybe_commit_after_ftp() -> None:
+    if not is_git_repository():
+        print()
+        print("Git non détecté dans ce répertoire : commit/push ignorés.")
+        return
+
+    print()
+    print("Synchronisation Git optionnelle")
+    print("-" * 31)
+    print_git_status()
+
+    if git_has_changes():
+        if confirm_optional("Créer un commit Git avec les changements actuels"):
+            default_message = f"Mise à jour après déploiement FTP {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            try:
+                message = input(f"Message de commit [{default_message}] : ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                message = ""
+            message = message or default_message
+
+            add_result = git_command("add", "-A", capture=False)
+            if add_result.returncode != 0:
+                print("Commit annulé : impossible d'ajouter les fichiers à l'index Git.")
+                return
+
+            commit_result = git_command("commit", "-m", message, capture=False)
+            if commit_result.returncode != 0:
+                print("Commit non créé. Vérifiez l'état Git avant de pousser.")
+                return
+        else:
+            print("Commit Git ignoré.")
+    else:
+        print("Aucun changement local à commiter.")
+
+    upstream = git_upstream()
+    if upstream is None:
+        print("Aucune branche upstream configurée : push automatique non proposé.")
+        return
+
+    ahead = git_ahead_count()
+    if ahead is None:
+        print("Impossible de calculer les commits en avance : push non proposé.")
+        return
+    if ahead <= 0:
+        print(f"Aucun commit à pousser vers {upstream}.")
+        return
+
+    print(f"{ahead} commit(s) local(aux) en avance sur {upstream}.")
+    if confirm_optional(f"Pousser maintenant vers {upstream}"):
+        push_result = git_command("push", capture=False)
+        if push_result.returncode == 0:
+            print("Push Git terminé.")
+        else:
+            print("Push Git en échec. Relancez manuellement après correction.")
+    else:
+        print("Push Git ignoré.")
+
+
+def prompt_text(label: str, default: str = "") -> str:
+    suffix = f" [{default}]" if default else ""
+    try:
+        value = input(f"{label}{suffix} : ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return ""
+    return value or default
+
+
+def default_sibling_destination() -> Path:
+    return PROJECT_ROOT.parent / f"{PROJECT_ROOT.name}2"
+
+
+def run_instance_clone() -> int:
+    print()
+    print("Créer un clone local d'instance")
+    print("-" * 34)
+    print("Le dossier de destination et le APP_BASE_PATH cible sont indépendants.")
+    print("Exemple: destination ../mod2 avec APP_BASE_PATH /mod.")
+    print()
+
+    source = prompt_text("Répertoire source", str(PROJECT_ROOT))
+    if not source:
+        print("Opération annulée.")
+        return 0
+
+    destination = prompt_text("Répertoire destination", str(default_sibling_destination()))
+    if not destination:
+        print("Opération annulée.")
+        return 0
+
+    target_base_path = prompt_text(
+        "APP_BASE_PATH cible (vide = dérivé du dossier destination)",
+        "",
+    )
+    public_url = prompt_text("APP_PUBLIC_BASE_URL cible optionnel", "")
+    force = confirm_optional("Remplacer la destination si elle existe")
+
+    command = [
+        sys.executable,
+        str(CMS_ENTRYPOINT),
+        "instance",
+        "clone",
+        "--source",
+        source,
+        "--destination",
+        destination,
+    ]
+    if target_base_path:
+        command.extend(["--new-base-path", target_base_path])
+    if public_url:
+        command.extend(["--new-public-base-url", public_url])
+    if force:
+        command.append("--force")
+
+    dry_run_command = [*command[:2], "--dry-run", *command[2:]]
+    print()
+    print("Simulation exécutée :")
+    print(f"  {format_command(dry_run_command)}")
+    dry_run = subprocess.run(dry_run_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if dry_run.returncode != 0:
+        print(f"\nSimulation en échec — code de retour {dry_run.returncode}")
+        return dry_run.returncode
+
+    if not confirm_destructive():
+        print("Clone local annulé après simulation.")
+        return 0
+
+    print()
+    print("Commande exécutée :")
+    print(f"  {format_command(command)}")
+    result = subprocess.run(command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if result.returncode == 0:
+        print("\nOK — clone local d'instance créé")
+    else:
+        print(f"\nERREUR — code de retour {result.returncode}")
+    return result.returncode
+
+
 def run_action(action: Action) -> int:
     print_action_details(action)
 
@@ -257,6 +449,8 @@ def run_action(action: Action) -> int:
 
     if result.returncode == 0:
         print(f"\nOK — {action.title}")
+        if action.key == "6":
+            maybe_commit_after_ftp()
     elif result.returncode == 2:
         print(
             "\nINCOMPLET — certains contrôles n'ont pas pu être exécutés. "
@@ -295,6 +489,12 @@ def main() -> int:
         if choice == "0":
             print("Fin de l'administration DEC CMS.")
             return 0
+
+        if choice == "9":
+            run_instance_clone()
+            if not pause_before_menu():
+                return 0
+            continue
 
         if choice == "2":
             action = choose_qualification()

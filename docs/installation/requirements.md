@@ -38,7 +38,7 @@ Le socle de validation du projet utilise les versions suivantes :
 La contrainte Composer reste compatible avec PHP `^8.2`, mais utiliser les versions ci-dessus permet de reproduire l’environnement contrôlé par les validateurs et la chaîne de release.
 
 - Extension `pdo_sqlite` obligatoire pour les bases SQLite.
-- Twig `^3.0`, fourni par Composer ou par le chemin configuré.
+- Twig `^3.0`, fourni par Composer, par le chemin configuré `APP_TWIG_VENDOR_PATH`, ou par un `../vendor/twig/` partagé entre plusieurs instances sous sous-répertoire.
 - Serveur web capable de servir `index.php` et d’appliquer les règles d’accès.
 - Python 3 pour les outils de maintenance.
 

@@ -1,4 +1,5 @@
 # Secrets locaux de déploiement
+ops/.env
 ops/ftp.deploy.json
 
 # Artefacts locaux de packaging / déploiement
@@ -26,6 +27,8 @@ storage/cache/*
 storage/logs/*.log
 storage/uploads/*
 !storage/uploads/.gitkeep
+storage/security/*
+!storage/security/.gitkeep
 
 # Dépendances locales de développement
 node_modules/
@@ -37,6 +40,13 @@ backend/vendor/
 # Python
 __pycache__/
 *.pyc
+
+# Tests de charge locaux
+tools/tests/.venv/
+tools/tests/users.csv
+tools/tests/*_credentials.csv
+tools/tests/*.zip
+tools/tests/webeLi-evidence-*/
 
 # Rapports locaux de qualification
 storage/qualification/*
