@@ -98,6 +98,17 @@ Audit release manuel :
 python3 tools/cms.py audit --profile release --build
 ```
 
+Le profil `release` utilise une borne globale adaptée aux audits longs. La
+façade applique par défaut un timeout global de 7200 secondes pour ce profil,
+afin de ne pas interrompre prématurément un audit qui construit l’admin, recrée
+les bases de test, lance les validations, produit le package et vérifie
+l’archive. Pour un environnement particulièrement lent, la borne peut être
+ajustée explicitement :
+
+```bash
+python3 tools/cms.py audit --profile release --build --timeout 10800
+```
+
 ## Preuve documentaire
 
 Après une mineure ou une majeure réussie, les fichiers suivants sont régénérés :

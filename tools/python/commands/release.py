@@ -1,5 +1,11 @@
 from tools.python.cms.runtime import python_script
 
+RELEASE_ORCHESTRATOR_TIMEOUT = 7200
+
+
+def _release_timeout(ctx):
+    return max(ctx.command_timeout, RELEASE_ORCHESTRATOR_TIMEOUT)
+
 def configure(p):
     p.add_argument('--ci',action='store_true',help='Exécuter la chaîne CI stable.')
     p.add_argument('--interactive-prepare',action='store_true',help='Lance d0_prepare_release.py, puis poursuit automatiquement avec le préflight et le packaging.')
@@ -23,4 +29,4 @@ def run(ctx,args):
     for flag,name in [('skip_preflight','--skip-preflight'),('exclude_databases','--exclude-databases'),('include_vendor','--include-vendor'),('no_zip','--no-zip'),('clean_stage','--clean-stage')]:
         if getattr(args,flag):a.append(name)
     if ctx.dry_run:a.append('--plan-only')
-    return python_script(ctx,'tools/python/operations/deployment/d_deploy.py',a)
+    return python_script(ctx,'tools/python/operations/deployment/d_deploy.py',a,timeout=_release_timeout(ctx))

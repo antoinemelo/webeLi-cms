@@ -10,7 +10,7 @@ version: 1.0
 last_verified: 2026-06-20
 source_of_truth: generated
 source_paths:
-  - storage/exports/dec_v06-e07a/dec_v06-e07a.release-evidence.json
+  - storage/exports/dec_v06-e10a/dec_v06-e10a.release-evidence.json
   - tools/python/operations/deployment/d13_bind_release_evidence.py
 owners:
   - core
@@ -21,16 +21,16 @@ generator: tools/python/operations/deployment/d13_bind_release_evidence.py
 
 Ce document est généré automatiquement pour une release **mineure ou majeure**. Les patchs ne déclenchent pas ce processus et conservent la qualification locale standard.
 
-- Version : `dec_v06-e07a`
+- Version : `dec_v06-e10a`
 - Type : `minor`
 - Nom : Beta
 - Audit : `PASS`
 - Profil : `release`
-- Date UTC : `2026-06-20T15:54:43Z`
-- Archive de release : `dec_v06-e07a.zip`
-- SHA-256 release : `7676948b92612f559df9235c9846c2105e46d4604bddf0736d4e520ad6c2c20d`
-- Archive de preuves : `dec_v06-e07a-audit-evidence.zip`
-- SHA-256 preuves : `749de791fa262e2b3ee726e6905a041fdea2f3fe5b3faaab3bca5d0bbc6ae1e1`
+- Date UTC : `2026-06-20T16:51:07Z`
+- Archive de release : `dec_v06-e10a.zip`
+- SHA-256 release : `a82760539f99ccbdd3885cfc05e591386d5e57b17a1584ec836745af676a559a`
+- Archive de preuves : `dec_v06-e10a-audit-evidence.zip`
+- SHA-256 preuves : `e970fc4fe6880352a1a55b204257078060b21ae4895f4a983a8997b95a619728`
 - Étapes démontrées : 21
 
 ## Vérification indépendante
@@ -38,8 +38,8 @@ Ce document est généré automatiquement pour une release **mineure ou majeure*
 Depuis le dossier contenant les artefacts :
 
 ```bash
-sha256sum -c dec_v06-e07a.zip.sha256
-sha256sum -c dec_v06-e07a-audit-evidence.zip.sha256
+sha256sum -c dec_v06-e10a.zip.sha256
+sha256sum -c dec_v06-e10a-audit-evidence.zip.sha256
 ```
 
 L’archive de preuves reste séparée de l’archive exécutable. Le manifeste JSON associé permet de vérifier qu’elles appartiennent au même processus de livraison.
