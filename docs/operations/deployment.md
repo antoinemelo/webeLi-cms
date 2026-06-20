@@ -42,17 +42,27 @@ python3 tools/cms.py release --help
 ```bash
 python3 tools/cms.py backup --help
 python3 tools/cms.py migrate --plan
+python3 tools/cms.py instance update --help
 ```
 
-La commande de backup doit être exécutée avant toute migration appliquée. Le plan de migration doit être lu avant validation.
+La commande de backup doit être exécutée avant toute migration appliquée. Pour une mise à jour de release sur une instance client, privilégier le flux local `instance update`, qui protège les bases, les médias, les secrets et les modules clients locaux.
 
-## Application des migrations natives
+## Mise à jour locale d’une instance client
 
 ```bash
-python3 tools/cms.py migrate --apply --backup
+python3 tools/cms.py instance update --source /chemin/release.zip --target /chemin/site-client --plan
+python3 tools/cms.py instance update --source /chemin/release.zip --target /chemin/site-client --apply --backup --yes
 ```
 
-Cette commande applique les migrations SQLite natives connues par l’inventaire local. Elle ne remplace pas une sauvegarde externe complète du serveur.
+Ce flux orchestre le delta fichiers, le backup SQLite, les migrations et les validations essentielles. Les chemins `storage/database/`, `storage/media/`, `storage/uploads/`, `storage/logs/`, `storage/backups/`, `ops/.env`, `ops/modules.local.json` et `local/modules/` sont protégés.
+
+## Application manuelle des migrations
+
+```bash
+python3 tools/cms.py migrate --apply --backup --yes
+```
+
+Cette commande applique les migrations SQLite connues par l’inventaire local. Elle ne remplace pas une sauvegarde externe complète du serveur.
 
 ## Après intervention
 

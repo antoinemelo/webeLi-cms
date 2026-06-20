@@ -23,6 +23,8 @@ VALIDATORS=(
     Validator('SECURITY_BASELINE', "tools.python.validation.security.baseline", 'security'),
     Validator('MEDIA_STORAGE_MODEL', "tools.python.validation.operations.media", 'operations'),
     Validator('OPERATIONS_MANIFESTS', "tools.python.validation.operations.manifests", 'operations'),
+    Validator('MODULE_MANIFESTS', "tools.python.validation.operations.module_manifests", 'operations'),
+    Validator('MIGRATION_SAFETY', "tools.python.validation.operations.migration_safety", 'operations'),
     Validator('RELEASE_STRUCTURE', "tools.python.validation.operations.release_structure", 'operations'),
     Validator('DOCUMENTATION_CONTRACTS', "tools.python.validation.documentation.contracts", 'documentation'),
     Validator('DEPENDENCY_BOUNDARIES', "tools.python.validation.shared.dependency_boundaries", 'shared'),

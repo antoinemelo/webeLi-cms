@@ -12,9 +12,9 @@ Profils disponibles :
     complete  qualification technique approfondie sans reconstruction des bases ;
     release   validation finale locale ; les mineures/majeures ajoutent un audit reproductible obligatoire.
 
-Les opérations de reconstruction, sauvegarde, export, préparation de release
+Les opérations de sauvegarde, migration incrémentale, mise à jour d’instance, export, préparation de release
 et déploiement restent disponibles séparément pour les interventions
-administratives explicites.
+administratives explicites. La reconstruction reste un outil destructif de développement, de test ou de récupération contrôlée.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ ACTIONS: tuple[Action, ...] = (
         "1",
         "Reconstruire les bases de données",
         ("rebuild",),
-        "Recrée les cinq bases SQLite, applique les seeds et reconstruit les projections.",
+        "Recrée les bases SQLite natives, applique les seeds et reconstruit les projections. Réservé au développement, aux tests ou à une récupération contrôlée.",
         True,
     ),
     Action(
@@ -80,7 +80,7 @@ ACTIONS: tuple[Action, ...] = (
         "7",
         "Créer une sauvegarde",
         ("backup",),
-        "Sauvegarde les bases SQLite natives et les ressources prévues par le manifeste.",
+        "Sauvegarde les bases SQLite de l’inventaire unifié et les ressources prévues par le manifeste.",
     ),
     Action(
         "8",
@@ -146,8 +146,14 @@ def print_intro() -> None:
     print("      patch : qualification standard")
     print("      mineure/majeure : audit reproductible obligatoire + preuves")
     print()
+    print("• Mise à jour d’une base existante avec contenu")
+    print("  10 — plan non mutatif, migration incrémentale, backup et validation")
+    print()
+    print("• Mise à jour d’une instance client depuis une release")
+    print("  11 — plan fichiers/migrations, backup, chemins protégés et journal JSON")
+    print()
     print("• Reconstruction explicite des bases de données")
-    print("  1 — opération indépendante et destructive")
+    print("  1 — opération indépendante, destructive, réservée au développement/test/récupération")
     print()
     print("Aucun profil de qualification ne reconstruit les bases de données.")
     print()
@@ -156,7 +162,7 @@ def print_intro() -> None:
 def print_menu() -> None:
     print("Opérations disponibles")
     print("-" * 78)
-    print(" 1. Reconstruire les bases de données")
+    print(" 1. Reconstruire les bases de données — dev/test/récupération")
     print(" 2. Lancer une qualification (pre-release)")
     print(" 3. Générer la documentation et les fichiers dérivés")
     print(" 4. Vérifier la documentation générée")
@@ -165,6 +171,8 @@ def print_menu() -> None:
     print(" 7. Créer une sauvegarde")
     print(" 8. Lancer l'export statique")
     print(" 9. Créer un clone local d'instance")
+    print("10. Mettre à jour les bases existantes — backup + migrations")
+    print("11. Mettre à jour une instance client depuis une release")
     print(" 0. Quitter")
     print()
 
@@ -365,6 +373,112 @@ def default_sibling_destination() -> Path:
     return PROJECT_ROOT.parent / f"{PROJECT_ROOT.name}2"
 
 
+def run_existing_database_update() -> int:
+    print()
+    print("Mettre à jour les bases existantes")
+    print("-" * 39)
+    print("Cette procédure conserve les données : plan non mutatif, migration incrémentale, backup et validation.")
+    print("Elle amène les bases connues à la dernière version de schéma disponible dans ce code.")
+    print()
+
+    plan_command = [sys.executable, str(CMS_ENTRYPOINT), "migrate", "--plan"]
+    print("Plan exécuté :")
+    print(f"  {format_command(plan_command)}")
+    plan = subprocess.run(plan_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if plan.returncode != 0:
+        print(f"\nPlan de migrations en échec — code de retour {plan.returncode}")
+        return plan.returncode
+
+    if not confirm_destructive():
+        print("Mise à jour des bases annulée après le plan.")
+        return 0
+
+    apply_command = [sys.executable, str(CMS_ENTRYPOINT), "migrate", "--apply", "--backup", "--yes"]
+    print()
+    print("Application exécutée :")
+    print(f"  {format_command(apply_command)}")
+    apply = subprocess.run(apply_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if apply.returncode != 0:
+        print(f"\nERREUR — migration interrompue avec le code {apply.returncode}")
+        return apply.returncode
+
+    validation_commands = [
+        [sys.executable, str(CMS_ENTRYPOINT), "validate", "--category", "database"],
+        [sys.executable, str(CMS_ENTRYPOINT), "validate", "--category", "operations"],
+    ]
+    for command in validation_commands:
+        print()
+        print("Validation exécutée :")
+        print(f"  {format_command(command)}")
+        result = subprocess.run(command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+        if result.returncode != 0:
+            print(f"\nERREUR — validation en échec avec le code {result.returncode}")
+            return result.returncode
+
+    print("\nOK — bases existantes mises à jour et validées")
+    return 0
+
+
+def run_instance_update() -> int:
+    print()
+    print("Mettre à jour une instance client")
+    print("-" * 37)
+    print("La cible conserve storage/database, médias, logs, backups, ops/.env, ops/modules.local.json et local/modules.")
+    print()
+
+    source = prompt_text("Release source ZIP ou dossier", "")
+    if not source:
+        print("Opération annulée.")
+        return 0
+
+    target = prompt_text("Répertoire cible de l'instance", str(PROJECT_ROOT))
+    if not target:
+        print("Opération annulée.")
+        return 0
+
+    delete_obsolete = confirm_optional("Supprimer les fichiers obsolètes hors chemins protégés")
+    maintenance_flag = confirm_optional("Créer storage/maintenance.flag pendant la copie fichiers")
+
+    base_command = [
+        sys.executable,
+        str(CMS_ENTRYPOINT),
+        "instance",
+        "update",
+        "--source",
+        source,
+        "--target",
+        target,
+    ]
+    if delete_obsolete:
+        base_command.append("--delete-obsolete")
+    if maintenance_flag:
+        base_command.append("--maintenance-flag")
+
+    plan_command = [*base_command, "--plan"]
+    print()
+    print("Plan exécuté :")
+    print(f"  {format_command(plan_command)}")
+    plan = subprocess.run(plan_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if plan.returncode != 0:
+        print(f"\nPlan de mise à jour en échec — code de retour {plan.returncode}")
+        return plan.returncode
+
+    if not confirm_destructive():
+        print("Mise à jour d’instance annulée après le plan.")
+        return 0
+
+    apply_command = [*base_command, "--apply", "--backup", "--yes"]
+    print()
+    print("Application exécutée :")
+    print(f"  {format_command(apply_command)}")
+    result = subprocess.run(apply_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if result.returncode == 0:
+        print("\nOK — instance client mise à jour")
+    else:
+        print(f"\nERREUR — code de retour {result.returncode}")
+    return result.returncode
+
+
 def run_instance_clone() -> int:
     print()
     print("Créer un clone local d'instance")
@@ -492,6 +606,18 @@ def main() -> int:
 
         if choice == "9":
             run_instance_clone()
+            if not pause_before_menu():
+                return 0
+            continue
+
+        if choice == "10":
+            run_existing_database_update()
+            if not pause_before_menu():
+                return 0
+            continue
+
+        if choice == "11":
+            run_instance_update()
             if not pause_before_menu():
                 return 0
             continue

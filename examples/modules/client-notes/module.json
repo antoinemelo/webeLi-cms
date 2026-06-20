@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "key": "client-notes",
+  "name": "Client Notes Example",
+  "version": "0.1.0",
+  "type": "client",
+  "provider_class": "ClientModules\\ClientNotes\\ClientNotesModuleProvider",
+  "provider_file": "examples/modules/client-notes/src/ClientNotesModuleProvider.php",
+  "enabled_by_default": false,
+  "databases": [
+    {
+      "key": "client_notes",
+      "path": "storage/database/client_notes.sqlite",
+      "schema": "examples/modules/client-notes/database/schema.sql",
+      "migrations": "examples/modules/client-notes/database/migrations"
+    }
+  ],
+  "protected_on_core_update": true
+}

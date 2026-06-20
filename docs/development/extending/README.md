@@ -25,11 +25,13 @@ Toute extension suit la même séquence :
 8. régénérer les références et exécuter la qualification.
 
 ```bash
-python3 tools/cms.py rebuild
+python3 tools/cms.py migrate --plan
 python3 tools/cms.py docs generate
 python3 tools/cms.py validate --full
 python3 tools/cms.py test
 ```
+
+Pour vérifier une installation existante, utilisez les migrations incrémentales. `rebuild` reste réservé aux environnements de développement ou de test où les bases peuvent être recréées volontairement.
 
 ## Choisir la fiche adaptée
 
@@ -40,3 +42,7 @@ python3 tools/cms.py test
 - [Commande, validateur ou test](command-validator.md)
 
 Les comportements utilisateurs doivent être testés par intégration, API ou navigateur. Les validateurs Python restent réservés aux invariants transversaux et déterministes.
+
+## Modules
+
+- [Modules système et modules clients](modules.md)

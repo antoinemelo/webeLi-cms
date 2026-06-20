@@ -15,12 +15,10 @@ from pathlib import Path
 
 from tools.python.lib.deploylib import sha256_file
 from tools.python.lib.release_metadata import load_release_metadata
-from tools.python.lib.database_inventory import native_database_names
+from tools.python.lib.database_inventory import DatabaseSpec, database_specs
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
-DB_DIR = ROOT / "storage" / "database"
 BACKUP_DIR = ROOT / "storage" / "backups" / "sqlite"
-DATABASES = native_database_names(backup=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,6 +34,24 @@ def integrity_check(path: Path) -> str:
         return str(con.execute("PRAGMA integrity_check").fetchone()[0])
 
 
+def archive_member(spec: DatabaseSpec) -> str:
+    return f"database/{spec.name}"
+
+
+def manifest_entry(spec: DatabaseSpec, path: Path, integrity: str) -> dict:
+    return {
+        "key": spec.key,
+        "path": spec.path,
+        "name": spec.name,
+        "kind": spec.kind,
+        "module_key": spec.module_key,
+        "migration_scope": spec.migration_scope,
+        "sha256": sha256_file(path),
+        "size": path.stat().st_size,
+        "integrity_check": integrity,
+    }
+
+
 def main() -> int:
     args = parse_args()
     output = Path(args.output).expanduser()
@@ -43,26 +59,33 @@ def main() -> int:
         output = ROOT / output
     output.parent.mkdir(parents=True, exist_ok=True)
 
+    specs = database_specs(root=ROOT, backup=True)
     metadata = load_release_metadata()
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "technical_version": metadata.technical_version,
         "databases": {},
     }
-    for name in DATABASES:
-        path = DB_DIR / name
+    entries: list[tuple[DatabaseSpec, Path, str]] = []
+    for spec in specs:
+        path = spec.absolute_path(ROOT)
         if not path.exists():
             raise SystemExit(f"ERREUR: base absente: {path}")
         integrity = integrity_check(path)
         if integrity != "ok":
-            raise SystemExit(f"ERREUR: {name} integrity_check={integrity}")
-        manifest["databases"][name] = {"sha256": sha256_file(path), "size": path.stat().st_size, "integrity_check": integrity}
+            raise SystemExit(f"ERREUR: {spec.key} integrity_check={integrity}")
+        manifest["databases"][spec.key] = manifest_entry(spec, path, integrity)
+        entries.append((spec, path, archive_member(spec)))
 
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("backup-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
-        for name in DATABASES:
-            archive.write(DB_DIR / name, f"database/{name}")
+        used_members: set[str] = set()
+        for spec, path, member in entries:
+            if member in used_members:
+                raise SystemExit(f"ERREUR: nom de base dupliqué dans la sauvegarde: {member}")
+            used_members.add(member)
+            archive.write(path, member)
     print(f"Backup SQLite créé: {output}")
     return 0
 

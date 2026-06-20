@@ -55,10 +55,10 @@ python3 tools/cms.py backup --help
 python3 tools/cms.py migrate --plan
 ```
 
-Appliquer les migrations natives avec sauvegarde préalable :
+Appliquer les migrations incrémentales avec sauvegarde préalable :
 
 ```bash
-python3 tools/cms.py migrate --apply --backup
+python3 tools/cms.py migrate --apply --backup --yes
 ```
 
 Vérifier la documentation générée ou contrôlée par le projet :
@@ -71,15 +71,15 @@ python3 tools/cms.py docs check
 ## Séquence recommandée avant migration
 
 1. vérifier que le projet est dans l’état attendu ;
-2. créer un backup ;
-3. lire le plan de migration ;
+2. créer ou vérifier un backup ;
+3. lire le plan de migration non mutatif ;
 4. appliquer uniquement si le plan est cohérent ;
 5. relancer les validations.
 
 ```bash
 python3 tools/cms.py validate --category database --category operations
 python3 tools/cms.py migrate --plan
-python3 tools/cms.py migrate --apply --backup
+python3 tools/cms.py migrate --apply --backup --yes
 python3 tools/cms.py validate --category database --category operations --category documentation
 ```
 
@@ -112,3 +112,7 @@ Ces commandes doivent rester vides. Si un fichier est trouvé, il faut corriger 
 - ne pas confondre release, dépôt source et instance cliente ;
 - ne pas activer un module custom sans vérifier ses tables et ses migrations ;
 - garder `tools/cms.py` comme façade principale pour les opérations locales.
+
+## Rappel sur `rebuild`
+
+Pour une base existante avec contenu, ne pas utiliser `rebuild` comme mise à jour. Utilisez `backup`, `migrate --plan`, `migrate --apply --backup --yes`, puis les validations. `rebuild` reste réservé au développement, aux tests et aux récupérations contrôlées après sauvegarde.

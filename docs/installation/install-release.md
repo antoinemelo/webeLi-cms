@@ -41,3 +41,28 @@ generated: false
 Pour une installation sous `/cms`, définissez `APP_BASE_PATH=/cms` et vérifiez les routes `/admin`, `/api/v1/health`, les assets et les URL générées.
 
 Pour Hostpoint, l'installation sous `/mod` peut être synchronisée soit par Git depuis la branche `staging`, soit par FTP/FTPS depuis une release préparée. Voir [Déployer sur Hostpoint avec Git ou FTP](../operations/hostpoint-git-ftp.md).
+
+## Socle modulaire local
+
+Une release officielle contient le noyau CMS et les modules système livrés avec lui. Elle ne doit pas contenir les développements spécifiques d’une instance client.
+
+Pour installer une instance qui recevra ensuite des modules clients :
+
+1. Installez la release normalement.
+2. Créez ou conservez `local/modules/` pour les développements locaux.
+3. Déclarez les modules clients activés dans `ops/modules.local.json`, sur le modèle de `ops/modules.local.json.example`.
+4. Gardez les bases métier des modules sous `storage/database/`.
+5. Vérifiez l’état local avec `python3 tools/cms.py validate`.
+
+Voir aussi [Modules système et modules clients](../development/extending/modules.md), [Migrations SQLite des modules](../operations/module-migrations.md) et [Mettre à jour une instance client avec modules locaux](../operations/client-instance-update.md).
+
+## Mise à jour d’une installation existante
+
+Cette page décrit l’installation initiale. Pour une instance qui contient déjà des données, ne relancez pas `init` ou `rebuild`. Utilisez le flux de mise à jour :
+
+```bash
+python3 tools/cms.py instance update --source /chemin/release.zip --target /chemin/site-client --plan
+python3 tools/cms.py instance update --source /chemin/release.zip --target /chemin/site-client --apply --backup --yes
+```
+
+Si seuls les schémas SQLite doivent être amenés à la dernière version, suivez [mettre à jour une base existante](../operations/existing-database-update.md).

@@ -32,6 +32,8 @@ generated: true
 | `SECURITY_BASELINE` | `security` | `fast`, `full`, `slow` | `tools.python.validation.security.baseline` |
 | `MEDIA_STORAGE_MODEL` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.media` |
 | `OPERATIONS_MANIFESTS` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.manifests` |
+| `MODULE_MANIFESTS` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.module_manifests` |
+| `MIGRATION_SAFETY` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.migration_safety` |
 | `RELEASE_STRUCTURE` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.release_structure` |
 | `DOCUMENTATION_CONTRACTS` | `documentation` | `fast`, `full`, `slow` | `tools.python.validation.documentation.contracts` |
 | `DEPENDENCY_BOUNDARIES` | `shared` | `fast`, `full`, `slow` | `tools.python.validation.shared.dependency_boundaries` |

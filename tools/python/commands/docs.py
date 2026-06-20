@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from tools.python.cms.runtime import python_script
+from tools.python.generators import generate_documentation
 from tools.python.validation.runner import run_validators
 
 
@@ -24,15 +25,24 @@ def configure(parser):
     )
 
 
+def _run_generate_documentation(flags: list[str]) -> int:
+    return int(generate_documentation.main(flags))
+
+
 def _run_steps(ctx, steps: list[tuple[str, list[str]]]) -> int:
     """Exécute la chaîne documentaire dans un ordre déterministe.
 
     OpenAPI doit être généré avant les types SDK, car ces derniers sont dérivés de
     ``components.schemas``. La première erreur interrompt la chaîne afin de ne pas
-    masquer la cause initiale.
+    masquer la cause initiale. Le générateur Markdown est lancé dans le processus
+    courant afin que ``docs check`` reste fiable dans les environnements locaux où
+    des sous-processus imbriqués peuvent conserver des descripteurs ouverts.
     """
     for script, flags in steps:
-        code = python_script(ctx, script, flags)
+        if script == "tools/python/generators/generate_documentation.py":
+            code = _run_generate_documentation(flags)
+        else:
+            code = python_script(ctx, script, flags)
         if code != 0:
             return code
     return 0

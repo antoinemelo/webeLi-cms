@@ -39,7 +39,7 @@ Utilisez-la pour les opérations courantes. Les scripts rangés sous `tools/pyth
 - Python 3 disponible sous la commande `python3` ;
 - exécution depuis la racine du projet, celle qui contient `tools/cms.py` ;
 - droits d’écriture sur `storage/` pour les commandes qui créent des bases, sauvegardes, exports ou releases ;
-- copie de sauvegarde avant une reconstruction ou une restauration.
+- copie de sauvegarde avant toute migration appliquée, restauration ou reconstruction contrôlée.
 
 Les chemins contenant des espaces sont acceptés lorsque vous utilisez les options prévues et que vous placez le chemin entre guillemets.
 
@@ -52,12 +52,13 @@ python3 tools/cms.py --help
 La CLI expose les familles suivantes :
 
 - `init` : créer les structures SQLite sans données métier ;
-- `rebuild` : reconstruire les bases et charger les seeds natifs ;
+- `rebuild` : reconstruire les bases et charger les seeds natifs, uniquement en développement/test/récupération contrôlée ;
 - `validate` : exécuter les validateurs ;
 - `test` : exécuter les tests Python ;
 - `export` : générer ou simuler un export statique ;
 - `backup` : créer ou restaurer une sauvegarde ;
-- `migrate` : planifier ou appliquer les migrations SQLite natives ;
+- `migrate` : planifier ou appliquer les migrations SQLite natives et les migrations de modules déclarées localement ;
+- `instance` : cloner ou mettre à jour une instance locale en conservant les chemins protégés ;
 - `release` : préparer ou vérifier une release ;
 - `docs` : générer ou contrôler les références documentaires.
 
@@ -90,6 +91,18 @@ python3 tools/cms.py --database-dir "/srv/Mon CMS/storage/database" validate
 
 Ne supposez pas qu’une option globale placée après la sous-commande sera comprise : suivez l’ordre affiché par `--help`.
 
+## Mettre à jour des bases existantes
+
+Pour une installation contenant déjà du contenu, utilisez les migrations incrémentales :
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py validate
+```
+
+Le plan est non mutatif. L’application crée ou exige un backup et applique seulement les migrations manquantes déclarées dans l’inventaire SQLite unifié. La procédure complète est décrite dans `docs/operations/existing-database-update.md`.
+
 ## Initialiser ou reconstruire les bases
 
 Pour créer les structures sans données métier :
@@ -98,13 +111,13 @@ Pour créer les structures sans données métier :
 python3 tools/cms.py init
 ```
 
-Pour repartir des schémas et seeds natifs :
+Pour repartir des schémas et seeds natifs dans un environnement où les données peuvent être perdues :
 
 ```bash
 python3 tools/cms.py rebuild
 ```
 
-`rebuild` est destructif pour les bases ciblées. Utilisez-le sur un environnement de développement ou après une sauvegarde vérifiée. Pour une instance contenant des données à conserver, suivez la procédure de mise à jour ou de restauration documentée au lieu de reconstruire sans contrôle.
+`rebuild` est destructif pour les bases ciblées. Utilisez-le sur un environnement de développement, de test ou de récupération contrôlée après sauvegarde vérifiée. Pour une instance contenant des données à conserver, suivez la procédure de mise à jour ou de restauration documentée au lieu de reconstruire sans contrôle.
 
 ## Lancer les validateurs et les tests
 
@@ -208,8 +221,9 @@ Les migrations locales passent par la façade stable :
 
 ```bash
 python3 tools/cms.py migrate --plan
-python3 tools/cms.py migrate --apply --backup
+python3 tools/cms.py migrate --apply --backup --yes
 python3 tools/cms.py migrate --database ai --plan
+python3 tools/cms.py migrate --module forms --plan
 ```
 
 Les bases natives migratables sont déclarées dans `tools/python/lib/database_inventory.py`. Chaque base possède son propre registre `schema_migrations`. Le retour arrière recommandé reste la restauration d’une sauvegarde SQLite vérifiée, pas une down migration SQL.
@@ -218,7 +232,7 @@ Procédure courte :
 
 1. `python3 tools/cms.py backup` ;
 2. `python3 tools/cms.py migrate --plan` ;
-3. `python3 tools/cms.py migrate --apply --backup` ;
+3. `python3 tools/cms.py migrate --apply --backup --yes` ;
 4. `python3 tools/cms.py validate --category database` ;
 5. restaurer le backup si un contrôle échoue.
 

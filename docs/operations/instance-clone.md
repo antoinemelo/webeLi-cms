@@ -64,6 +64,14 @@ Vérifier manuellement :
 - les médias ;
 - les tâches ou scripts locaux qui ne doivent pas pointer vers la production.
 
+## Après clonage, tester une mise à jour
+
+Un clone local peut servir à répéter une mise à jour avant intervention sur un site client :
+
+```bash
+python3 tools/cms.py instance update --source /chemin/release.zip --target /chemin/clone --plan
+```
+
 ## Limite
 
 Le clonage ne doit pas être confondu avec un outil de synchronisation automatique multi-sites. Pour l’instant, la maintenance reste locale et explicite.

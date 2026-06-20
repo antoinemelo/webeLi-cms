@@ -23,15 +23,16 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,export,backup,migrate,release,docs}
+                    {init,rebuild,validate,qualify,audit,test,export,backup,migrate,instance,release,docs}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,export,backup,migrate,release,docs}
+  {init,rebuild,validate,qualify,audit,test,export,backup,migrate,instance,release,docs}
     init                Créer les structures SQLite sans données métier.
-    rebuild             Reconstruire les bases et appliquer les seeds natifs.
+    rebuild             Développement/test: reconstruire les bases et
+                        appliquer les seeds natifs.
     validate            Exécuter les validateurs du CMS.
     qualify             Qualifier globalement le CMS selon un profil.
     audit               Produire des preuves reproductibles dans le conteneur
@@ -39,7 +40,9 @@ positional arguments:
     test                Exécuter les tests automatisés Python.
     export              Générer ou simuler un export statique.
     backup              Créer ou restaurer une sauvegarde SQLite.
-    migrate             Planifier ou appliquer les migrations SQLite natives.
+    migrate             Planifier ou appliquer les migrations SQLite natives
+                        et de modules.
+    instance            Gérer les instances locales du CMS.
     release             Préparer et vérifier une release.
     docs                Générer ou vérifier la documentation de référence.
 
@@ -195,6 +198,101 @@ options:
   --restore RESTORE
   --yes
   --no-safety-copy
+```
+
+## `tools/cms.py migrate`
+
+```text
+usage: tools/cms.py migrate [-h]
+                            [--all | --database {core,iam,forms,cookies,ai} | --module {ai-assistant,forms}]
+                            [--plan | --apply] [--backup]
+                            [--no-backup-i-understand-the-risk] [--yes]
+
+options:
+  -h, --help            show this help message and exit
+  --all                 Traite toutes les bases SQLite migratables connues
+                        (défaut).
+  --database {core,iam,forms,cookies,ai}
+                        Traite une seule base par clé ou scope.
+  --module {ai-assistant,forms}
+                        Traite les bases déclarées par un module.
+  --plan                Affiche les migrations disponibles et manquantes sans
+                        les appliquer.
+  --apply               Applique les migrations manquantes après confirmation
+                        interne.
+  --backup              Crée une sauvegarde SQLite avant application.
+  --no-backup-i-understand-the-risk
+                        Applique sans sauvegarde préalable; option
+                        volontairement explicite et déconseillée.
+  --yes                 Confirme explicitement l’application des migrations.
+```
+
+## `tools/cms.py instance`
+
+```text
+usage: tools/cms.py instance [-h] {clone,update} ...
+
+positional arguments:
+  {clone,update}
+    clone         Cloner une instance locale dans un autre répertoire.
+    update        Mettre à jour une instance client locale depuis une release.
+
+options:
+  -h, --help      show this help message and exit
+```
+
+## `tools/cms.py instance clone`
+
+```text
+usage: tools/cms.py instance clone [-h] [--source SOURCE] --destination
+                                   DESTINATION [--old-base-path OLD_BASE_PATH]
+                                   [--new-base-path NEW_BASE_PATH]
+                                   [--new-public-base-url NEW_PUBLIC_BASE_URL]
+                                   [--force] [--include-dev-admin-vue]
+                                   [--include-docs]
+
+options:
+  -h, --help            show this help message and exit
+  --source SOURCE       Répertoire source. Par défaut: racine CMS courante.
+  --destination DESTINATION
+                        Répertoire destination à créer, par exemple ../mod2 ou
+                        ../eve.
+  --old-base-path OLD_BASE_PATH
+                        APP_BASE_PATH public source. Par défaut: nom du
+                        répertoire source.
+  --new-base-path NEW_BASE_PATH, --target-base-path NEW_BASE_PATH
+                        APP_BASE_PATH public cible. Par défaut: nom du
+                        répertoire destination.
+  --new-public-base-url NEW_PUBLIC_BASE_URL
+                        APP_PUBLIC_BASE_URL exact à écrire dans ops/.env.
+  --force               Remplace la destination si elle existe.
+  --include-dev-admin-vue
+                        Inclut les sources frontend/admin-vue.
+  --include-docs        Inclut docs/, README.md et TREE.txt.
+```
+
+## `tools/cms.py instance update`
+
+```text
+usage: tools/cms.py instance update [-h] --source SOURCE --target TARGET
+                                    (--plan | --apply) [--backup] [--yes]
+                                    [--delete-obsolete] [--maintenance-flag]
+                                    [--json]
+
+options:
+  -h, --help          show this help message and exit
+  --source SOURCE     Archive ZIP ou dossier racine de release à déployer.
+  --target TARGET     Dossier racine de l'instance client à mettre à jour.
+  --plan              Affiche le plan fichiers/migrations sans modifier la
+                      cible.
+  --apply             Applique la mise à jour après plan, backup et
+                      confirmation.
+  --backup            Crée un backup SQLite avant application.
+  --yes               Confirme explicitement l'application.
+  --delete-obsolete   Supprime les fichiers absents de la release, hors
+                      chemins protégés.
+  --maintenance-flag  Crée storage/maintenance.flag pendant la copie fichiers.
+  --json              Affiche un résumé JSON stable.
 ```
 
 ## `tools/cms.py release`

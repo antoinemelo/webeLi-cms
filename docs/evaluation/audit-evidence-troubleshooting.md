@@ -40,6 +40,8 @@ composer dump-autoload --working-dir backend --optimize --strict-psr
 python3 tools/cms.py rebuild
 ```
 
+Cette commande recrée les bases de la copie de test utilisée pour l’audit. Elle ne correspond pas à une procédure de mise à jour d’une instance de production avec contenu.
+
 ## Preuve de sauvegarde et restauration
 
 La comparaison SHA-256 porte uniquement sur les bases actives de

@@ -29,6 +29,16 @@ python3 tools/cms.py validate --full
 python3 tools/cms.py test
 ```
 
+## Mettre à jour une installation existante
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py validate
+```
+
+Pour une mise à jour complète de release, utilisez `tools/cms.py instance update`. La procédure détaillée se trouve dans [mettre à jour une base existante](../operations/existing-database-update.md).
+
 ## Repartir de zéro pour développer
 
 ```bash
@@ -38,7 +48,7 @@ python3 tools/cms.py validate --full
 python3 tools/cms.py test
 ```
 
-La reconstruction supprime et recrée les bases SQLite natives, applique les seeds et reconstruit les projections. Elle ne remplace pas une sauvegarde d’une instance contenant des données utiles.
+La reconstruction supprime et recrée les bases SQLite natives, applique les seeds et reconstruit les projections. Elle est réservée au développement, aux tests ou à une récupération contrôlée après sauvegarde. Elle ne remplace pas une mise à jour d’une instance contenant des données utiles.
 
 ## Lire ensuite
 

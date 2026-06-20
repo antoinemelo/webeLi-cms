@@ -6,7 +6,6 @@ import argparse
 import json
 import re
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
 
@@ -165,27 +164,73 @@ def render_field_types() -> str:
     return header("Types de champs") + "| Type détecté |\n|---|\n" + "".join(f"| `{name}` |\n" for name in sorted(names))
 
 
-def command_help(command: str | None = None) -> str:
-    args = [sys.executable, str(ROOT / "tools/cms.py")]
-    if command:
-        args.append(command)
-    args.append("--help")
-    completed = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, timeout=20)
-    output = completed.stdout or completed.stderr
-    return output.strip()
+def command_help(*command: str) -> str:
+    from argparse import _SubParsersAction
+    from tools.python.cms import cli as cms_cli
+
+    current = cms_cli.parser()
+    for part in command:
+        subparsers = next(
+            (action for action in current._actions if isinstance(action, _SubParsersAction)),
+            None,
+        )
+        if subparsers is None or part not in subparsers.choices:
+            raise RuntimeError(f"Sous-commande CLI introuvable pour la documentation: {' '.join(command)}")
+        current = subparsers.choices[part]
+    return current.format_help().strip()
 
 
 def render_cli() -> str:
     body = header("Commandes CLI")
     body += "## Aide générale\n\n```text\n" + command_help() + "\n```\n\n"
-    for command in ("init", "rebuild", "validate", "qualify", "audit", "test", "export", "backup", "release", "docs"):
-        body += f"## `tools/cms.py {command}`\n\n```text\n{command_help(command)}\n```\n\n"
+    topics: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("init", ("init",)),
+        ("rebuild", ("rebuild",)),
+        ("validate", ("validate",)),
+        ("qualify", ("qualify",)),
+        ("audit", ("audit",)),
+        ("test", ("test",)),
+        ("export", ("export",)),
+        ("backup", ("backup",)),
+        ("migrate", ("migrate",)),
+        ("instance", ("instance",)),
+        ("instance clone", ("instance", "clone")),
+        ("instance update", ("instance", "update")),
+        ("release", ("release",)),
+        ("docs", ("docs",)),
+    )
+    for label, args in topics:
+        body += f"## `tools/cms.py {label}`\n\n```text\n{command_help(*args)}\n```\n\n"
     return body
 
 
 def render_modules() -> str:
-    rows = [(path.parent.name, path.relative_to(ROOT).as_posix()) for path in sorted((ROOT / "backend/src/Modules").glob("*/*Manifest.php"))]
-    return header("Modules runtime") + "| Module | Manifest |\n|---|---|\n" + "".join(f"| `{name}` | `{source}` |\n" for name, source in rows)
+    manifest_paths = sorted((ROOT / "backend/src/Modules").glob("*/module.json"))
+    manifest_paths += sorted((ROOT / "local/modules").glob("*/module.json"))
+    manifest_paths += sorted((ROOT / "examples/modules").glob("*/module.json"))
+    body = header("Modules runtime")
+    body += "| Module | Type | Version | Activé par défaut | Base(s) | Manifeste |\n|---|---|---|---:|---|---|\n"
+    for path in manifest_paths:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        key = str(data.get("key") or path.parent.name)
+        module_type = str(data.get("type") or "unknown")
+        version = str(data.get("version") or "")
+        enabled = "oui" if data.get("enabled_by_default") is True else "non"
+        databases = data.get("databases", [])
+        db_keys = []
+        if isinstance(databases, list):
+            for item in databases:
+                if isinstance(item, dict) and item.get("key"):
+                    db_keys.append(f"`{item['key']}`")
+        rel = path.relative_to(ROOT).as_posix()
+        body += f"| `{key}` | `{module_type}` | `{version}` | {enabled} | {', '.join(db_keys) or '—'} | `{rel}` |\n"
+    body += "\nLes exemples sous `examples/modules/` documentent le contrat mais ne sont pas chargés automatiquement. Les modules clients actifs doivent être copiés ou développés sous `local/modules/` puis déclarés dans `ops/modules.local.json`.\n"
+    return body
 
 
 def render_native_blueprints() -> str:

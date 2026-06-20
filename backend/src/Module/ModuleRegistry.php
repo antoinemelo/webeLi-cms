@@ -457,6 +457,8 @@ final class ModuleRegistry
 
         $classes = array_merge(
             $this->providerClassesFromConfig(),
+            $this->providerClassesFromSystemManifests(),
+            $this->providerClassesFromLocalManifests(),
             $this->providerClassesFromDatabase(),
         );
 
@@ -508,6 +510,138 @@ final class ModuleRegistry
             }
         }
         return array_values(array_unique($providers));
+    }
+
+    /** @return list<class-string> */
+    private function providerClassesFromSystemManifests(): array
+    {
+        $modules = $this->config['modules'] ?? [];
+        $paths = [];
+        if (is_array($modules) && is_array($modules['system_manifest_paths'] ?? null)) {
+            foreach ($modules['system_manifest_paths'] as $path) {
+                if (is_string($path) && $path !== '') {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        if ($paths === []) {
+            $paths = glob(base_path('backend/src/Modules/*/module.json')) ?: [];
+        }
+
+        $providers = [];
+        foreach ($paths as $path) {
+            $manifest = $this->loadManifest($path, expectedType: 'system');
+            if ($manifest === null) {
+                continue;
+            }
+            $providers[] = $manifest->providerClass();
+        }
+        return array_values(array_unique($providers));
+    }
+
+    /** @return list<class-string> */
+    private function providerClassesFromLocalManifests(): array
+    {
+        $modules = $this->config['modules'] ?? [];
+        $configPath = is_array($modules) && is_string($modules['local_modules_config'] ?? null)
+            ? (string) $modules['local_modules_config']
+            : base_path('ops/modules.local.json');
+        if (!is_file($configPath)) {
+            return [];
+        }
+
+        $raw = file_get_contents($configPath);
+        if ($raw === false) {
+            $this->logger?->warning('module.local_config_unreadable', ['path' => 'ops/modules.local.json']);
+            return [];
+        }
+
+        $config = json_decode($raw, true);
+        if (!is_array($config)) {
+            $this->logger?->warning('module.local_config_invalid_json', ['path' => 'ops/modules.local.json']);
+            return [];
+        }
+
+        $entries = is_array($config['modules'] ?? null) ? $config['modules'] : [];
+        $providers = [];
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $manifestRel = trim((string) ($entry['manifest'] ?? ''));
+            if ($manifestRel === '') {
+                continue;
+            }
+            if (!$this->isLocalModulePath($manifestRel)) {
+                $this->logger?->warning('module.local_manifest_outside_local_modules', ['manifest' => $manifestRel]);
+                continue;
+            }
+            $manifest = $this->loadManifest(base_path($manifestRel), expectedType: 'client');
+            if ($manifest === null) {
+                continue;
+            }
+            $providers[] = $manifest->providerClass();
+        }
+        return array_values(array_unique($providers));
+    }
+
+    private function loadManifest(string $path, ?string $expectedType = null): ?ModuleManifest
+    {
+        $manifest = ModuleManifest::fromFile($path);
+        if ($manifest === null) {
+            $this->logger?->warning('module.manifest_unreadable', ['path' => $this->relativePath($path)]);
+            return null;
+        }
+
+        $missing = $manifest->missingRequiredFields();
+        if ($missing !== []) {
+            $this->logger?->warning('module.manifest_incomplete', ['path' => $this->relativePath($path), 'missing' => $missing]);
+            return null;
+        }
+
+        if (!in_array($manifest->type(), ['system', 'client'], true)) {
+            $this->logger?->warning('module.manifest_invalid_type', ['path' => $this->relativePath($path), 'type' => $manifest->type()]);
+            return null;
+        }
+
+        if ($expectedType !== null && $manifest->type() !== $expectedType) {
+            $this->logger?->warning('module.manifest_unexpected_type', ['path' => $this->relativePath($path), 'expected' => $expectedType, 'actual' => $manifest->type()]);
+            return null;
+        }
+
+        $providerFile = $manifest->providerFile();
+        if ($providerFile !== '') {
+            if ($manifest->type() === 'client' && !$this->isLocalModulePath($providerFile)) {
+                $this->logger?->warning('module.client_provider_outside_local_modules', ['path' => $providerFile, 'module' => $manifest->key()]);
+                return null;
+            }
+            $absoluteProviderFile = base_path($providerFile);
+            if (is_file($absoluteProviderFile)) {
+                require_once $absoluteProviderFile;
+            } else {
+                $this->logger?->warning('module.provider_file_missing', ['path' => $providerFile, 'module' => $manifest->key()]);
+            }
+        }
+
+        return $manifest;
+    }
+
+    private function isLocalModulePath(string $path): bool
+    {
+        $normalized = str_replace('\\', '/', trim($path));
+        return $normalized === 'local/modules' || str_starts_with($normalized, 'local/modules/');
+    }
+
+    private function relativePath(string $path): string
+    {
+        $root = rtrim(base_path(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        $normalized = str_replace('\\', '/', $path);
+        $rootNormalized = str_replace('\\', '/', $root);
+        if (str_starts_with($normalized, $rootNormalized)) {
+            return substr($normalized, strlen($rootNormalized));
+        }
+        return $normalized;
     }
 
     /** @return list<string> */

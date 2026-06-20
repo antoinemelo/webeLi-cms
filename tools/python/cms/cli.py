@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .evidence import CommandEvidence
 from .runtime import Context
-from tools.python.commands import audit, backup, docs, export, init, migrate, qualify, release, test, validate
+from tools.python.commands import audit, backup, docs, export, init, instance, migrate, qualify, release, test, validate
 from tools.python.lib.release_metadata import load_release_metadata
 
-COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'release': release.run, 'docs': docs.run}
+COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'instance': instance.run, 'release': release.run, 'docs': docs.run}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -24,14 +24,15 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--evidence-dir', help='Écrit une preuve JSON signée par SHA-256 pour la commande complète.')
     sub = p.add_subparsers(dest='command', required=True)
     init.configure(sub.add_parser('init', help='Créer les structures SQLite sans données métier.'))
-    init.configure_rebuild(sub.add_parser('rebuild', help='Reconstruire les bases et appliquer les seeds natifs.'))
+    init.configure_rebuild(sub.add_parser('rebuild', help='Développement/test: reconstruire les bases et appliquer les seeds natifs.'))
     validate.configure(sub.add_parser('validate', help='Exécuter les validateurs du CMS.'))
     qualify.configure(sub.add_parser('qualify', help='Qualifier globalement le CMS selon un profil.'))
     audit.configure(sub.add_parser('audit', help='Produire des preuves reproductibles dans le conteneur d audit.'))
     test.configure(sub.add_parser('test', help='Exécuter les tests automatisés Python.'))
     export.configure(sub.add_parser('export', help='Générer ou simuler un export statique.'))
     backup.configure(sub.add_parser('backup', help='Créer ou restaurer une sauvegarde SQLite.'))
-    migrate.configure(sub.add_parser('migrate', help='Planifier ou appliquer les migrations SQLite natives.'))
+    migrate.configure(sub.add_parser('migrate', help='Planifier ou appliquer les migrations SQLite natives et de modules.'))
+    instance.configure(sub.add_parser('instance', help='Gérer les instances locales du CMS.'))
     release.configure(sub.add_parser('release', help='Préparer et vérifier une release.'))
     docs.configure(sub.add_parser('docs', help='Générer ou vérifier la documentation de référence.'))
     return p
