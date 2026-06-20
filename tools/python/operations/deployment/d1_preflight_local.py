@@ -217,7 +217,7 @@ def vite_manifest_missing_assets(manifest_path: Path, asset_root: Path) -> list[
     return missing
 
 
-def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True) -> int:
+def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True, echo_output: bool = True) -> int:
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     header = f"\n[{stamp}] >>> {' '.join(command)}\n"
     log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -227,9 +227,9 @@ def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True
         proc = subprocess.run(command, cwd=str(cwd), text=True, capture_output=True)
         stdout = proc.stdout or ""
         stderr = proc.stderr or ""
-        if stdout:
+        if echo_output and stdout:
             print(stdout, end="")
-        if stderr:
+        if echo_output and stderr:
             print(stderr, end="", file=sys.stderr)
         with log_file.open("a", encoding="utf-8") as handle:
             if stdout:
@@ -441,7 +441,7 @@ def main() -> int:
     errors, warnings = check_prerequisites(args.target)
     if not args.skip_console and not errors and CONSOLE.exists() and shutil.which("php"):
         for command in [["php", str(CONSOLE), "route:list"], ["php", str(CONSOLE), "system:smoke"]]:
-            code = run_step(command, ROOT, log_file)
+            code = run_step(command, ROOT, log_file, echo_output=False)
             if code != 0:
                 errors.append(f"Commande de préflight échouée: {' '.join(command)}")
                 break

@@ -7,11 +7,48 @@ require_once __DIR__ . '/../bootstrap/runtime.php';
 $config = require __DIR__ . '/../bootstrap/config.php';
 $cmd = $argv[1] ?? 'help';
 
-$commandList = 'Commands: migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke';
+$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
 if (in_array($cmd, ['help', '--help', '-h'], true)) {
     echo $commandList . "\n";
     exit(0);
 }
+
+if ($cmd === 'route:list') {
+    $routeFiles = [
+        'web' => __DIR__ . '/../routes/web.php',
+        'api' => __DIR__ . '/../routes/api.php',
+        'admin' => __DIR__ . '/../routes/admin.php',
+    ];
+    $count = 0;
+    foreach ($routeFiles as $source => $file) {
+        if (!is_file($file)) {
+            fwrite(STDERR, "Route file missing: {$source}
+");
+            exit(1);
+        }
+        $routes = require $file;
+        if (!is_array($routes)) {
+            fwrite(STDERR, "Route file invalid: {$source}
+");
+            exit(1);
+        }
+        foreach ($routes as $route) {
+            if (!is_array($route) || count($route) < 3) {
+                fwrite(STDERR, "Route entry invalid in {$source}
+");
+                exit(1);
+            }
+            [$method, $path, $handler] = $route;
+            echo sprintf("%-7s %-60s %s [%s]
+", (string) $method, (string) $path, (string) $handler, $source);
+            $count++;
+        }
+    }
+    echo "Routes: {$count}
+";
+    exit(0);
+}
+
 if ($cmd === 'log:tail') {
     $path = base_path('storage/logs/app.log');
     echo is_file($path) ? implode('', array_slice(file($path), -50)) : "No log file\n";
@@ -137,6 +174,7 @@ switch ($cmd) {
         break;
 
     case 'test:smoke':
+    case 'system:smoke':
         App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
         $count = (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM content_entries')->fetchColumn();
         $routes = (int) $coreDb->pdo()->query("SELECT COUNT(*) FROM routes WHERE status = 'active'")->fetchColumn();
@@ -145,5 +183,8 @@ switch ($cmd) {
         exit($ok ? 0 : 1);
 
     default:
+        fwrite(STDERR, "Unknown command: {$cmd}\n");
         echo $commandList . "\n";
+        exit(2);
 }
+
