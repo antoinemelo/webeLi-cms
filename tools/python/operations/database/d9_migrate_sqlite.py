@@ -22,7 +22,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from tools.python.lib.database_inventory import native_database_specs, migration_scopes
 DB_DIR = ROOT / "storage" / "database"
 MIGRATION_DIR = ROOT / "database" / "migrations"
 BACKUP_SCRIPT = ROOT / "tools" / "python" / "operations" / "backup" / "d6_backup_sqlite.py"
@@ -49,12 +53,15 @@ class DatabaseScope:
     migrations: Path
 
 
-SCOPES = {
-    "core": DatabaseScope("core", DB_DIR / "core.sqlite", MIGRATION_DIR / "core"),
-    "iam": DatabaseScope("iam", DB_DIR / "iam.sqlite", MIGRATION_DIR / "iam"),
-    "forms": DatabaseScope("forms", DB_DIR / "forms.sqlite", MIGRATION_DIR / "forms"),
-    "cookies": DatabaseScope("cookies", DB_DIR / "cookies.sqlite", MIGRATION_DIR / "cookies"),
-}
+def build_scopes() -> dict[str, DatabaseScope]:
+    scopes: dict[str, DatabaseScope] = {}
+    for spec in native_database_specs(migratable=True):
+        scope = spec.migration_scope or spec.key
+        scopes[scope] = DatabaseScope(scope, ROOT / spec.path, MIGRATION_DIR / scope)
+    return scopes
+
+
+SCOPES = build_scopes()
 
 
 def migration_log_columns(connection: sqlite3.Connection) -> set[str]:
@@ -186,7 +193,7 @@ def make_sqlite_backup() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Applique les migrations SQLite DEC CMS non encore appliquees.")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--all", action="store_true", help="Traite core, iam, forms et cookies.")
+    group.add_argument("--all", action="store_true", help="Traite toutes les bases SQLite natives migratables.")
     group.add_argument("--database", choices=sorted(SCOPES), help="Traite une seule base.")
     parser.add_argument("--plan", action="store_true", help="Affiche les migrations disponibles et manquantes sans les appliquer.")
     parser.add_argument("--backup", action="store_true", help="Cree une sauvegarde SQLite via d6_backup_sqlite.py avant application.")
@@ -196,7 +203,7 @@ def parse_args() -> argparse.Namespace:
 
 def selected_scopes(args: argparse.Namespace) -> list[DatabaseScope]:
     if args.all:
-        return [SCOPES[name] for name in ("core", "iam", "forms", "cookies")]
+        return [SCOPES[name] for name in migration_scopes()]
     return [SCOPES[args.database]]
 
 

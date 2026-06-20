@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .evidence import CommandEvidence
 from .runtime import Context
-from tools.python.commands import audit, backup, docs, export, init, instance, qualify, release, test, validate
+from tools.python.commands import audit, backup, docs, export, init, migrate, qualify, release, test, validate
 from tools.python.lib.release_metadata import load_release_metadata
 
-COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'release': release.run, 'docs': docs.run, 'instance': instance.run}
+COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'release': release.run, 'docs': docs.run}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -31,9 +31,9 @@ def parser() -> argparse.ArgumentParser:
     test.configure(sub.add_parser('test', help='Exécuter les tests automatisés Python.'))
     export.configure(sub.add_parser('export', help='Générer ou simuler un export statique.'))
     backup.configure(sub.add_parser('backup', help='Créer ou restaurer une sauvegarde SQLite.'))
+    migrate.configure(sub.add_parser('migrate', help='Planifier ou appliquer les migrations SQLite natives.'))
     release.configure(sub.add_parser('release', help='Préparer et vérifier une release.'))
     docs.configure(sub.add_parser('docs', help='Générer ou vérifier la documentation de référence.'))
-    instance.configure(sub.add_parser('instance', help='Préparer ou cloner une instance locale.'))
     return p
 
 

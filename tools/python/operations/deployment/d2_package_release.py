@@ -33,12 +33,87 @@ DEFAULT_EXCLUDES = [
     ".git/*",
     ".DS_Store",
     "Thumbs.db",
+    # Hygiène de release: aucun environnement local, cache Python, test
+    # interne ou artefact compressé ne doit partir en production.
+    ".venv",
+    ".venv/*",
+    ".venv/**",
+    "venv",
+    "venv/*",
+    "venv/**",
+    "**/.venv",
+    "**/.venv/*",
+    "**/.venv/**",
+    "**/venv",
+    "**/venv/*",
+    "**/venv/**",
+    "__pycache__",
+    "__pycache__/*",
+    "**/__pycache__",
+    "**/__pycache__/*",
+    "**/__pycache__/**",
+    ".pytest_cache",
+    ".pytest_cache/*",
+    ".pytest_cache/**",
+    "**/.pytest_cache",
+    "**/.pytest_cache/*",
+    "**/.pytest_cache/**",
+    ".mypy_cache",
+    ".mypy_cache/*",
+    ".mypy_cache/**",
+    "**/.mypy_cache",
+    "**/.mypy_cache/*",
+    "**/.mypy_cache/**",
+    ".ruff_cache",
+    ".ruff_cache/*",
+    ".ruff_cache/**",
+    "**/.ruff_cache",
+    "**/.ruff_cache/*",
+    "**/.ruff_cache/**",
+    "tools/python/tests",
+    "tools/python/tests/*",
+    "tools/python/tests/**",
+    "tools/tests",
+    "tools/tests/*",
+    "tools/tests/**",
+    "*.zip",
+    "**/*.zip",
+    "*.tar",
+    "**/*.tar",
+    "*.tgz",
+    "**/*.tgz",
+    "*.tar.gz",
+    "**/*.tar.gz",
+    "*.bak",
+    "**/*.bak",
+    "*.backup",
+    "**/*.backup",
+    "*.tmp",
+    "**/*.tmp",
+    "*.sqlite-wal",
+    "**/*.sqlite-wal",
+    "*.sqlite-shm",
+    "**/*.sqlite-shm",
     "vendor",
     "vendor/*",
     "backend/vendor",
     "backend/vendor/*",
     "admin-app/assets/*.js.map",
-    "ops/.env",
+    # Fichiers de configuration locale interdits. `ops/.env` est volontairement
+    # absent: c'est le fichier runtime de production autorisé et vérifié par
+    # d4_verify_release_archive.py.
+    ".env",
+    ".env.*",
+    "backend/.env",
+    "backend/.env.*",
+    "frontend/.env",
+    "frontend/.env.*",
+    "ops/.env.local",
+    "ops/.env.dev",
+    "ops/.env.test",
+    "ops/.env.backup",
+    "ops/*.env.bak",
+    "ops/*.env.save",
     "ops/ftp.deploy.json",
     "backend/storage",
     "backend/storage/*",
@@ -48,7 +123,6 @@ DEFAULT_EXCLUDES = [
     "storage/backups/*",
     "storage/backups/**",
     "storage/uploads/*",
-    "storage/security/*",
     # Règle stricte: une release ne transporte jamais ses exports locaux,
     # ses anciens ZIP ni son propre staging. Les seuls fichiers tolérés
     # sous storage/exports sont les garde-fous .gitkeep/.htaccess.
@@ -91,7 +165,6 @@ KEEP_FILES = {
     "storage/cache/.gitkeep",
     "storage/logs/.gitkeep",
     "storage/uploads/.gitkeep",
-    "storage/security/.gitkeep",
     "storage/exports/.gitkeep",
     "storage/exports/.htaccess",
     "storage/exports/static/.gitkeep",
@@ -116,7 +189,48 @@ FORBIDDEN_STAGE_FILES = (
     "storage/exports/last_deployment_report.json",
 )
 
+FORBIDDEN_STAGE_PREFIXES = (
+    "tools/python/tests/",
+    "tools/tests/",
+    "storage/qualification/",
+    "storage/audit-results/",
+)
+
+FORBIDDEN_STAGE_PARTS = {
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+}
+
+FORBIDDEN_STAGE_SUFFIXES = (
+    ".pyc",
+    ".pyo",
+    ".zip",
+    ".tar",
+    ".tgz",
+    ".tar.gz",
+    ".bak",
+    ".backup",
+    ".tmp",
+    ".sqlite-wal",
+    ".sqlite-shm",
+    ".sqlite-journal",
+)
+
 REQUIRED_SQLITE_DATABASES = native_database_names(release=True)
+
+
+def is_forbidden_stage_file(rel: str) -> bool:
+    parts = set(rel.split("/"))
+    return (
+        any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_FILES)
+        or any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_PREFIXES)
+        or bool(parts & FORBIDDEN_STAGE_PARTS)
+        or rel.endswith(FORBIDDEN_STAGE_SUFFIXES)
+    )
 
 
 def assert_clean_stage(stage_dir: Path) -> None:
@@ -135,7 +249,7 @@ def assert_clean_stage(stage_dir: Path) -> None:
             continue
         if rel.startswith("storage/exports/"):
             offenders.append(rel)
-        elif any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_FILES):
+        elif is_forbidden_stage_file(rel):
             offenders.append(rel)
 
     if offenders:
@@ -306,6 +420,7 @@ def main() -> int:
             "--include-vendor inclut uniquement les dépendances PHP de runtime (vendor/, backend/vendor/ et le chemin Twig configuré).",
             "Les node_modules du back-office restent toujours exclus: seuls les assets admin compilés sont distribués.",
             "Les fichiers sensibles ou de debug (ops/ftp.deploy.json, *.js.map) sont exclus des releases standard.",
+            "Les environnements virtuels, caches Python, tests locaux et archives temporaires sont exclus des releases de production.",
             f"L'archive ZIP contient le dossier racine {release_metadata.package_root}/.",
         ],
         release_metadata=release_metadata.to_dict(),

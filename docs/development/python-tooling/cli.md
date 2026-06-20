@@ -57,8 +57,8 @@ La CLI expose les familles suivantes :
 - `test` : exécuter les tests Python ;
 - `export` : générer ou simuler un export statique ;
 - `backup` : créer ou restaurer une sauvegarde ;
+- `migrate` : planifier ou appliquer les migrations SQLite natives ;
 - `release` : préparer ou vérifier une release ;
-- `instance` : cloner ou préparer une instance locale ;
 - `docs` : générer ou contrôler les références documentaires.
 
 Pour connaître les paramètres d’une famille :
@@ -192,26 +192,6 @@ Le flux attendu est toujours le même :
 
 Utilisez `--dry-run` lorsqu’il est proposé pour contrôler la sélection de fichiers avant de produire une archive distribuable.
 
-## Cloner une instance locale
-
-La commande `instance clone` prépare une copie locale dans un autre répertoire. Elle sépare le dossier créé de la configuration publique :
-
-```bash
-python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
-python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
-```
-
-Dans cet exemple, le dossier s'appelle `mod2`, mais `APP_BASE_PATH` reste `/mod`. Pour une future instance `/eve` préparée dans un dossier temporaire :
-
-```bash
-python3 tools/cms.py instance clone \
-  --destination ../eve2 \
-  --new-base-path /eve \
-  --new-public-base-url https://webe.li/eve
-```
-
-La commande copie les bases SQLite et les fichiers runtime locaux. Elle doit être utilisée pour des préparations contrôlées, pas comme substitut à une release publique.
-
 ## Sauvegarder et restaurer
 
 Consultez les actions disponibles :
@@ -221,6 +201,26 @@ python3 tools/cms.py backup --help
 ```
 
 Une sauvegarde n’est considérée comme exploitable qu’après un test de restauration dans un répertoire séparé. N’écrasez pas une instance en production pour vérifier une archive.
+
+## Planifier et appliquer les migrations SQLite
+
+Les migrations locales passent par la façade stable :
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup
+python3 tools/cms.py migrate --database ai --plan
+```
+
+Les bases natives migratables sont déclarées dans `tools/python/lib/database_inventory.py`. Chaque base possède son propre registre `schema_migrations`. Le retour arrière recommandé reste la restauration d’une sauvegarde SQLite vérifiée, pas une down migration SQL.
+
+Procédure courte :
+
+1. `python3 tools/cms.py backup` ;
+2. `python3 tools/cms.py migrate --plan` ;
+3. `python3 tools/cms.py migrate --apply --backup` ;
+4. `python3 tools/cms.py validate --category database` ;
+5. restaurer le backup si un contrôle échoue.
 
 ## Bon usage dans les scripts et la CI
 

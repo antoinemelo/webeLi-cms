@@ -32,6 +32,7 @@ generated: true
 | `ai_task_results` | id, task_id, result_type, result_json, summary, warnings_json, created_at |
 | `ai_tasks` | id, site_id, user_id, title, task_type, provider_key, model_key, status, input_hash, payload_json, target_type, target_id, result_id, error_type, error_message, attempts, max_attempts, created_at, started_at, finished_at |
 | `ai_usage_events` | id, site_id, user_id, provider_key, model_key, task_type, input_tokens, output_tokens, total_tokens, duration_ms, estimated_cost, currency, status, details_json, created_at |
+| `schema_migrations` | id, migration, migrated_at |
 
 ## `cookies.sqlite`
 
@@ -46,6 +47,7 @@ generated: true
 | `cookie_service_cookies` | id, service_id, cookie_name, purpose, duration, domain, created_at |
 | `cookie_service_translations` | id, service_id, language_code, name, purpose, description, fallback_message, created_at, updated_at |
 | `cookie_services` | id, site_id, category_id, service_key, provider_name, service_type, cookie_type, domain, duration, privacy_url, is_enabled, sort_order, created_at, updated_at |
+| `schema_migrations` | id, migration, migrated_at |
 
 ## `core.sqlite`
 
@@ -150,6 +152,7 @@ generated: true
 | `form_submissions` | id, form_id, site_id, language_code, submission_status, spam_score, spam_reasons_json, ip_hash, user_agent, referer_url, payload_json, created_at |
 | `form_translations` | id, form_id, language_code, name, description_text, submit_label, success_message, updated_at |
 | `forms` | id, site_id, form_key, status, is_active, store_submissions, notification_enabled, notification_recipients_json, notification_subject, honeypot_field, min_submit_seconds, rate_limit_max_attempts, rate_limit_window_seconds, settings_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `schema_migrations` | id, migration, migrated_at |
 
 ## `iam.sqlite`
 

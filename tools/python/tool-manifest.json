@@ -27,11 +27,6 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
-        "docs/operations/deployment.md",
-        "docs/operations/hostpoint-git-ftp.md",
-        "docs/operations/instance-clone.md",
-        "docs/operations/runbook.md",
-        "ops/deployment-notes.md",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -70,7 +65,6 @@
         "docs/development/testing-validation/FRONTEND_DEPENDENCIES.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/development/testing-validation/README.md",
-        "docs/development/testing-validation/load-testing.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/evidence-index.md",
         "docs/evaluation/machine-readable/cms-evaluation-manifest.json",
@@ -87,6 +81,7 @@
         "docs/operations/deployment.md",
         "docs/operations/hostpoint-git-ftp.md",
         "docs/operations/instance-clone.md",
+        "docs/operations/local-update.md",
         "docs/operations/runbook.md",
         "docs/public-api/quickstart.md",
         "docs/reference/README.md",
@@ -134,7 +129,6 @@
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d12_quality_gate.py",
         "tools/python/operations/deployment/d13_bind_release_evidence.py",
-        "tools/python/operations/deployment/d14_clone_instance.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
@@ -276,10 +270,13 @@
       "entrypoint": false,
       "called_by": [
         "docs/evaluation/machine-readable/tests.json",
+        "docs/operations/deployment.md",
+        "docs/operations/runbook.md",
         "tools/cms.py",
         "tools/python/ARCHITECTURE.md",
         "tools/python/archive/c_validate.py",
-        "tools/python/tool-manifest.json"
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -323,7 +320,7 @@
         "tools/python/commands/docs.py",
         "tools/python/commands/export.py",
         "tools/python/commands/init.py",
-        "tools/python/commands/instance.py",
+        "tools/python/commands/migrate.py",
         "tools/python/commands/qualify.py",
         "tools/python/commands/release.py",
         "tools/python/commands/test.py",
@@ -423,8 +420,6 @@
       "called_by": [
         "TREE.txt",
         "database/00-overview.md",
-        "docs/operations/hostpoint-git-ftp.md",
-        "tools/python/lib/database_inventory.py",
         "tools/python/operations/database/a_db_init.py",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g7_add_site.py",
@@ -432,8 +427,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
-        "tools/python/tool-manifest.json",
-        "tools/python/validation/database/inventory.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -447,12 +441,25 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/operations/instance-clone.md",
-        "tools/python/tests/test_instance_clone.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
       "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/migrate.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/validation/operations/manifests.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": true,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -506,11 +513,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/load-testing.md",
-        "tools/python/generators/generate_tool_manifest.py",
-        "tools/python/tool-manifest.json",
-        "tools/tests/README_LOAD-TEST.md",
-        "tools/tests/load_test.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -713,13 +716,18 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/development/python-tooling/cli.md",
+        "docs/operations/local-update.md",
         "tools/python/operations/backup/d6_backup_sqlite.py",
         "tools/python/operations/backup/d7_restore_sqlite.py",
+        "tools/python/operations/database/a_db_init.py",
+        "tools/python/operations/database/d9_migrate_sqlite.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/operations/manifests.py",
         "tools/python/validation/qualification/runtime_integrity.py"
       ],
       "replacement": null,
@@ -811,8 +819,7 @@
       "called_by": [
         "database/00-overview.md",
         "tools/python/operations/ai/reset_ai_database.py",
-        "tools/python/tool-manifest.json",
-        "tools/python/validation/database/inventory.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -907,6 +914,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/operations/local-update.md",
         "tools/python/README.md",
         "tools/python/commands/backup.py",
         "tools/python/operations/backup/d7_restore_sqlite.py",
@@ -928,6 +936,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/operations/local-update.md",
         "tools/python/README.md",
         "tools/python/commands/backup.py",
         "tools/python/operations/deployment/d_deploy.py",
@@ -965,17 +974,14 @@
       "called_by": [
         "TREE.txt",
         "database/00-overview.md",
-        "docs/operations/hostpoint-git-ftp.md",
         "tools/python/commands/init.py",
-        "tools/python/lib/database_inventory.py",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g7_add_site.py",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
-        "tools/python/tool-manifest.json",
-        "tools/python/validation/database/inventory.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
       "status": "active",
@@ -1089,10 +1095,13 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/operations/local-update.md",
         "tools/python/README.md",
+        "tools/python/commands/migrate.py",
         "tools/python/operations/deployment/d8_deploy_web_update.py",
         "tools/python/operations/deployment/d_deploy.py",
-        "tools/python/tool-manifest.json"
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/manifests.py"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
       "status": "active",
@@ -1224,13 +1233,11 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/operations/instance-clone.md",
-        "tools/python/commands/instance.py",
-        "tools/python/tests/test_instance_clone.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
       "status": "active",
-      "destructive": true,
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -1242,8 +1249,6 @@
       "called_by": [
         "TREE.txt",
         "backend/public/index.php",
-        "docs/operations/deployment.md",
-        "docs/operations/hostpoint-git-ftp.md",
         "ops/deployment-notes.md",
         "tools/python/README.md",
         "tools/python/operations/deployment/d_deploy.py",
@@ -1289,7 +1294,6 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
-        "docs/operations/hostpoint-git-ftp.md",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
@@ -1367,9 +1371,6 @@
         "TREE.txt",
         "database/00-overview.md",
         "docs/evaluation/release-audit-policy.md",
-        "docs/operations/deployment.md",
-        "docs/operations/hostpoint-git-ftp.md",
-        "docs/operations/runbook.md",
         "docs/reference/generated/configuration.md",
         "ops/deployment-notes.md",
         "tools/python/commands/release.py",
@@ -1474,9 +1475,7 @@
         "docs/evaluation/product-scope.md",
         "docs/evaluation/reproducible-checks.md",
         "docs/operations/backup-restore.md",
-        "docs/operations/deployment.md",
         "docs/operations/production-checklist.md",
-        "docs/operations/runbook.md",
         "docs/operations/static-export.md",
         "docs/operations/troubleshooting.md",
         "tools/python/commands/qualify.py",
@@ -1630,7 +1629,9 @@
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,
@@ -1955,7 +1956,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/development/python-tooling/cli.md",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/local-update.md",
         "docs/reference/generated/validators.md",
         "tools/python/archive/consolidation_inventory.py",
         "tools/python/tool-manifest.json",
@@ -2409,16 +2412,13 @@
     },
     {
       "path": "tools/tests/load_test.py",
-      "category": "load-test",
+      "category": "test",
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/load-testing.md",
-        "tools/python/generators/generate_tool_manifest.py",
-        "tools/python/tool-manifest.json",
-        "tools/tests/README_LOAD-TEST.md"
+        "tools/python/tool-manifest.json"
       ],
-      "replacement": "python3 tools/tests/load_test.py --help",
+      "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,
       "archived_at": null,

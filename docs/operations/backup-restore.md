@@ -41,3 +41,16 @@ Exécutez `python3 tools/cms.py backup --output "/chemin/sauvegardes"`. Le dry-r
 ## Rollback applicatif
 
 Restaurez ensemble le code compatible, la configuration et les bases. Un rollback de code seul peut être incompatible avec un schéma plus récent.
+
+
+## Avant une migration locale
+
+Avant d’appliquer des migrations SQLite, créez ou laissez créer une sauvegarde :
+
+```bash
+python3 tools/cms.py backup
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup
+```
+
+Les bases natives couvertes par cette procédure sont celles de l’inventaire central : `core.sqlite`, `iam.sqlite`, `forms.sqlite`, `cookies.sqlite` et `ai.sqlite`.

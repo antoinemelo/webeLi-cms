@@ -50,7 +50,6 @@ FORBIDDEN_PREFIXES = [
     "storage/logs/",
     "storage/uploads/",
     "storage/cache/",
-    "storage/security/",
     ".git/",
     "frontend/admin-vue/node_modules/",
     "vendor/",
@@ -58,13 +57,25 @@ FORBIDDEN_PREFIXES = [
     "docs/internal/",
     "docs/archive/",
     "docs/history/",
+    "tools/python/tests/",
+    "tools/tests/",
 ]
 
+FORBIDDEN_PATH_PARTS = {
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+}
+
 FORBIDDEN_SUFFIXES = [
-    ".pyc", ".log", ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
-    ".js.map", ".zip", ".tar", ".tgz", ".tar.gz", ".bak", ".backup",
+    ".pyc", ".pyo", ".log", ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
+    ".js.map", ".zip", ".tar", ".tgz", ".tar.gz", ".bak", ".backup", ".tmp",
 ]
-FORBIDDEN_NAMES = {"ops/ftp.deploy.json", ".env", "ops/.env"}
+FORBIDDEN_NAMES = {"ops/ftp.deploy.json", ".env"}
+ALLOWED_RUNTIME_ENV_FILES = {"ops/.env"}
 ALLOWED_EXPORT_GUARDS = {
     "storage/exports/.gitkeep",
     "storage/exports/.htaccess",
@@ -80,6 +91,10 @@ def has_forbidden_prefix(name: str, *, include_vendor: bool) -> bool:
         for prefix in FORBIDDEN_PREFIXES
         if not (include_vendor and prefix in {"vendor/", "backend/vendor/"})
     )
+
+
+def has_forbidden_path_part(name: str) -> bool:
+    return bool(set(name.split("/")) & FORBIDDEN_PATH_PARTS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -171,7 +186,6 @@ def main() -> int:
                     "storage/logs/.gitkeep",
                     "storage/logs/.htaccess",
                     "storage/uploads/.gitkeep",
-                    "storage/security/.gitkeep",
                     "storage/exports/.gitkeep",
                     "storage/exports/.htaccess",
                     "storage/exports/static/.gitkeep",
@@ -188,8 +202,12 @@ def main() -> int:
                     fail(errors, f"Export local interdit dans l'archive: {name}")
                 elif has_forbidden_prefix(name, include_vendor=include_vendor):
                     fail(errors, f"Fichier local interdit dans l'archive: {name}")
+                if has_forbidden_path_part(name):
+                    fail(errors, f"Répertoire local interdit dans l'archive: {name}")
                 if any(name.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES):
                     fail(errors, f"Suffixe interdit dans l'archive: {name}")
+                if name in ALLOWED_RUNTIME_ENV_FILES:
+                    continue
                 if name in FORBIDDEN_NAMES or Path(name).name in SECRET_NAME_PATTERNS:
                     fail(errors, f"Secret/config locale interdit dans l'archive: {name}")
 
