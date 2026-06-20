@@ -63,6 +63,18 @@ def resolve_executable(name: str, *, env_variable: str | None = None) -> str:
     return str(path if path.is_absolute() else candidate)
 
 
+def merged_environment(overrides: dict[str, str] | None = None) -> dict[str, str]:
+    """Return a subprocess environment with explicit overrides applied last.
+
+    This intentionally avoids ``dict(**os.environ, NAME=value)`` because that
+    pattern raises ``TypeError`` when NAME is already exported by the caller.
+    """
+    environment = os.environ.copy()
+    if overrides:
+        environment.update({str(key): str(value) for key, value in overrides.items()})
+    return environment
+
+
 def _terminate_process_group(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
@@ -107,7 +119,7 @@ def execute(
         process = subprocess.Popen(
             cmd,
             cwd=working_directory,
-            env={**os.environ, **(env or {})},
+            env=merged_environment(env),
             text=True,
             stdout=subprocess.PIPE if ctx.json_output else None,
             stderr=subprocess.PIPE if ctx.json_output else None,

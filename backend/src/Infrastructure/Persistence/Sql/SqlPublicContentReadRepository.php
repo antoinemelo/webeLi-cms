@@ -232,7 +232,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
     
             $whereSql = implode(' AND ', $where);
             $fromSql = "FROM content_entries ce
-                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.is_active = 1
+                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.api_enabled = 1
                 JOIN public_content_snapshots pcs ON pcs.site_id = ce.site_id
                    AND pcs.resource_type = 'content_entry'
                    AND pcs.resource_id = ce.id
@@ -356,7 +356,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
                    AND cep.published_revision_id = pcs.source_published_revision_id
                    AND cep.workflow_status = 'published'
                 JOIN content_entries ce ON ce.id = sd.resource_id AND ce.site_id = sd.site_id AND ce.is_active = 1 AND ce.status = 'published'
-                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.is_active = 1
+                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.api_enabled = 1
                 JOIN routes r ON r.site_id = sd.site_id
                    AND r.resource_type = sd.resource_type
                    AND r.resource_id = sd.resource_id
