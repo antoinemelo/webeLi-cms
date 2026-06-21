@@ -61,14 +61,14 @@ export const dashboardLinks: SectionLink[] = [
 
 export const assetLinks: SectionLink[] = [
   { label: 'Médias', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.' },
-  { label: 'Docs', route: '/docs', anyPermission: ['content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'media.read', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], hint: 'Documentation utile selon le rôle connecté.' }
+  { label: 'Docs', route: '/docs', hint: 'Documentation utile selon le rôle connecté.' }
 ];
 
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
   { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage'], children: moduleWorkbenchLinks },
-  { key: 'assets', label: 'Actifs', route: '/media', anyPermission: ['media.read', 'content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], children: assetLinks }
+  { key: 'assets', label: 'Actifs', route: '/media', children: assetLinks }
 ];
 
 export type AdminSearchAction = SectionLink & {
@@ -95,7 +95,7 @@ export const adminSearchActions: AdminSearchAction[] = [
     ];
   }),
   searchAction('media.open', 'Actifs', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload', 'actifs']),
-  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', anyPermission: ['content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'media.read', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], hint: 'Documentation utile selon le rôle connecté.' }, ['docs', 'documentation', 'guide', 'aide']),
+  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', hint: 'Documentation utile selon le rôle connecté.' }, ['docs', 'documentation', 'guide', 'aide']),
   ...moduleWorkbenchLinks.map((link) => searchAction(`modules.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Modules', link, ['module', 'extension', 'métier', 'blueprint'])),
   ...structureLinks.map((link) => searchAction(`structure.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Structure', link, ['navigation', 'classement'])),
   searchAction('seo.audit', 'Qualité', { label: 'Audit SEO & IA', navLabel: 'Audit', route: '/seo/audit', permission: 'content.read', hint: 'Scores, problèmes et recommandations.' }, ['seo', 'ia', 'score', 'audit', 'recommandations']),

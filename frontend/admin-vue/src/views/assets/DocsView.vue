@@ -39,21 +39,9 @@ const q = ref('');
 const selectedSection = ref('all');
 const selectedId = ref('');
 
-const canOpenDocs = computed(() =>
-  context.can('*') ||
-  context.can('content.read') ||
-  context.can('content.publish') ||
-  context.can('content.approve') ||
-  context.can('seo.read') ||
-  context.can('seo.manage') ||
-  context.can('media.read') ||
-  context.can('settings.read') ||
-  context.can('modules.read') ||
-  context.can('users.read') ||
-  context.can('roles.read') ||
-  context.can('maintenance.manage') ||
-  context.can('imports_exports.manage')
-);
+// The API filters the index document by document. Keeping a second permission
+// matrix here inevitably hides valid documentation when policies evolve.
+const canOpenDocs = computed(() => Boolean(context.context));
 
 const filteredSections = computed(() => {
   const term = q.value.trim().toLowerCase();

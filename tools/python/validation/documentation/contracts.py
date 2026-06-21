@@ -48,6 +48,8 @@ ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
     ("backend/src/Application/Api/Admin/DocsApiController.php", "withResolvedMarkdownLinks", "enrichissement des liens Markdown rendus"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "resolveRequestedDocument", "résolution serveur robuste des identifiants ou chemins Markdown"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "link_path", "secours serveur avec chemin de lien Markdown"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "documentPermissions", "filtrage de chaque document selon son front matter"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "$frontMatter, $permissions, $isSuperAdmin", "application du front matter au contrôle d’accès"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "documentIdFromRelativePath", "résolution client de secours des chemins Markdown"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "explicitDocumentIdFromHref", "navigation client via les liens #docs/<id>"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "from_id", "transmission du document source pour les liens relatifs"),

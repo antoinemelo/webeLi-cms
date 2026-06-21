@@ -110,12 +110,12 @@ final class DocsApiController
                 continue;
             }
             $section = $this->sections[$sectionKey];
-            if (!$this->canAccessDocument($relativePath, $section, $permissions, $isSuperAdmin)) {
-                continue;
-            }
             $absolute = $this->docsRoot() . '/' . $relativePath;
             $source = (string) file_get_contents($absolute);
             [$frontMatter, $body] = $this->splitFrontMatter($source);
+            if (!$this->canAccessDocument($relativePath, $section, $frontMatter, $permissions, $isSuperAdmin)) {
+                continue;
+            }
             $documents[] = $this->documentContract($relativePath, $sectionKey, $frontMatter, $body, $absolute);
         }
 
@@ -291,8 +291,12 @@ final class DocsApiController
         return false;
     }
 
-    /** @param array<string,mixed> $section @param list<string> $permissions */
-    private function canAccessDocument(string $relativePath, array $section, array $permissions, bool $isSuperAdmin): bool
+    /**
+     * @param array<string,mixed> $section
+     * @param array<string,mixed> $frontMatter
+     * @param list<string> $permissions
+     */
+    private function canAccessDocument(string $relativePath, array $section, array $frontMatter, array $permissions, bool $isSuperAdmin): bool
     {
         if ($isSuperAdmin) {
             return true;
@@ -303,12 +307,44 @@ final class DocsApiController
         if (!empty($section['superadmin_only'])) {
             return false;
         }
-        foreach ((array) ($section['any_permission'] ?? []) as $permission) {
-            if (in_array((string) $permission, $permissions, true)) {
+        $documentPermissions = $this->documentPermissions($frontMatter);
+        $requiredPermissions = $documentPermissions !== []
+            ? $documentPermissions
+            : array_values(array_map('strval', (array) ($section['any_permission'] ?? [])));
+        foreach ($requiredPermissions as $permission) {
+            if (in_array($permission, $permissions, true)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** @param array<string,mixed> $frontMatter @return list<string> */
+    private function documentPermissions(array $frontMatter): array
+    {
+        $declared = $frontMatter['permissions'] ?? [];
+        if (!is_array($declared)) {
+            return [];
+        }
+
+        $permissions = [];
+        foreach ($declared as $value) {
+            $value = trim((string) $value);
+            if ($value === '') {
+                continue;
+            }
+            if (preg_match('/^([a-z][a-z0-9_.-]*)\.([a-z][a-z0-9_-]*)(?:\/([a-z][a-z0-9_-]*))+$/', $value, $match)) {
+                $prefix = $match[1];
+                foreach (explode('/', substr($value, strlen($prefix) + 1)) as $action) {
+                    $permissions[] = $prefix . '.' . $action;
+                }
+                continue;
+            }
+            if (preg_match('/^[a-z][a-z0-9_.-]*\.[a-z][a-z0-9_-]*$/', $value)) {
+                $permissions[] = $value;
+            }
+        }
+        return array_values(array_unique($permissions));
     }
 
     /** @return list<string> */

@@ -169,6 +169,10 @@ def command_help(*command: str) -> str:
     from tools.python.cms import cli as cms_cli
 
     current = cms_cli.parser()
+    # argparse otherwise derives its wrapping width from the current terminal.
+    # Generated references must be identical in CI, a local PTY and cron.
+    fixed_width = 80
+    current.formatter_class = lambda prog: argparse.HelpFormatter(prog, width=fixed_width)
     for part in command:
         subparsers = next(
             (action for action in current._actions if isinstance(action, _SubParsersAction)),
@@ -177,6 +181,7 @@ def command_help(*command: str) -> str:
         if subparsers is None or part not in subparsers.choices:
             raise RuntimeError(f"Sous-commande CLI introuvable pour la documentation: {' '.join(command)}")
         current = subparsers.choices[part]
+        current.formatter_class = lambda prog: argparse.HelpFormatter(prog, width=fixed_width)
     return current.format_help().strip()
 
 

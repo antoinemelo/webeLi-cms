@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from tools.python.generators.generate_documentation import command_help
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / "tools/cms.py"
@@ -53,6 +57,15 @@ class CliRationalizationTest(unittest.TestCase):
             if not any(part in MANIFEST_EXCLUDED_PARTS for part in path.parts)
         }
         self.assertEqual(listed, actual)
+
+    def test_generated_cli_help_is_independent_from_terminal_width(self) -> None:
+        with patch.dict(os.environ, {"COLUMNS": "80"}):
+            narrow = command_help("validate")
+        with patch.dict(os.environ, {"COLUMNS": "200"}):
+            wide = command_help("validate")
+
+        self.assertEqual(narrow, wide)
+        self.assertIn("usage: tools/cms.py validate", narrow)
 
     def test_archive_not_imported_by_active_python(self) -> None:
         for path in ROOT.glob("tools/python/**/*.py"):

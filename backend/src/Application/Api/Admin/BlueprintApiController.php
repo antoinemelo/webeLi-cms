@@ -28,9 +28,8 @@ final class BlueprintApiController
     public function index(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
+        $siteId = $this->requireForSite('blueprints.read');
         $resourceType = $this->request->input('resource_type');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
         return Response::success(
             $this->blueprints->list(is_string($resourceType) ? $resourceType : null, $siteId),
             'admin.blueprints.index.v1'
@@ -40,8 +39,7 @@ final class BlueprintApiController
     public function model(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.read');
         return Response::success($this->blueprints->modelOverview($siteId), 'admin.blueprints.model.v1');
     }
 
@@ -49,15 +47,14 @@ final class BlueprintApiController
     public function fieldTypes(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
+        $this->requireForSite('blueprints.read');
         return Response::success($this->blueprints->fieldTypes(), 'admin.field_types.index.v1');
     }
 
     public function design(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.read');
         $resourceType = $this->request->input('resource_type');
         try {
             return Response::success($this->blueprints->design($key, is_string($resourceType) ? $resourceType : null, $siteId), 'admin.blueprints.design.v1');
@@ -69,9 +66,9 @@ final class BlueprintApiController
     public function saveDesign(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
         $payload = $this->payload();
-        $siteId = $this->optionalInt($payload['site_id'] ?? $this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.manage', $payload);
+        $payload['site_id'] = $siteId;
         try {
             return Response::success($this->blueprints->saveDesign($key, $payload, $siteId), 'admin.blueprints.design.v1');
         } catch (\InvalidArgumentException $e) {
@@ -82,8 +79,7 @@ final class BlueprintApiController
     public function destroy(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.manage');
         $resourceType = $this->request->input('resource_type');
         try {
             return Response::success($this->blueprints->deleteBlueprint($key, is_string($resourceType) ? $resourceType : null, $siteId), 'admin.blueprints.delete.v1');
@@ -97,14 +93,14 @@ final class BlueprintApiController
     public function fieldsets(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
+        $this->requireForSite('blueprints.read');
         return Response::success($this->blueprints->fieldsets(), 'admin.fieldsets.index.v1');
     }
 
     public function showFieldset(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
+        $this->requireForSite('blueprints.read');
         try {
             return Response::success($this->blueprints->fieldset($key), 'admin.fieldsets.show.v1');
         } catch (\RuntimeException) {
@@ -115,7 +111,7 @@ final class BlueprintApiController
     public function storeFieldset(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
+        $this->requireForSite('blueprints.manage');
         try {
             return Response::success($this->blueprints->saveFieldset(null, $this->payload()), 'admin.fieldsets.write.v1', [], 201);
         } catch (\InvalidArgumentException $e) {
@@ -126,7 +122,7 @@ final class BlueprintApiController
     public function updateFieldset(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
+        $this->requireForSite('blueprints.manage');
         try {
             return Response::success($this->blueprints->saveFieldset($key, $this->payload()), 'admin.fieldsets.write.v1');
         } catch (\InvalidArgumentException $e) {
@@ -137,7 +133,7 @@ final class BlueprintApiController
     public function destroyFieldset(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
+        $this->requireForSite('blueprints.manage');
         try {
             return Response::success($this->blueprints->deleteFieldset($key), 'admin.fieldsets.delete.v1');
         } catch (\InvalidArgumentException $e) {
@@ -150,8 +146,7 @@ final class BlueprintApiController
     public function show(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.read');
         $blueprint = $this->blueprints->findByKey($key, null, $siteId);
         if (!$blueprint) {
             return $this->notFound($key);
@@ -162,8 +157,7 @@ final class BlueprintApiController
     public function versions(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.read');
-        $siteId = $this->optionalInt($this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.read');
         $versions = $this->blueprints->versions($key, null, $siteId);
         if ($versions === [] && !$this->blueprints->findByKey($key, null, $siteId)) {
             return $this->notFound($key);
@@ -189,16 +183,18 @@ final class BlueprintApiController
     public function store(): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
-        return Response::success($this->blueprints->createBlueprint($this->payload()), 'admin.blueprints.write.v1', [], 201);
+        $payload = $this->payload();
+        $siteId = $this->requireForSite('blueprints.manage', $payload);
+        $payload['site_id'] = $siteId;
+        return Response::success($this->blueprints->createBlueprint($payload), 'admin.blueprints.write.v1', [], 201);
     }
 
     public function storeVersion(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
         $payload = $this->normalizeVersionPayload($this->payload());
-        $siteId = $this->optionalInt($payload['site_id'] ?? $this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.manage', $payload);
+        $payload['site_id'] = $siteId;
         try {
             return Response::success($this->blueprints->createVersion($key, $payload, $siteId), 'admin.blueprints.versions.write.v1', [], 201);
         } catch (\RuntimeException) {
@@ -209,13 +205,12 @@ final class BlueprintApiController
     public function activate(string $key): Response
     {
         $this->auth->requireAuth();
-        $this->authorization->require('blueprints.manage');
         $payload = $this->payload();
         $version = isset($payload['version']) ? (int) $payload['version'] : (int) $this->request->input('version', 0);
         if ($version <= 0) {
             return Response::validation(['version' => ['version est obligatoire et doit être un entier positif.']]);
         }
-        $siteId = $this->optionalInt($payload['site_id'] ?? $this->request->input('site_id'));
+        $siteId = $this->requireForSite('blueprints.manage', $payload);
         try {
             return Response::success($this->blueprints->activate($key, $version, $siteId), 'admin.blueprints.activate.v1');
         } catch (\RuntimeException) {
@@ -238,6 +233,16 @@ final class BlueprintApiController
             return null;
         }
         return (int) $value;
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function requireForSite(string $permission, array $payload = []): int
+    {
+        $requestedSiteId = $this->optionalInt($payload['site_id'] ?? $this->request->input('site_id'));
+        $site = AdminApiContract::siteContext($this->request, $this->sites, $requestedSiteId, $this->auth);
+        $siteId = (int) $site['id'];
+        $this->authorization->require($permission, $siteId);
+        return $siteId;
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
