@@ -120,16 +120,47 @@ function normalizeDocPath(path: string): string {
   return output.join('/');
 }
 
+function normalizedDocLookupPath(path?: string): string {
+  return (path || '').replace(/^docs\//, '');
+}
+
+function markdownHrefCandidates(href: string): string[] {
+  const cleanHref = href.split('#')[0].split('?')[0].trim();
+  if (!cleanHref || !current.value || cleanHref.startsWith('#')) return [];
+  if (/^[a-z][a-z0-9+.-]*:/i.test(cleanHref)) return [];
+
+  const explicitDocsPath = cleanHref.match(/(?:^|\/)docs\/(.+)$/);
+  const currentPath = normalizedDocLookupPath(current.value.relative_path || current.value.source_path);
+  const currentDirectory = currentPath.split('/').slice(0, -1).join('/');
+  const resolved = explicitDocsPath
+    ? explicitDocsPath[1]
+    : cleanHref.startsWith('docs/')
+      ? cleanHref.replace(/^docs\//, '')
+      : normalizeDocPath(`${currentDirectory}/${cleanHref}`);
+
+  const base = resolved.endsWith('/') ? `${resolved}README.md` : resolved;
+  const candidates = new Set<string>([
+    base,
+    base.replace(/^docs\//, ''),
+    base.replace(/\/index\.md$/i, '/README.md')
+  ]);
+
+  if (!/\.md$/i.test(base)) {
+    candidates.add(`${base}.md`);
+    candidates.add(`${base}/README.md`);
+  }
+
+  return [...candidates].map(normalizedDocLookupPath);
+}
+
 function documentIdForMarkdownHref(href: string): string {
-  const cleanHref = href.split('#')[0].split('?')[0];
-  if (!cleanHref || !current.value) return '';
-  if (/^[a-z][a-z0-9+.-]*:/i.test(cleanHref) || cleanHref.startsWith('#')) return '';
-  const relative = cleanHref.startsWith('/docs/')
-    ? cleanHref.replace(/^\/docs\//, '')
-    : normalizeDocPath(`${current.value.relative_path.split('/').slice(0, -1).join('/')}/${cleanHref}`);
-  const normalized = relative.endsWith('/') ? `${relative}README.md` : relative;
-  const candidates = [normalized, normalized.replace(/\/index\.md$/i, '/README.md')];
-  return documents.value.find((doc) => candidates.includes(doc.relative_path))?.id || '';
+  const candidates = markdownHrefCandidates(href);
+  if (candidates.length === 0) return '';
+  return documents.value.find((doc) => {
+    const relativePath = normalizedDocLookupPath(doc.relative_path);
+    const sourcePath = normalizedDocLookupPath(doc.source_path);
+    return candidates.includes(relativePath) || candidates.includes(sourcePath);
+  })?.id || '';
 }
 
 function onMarkdownClick(event: MouseEvent): void {
@@ -183,7 +214,6 @@ onMounted(loadIndex);
         <div v-else-if="filteredSections.length === 0" class="muted">Aucun document ne correspond au filtre.</div>
         <div v-for="section in filteredSections" :key="section.key" class="docs-section-list">
           <h2>{{ section.label }}</h2>
-          <p class="muted">{{ section.audience_label }}</p>
           <button
             v-for="doc in section.documents"
             :key="doc.id"
