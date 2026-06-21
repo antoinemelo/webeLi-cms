@@ -60,4 +60,4 @@ python3 tools/cms.py docs generate
 python3 tools/cms.py docs check
 ```
 
-`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale et les références vers des commandes CLI existantes. Il ne vérifie aucune formulation marketing ni phrase exacte.
+`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale, les références vers des commandes CLI existantes et les garde-fous du viewer Markdown du back-office. Il ne vérifie aucune formulation marketing ni phrase exacte.

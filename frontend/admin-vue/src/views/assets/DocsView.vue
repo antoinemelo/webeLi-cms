@@ -121,7 +121,7 @@ function normalizeDocPath(path: string): string {
 }
 
 function normalizedDocLookupPath(path?: string): string {
-  return (path || '').replace(/^docs\//, '');
+  return normalizeDocPath(path || '').replace(/^docs\//, '');
 }
 
 function decodeHrefPath(href: string): string {
@@ -130,6 +130,24 @@ function decodeHrefPath(href: string): string {
     return decodeURIComponent(clean);
   } catch {
     return clean;
+  }
+}
+
+function documentIdFromRelativePath(path: string): string {
+  return normalizedDocLookupPath(path)
+    .replace(/\.md$/i, '')
+    .replace(/\/README$/i, '/index')
+    .replace(/\//g, '~')
+    .replace(/[^A-Za-z0-9._~-]+/g, '-');
+}
+
+function explicitDocumentIdFromHref(href: string): string {
+  const hashMatch = href.match(/^#docs\/(.+)$/);
+  if (!hashMatch) return '';
+  try {
+    return decodeURIComponent(hashMatch[1]);
+  } catch {
+    return hashMatch[1];
   }
 }
 
@@ -161,23 +179,43 @@ function markdownHrefCandidates(href: string): string[] {
     candidates.add(`${base}/README.md`);
   }
 
-  return [...candidates].map(normalizedDocLookupPath);
+  return [...candidates].map(normalizedDocLookupPath).filter(Boolean);
+}
+
+function documentMatchesCandidate(doc: DocsDocument, candidates: string[]): boolean {
+  const relativePath = normalizedDocLookupPath(doc.relative_path);
+  const sourcePath = normalizedDocLookupPath(doc.source_path);
+  const id = doc.id;
+  return candidates.some((candidate) => {
+    const normalized = normalizedDocLookupPath(candidate);
+    return normalized === relativePath
+      || normalized === sourcePath
+      || normalized === id
+      || documentIdFromRelativePath(normalized) === id
+      || relativePath.endsWith(`/${normalized}`)
+      || sourcePath.endsWith(`/${normalized}`);
+  });
 }
 
 function documentIdForMarkdownHref(href: string): string {
+  const explicitId = explicitDocumentIdFromHref(href);
+  if (explicitId) return explicitId;
+
   const candidates = markdownHrefCandidates(href);
   if (candidates.length === 0) return '';
-  return documents.value.find((doc) => {
-    const relativePath = normalizedDocLookupPath(doc.relative_path);
-    const sourcePath = normalizedDocLookupPath(doc.source_path);
-    return candidates.includes(relativePath) || candidates.includes(sourcePath) || candidates.includes(doc.id);
-  })?.id || '';
+
+  const known = documents.value.find((doc) => documentMatchesCandidate(doc, candidates));
+  if (known?.id) return known.id;
+
+  const markdownCandidate = candidates.find((candidate) => /\.md$/i.test(candidate));
+  return markdownCandidate ? documentIdFromRelativePath(markdownCandidate) : '';
 }
 
 function onMarkdownClick(event: MouseEvent): void {
   const target = event.target as HTMLElement | null;
   const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
   if (!anchor) return;
+
   const href = anchor.getAttribute('href') || '';
   const docId = anchor.dataset.docId || documentIdForMarkdownHref(href);
   if (docId) {
@@ -185,14 +223,16 @@ function onMarkdownClick(event: MouseEvent): void {
     void selectDocument(docId);
     return;
   }
+
   if (/^https?:\/\//i.test(href)) {
     anchor.setAttribute('target', '_blank');
     anchor.setAttribute('rel', 'noopener noreferrer');
     return;
   }
+
   if (href && !href.startsWith('#') && !/^[a-z][a-z0-9+.-]*:/i.test(href)) {
     event.preventDefault();
-    error.value = 'Ce lien pointe vers un fichier non Markdown ou vers un document non autorisé pour ce profil.';
+    error.value = 'Document Markdown introuvable dans la documentation disponible pour ce profil.';
   }
 }
 

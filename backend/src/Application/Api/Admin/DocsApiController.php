@@ -309,23 +309,41 @@ final class DocsApiController
      */
     private function withResolvedMarkdownLinks(string $html, array $current, array $documents): string
     {
-        $resolved = preg_replace_callback('/<a\s+href="([^"]*)"([^>]*)>(.*?)<\/a>/is', function (array $m) use ($current, $documents): string {
-            $href = html_entity_decode((string) $m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $resolved = preg_replace_callback('~<a\b([^>]*)\bhref=("|\')([^"\']*)\2([^>]*)>(.*?)</a>~is', function (array $m) use ($current, $documents): string {
+            $before = (string) $m[1];
+            $quote = (string) $m[2];
+            $rawHref = (string) $m[3];
+            $after = (string) $m[4];
+            $label = (string) $m[5];
+            $href = html_entity_decode($rawHref, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $target = $this->documentForMarkdownHref($href, $current, $documents);
             if ($target === null) {
                 return $m[0];
             }
 
-            $title = '';
-            if (preg_match('/\stitle="([^"]*)"/i', (string) $m[2], $titleMatch)) {
-                $title = ' title="' . $this->escAttr(html_entity_decode((string) $titleMatch[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '"';
+            $id = (string) ($target['id'] ?? '');
+            if ($id === '') {
+                return $m[0];
             }
 
-            $id = (string) ($target['id'] ?? '');
-            return '<a href="#docs/' . $this->escAttr($id) . '" data-doc-id="' . $this->escAttr($id) . '" data-doc-path="' . $this->escAttr((string) ($target['source_path'] ?? '')) . '"' . $title . '>' . $m[3] . '</a>';
+            $attrs = $this->cleanAnchorAttributes($before . ' ' . $after);
+            $docPath = (string) ($target['source_path'] ?? '');
+
+            return '<a href=' . $quote . '#docs/' . $this->escAttr($id) . $quote
+                . ' data-doc-id="' . $this->escAttr($id) . '"'
+                . ' data-doc-path="' . $this->escAttr($docPath) . '"'
+                . ($attrs !== '' ? ' ' . $attrs : '')
+                . '>' . $label . '</a>';
         }, $html);
 
         return is_string($resolved) ? $resolved : $html;
+    }
+
+    private function cleanAnchorAttributes(string $attributes): string
+    {
+        $attributes = preg_replace('~\s(?:href|data-doc-id|data-doc-path)=("[^"]*"|\'[^\']*\'|[^\s>]+)~i', '', $attributes) ?? '';
+        $attributes = trim(preg_replace('/\s+/', ' ', $attributes) ?? '');
+        return $attributes;
     }
 
     /**

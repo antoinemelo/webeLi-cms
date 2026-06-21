@@ -43,6 +43,13 @@ CLI_RE = re.compile(r"(?:python3|/usr/bin/python3)\s+tools/cms\.py\s+([a-z][a-z0
 ALLOWED_DOC_ACTIONS = {"generate", "check", "evaluation-generate", "evaluation-check"}
 LEGACY_DIRS = ("docs/archive", "docs/history", "docs/internal")
 
+ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "data-doc-id", "résolution serveur des liens Markdown internes"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "withResolvedMarkdownLinks", "enrichissement des liens Markdown rendus"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "documentIdFromRelativePath", "résolution client de secours des chemins Markdown"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "explicitDocumentIdFromHref", "navigation client via les liens #docs/<id>"),
+)
+
 
 def _front_matter(text: str) -> dict[str, object] | None:
     if not text.startswith("---\n"):
@@ -129,6 +136,15 @@ def validate(mode: str = "fast") -> ValidationReport:
         report.checked()
         if (ROOT / legacy).exists():
             report.add("DOC-005", "Ancien espace documentaire présent", path=legacy)
+
+    for rel, snippet, expected in ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS:
+        report.checked()
+        source_path = ROOT / rel
+        if not source_path.is_file():
+            report.add("DOC-009", "Source du viewer Docs absente", path=rel, expected=expected)
+            continue
+        if snippet not in source_path.read_text(encoding="utf-8", errors="ignore"):
+            report.add("DOC-009", "Protection des liens Markdown du viewer Docs incomplète", path=rel, expected=expected)
 
     available = _available_cli_commands()
     report.checked()
