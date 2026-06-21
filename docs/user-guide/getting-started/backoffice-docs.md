@@ -5,8 +5,9 @@ audience:
   - publisher
   - seo
   - administrator
+  - superadministrator
 status: stable
-version: 1.0
+version: 1.1
 last_verified: 2026-06-21
 source_of_truth: manual
 source_paths:
@@ -29,23 +30,27 @@ Chaque profil accède depuis le menu principal aux documents utiles pour son rô
 1. Ouvrez le back-office.
 2. Dans le menu principal, choisissez **Actifs**.
 3. Ouvrez **Docs**.
-4. Utilisez le filtre par espace documentaire ou la recherche pour trouver une procédure.
+4. Utilisez la ligne de recherche pour filtrer par texte et par espace documentaire.
 
 ## Règle d’affichage
 
-La liste est filtrée côté serveur selon les permissions du profil connecté :
+La liste est filtrée côté serveur selon les permissions du profil connecté. Un document non autorisé est caché, pas affiché en grisé.
 
 | Espace documentaire | Profil principalement concerné |
 |---|---|
-| Découvrir et installer localement | Admin |
-| Créer, réviser et publier | Éditeur, Publication, SEO |
-| Administrer sites, langues, rôles et modules | Admin |
+| Découvrir et installer localement | Admin, Superadmin |
+| Créer, réviser et publier | Éditeur, Publication, SEO, Admin, Superadmin |
+| Administrer sites, langues, rôles et modules | Admin, Superadmin |
 | Installer une release | Superadmin |
 | Exploiter, sauvegarder, déployer et diagnostiquer | Admin, Superadmin |
-| Intégrer l’API publique ou consulter les contrats internes | Admin |
+| Intégrer l’API publique ou consulter les contrats internes | Admin, Superadmin |
 | Développer et étendre le CMS | Superadmin |
 | Consulter les inventaires techniques | Superadmin |
-| Évaluer les capacités et limites | Admin |
+| Évaluer les capacités et limites | Admin, Superadmin |
+
+## Exception de sécurité
+
+L’index `docs/user-guide/README.md` est réservé aux superadmins, car il agrège des liens vers des procédures dont toutes les cibles ne sont pas visibles pour les profils éditoriaux. Les sous-pages utiles du guide utilisateur restent accessibles directement dans **Actifs > Docs** selon les permissions du profil.
 
 ## Lecture Markdown
 

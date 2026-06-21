@@ -32,11 +32,13 @@ final class DocsApiController
         $documents = $this->accessibleDocuments((int) $site['id']);
 
         $sections = [];
+        $visibleSectionKeys = [];
         foreach ($this->sections as $key => $section) {
             $items = array_values(array_filter($documents, static fn(array $doc): bool => ($doc['section_key'] ?? '') === $key));
             if ($items === []) {
                 continue;
             }
+            $visibleSectionKeys[] = $key;
             $sections[] = [
                 'key' => $key,
                 'label' => (string) $section['label'],
@@ -49,7 +51,7 @@ final class DocsApiController
         return Response::success([
             'sections' => $sections,
             'documents' => $documents,
-            'policy' => $this->policySummary(),
+            'policy' => $this->policySummary($visibleSectionKeys),
         ], 'admin.docs.index.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site)));
     }
 
@@ -101,7 +103,7 @@ final class DocsApiController
                 continue;
             }
             $section = $this->sections[$sectionKey];
-            if (!$this->canAccessSection($section, $permissions, $isSuperAdmin)) {
+            if (!$this->canAccessDocument($relativePath, $section, $permissions, $isSuperAdmin)) {
                 continue;
             }
             $absolute = $this->docsRoot() . '/' . $relativePath;
@@ -127,10 +129,13 @@ final class DocsApiController
     }
 
     /** @param array<string,mixed> $section @param list<string> $permissions */
-    private function canAccessSection(array $section, array $permissions, bool $isSuperAdmin): bool
+    private function canAccessDocument(string $relativePath, array $section, array $permissions, bool $isSuperAdmin): bool
     {
         if ($isSuperAdmin) {
             return true;
+        }
+        if (in_array($relativePath, (array) ($section['superadmin_documents'] ?? []), true)) {
+            return false;
         }
         if (!empty($section['superadmin_only'])) {
             return false;
@@ -312,7 +317,8 @@ final class DocsApiController
                 'description' => 'Documentation opérationnelle pour les contenus, médias, menus, publication et SEO éditorial.',
                 'audience_label' => 'Éditeur · Publication · SEO',
                 'sort_order' => 20,
-                'any_permission' => ['content.read', 'content.update', 'content.publish', 'content.approve', 'seo.read', 'seo.simple', 'seo.manage', 'media.read', 'menu.read', 'taxonomy.read', 'forms.read', 'imports_exports.read'],
+                'any_permission' => ['content.read', 'content.update', 'content.publish', 'content.approve', 'seo.read', 'seo.simple', 'seo.manage', 'media.read', 'menu.read', 'taxonomy.read', 'forms.read', 'imports_exports.read', 'settings.read'],
+                'superadmin_documents' => ['user-guide/README.md'],
             ],
             'administration' => [
                 'label' => 'Administrer sites, langues, rôles et modules',
@@ -373,11 +379,15 @@ final class DocsApiController
         ];
     }
 
-    /** @return list<array<string,string>> */
-    private function policySummary(): array
+    /** @param list<string> $visibleSectionKeys @return list<array<string,string>> */
+    private function policySummary(array $visibleSectionKeys): array
     {
+        $visible = array_flip($visibleSectionKeys);
         $items = [];
         foreach ($this->sections as $key => $section) {
+            if (!isset($visible[$key])) {
+                continue;
+            }
             $items[] = [
                 'key' => $key,
                 'label' => (string) $section['label'],

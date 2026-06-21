@@ -46,6 +46,9 @@ function canOpenModuleGovernance(): boolean {
   return context.can('modules.read') || context.can('modules.manage');
 }
 function parentRoute(item: MainNavigationItem): string {
+  if (item.key === 'assets' && !context.can('media.read')) {
+    return visibleStaticChildren(item)[0]?.route || item.route;
+  }
   if (item.key !== 'modules' || canOpenModuleGovernance()) return item.route;
   return visibleModuleProviderChildren()[0]?.route || visibleStaticChildren(item)[0]?.route || item.route;
 }

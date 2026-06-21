@@ -159,11 +159,7 @@ onMounted(loadIndex);
 </script>
 
 <template>
-  <PageHeader title="Documentation" intro="Documents pertinents selon le rôle connecté, accessibles uniquement depuis le menu principal Actifs.">
-    <template #actions>
-      <button class="btn ghost" type="button" :disabled="loading || documentLoading" @click="loadIndex">Rafraîchir</button>
-    </template>
-  </PageHeader>
+  <PageHeader title="Documentation" intro="Documents pertinents selon le rôle connecté, accessibles uniquement depuis le menu principal Actifs." />
 
   <ApiFeedback :error="error" />
 

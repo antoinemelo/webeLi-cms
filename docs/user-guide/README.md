@@ -1,12 +1,10 @@
 ---
 title: Guide utilisateur
 audience:
-  - editor
-  - publisher
-  - seo
+  - superadministrator
 status: stable
 version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-21
 source_of_truth: manual
 owners:
   - core
@@ -14,6 +12,8 @@ document_type: guide
 generated: false
 ---
 # Guide utilisateur
+
+> Cet index agrège des liens vers plusieurs espaces du guide et n’est exposé dans le back-office qu’aux superadmins. Les pages individuelles utiles restent filtrées selon les permissions des profils éditeur, publication, SEO et admin.
 
 Le guide suit les parcours du back-office. Les menus visibles dépendent du rôle, des permissions et du site actif ; masquer une action dans l’interface ne remplace jamais l’autorisation côté serveur.
 
