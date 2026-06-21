@@ -46,8 +46,13 @@ LEGACY_DIRS = ("docs/archive", "docs/history", "docs/internal")
 ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
     ("backend/src/Application/Api/Admin/DocsApiController.php", "data-doc-id", "résolution serveur des liens Markdown internes"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "withResolvedMarkdownLinks", "enrichissement des liens Markdown rendus"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "resolveRequestedDocument", "résolution serveur robuste des identifiants ou chemins Markdown"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "link_path", "secours serveur avec chemin de lien Markdown"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "documentIdFromRelativePath", "résolution client de secours des chemins Markdown"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "explicitDocumentIdFromHref", "navigation client via les liens #docs/<id>"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "from_id", "transmission du document source pour les liens relatifs"),
+    ("backend/routes/api.php", "/admin/api/docs/resolve", "endpoint stable de résolution des liens Markdown internes"),
+    ("backend/routes/api.php", "/admin/api/docs/{id:.+}", "compatibilité avec les anciens liens Markdown encodés dans le chemin"),
 )
 
 

@@ -54,7 +54,7 @@ L’index `docs/user-guide/README.md` est réservé aux superadmins, car il agr�
 
 ## Lecture Markdown
 
-Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers d’autres fichiers Markdown sont résolus côté serveur et côté interface vers un identifiant de document autorisé. Un lien Markdown relatif, par exemple `content/create-edit.md`, ouvre donc directement le document cible dans le viewer quand le profil connecté peut le consulter.
+Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers d’autres fichiers Markdown sont résolus côté serveur et côté interface vers un identifiant de document autorisé. Un lien Markdown relatif, par exemple `content/create-edit.md`, ouvre donc directement le document cible dans le viewer quand le profil connecté peut le consulter. Le serveur accepte aussi les variantes générées par le viewer (`#docs/<id>`, chemin `docs/...`, identifiant avec `~`) uniquement si elles correspondent à un document déjà autorisé pour le profil courant.
 
 ## Limites
 

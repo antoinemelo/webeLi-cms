@@ -76,7 +76,8 @@ generated: true
 | `GET` | `/admin/api/context` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/cookies` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/docs` | API administrative | `backend/routes/api.php` |
-| `GET` | `/admin/api/docs/{id:[A-Za-z0-9._~-]+}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/docs/resolve` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/docs/{id:.+}` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/entries` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/entries/{id}` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/entries/{id}/preview` | API administrative | `backend/routes/api.php` |

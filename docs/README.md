@@ -29,7 +29,7 @@ La documentation est organisée par tâche et par public. Les concepts et procé
 
 ## Accès depuis le back-office
 
-Dans le back-office, les profils autorisés consultent les documents Markdown depuis le menu principal **Actifs > Docs**. La liste est filtrée côté serveur selon les permissions du profil connecté : les documents et espaces non autorisés sont cachés, jamais simplement grisés. Les panneaux individuels ne contiennent pas de liens directs vers la documentation.
+Dans le back-office, les profils autorisés consultent les documents Markdown depuis le menu principal **Actifs > Docs**. La liste est filtrée côté serveur selon les permissions du profil connecté : les documents et espaces non autorisés sont cachés, jamais simplement grisés. Les panneaux individuels ne contiennent pas de liens directs vers la documentation. Les liens Markdown internes sont résolus vers des documents explicitement autorisés, y compris lorsqu’un lien relatif est converti par le viewer en identifiant technique.
 
 ## Espaces documentaires
 

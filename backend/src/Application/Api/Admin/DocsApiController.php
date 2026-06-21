@@ -55,17 +55,22 @@ final class DocsApiController
         ], 'admin.docs.index.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site)));
     }
 
+    public function resolve(): Response
+    {
+        $id = isset($this->request->query['id']) ? (string) $this->request->query['id'] : '';
+        return $this->show($id);
+    }
+
     public function show(string $id): Response
     {
         $this->auth->requireAuth();
         $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
         $documents = $this->accessibleDocuments((int) $site['id']);
-        $document = null;
-        foreach ($documents as $candidate) {
-            if (($candidate['id'] ?? '') === $id) {
-                $document = $candidate;
-                break;
-            }
+        $fromId = isset($this->request->query['from_id']) ? (string) $this->request->query['from_id'] : '';
+        $linkPath = isset($this->request->query['link_path']) ? (string) $this->request->query['link_path'] : '';
+        $document = $this->resolveRequestedDocument($id, $documents, $fromId);
+        if ($document === null && $linkPath !== '') {
+            $document = $this->resolveRequestedDocument($linkPath, $documents, $fromId);
         }
 
         if ($document === null) {
@@ -128,6 +133,162 @@ final class DocsApiController
         });
 
         return $documents;
+    }
+
+    /**
+     * Résout un document demandé depuis le viewer Markdown.
+     *
+     * Les liens rendus peuvent arriver sous plusieurs formes selon le navigateur,
+     * le cache d'assets ou l'état du contenu : identifiant canonique, chemin
+     * source, chemin relatif, variante #docs/<id> ou ancien identifiant calculé
+     * depuis un lien relatif. La résolution reste limitée aux documents déjà
+     * autorisés par accessibleDocuments(), afin de ne jamais exposer une page
+     * cachée pour le profil courant.
+     *
+     * @param list<array<string,mixed>> $documents
+     * @return array<string,mixed>|null
+     */
+    private function resolveRequestedDocument(string $requestedId, array $documents, string $fromId = ''): ?array
+    {
+        $requestedId = $this->decodeRequestToken($requestedId);
+
+        foreach ($documents as $document) {
+            if ((string) ($document['id'] ?? '') === $requestedId) {
+                return $document;
+            }
+        }
+
+        $from = null;
+        if ($fromId !== '') {
+            $fromId = $this->decodeRequestToken($fromId);
+            foreach ($documents as $document) {
+                if ((string) ($document['id'] ?? '') === $fromId) {
+                    $from = $document;
+                    break;
+                }
+            }
+        }
+
+        $candidates = $this->requestDocumentCandidates($requestedId, $from);
+        if ($candidates === []) {
+            return null;
+        }
+
+        $matches = [];
+        foreach ($documents as $document) {
+            if ($this->documentMatchesCandidates($document, $candidates, true)) {
+                $matches[(string) ($document['id'] ?? '')] = $document;
+            }
+        }
+        if (count($matches) === 1) {
+            return reset($matches) ?: null;
+        }
+        if (count($matches) > 1) {
+            foreach ($matches as $document) {
+                if ($this->documentMatchesCandidates($document, $candidates, false)) {
+                    return $document;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function decodeRequestToken(string $value): string
+    {
+        $value = trim($value);
+        for ($i = 0; $i < 2; $i++) {
+            $decoded = rawurldecode($value);
+            if ($decoded === $value) {
+                break;
+            }
+            $value = $decoded;
+        }
+        if (str_starts_with($value, '#docs/')) {
+            $value = substr($value, 6);
+        }
+        return trim($value);
+    }
+
+    /** @param array<string,mixed>|null $from @return list<string> */
+    private function requestDocumentCandidates(string $requested, ?array $from): array
+    {
+        $requested = $this->decodeRequestToken($requested);
+        if ($requested === '' || preg_match('/^[a-z][a-z0-9+.-]*:/i', $requested)) {
+            return [];
+        }
+
+        $rawValues = [$requested];
+        if (str_starts_with($requested, 'docs/')) {
+            $rawValues[] = substr($requested, 5);
+        }
+        if (str_contains($requested, '~')) {
+            $rawValues[] = str_replace('~', '/', $requested);
+        }
+
+        if ($from !== null) {
+            foreach ($rawValues as $value) {
+                $fromCandidates = $this->markdownHrefCandidates($value, $from);
+                foreach ($fromCandidates as $candidate) {
+                    $rawValues[] = $candidate;
+                }
+            }
+        }
+
+        $candidates = [];
+        foreach ($rawValues as $value) {
+            $value = $this->normalizedDocLookupPath($value);
+            if ($value === '') {
+                continue;
+            }
+            $variants = [$value];
+            if (str_ends_with($value, '/index')) {
+                $variants[] = substr($value, 0, -strlen('/index')) . '/README.md';
+            }
+            if (str_ends_with($value, '/index.md')) {
+                $variants[] = substr($value, 0, -strlen('/index.md')) . '/README.md';
+            }
+            if (!preg_match('/\.md$/i', $value)) {
+                $variants[] = $value . '.md';
+                $variants[] = rtrim($value, '/') . '/README.md';
+            }
+            foreach ($variants as $variant) {
+                $normalized = $this->normalizedDocLookupPath($variant);
+                if ($normalized !== '' && !in_array($normalized, $candidates, true)) {
+                    $candidates[] = $normalized;
+                }
+                $asId = $this->documentId($normalized);
+                if ($asId !== '' && !in_array($asId, $candidates, true)) {
+                    $candidates[] = $asId;
+                }
+            }
+        }
+
+        return $candidates;
+    }
+
+    /** @param array<string,mixed> $document @param list<string> $candidates */
+    private function documentMatchesCandidates(array $document, array $candidates, bool $allowSuffix): bool
+    {
+        $id = (string) ($document['id'] ?? '');
+        $relative = $this->normalizedDocLookupPath((string) ($document['relative_path'] ?? ''));
+        $source = $this->normalizedDocLookupPath((string) ($document['source_path'] ?? ''));
+        foreach ($candidates as $candidate) {
+            $candidate = $this->normalizedDocLookupPath($candidate);
+            if ($candidate === '') {
+                continue;
+            }
+            if ($candidate === $id || $candidate === $relative || $candidate === $source || $this->documentId($candidate) === $id) {
+                return true;
+            }
+            if ($allowSuffix && !str_contains($candidate, '/') && !str_contains($candidate, '~')) {
+                continue;
+            }
+            if ($allowSuffix && (str_ends_with($relative, '/' . $candidate) || str_ends_with($source, '/' . $candidate))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @param array<string,mixed> $section @param list<string> $permissions */

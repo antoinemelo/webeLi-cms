@@ -5,10 +5,10 @@
   "package_root": "mod",
   "major": "v07",
   "minor": "e01",
-  "patch": "f",
+  "patch": "i",
   "release_type": "patch",
   "release_name": "Beta",
-  "technical_version": "dec_v07-e01f",
+  "technical_version": "dec_v07-e01i",
   "history_policy": {
     "minor_resets_patch_history": true,
     "major_resets_minor_and_patch_history": true,

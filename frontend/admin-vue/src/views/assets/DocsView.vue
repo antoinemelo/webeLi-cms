@@ -94,16 +94,26 @@ async function loadIndex(): Promise<void> {
   }
 }
 
-async function selectDocument(id: string): Promise<void> {
-  if (!id || id === selectedId.value && current.value) return;
+type SelectDocumentOptions = { fromId?: string; linkPath?: string };
+
+async function selectDocument(id: string, options: SelectDocumentOptions = {}): Promise<void> {
+  if (!id || (id === selectedId.value && current.value && !options.fromId && !options.linkPath)) return;
+  const previousId = selectedId.value;
   selectedId.value = id;
   documentLoading.value = true;
   error.value = '';
   try {
-    const response = await adminApi.get<DocsShowPayload>(`/docs/${encodeURIComponent(id)}`, { site_id: context.siteId });
+    const response = await adminApi.get<DocsShowPayload>('/docs/resolve', {
+      site_id: context.siteId,
+      id,
+      from_id: options.fromId,
+      link_path: options.linkPath
+    });
     current.value = response.data.document;
+    selectedId.value = response.data.document.id;
     if (Array.isArray(response.data.navigation) && response.data.navigation.length > 0) documents.value = response.data.navigation;
   } catch (err) {
+    selectedId.value = current.value?.id || previousId;
     error.value = apiErrorMessage(err, 'Document indisponible.');
   } finally {
     documentLoading.value = false;
@@ -197,9 +207,17 @@ function documentMatchesCandidate(doc: DocsDocument, candidates: string[]): bool
   });
 }
 
+function currentDocumentDirectory(): string {
+  const currentPath = normalizedDocLookupPath(current.value?.relative_path || current.value?.source_path || '');
+  return currentPath.split('/').slice(0, -1).join('/');
+}
+
 function documentIdForMarkdownHref(href: string): string {
   const explicitId = explicitDocumentIdFromHref(href);
-  if (explicitId) return explicitId;
+  if (explicitId) {
+    const knownExplicit = documents.value.find((doc) => doc.id === explicitId);
+    return knownExplicit?.id || explicitId;
+  }
 
   const candidates = markdownHrefCandidates(href);
   if (candidates.length === 0) return '';
@@ -208,7 +226,47 @@ function documentIdForMarkdownHref(href: string): string {
   if (known?.id) return known.id;
 
   const markdownCandidate = candidates.find((candidate) => /\.md$/i.test(candidate));
-  return markdownCandidate ? documentIdFromRelativePath(markdownCandidate) : '';
+  return markdownCandidate ? documentIdFromRelativePath(markdownCandidate) : documentIdFromRelativePath(candidates[0]);
+}
+
+function documentIdForMarkdownAnchor(anchor: HTMLAnchorElement, href: string): string {
+  const rawTokens = [anchor.dataset.docPath || '', anchor.dataset.docId || '', href].filter(Boolean);
+  const currentDir = currentDocumentDirectory();
+
+  for (const token of rawTokens) {
+    const explicitId = explicitDocumentIdFromHref(token);
+    if (explicitId) {
+      const known = documents.value.find((doc) => doc.id === explicitId);
+      if (known?.id) return known.id;
+      return explicitId;
+    }
+
+    const direct = documents.value.find((doc) => doc.id === token);
+    if (direct?.id) return direct.id;
+
+    const tokenAsPath = normalizedDocLookupPath(token.replace(/~/g, '/'));
+    const candidates = new Set<string>([...markdownHrefCandidates(token), tokenAsPath]);
+    if (tokenAsPath && !/\.md$/i.test(tokenAsPath)) {
+      candidates.add(`${tokenAsPath}.md`);
+      candidates.add(`${tokenAsPath}/README.md`);
+    }
+    if (currentDir && tokenAsPath && !tokenAsPath.startsWith(`${currentDir}/`)) {
+      const relativeToCurrent = normalizeDocPath(`${currentDir}/${tokenAsPath}`);
+      candidates.add(relativeToCurrent);
+      if (!/\.md$/i.test(relativeToCurrent)) candidates.add(`${relativeToCurrent}.md`);
+    }
+
+    const known = documents.value.find((doc) => documentMatchesCandidate(doc, [...candidates]));
+    if (known?.id) return known.id;
+  }
+
+  return documentIdForMarkdownHref(href);
+}
+
+function linkPathForMarkdownAnchor(anchor: HTMLAnchorElement, href: string): string {
+  const explicitPath = anchor.dataset.docPath || '';
+  if (explicitPath) return explicitPath;
+  return href || '';
 }
 
 function onMarkdownClick(event: MouseEvent): void {
@@ -217,10 +275,13 @@ function onMarkdownClick(event: MouseEvent): void {
   if (!anchor) return;
 
   const href = anchor.getAttribute('href') || '';
-  const docId = anchor.dataset.docId || documentIdForMarkdownHref(href);
+  const docId = documentIdForMarkdownAnchor(anchor, href);
   if (docId) {
     event.preventDefault();
-    void selectDocument(docId);
+    void selectDocument(docId, {
+      fromId: current.value?.id,
+      linkPath: linkPathForMarkdownAnchor(anchor, href)
+    });
     return;
   }
 
