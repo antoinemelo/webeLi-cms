@@ -27,6 +27,10 @@ generated: false
 
 La documentation est organisée par tâche et par public. Les concepts et procédures sont rédigés manuellement. Les inventaires qui dérivent du code sont générés dans [`reference/generated/`](reference/generated/README.md) et ne doivent pas être recopiés ailleurs.
 
+## Accès depuis le back-office
+
+Dans le back-office, les profils autorisés consultent les documents Markdown depuis le menu principal **Actifs > Docs**. La liste est filtrée selon les permissions du profil connecté ; les panneaux individuels ne contiennent pas de liens directs vers la documentation.
+
 ## Espaces documentaires
 
 | Besoin | Espace canonique |

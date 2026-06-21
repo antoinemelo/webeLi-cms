@@ -15,6 +15,7 @@ use App\Application\Api\Admin\ContentEntryApiController;
 use App\Application\Api\Admin\ContentRevisionApiController;
 use App\Application\Api\Admin\ConfigurationApiController;
 use App\Application\Api\Admin\CookieConsentApiController;
+use App\Application\Api\Admin\DocsApiController;
 use App\Application\Api\Admin\ContentTypeApiController;
 use App\Application\Api\Admin\MediaApiController;
 use App\Application\Api\Admin\MaintenanceApiController;
@@ -355,6 +356,7 @@ final class App
             TaxonomyApiController::class => new TaxonomyApiController($this->request, $services->sites(), $services->taxonomies(), $services->auth(), $services->authorization()),
             MenuApiController::class => new MenuApiController($this->request, $services->menus(), $services->sites(), $services->auth(), $services->authorization()),
             MediaApiController::class => new MediaApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->logger()),
+            DocsApiController::class => new DocsApiController($this->request, $services->sites(), $services->auth()),
             MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline()),
             FormApiController::class => new FormApiController($this->request, $services->forms(), $services->sites(), $services->auth(), $services->authorization()),
             CookieConsentApiController::class => new CookieConsentApiController($this->request, $services->cookies(), $services->sites(), $services->auth(), $services->authorization()),

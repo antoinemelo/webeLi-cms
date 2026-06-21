@@ -40,7 +40,7 @@ Téléverser, classer et documenter les médias. La procédure décrit uniquemen
 un format et une taille acceptés par la configuration
 ## Procédure
 
-1. Ouvrez la médiathèque dans le bon site.
+1. Ouvrez **Actifs > Médias** dans le bon site.
 2. Créez ou choisissez un dossier, puis téléversez le fichier.
 3. Renseignez un nom compréhensible, le texte alternatif, la légende et les informations utiles.
 4. Attachez le média au contenu depuis le champ ou le bloc prévu.

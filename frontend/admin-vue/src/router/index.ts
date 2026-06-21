@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import DashboardView from '@/views/DashboardView.vue';
 import MediaLibraryView from '@/views/content/MediaLibraryView.vue';
+import DocsView from '@/views/assets/DocsView.vue';
 import ContentListView from '@/views/content/ContentListView.vue';
 import ContentEditorView from '@/views/content/ContentEditorView.vue';
 import MenusView from '@/views/content/MenusView.vue';
@@ -64,6 +65,7 @@ export const router = createRouter({
     { path: '/contents/:typeKey/new', name: 'content-new', component: ContentEditorView, props: true },
     { path: '/contents/:typeKey/:id', name: 'content-edit', component: ContentEditorView, props: true },
     { path: '/media', name: 'media-library', component: MediaLibraryView },
+    { path: '/docs', name: 'docs', component: DocsView },
     { path: '/forms', name: 'forms', component: FormsView },
     { path: '/modules', name: 'modules', component: ModulesView },
     { path: '/modules/ai-assistant/config', name: 'ai-assistant-config', component: AiAssistantConfigView },

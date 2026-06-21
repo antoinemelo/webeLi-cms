@@ -47,5 +47,6 @@ Le guide suit les parcours du back-office. Les menus visibles dépendent du rôl
 ## Compte et dépannage
 
 - [Connexion, profil et contexte](getting-started/sign-in-profile-context.md)
+- [Consulter la documentation dans le back-office](getting-started/backoffice-docs.md)
 - [Sécurité du compte et 2FA](getting-started/account-security-2fa.md)
 - [Dépannage utilisateur](troubleshooting.md)

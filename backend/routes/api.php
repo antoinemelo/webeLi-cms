@@ -176,6 +176,8 @@ return [
     ['DELETE', '/admin/api/forms/{id}', 'App\Application\Api\Admin\FormApiController@destroy'],
     ['GET', '/admin/api/forms/{id}/submissions', 'App\Application\Api\Admin\FormApiController@submissions'],
     ['GET', '/admin/api/forms/{id}/export.csv', 'App\Application\Api\Admin\FormApiController@exportCsv'],
+    ['GET', '/admin/api/docs', 'App\Application\Api\Admin\DocsApiController@index'],
+    ['GET', '/admin/api/docs/{id:[A-Za-z0-9._~-]+}', 'App\Application\Api\Admin\DocsApiController@show'],
     ['GET', '/admin/api/media', 'App\Application\Api\Admin\MediaApiController@index'],
     ['POST', '/admin/api/media', 'App\Application\Api\Admin\MediaApiController@store'],
     ['GET', '/admin/api/media/folders', 'App\Application\Api\Admin\MediaApiController@folders'],

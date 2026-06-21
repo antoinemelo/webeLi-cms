@@ -11,7 +11,7 @@ export type SectionLink = {
 };
 
 export type MainNavigationItem = {
-  key: 'dashboard' | 'studio' | 'modules' | 'media';
+  key: 'dashboard' | 'studio' | 'modules' | 'assets';
   label: string;
   route: string;
   permission?: PermissionKey;
@@ -59,11 +59,16 @@ export const dashboardLinks: SectionLink[] = [
   { label: 'Maintenance', route: '/maintenance', permission: 'maintenance.manage', hint: 'Cache, recherche, logs et audits.' }
 ];
 
+export const assetLinks: SectionLink[] = [
+  { label: 'Médias', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.' },
+  { label: 'Docs', route: '/docs', anyPermission: ['content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'media.read', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], hint: 'Documentation utile selon le rôle connecté.' }
+];
+
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
   { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage'], children: moduleWorkbenchLinks },
-  { key: 'media', label: 'Médias', route: '/media', permission: 'media.read' }
+  { key: 'assets', label: 'Actifs', route: '/media', anyPermission: ['media.read', 'content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], children: assetLinks }
 ];
 
 export type AdminSearchAction = SectionLink & {
@@ -89,7 +94,8 @@ export const adminSearchActions: AdminSearchAction[] = [
       searchAction(`${archive ? 'archives.' : ''}${plural}.create`, 'Créer', { label: archive ? `Créer une archive de ${plural}` : `Créer ${singular === 'article' ? 'un article' : 'une page'}`, route: `${link.route}/new`, permission: archive ? 'content.archive' : 'content.create', hint: archive ? `Ajouter une archive de ${plural}.` : `Ajouter ${singular === 'article' ? 'un article' : 'une page'}.` }, ['créer', 'ajouter', 'nouveau', singular, plural, archive ? 'archive' : ''])
     ];
   }),
-  searchAction('media.open', 'Médias', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload']),
+  searchAction('media.open', 'Actifs', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload', 'actifs']),
+  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', anyPermission: ['content.read', 'content.publish', 'content.approve', 'seo.read', 'seo.manage', 'media.read', 'settings.read', 'modules.read', 'users.read', 'roles.read', 'maintenance.manage', 'imports_exports.manage'], hint: 'Documentation utile selon le rôle connecté.' }, ['docs', 'documentation', 'guide', 'aide']),
   ...moduleWorkbenchLinks.map((link) => searchAction(`modules.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Modules', link, ['module', 'extension', 'métier', 'blueprint'])),
   ...structureLinks.map((link) => searchAction(`structure.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Structure', link, ['navigation', 'classement'])),
   searchAction('seo.audit', 'Qualité', { label: 'Audit SEO & IA', navLabel: 'Audit', route: '/seo/audit', permission: 'content.read', hint: 'Scores, problèmes et recommandations.' }, ['seo', 'ia', 'score', 'audit', 'recommandations']),
