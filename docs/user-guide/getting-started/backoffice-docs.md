@@ -7,7 +7,7 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.1
+version: 1.2
 last_verified: 2026-06-21
 source_of_truth: manual
 source_paths:
@@ -54,7 +54,7 @@ L’index `docs/user-guide/README.md` est réservé aux superadmins, car il agr�
 
 ## Lecture Markdown
 
-Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers d’autres fichiers Markdown restent navigables lorsque le document cible est aussi autorisé pour le profil connecté.
+Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers d’autres fichiers Markdown sont résolus côté serveur et restent navigables lorsque le document cible est aussi autorisé pour le profil connecté.
 
 ## Limites
 

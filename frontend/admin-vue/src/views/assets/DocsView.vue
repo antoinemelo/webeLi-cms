@@ -124,12 +124,23 @@ function normalizedDocLookupPath(path?: string): string {
   return (path || '').replace(/^docs\//, '');
 }
 
+function decodeHrefPath(href: string): string {
+  const clean = href.split('#')[0].split('?')[0].trim();
+  try {
+    return decodeURIComponent(clean);
+  } catch {
+    return clean;
+  }
+}
+
 function markdownHrefCandidates(href: string): string[] {
-  const cleanHref = href.split('#')[0].split('?')[0].trim();
+  const cleanHref = decodeHrefPath(href);
   if (!cleanHref || !current.value || cleanHref.startsWith('#')) return [];
   if (/^[a-z][a-z0-9+.-]*:/i.test(cleanHref)) return [];
 
   const explicitDocsPath = cleanHref.match(/(?:^|\/)docs\/(.+)$/);
+  if (cleanHref.startsWith('/') && !explicitDocsPath) return [];
+
   const currentPath = normalizedDocLookupPath(current.value.relative_path || current.value.source_path);
   const currentDirectory = currentPath.split('/').slice(0, -1).join('/');
   const resolved = explicitDocsPath
@@ -159,7 +170,7 @@ function documentIdForMarkdownHref(href: string): string {
   return documents.value.find((doc) => {
     const relativePath = normalizedDocLookupPath(doc.relative_path);
     const sourcePath = normalizedDocLookupPath(doc.source_path);
-    return candidates.includes(relativePath) || candidates.includes(sourcePath);
+    return candidates.includes(relativePath) || candidates.includes(sourcePath) || candidates.includes(doc.id);
   })?.id || '';
 }
 
@@ -168,7 +179,7 @@ function onMarkdownClick(event: MouseEvent): void {
   const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
   if (!anchor) return;
   const href = anchor.getAttribute('href') || '';
-  const docId = documentIdForMarkdownHref(href);
+  const docId = anchor.dataset.docId || documentIdForMarkdownHref(href);
   if (docId) {
     event.preventDefault();
     void selectDocument(docId);
@@ -223,7 +234,6 @@ onMounted(loadIndex);
             @click="selectDocument(doc.id)"
           >
             <strong>{{ doc.title }}</strong>
-            <small>{{ doc.source_path }}</small>
           </button>
         </div>
       </aside>
@@ -239,7 +249,6 @@ onMounted(loadIndex);
             <p class="eyebrow">{{ currentSection?.label || current.section_label }}</p>
             <h1>{{ current.title }}</h1>
             <div class="docs-meta-row">
-              <span v-if="current.audience_label" class="badge">{{ current.audience_label }}</span>
               <span v-if="labelForStatus(current.status)" class="badge">{{ labelForStatus(current.status) }}</span>
               <span v-if="current.last_verified" class="muted">Vérifié : {{ current.last_verified }}</span>
               <span class="muted">{{ current.source_path }}</span>

@@ -80,11 +80,13 @@ final class DocsApiController
         $source = (string) file_get_contents($absolute);
         [$frontMatter, $body] = $this->splitFrontMatter($source);
 
+        $html = $this->withResolvedMarkdownLinks(MarkdownRenderer::toHtml($body), $document, $documents);
+
         return Response::success([
             'document' => $document + [
                 'front_matter' => $frontMatter,
                 'markdown' => $body,
-                'html' => MarkdownRenderer::toHtml($body),
+                'html' => $html,
             ],
             'navigation' => $documents,
         ], 'admin.docs.show.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site), ['document_id' => $id]));
@@ -294,6 +296,142 @@ final class DocsApiController
         $id = str_replace('/README', '/index', $id);
         $id = str_replace('/', '~', $id);
         return preg_replace('/[^A-Za-z0-9._~-]+/', '-', $id) ?? $id;
+    }
+
+    /**
+     * Ajoute un identifiant de document aux liens Markdown internes déjà autorisés.
+     * Le viewer peut ainsi naviguer sans dépendre du chemin relatif rendu dans le HTML.
+     * Les liens vers des documents non autorisés ou absents restent inchangés et ne
+     * révèlent aucun identifiant côté client.
+     *
+     * @param array<string,mixed> $current
+     * @param list<array<string,mixed>> $documents
+     */
+    private function withResolvedMarkdownLinks(string $html, array $current, array $documents): string
+    {
+        $resolved = preg_replace_callback('/<a\s+href="([^"]*)"([^>]*)>(.*?)<\/a>/is', function (array $m) use ($current, $documents): string {
+            $href = html_entity_decode((string) $m[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $target = $this->documentForMarkdownHref($href, $current, $documents);
+            if ($target === null) {
+                return $m[0];
+            }
+
+            $title = '';
+            if (preg_match('/\stitle="([^"]*)"/i', (string) $m[2], $titleMatch)) {
+                $title = ' title="' . $this->escAttr(html_entity_decode((string) $titleMatch[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '"';
+            }
+
+            $id = (string) ($target['id'] ?? '');
+            return '<a href="#docs/' . $this->escAttr($id) . '" data-doc-id="' . $this->escAttr($id) . '" data-doc-path="' . $this->escAttr((string) ($target['source_path'] ?? '')) . '"' . $title . '>' . $m[3] . '</a>';
+        }, $html);
+
+        return is_string($resolved) ? $resolved : $html;
+    }
+
+    /**
+     * @param array<string,mixed> $current
+     * @param list<array<string,mixed>> $documents
+     * @return array<string,mixed>|null
+     */
+    private function documentForMarkdownHref(string $href, array $current, array $documents): ?array
+    {
+        $candidates = $this->markdownHrefCandidates($href, $current);
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($documents as $document) {
+            $relative = $this->normalizedDocLookupPath((string) ($document['relative_path'] ?? ''));
+            $source = $this->normalizedDocLookupPath((string) ($document['source_path'] ?? ''));
+            $id = (string) ($document['id'] ?? '');
+            if (in_array($relative, $candidates, true) || in_array($source, $candidates, true) || in_array($id, $candidates, true)) {
+                return $document;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<string,mixed> $current @return list<string> */
+    private function markdownHrefCandidates(string $href, array $current): array
+    {
+        $clean = trim(explode('#', explode('?', $href, 2)[0], 2)[0]);
+        if ($clean === '' || str_starts_with($clean, '#')) {
+            return [];
+        }
+        $decoded = rawurldecode($clean);
+        if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $decoded)) {
+            return [];
+        }
+
+        $explicitDocsPath = null;
+        if (preg_match('~(?:^|/)docs/(.+)$~', $decoded, $m)) {
+            $explicitDocsPath = $m[1];
+        }
+        if (str_starts_with($decoded, '/') && $explicitDocsPath === null) {
+            return [];
+        }
+
+        $currentPath = $this->normalizedDocLookupPath((string) ($current['relative_path'] ?? $current['source_path'] ?? ''));
+        $currentDirectory = dirname($currentPath);
+        if ($currentDirectory === '.' || $currentDirectory === '\\') {
+            $currentDirectory = '';
+        }
+
+        if ($explicitDocsPath !== null) {
+            $resolved = $explicitDocsPath;
+        } elseif (str_starts_with($decoded, 'docs/')) {
+            $resolved = substr($decoded, 5);
+        } else {
+            $resolved = $this->normalizeDocPath(trim($currentDirectory . '/' . $decoded, '/'));
+        }
+
+        $base = str_ends_with($resolved, '/') ? $resolved . 'README.md' : $resolved;
+        $items = [
+            $base,
+            preg_replace('~^docs/~', '', $base) ?? $base,
+            preg_replace('~/index\.md$~i', '/README.md', $base) ?? $base,
+        ];
+
+        if (!preg_match('/\.md$/i', $base)) {
+            $items[] = $base . '.md';
+            $items[] = rtrim($base, '/') . '/README.md';
+        }
+
+        $normalized = [];
+        foreach ($items as $item) {
+            $value = $this->normalizedDocLookupPath($item);
+            if ($value !== '' && !in_array($value, $normalized, true)) {
+                $normalized[] = $value;
+            }
+        }
+        return $normalized;
+    }
+
+    private function normalizeDocPath(string $path): string
+    {
+        $output = [];
+        foreach (explode('/', str_replace('\\', '/', $path)) as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                array_pop($output);
+                continue;
+            }
+            $output[] = $part;
+        }
+        return implode('/', $output);
+    }
+
+    private function normalizedDocLookupPath(string $path): string
+    {
+        return preg_replace('~^docs/~', '', $this->normalizeDocPath($path)) ?? $path;
+    }
+
+    private function escAttr(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function docsRoot(): string
