@@ -4,7 +4,7 @@ audience:
   - editor
   - publisher
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - backend/src
@@ -36,6 +36,8 @@ Ouvrez un contenu dans le bon site et la bonne langue. Le formulaire affiché d�
 ## Comprendre les trois niveaux
 
 Un **champ** contient une valeur précise, par exemple un titre, une date, une relation ou un média. Un **fieldset** regroupe plusieurs champs réutilisables. Un **bloc** est une unité de contenu ordonnée que l’on peut ajouter, déplacer, désactiver ou compléter séparément.
+
+Pour les pages et les articles natifs, la composition éditoriale se fait dans **Composition par blocs**. Il n’existe pas de champ séparé nommé « Blocs de contenu » à remplir : les blocs, le hero et le SEO disposent de leurs interfaces natives afin d’éviter les doublons et les formulaires ambigus.
 
 Les indications placées à côté des libellés décrivent le format attendu. Respectez-les avant d’enregistrer : elles proviennent du modèle de contenu et peuvent correspondre à une contrainte de publication.
 

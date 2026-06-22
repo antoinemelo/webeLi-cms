@@ -376,7 +376,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return [
             $this->preset('page_standard_seo', 'Page standard SEO', 'Page classique avec titre, slug, contenu et SEO explicite lorsque l’éditeur veut surcharger les fallbacks.', ['title','slug','seo_title','seo_description','canonical_url','robots','og_title','og_description','og_image']),
             $this->preset('editorial_article', 'Article éditorial', 'Article daté avec chapô, image sociale, auteur et SEO éditable sans obligation de dupliquer les valeurs Open Graph/Twitter.', ['title','slug','excerpt','hero_image','body','seo_title','seo_description','canonical_url','robots','og_image']),
-            $this->preset('light_landing_page', 'Landing page légère', 'Page marketing simple, orientée performance et conversion, avec builder et SEO explicite seulement si utile.', ['title','slug','hero_title','hero_text','blocks','seo_title','seo_description','canonical_url','robots','og_image']),
+            $this->preset('light_landing_page', 'Landing page légère', 'Page marketing simple, orientée performance et conversion. La composition et le SEO restent gérés par les éditeurs natifs.', ['title','slug','campaign_label','audience','cta_label','cta_url']),
             $this->preset('reusable_block', 'Bloc réutilisable', 'Fragment éditorial stable réutilisable dans un builder léger, sans routage ni SEO public propre.', ['title','handle','body','media']),
             $this->preset('structured_collection', 'Collection structurée', 'Fiche ou élément de catalogue exposable en HTML natif et API headless, avec SEO explicite ou calculé.', ['title','slug','summary','attributes','seo_title','seo_description','canonical_url','robots']),
         ];
