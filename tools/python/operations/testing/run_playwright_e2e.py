@@ -129,6 +129,8 @@ def create_php_router(instance: Path) -> Path:
         "$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';\n"
         "$file = __DIR__ . '/' . ltrim($path, '/');\n"
         "if ($path !== '/' && is_file($file)) { return false; }\n"
+        "$_SERVER['SCRIPT_NAME'] = '/index.php';\n"
+        "$_SERVER['PHP_SELF'] = '/index.php';\n"
         "require __DIR__ . '/index.php';\n",
         encoding="utf-8",
     )

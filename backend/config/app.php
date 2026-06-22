@@ -74,6 +74,7 @@ return [
         'default_scope' => env('APP_PUBLIC_API_AUTH_DEFAULT_SCOPE', 'content:read'),
         'public_paths' => [
             '#^/api/v1/health$#',
+            '#^/api/v1/openapi\.(?:json|yaml)$#',
         ],
         'protected_paths' => [
             '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media)(?:/|$)#',

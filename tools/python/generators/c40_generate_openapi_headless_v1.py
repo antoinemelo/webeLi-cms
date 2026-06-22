@@ -187,7 +187,7 @@ def collect_operations(contracts: list[tuple[Path, dict[str, Any]]]) -> list[dic
                     continue
                 method = str(method_item.get("method", "GET")).upper()
                 path = str(method_item.get("path", ""))
-                if not path.startswith("/api/v1/"):
+                if not (path == "/api/v1" or path.startswith("/api/v1/")):
                     continue
                 operations.append({
                     "method": method,
@@ -203,7 +203,7 @@ def collect_operations(contracts: list[tuple[Path, dict[str, Any]]]) -> list[dic
         if isinstance(contract.get("paths"), list):
             paths.extend(str(item) for item in contract["paths"] if isinstance(item, str))
         for path in paths:
-            if path.startswith("/api/v1/"):
+            if path == "/api/v1" or path.startswith("/api/v1/"):
                 operations.append({
                     "method": method,
                     "path": path,
@@ -358,7 +358,7 @@ def build_openapi(contracts: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any
         method = operation["method"].lower()
         path = operation["path"]
         runtime_contract = str(operation.get("runtime_contract") or contract.get("contract") or "")
-        if "/admin" in path or not path.startswith("/api/v1/"):
+        if "/admin" in path or not (path == "/api/v1" or path.startswith("/api/v1/")):
             continue
         component_name = COMPONENT_BY_RUNTIME_CONTRACT.get(runtime_contract)
         schema = {"$ref": f"#/components/schemas/{component_name}"} if component_name else extract_response_schema(contract, runtime_contract)
@@ -368,12 +368,14 @@ def build_openapi(contracts: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any
         for err in contract.get("errors", []):
             if isinstance(err, dict) and isinstance(err.get("status"), int):
                 responses[str(err["status"])] = error_response(int(err["status"]), str(err.get("description", "")))
+        security_description = str(contract.get("security") or "").lower()
+        operation_security = [] if "no bearer" in security_description or "public endpoint" in security_description else [{"BearerAuth": []}]
         paths.setdefault(path, {})[method] = {
             "operationId": operation_id(method, path, runtime_contract),
             "summary": str(contract.get("summary") or runtime_contract),
             "description": str(contract.get("description") or contract.get("summary") or ""),
             "tags": ["Headless v1"],
-            "security": [{"BearerAuth": []}],
+            "security": operation_security,
             "parameters": operation_parameters(contract, path),
             "responses": responses,
         }

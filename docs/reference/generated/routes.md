@@ -135,6 +135,7 @@ generated: true
 | `GET` | `/admin/forgot-password` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/login` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/reset-password` | API administrative | `backend/routes/admin.php` |
+| `GET` | `/api/v1` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content-by-path` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content/{type}` | API publique | `backend/routes/api.php` |
@@ -149,6 +150,8 @@ generated: true
 | `GET` | `/api/v1/menus/{key}` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/modules/forms/forms/schema` | API publique | `backend/src/Modules/Forms/FormsModuleProvider.php` |
 | `GET` | `/api/v1/modules/{module}/{resource}/schema` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/openapi.json` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/openapi.yaml` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/route` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/routes` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/search` | API publique | `backend/routes/api.php` |

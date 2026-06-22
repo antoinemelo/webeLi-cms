@@ -20,6 +20,10 @@ test.describe('webhook management', () => {
     const webhooksTab = page.getByRole('button', { name: 'Webhooks', exact: true });
     await expect(webhooksTab).toBeVisible();
     await webhooksTab.click();
+    const headlessHelp = page.locator('.amcms-headless-docs');
+    await expect(headlessHelp.getByRole('link', { name: 'Documentation', exact: true })).toHaveCount(0);
+    await expect(headlessHelp.getByRole('link', { name: 'OpenAPI v1 JSON', exact: true })).toHaveAttribute('href', /\/api\/v1\/openapi\.json$/);
+    await expect(headlessHelp.getByRole('link', { name: 'OpenAPI v1 YAML', exact: true })).toHaveAttribute('href', /\/api\/v1\/openapi\.yaml$/);
 
     const createForm = page.locator('[data-webhook-form]');
     await expect(createForm).toBeVisible();
@@ -48,10 +52,37 @@ test.describe('webhook management', () => {
     page.once('dialog', (dialog) => dialog.accept());
     await row.getByRole('button', { name: 'Supprimer', exact: true }).click();
     await expect(page.locator('.amcms-security-row').filter({ hasText: webhookName })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Relations', exact: true }).click();
+    const corsHelp = page.locator('[data-amcms-cors-relations]');
+    await expect(corsHelp).toBeVisible();
+    await expect(corsHelp.getByRole('link', { name: 'Documentation', exact: true })).toHaveCount(0);
+    await expect(corsHelp.getByRole('link', { name: 'OpenAPI v1 JSON', exact: true })).toHaveAttribute('href', /\/api\/v1\/openapi\.json$/);
+    await expect(corsHelp.getByRole('link', { name: 'OpenAPI v1 YAML', exact: true })).toHaveAttribute('href', /\/api\/v1\/openapi\.yaml$/);
+    await expect(corsHelp.getByRole('link', { name: /\/api\/v1$/, exact: true })).toHaveAttribute('href', /\/api\/v1$/);
   });
 
   test('direct API call without authentication is forbidden', async ({ request }) => {
     const response = await request.post('/admin/api/security/webhooks/1/ping');
     expect([401, 403]).toContain(response.status());
+  });
+
+  test('public API discovery and OpenAPI specifications are directly accessible', async ({ request }) => {
+    const discovery = await request.get('/api/v1');
+    expect(discovery.status()).toBe(200);
+    const payload = await discovery.json();
+    expect(payload.meta.contract).toBe('public.discovery.v1');
+    expect(payload.data.openapi.json).toBe('/api/v1/openapi.json');
+    expect(payload.data.openapi.yaml).toBe('/api/v1/openapi.yaml');
+
+    const json = await request.get('/api/v1/openapi.json');
+    expect(json.status()).toBe(200);
+    expect(json.headers()['content-type']).toContain('application/json');
+    expect((await json.json()).openapi).toBe('3.1.0');
+
+    const yaml = await request.get('/api/v1/openapi.yaml');
+    expect(yaml.status()).toBe(200);
+    expect(yaml.headers()['content-type']).toContain('application/yaml');
+    expect(await yaml.text()).toMatch(/openapi:\s+["']?3\.1\.0/);
   });
 });

@@ -1,6 +1,9 @@
 <?php
 
 return [
+    ['GET', '/api/v1', 'App\Application\Frontend\PublicApiDocsController@discovery'],
+    ['GET', '/api/v1/openapi.json', 'App\Application\Frontend\PublicApiDocsController@openApiJson'],
+    ['GET', '/api/v1/openapi.yaml', 'App\Application\Frontend\PublicApiDocsController@openApiYaml'],
     ['GET', '/api/v1/health', 'App\Application\Api\PublicHeadlessController@health'],
     ['GET', '/api/v1/route', 'App\Application\Api\PublicHeadlessController@byRoute'],
     ['GET', '/api/v1/content', 'App\Application\Api\PublicHeadlessController@contentIndex'],

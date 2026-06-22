@@ -50,6 +50,7 @@ class E2EHarnessTest(unittest.TestCase):
             source = router.read_text(encoding="utf-8")
             self.assertIn("is_file($file)", source)
             self.assertIn("return false", source)
+            self.assertIn("SCRIPT_NAME", source)
             self.assertIn("/index.php", source)
 
 

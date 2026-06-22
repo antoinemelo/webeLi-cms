@@ -182,13 +182,11 @@
     return `${location.origin}${pathBase}`.replace(/\/+$/, '');
   }
   function publicApiBaseUrl(siteId){ return absolutePublicPath('/api/v1', siteId); }
-  const PUBLIC_API_DOCS_INDEX = 'docs/public-api/index.html';
-  const PUBLIC_API_OPENAPI = 'docs/public-api/openapi.v1.json';
-  // Public API docs, OpenAPI and code examples are site-aware: a selected sub-site
-  // such as /mod/site_a must generate /mod/site_a/api/v1 and /mod/site_a/docs/public-api/*.
+  // Public API endpoints are site-aware: a selected sub-site such as /mod/site_a
+  // must generate /mod/site_a/api/v1 and /mod/site_a/api/v1/openapi.*.
   function publicDocsUrl(file='index.html', siteId){ return absolutePublicPath(`/docs/public-api/${file}`, siteId); }
-  function openApiUrl(siteId){ return publicDocsUrl('openapi.v1.json', siteId); }
-  function openApiYamlUrl(siteId){ return publicDocsUrl('openapi.v1.yaml', siteId); }
+  function openApiUrl(siteId){ return absolutePublicPath('/api/v1/openapi.json', siteId); }
+  function openApiYamlUrl(siteId){ return absolutePublicPath('/api/v1/openapi.yaml', siteId); }
   function selectedSiteKey(siteId){
     const site = selectedSite(siteId);
     return String(site?.site_key || site?.key || site?.slug || 'main');
@@ -203,7 +201,7 @@
     return `<div class="amcms-headless-code-card"><h4>${h(title)}</h4><pre class="amcms-headless-code"><code>${h(code)}</code></pre><div class="amcms-security-actions"><button type="button" class="amcms-security-btn" data-copy-snippet="${h(code)}">Copier</button></div></div>`;
   }
   function headlessDocLinksHtml(siteId){
-    return `<div class="amcms-headless-links"><a class="amcms-security-btn" href="${h(publicDocsUrl('index.html', siteId))}" target="_blank" rel="noopener">Documentation</a><a class="amcms-security-btn" href="${h(openApiUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 JSON</a><a class="amcms-security-btn" href="${h(openApiYamlUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 YAML</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-next/README.md', siteId))}" target="_blank" rel="noopener">Next</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-nuxt/README.md', siteId))}" target="_blank" rel="noopener">Nuxt</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-astro/README.md', siteId))}" target="_blank" rel="noopener">Astro</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-vanilla/README.md', siteId))}" target="_blank" rel="noopener">Vanilla</a></div>`;
+    return `<div class="amcms-headless-links"><a class="amcms-security-btn" href="${h(openApiUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 JSON</a><a class="amcms-security-btn" href="${h(openApiYamlUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 YAML</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-next/README.md', siteId))}" target="_blank" rel="noopener">Next</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-nuxt/README.md', siteId))}" target="_blank" rel="noopener">Nuxt</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-astro/README.md', siteId))}" target="_blank" rel="noopener">Astro</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-vanilla/README.md', siteId))}" target="_blank" rel="noopener">Vanilla</a></div>`;
   }
   function headlessIntroHtml(siteId, state){
     const apiUrl = publicApiBaseUrl(siteId);
@@ -255,7 +253,7 @@
     const cors = (state?.cors || []).find(c => Number(c.site_id) === Number(siteId)) || {origins:[]};
     const origins = Array.isArray(cors.origins) ? cors.origins : [];
     const originsHtml = origins.length ? origins.map(origin => `<li><code>${h(origin)}</code></li>`).join('') : '<li class="amcms-security-muted">Aucune origine spécifique configurée pour ce site.</li>';
-    return `<section data-amcms-cors-relations="1" class="amcms-security-card"><h3 class="amcms-security-title">CORS par site — API headless publique</h3><p class="amcms-security-muted">CORS indique quels domaines front-end ont le droit d’appeler l’API publique depuis un navigateur. Ajoutez ici les origines exactes de vos fronts, par exemple <code>https://www.example.ch</code>. Un token Bearer reste nécessaire si l’endpoint le demande.</p><div class="amcms-headless-note"><strong>Exposition publique</strong><br>Seuls les contenus publiés sont exposés par l’API headless v1. Les contenus brouillons, l’administration et les mutations publiques ne sont pas exposés.</div><h4>Origines CORS actuelles</h4><ul class="amcms-headless-inline-list">${originsHtml}</ul><div class="amcms-headless-kv"><strong>URL de base API</strong><code>${h(publicApiBaseUrl(siteId))}</code><strong>OpenAPI JSON</strong><code>${h(openApiUrl(siteId))}</code><strong>OpenAPI YAML</strong><code>${h(openApiYamlUrl(siteId))}</code></div>${headlessDocLinksHtml(siteId)}</section>`;
+    return `<section data-amcms-cors-relations="1" class="amcms-security-card"><h3 class="amcms-security-title">CORS par site — API headless publique</h3><p class="amcms-security-muted">CORS indique quels domaines front-end ont le droit d’appeler l’API publique depuis un navigateur. Ajoutez ici les origines exactes de vos fronts, par exemple <code>https://www.example.ch</code>. Un token Bearer reste nécessaire si l’endpoint le demande.</p><div class="amcms-headless-note"><strong>Exposition publique</strong><br>Seuls les contenus publiés sont exposés par l’API headless v1. Les contenus brouillons, l’administration et les mutations publiques ne sont pas exposés.</div><h4>Origines CORS actuelles</h4><ul class="amcms-headless-inline-list">${originsHtml}</ul><div class="amcms-headless-kv"><strong>URL de base API</strong><a href="${h(publicApiBaseUrl(siteId))}" target="_blank" rel="noopener"><code>${h(publicApiBaseUrl(siteId))}</code></a><strong>OpenAPI JSON</strong><code>${h(openApiUrl(siteId))}</code><strong>OpenAPI YAML</strong><code>${h(openApiYamlUrl(siteId))}</code></div>${headlessDocLinksHtml(siteId)}</section>`;
   }
 
   function injectStyles(){

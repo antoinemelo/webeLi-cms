@@ -6,6 +6,7 @@ $tests = [
     'unit/health_check_test.php',
     'unit/editorial_status_test.php',
     'unit/docs_access_test.php',
+    'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',
     'integration/webhook_repository_test.php',
     'integration/multisite_locale_test.php',

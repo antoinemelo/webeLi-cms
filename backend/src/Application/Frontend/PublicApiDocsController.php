@@ -32,6 +32,33 @@ final class PublicApiDocsController
         return $this->show('index.html');
     }
 
+    public function discovery(): Response
+    {
+        $base = url_path(current_site_base_path() . '/api/v1');
+        return Response::success([
+            'name' => 'DEC CMS Public Headless API',
+            'status' => 'available',
+            'base_path' => $base,
+            'health' => $base . '/health',
+            'openapi' => [
+                'json' => $base . '/openapi.json',
+                'yaml' => $base . '/openapi.yaml',
+            ],
+        ], 'public.discovery.v1', [], 200, [
+            'Cache-Control' => 'public, max-age=300',
+        ]);
+    }
+
+    public function openApiJson(): Response
+    {
+        return $this->show('openapi.v1.json');
+    }
+
+    public function openApiYaml(): Response
+    {
+        return $this->show('openapi.v1.yaml');
+    }
+
 
     public function example(string $example): Response
     {
