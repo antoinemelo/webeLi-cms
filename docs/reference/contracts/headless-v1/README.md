@@ -4,7 +4,7 @@ audience:
   - api-integrator
   - developer
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: contract
 owners:
   - api
@@ -55,6 +55,8 @@ Si `site` et `site_id` sont absents, le site est résolu comme le front public, 
 | `GET /api/v1/taxonomies/{taxonomy}` | `public.taxonomies.v1` | `public.taxonomies.show.v1` | Lire les termes publics localisés d’une taxonomie. |
 | `GET /api/v1/media` | `public.media.index.v1` | `public.media.index.v1` | Lister les médias prêts et validés. |
 | `GET /api/v1/media/{id}` | `public.media.show.v1` | `public.media.show.v1` | Lire un média prêt et validé avec variantes. |
+| `GET /api/v1/forms/{key}` | `public.forms.show.v1` | `public.forms.show.v1` | Lire un formulaire public actif. |
+| `POST /api/v1/forms/{key}/submit` | `public.forms.submit.v1` | `public.forms.submit.v1` | Valider et enregistrer une soumission publique. |
 | `GET /api/v1/modules/{module}/{resource}/schema` | `public.module_resource_schema.v1` | `public.module_resource_schema.v1` | Découvrir le schéma headless d’une ressource métier déclarée par un module actif. |
 | `GET /api/v1/content-by-path?path=/...` | `public.content.by_path.v1` | `public.content.by_path.v1` | Alias de compatibilité servi par `PublicHeadlessController::contentByPath`. |
 
@@ -88,6 +90,7 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 - Les brouillons, révisions de travail, documents de preview et routes admin ne font pas partie de cette surface.
 - Les erreurs ne doivent pas exposer de trace technique.
 - Les endpoints de lecture peuvent être protégés par Bearer token selon la configuration de sécurité existante.
+- Les endpoints publics de formulaires (`/api/v1/forms/{key}` et `/api/v1/forms/{key}/submit`) restent anonymes afin que le frontend public n’expose aucun secret applicatif.
 - Les scopes attendus restent : `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read` ou l’alias de compatibilité `headless:read`.
 
 ## Génération OpenAPI v1

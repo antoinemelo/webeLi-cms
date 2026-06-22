@@ -8,6 +8,7 @@ $tests = [
     'unit/docs_access_test.php',
     'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',
+    'integration/blueprint_designer_characterization_test.php',
     'integration/webhook_repository_test.php',
     'integration/multisite_locale_test.php',
     'integration/multisite_base_path_test.php',

@@ -55,7 +55,7 @@ return [
         'enabled' => $boolEnv('APP_PUBLIC_API_CORS_ENABLED', true),
         'allow_current_site_origin' => $boolEnv('APP_PUBLIC_API_CORS_ALLOW_CURRENT_SITE', true),
         'default_allowed_origins' => env('APP_PUBLIC_API_CORS_DEFAULT_ORIGINS', '[]'),
-        'allowed_methods' => ['GET', 'OPTIONS'],
+        'allowed_methods' => ['GET', 'POST', 'OPTIONS'],
         'allowed_headers' => ['Authorization', 'Content-Type', 'X-Requested-With'],
         'max_age' => (int) env('APP_PUBLIC_API_CORS_MAX_AGE', 600),
     ],
@@ -68,13 +68,16 @@ return [
 
     'public_api_auth' => [
         // Authentification headless stateless par Bearer token pour /api/v1/*.
-        // Indépendante des sessions admin. /api/v1/health reste public.
+        // Indépendante des sessions admin. Les endpoints techniques et les formulaires publics
+        // restent anonymes afin que le frontend ne doive jamais exposer un Bearer token.
         'enabled' => $boolEnv('APP_PUBLIC_API_AUTH_ENABLED', $isProduction),
         'protect_all_v1_by_default' => $boolEnv('APP_PUBLIC_API_AUTH_PROTECT_ALL', true),
         'default_scope' => env('APP_PUBLIC_API_AUTH_DEFAULT_SCOPE', 'content:read'),
         'public_paths' => [
             '#^/api/v1/health$#',
             '#^/api/v1/openapi\.(?:json|yaml)$#',
+            '#^/api/v1/forms/[a-z0-9_-]+$#',
+            '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
         ],
         'protected_paths' => [
             '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media)(?:/|$)#',

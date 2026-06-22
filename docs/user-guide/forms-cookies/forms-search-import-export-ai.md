@@ -5,7 +5,7 @@ audience:
   - publisher
   - seo
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - backend/src
@@ -38,6 +38,10 @@ modules correspondants activés et configurés
 ## Formulaires
 
 Créez le formulaire, définissez ses champs, publiez son schéma puis contrôlez les soumissions et l’export CSV. Les données collectées doivent respecter la politique de confidentialité de l’exploitant.
+
+Sur le site public, un bloc formulaire embarque explicitement les URLs API `GET /api/v1/forms/{key}` et `POST /api/v1/forms/{key}/submit` avec le bon base path du site. Ces deux endpoints restent accessibles sans Bearer token, même lorsque l’API headless de lecture est protégée : le navigateur public ne doit jamais exposer un secret applicatif.
+
+Si la page affiche « Le formulaire est momentanément indisponible. », vérifiez en priorité que le formulaire est actif/publié, que la clé du bloc correspond à la clé du formulaire, que l’URL API générée contient le bon préfixe d’installation et que l’endpoint ne renvoie pas `AUTH_REQUIRED`.
 
 ## Recherche
 

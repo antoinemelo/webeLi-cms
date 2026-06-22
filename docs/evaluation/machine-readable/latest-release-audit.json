@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "release_type": "minor",
-  "bound_at": "2026-06-22T04:49:57Z",
+  "bound_at": "2026-06-22T15:23:30Z",
   "audit_profile": "release",
   "audit_status": "PASS",
   "audit_steps_passed": 21,
-  "release_sha256": "04fe6be03cfee346c9a3189dea49e6a5c224649a4adc281a70e5005f77f5ebc8",
-  "evidence_sha256": "a388917665cd5471006e45c527a14d418369a63d488b4362c7b9e9994800a377",
+  "release_sha256": "9edec043f863bcd64e84ee9d4ba8d18b28249ef2b552fb337244d362d2bc1af7",
+  "evidence_sha256": "9637420f257e1c3cdeee8f23b2aa6d0bc7ba318caf824b64d4517fe0b4d7cb40",
   "policy": {
     "applies_to": [
       "minor",

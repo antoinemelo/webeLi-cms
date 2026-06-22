@@ -176,7 +176,9 @@
 {% elseif type == 'form' %}
   {% set form_key = data.form_key|default('') %}
   {% if form_key %}
-    <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} form-block form-block--{{ data.layout|default('default') }}" data-form-block="{{ form_key }}" data-form-started="{{ 'now'|date('U') }}">
+    {% set form_api_url = public_api_url('forms/' ~ (form_key|url_encode)) %}
+    {% set form_submit_url = public_api_url('forms/' ~ (form_key|url_encode) ~ '/submit') %}
+    <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} form-block form-block--{{ data.layout|default('default') }}" data-form-block="{{ form_key|e('html_attr') }}" data-form-started="{{ 'now'|date('U') }}" data-form-api-url="{{ form_api_url|e('html_attr') }}" data-form-submit-url="{{ form_submit_url|e('html_attr') }}">
       {% if data.title|default('') %}<h2{{ edit_title|raw }}>{{ data.title }}</h2>{% endif %}
       {% if data.intro|default('') %}<p{{ edit_lead|raw }}>{{ data.intro }}</p>{% endif %}
       <div class="form-block__mount" role="status">Chargement du formulaire…</div>

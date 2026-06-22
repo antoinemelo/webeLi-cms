@@ -57,6 +57,13 @@ function current_site_base_path(): string
     return '/' . trim($basePath, '/');
 }
 
+function public_api_url_path(string $path = ''): string
+{
+    $path = trim($path);
+    $apiPath = '/api/v1' . ($path !== '' ? '/' . ltrim($path, '/') : '');
+    return url_path(current_site_base_path() . $apiPath);
+}
+
 function admin_url_path(string $path = '/admin/app'): string
 {
     return admin_url_path_for_site(current_site_base_path(), $path);

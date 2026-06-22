@@ -92,6 +92,8 @@ final class StaticFormRenderer
 
         $attrs = preg_replace('/\sdata-form-block=("|\')[^"\']+\1/i', '', $attrs) ?? $attrs;
         $attrs = preg_replace('/\sdata-form-started=("|\')[^"\']*\1/i', '', $attrs) ?? $attrs;
+        $attrs = preg_replace('/\sdata-form-api-url=("|\')[^"\']*\1/i', '', $attrs) ?? $attrs;
+        $attrs = preg_replace('/\sdata-form-submit-url=("|\')[^"\']*\1/i', '', $attrs) ?? $attrs;
         $attrs .= ' data-static-form-block=' . $quote . $this->e($key) . $quote;
 
         if (preg_match('#<div\b([^>]*\bclass=("|\')[^"\']*\bform-block__mount\b[^"\']*\2[^>]*)>.*?</div>#is', $inner)) {

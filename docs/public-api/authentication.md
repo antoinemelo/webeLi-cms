@@ -3,7 +3,7 @@ title: Authentification API headless v1
 audience:
   - api-integrator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: contract
 owners:
   - api
@@ -36,6 +36,19 @@ const response = await fetch('https://example.com/mod/site_a/api/v1/content?site
   }
 });
 ```
+
+## Endpoints publics sans Bearer
+
+Même lorsque `APP_PUBLIC_API_AUTH_ENABLED=1` et `APP_PUBLIC_API_AUTH_PROTECT_ALL=1`, certains endpoints restent volontairement anonymes :
+
+| Endpoint | Rôle |
+|---|---|
+| `GET /api/v1/health` | Vérification technique minimale. |
+| `GET /api/v1/openapi.json` / `GET /api/v1/openapi.yaml` | Contrat public de l’API. |
+| `GET /api/v1/forms/{key}` | Lecture d’un formulaire publié affiché sur une page publique. |
+| `POST /api/v1/forms/{key}/submit` | Soumission d’un formulaire public. |
+
+Les formulaires publics ne doivent pas demander de Bearer token au navigateur : un token exposé dans le JavaScript public ne serait plus secret. Ils restent contrôlés par le contexte site/langue, les règles de publication, le CORS, le rate-limit, le honeypot, le délai anti-spam et la validation serveur.
 
 ## Scopes reconnus
 

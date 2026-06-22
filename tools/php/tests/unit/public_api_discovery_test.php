@@ -11,9 +11,10 @@ $h = new TestHarness();
 $routes = require base_path('backend/routes/api.php');
 $router = new Router();
 
-foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml'] as $path) {
+foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/forms/contact'] as $path) {
     $h->assertTrue($router->match('GET', $path, $routes) !== null, 'public API route is registered: ' . $path);
 }
+$h->assertTrue($router->match('POST', '/api/v1/forms/contact/submit', $routes) !== null, 'public API route is registered: /api/v1/forms/contact/submit');
 
 $controller = new PublicApiDocsController();
 $discovery = $controller->discovery();
@@ -43,7 +44,7 @@ $h->assertTrue(str_contains($yaml->body(), 'openapi: "3.1.0"'), 'OpenAPI YAML pa
 
 $config = require base_path('backend/config/app.php');
 $publicPatterns = $config['public_api_auth']['public_paths'] ?? [];
-foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml'] as $path) {
+foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/forms/contact', '/api/v1/forms/contact/submit'] as $path) {
     $public = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, $path) === 1);
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }

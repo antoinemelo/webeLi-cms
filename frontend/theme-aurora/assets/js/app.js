@@ -147,26 +147,40 @@ document.addEventListener('click', (event) => {
   }
 
   function basePath() {
-    const script = document.currentScript || Array.from(document.scripts).find((item) => item.src && (item.src.includes('/frontend/theme-aurora/assets/js/app.js') || item.src.includes('/frontend/theme-default/assets/js/app.js')));
-    if (!script || !script.src) return '';
-    try {
-      const path = new URL(script.src, window.location.origin).pathname;
-      const markers = ['/frontend/theme-aurora/assets/js/app.js', '/frontend/theme-default/assets/js/app.js'];
-      for (const marker of markers) {
-        const index = path.indexOf(marker);
-        if (index > 0) return path.slice(0, index);
-      }
-      return '';
-    } catch {
-      return '';
+    const scripts = [document.currentScript, ...Array.from(document.scripts)].filter((item) => item && item.src);
+    const markers = [
+      '/frontend/theme-default/assets/js/app.js',
+      '/frontend/theme-aurora/assets/js/app.js',
+      '/frontend/theme-pulse/assets/js/app.js',
+      '/assets/theme-default/js/app.js',
+      '/assets/theme-aurora/js/app.js',
+      '/assets/theme-pulse/js/app.js',
+      '/assets/js/app.js',
+    ];
+    for (const script of scripts) {
+      try {
+        const path = new URL(script.src, window.location.origin).pathname;
+        for (const marker of markers) {
+          const index = path.indexOf(marker);
+          if (index > 0) return path.slice(0, index);
+        }
+      } catch {}
     }
+    return '';
   }
 
   const publicBasePath = basePath();
 
-  function apiPath(key, submit) {
+  function withLang(url) {
     const lang = document.documentElement.lang || 'fr';
-    return `${publicBasePath}/api/v1/forms/${encodeURIComponent(key)}${submit ? '/submit' : ''}?lang=${encodeURIComponent(lang)}`;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}lang=${encodeURIComponent(lang)}`;
+  }
+
+  function apiPath(block, key, submit) {
+    const direct = submit ? block.dataset.formSubmitUrl : block.dataset.formApiUrl;
+    if (direct) return withLang(direct);
+    return withLang(`${publicBasePath}/api/v1/forms/${encodeURIComponent(key)}${submit ? '/submit' : ''}`);
   }
 
   function inputHtml(field) {
@@ -191,8 +205,9 @@ document.addEventListener('click', (event) => {
     const mount = block.querySelector('.form-block__mount');
     if (!key || !mount) return;
     try {
-      const response = await fetch(apiPath(key, false), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      const response = await fetch(apiPath(block, key, false), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
       const payload = await response.json();
+      if (!response.ok || !payload?.data?.form) throw new Error('FORM_UNAVAILABLE');
       const form = payload.data.form;
       mount.innerHTML = `<form class="native-form" novalidate><input type="hidden" name="_started_at" value="${esc(block.dataset.formStarted || Math.floor(Date.now()/1000))}"><input class="form-hp" type="text" name="${esc(form.honeypot_field || 'website')}" tabindex="-1" autocomplete="off" aria-hidden="true"><div class="form-grid">${form.fields.map(inputHtml).join('')}</div><p class="form-message" data-form-message></p><button class="btn btn--primary" type="submit">${esc(form.submit_label || 'Envoyer')}</button></form>`;
       const formEl = mount.querySelector('form');
@@ -209,7 +224,7 @@ document.addEventListener('click', (event) => {
         const submit = formEl.querySelector('button[type="submit"]');
         submit.disabled = true;
         try {
-          const res = await fetch(apiPath(key, true), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ data: values }) });
+          const res = await fetch(apiPath(block, key, true), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ data: values }) });
           const out = await res.json();
           if (!res.ok || out.error) {
             const fields = out.error?.fields || {};

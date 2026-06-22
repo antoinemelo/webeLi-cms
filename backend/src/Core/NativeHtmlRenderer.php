@@ -514,7 +514,17 @@ HTML;
         if ($key === '') { return ''; }
         $title = self::esc((string) ($data['title'] ?? ''));
         $intro = self::esc((string) ($data['intro'] ?? ''));
-        $html = '<section' . $id . $classAttr . ' data-form-block="' . self::esc($key) . '" data-form-started="' . time() . '">';
+        $apiUrl = function_exists('public_api_url_path')
+            ? public_api_url_path('forms/' . rawurlencode($key))
+            : url_path('/api/v1/forms/' . rawurlencode($key));
+        $submitUrl = function_exists('public_api_url_path')
+            ? public_api_url_path('forms/' . rawurlencode($key) . '/submit')
+            : url_path('/api/v1/forms/' . rawurlencode($key) . '/submit');
+        $html = '<section' . $id . $classAttr
+            . ' data-form-block="' . self::esc($key) . '"'
+            . ' data-form-started="' . time() . '"'
+            . ' data-form-api-url="' . self::esc($apiUrl) . '"'
+            . ' data-form-submit-url="' . self::esc($submitUrl) . '">';
         if ($title !== '') { $html .= '<h2>' . $title . '</h2>'; }
         if ($intro !== '') { $html .= '<p>' . $intro . '</p>'; }
         return $html . '<div class="form-block__mount" role="status">Chargement du formulaire…</div></section>';
