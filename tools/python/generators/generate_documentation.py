@@ -29,24 +29,12 @@ def is_generated_scan_excluded(path: Path) -> bool:
     return any(part in GENERATED_SCAN_EXCLUDED_PARTS for part in path.relative_to(ROOT).parts)
 
 
-def release_metadata() -> dict:
-    path = ROOT / "config" / "release.json"
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"technical_version": "unknown"}
-
-
-RELEASE = release_metadata()
-VERSION = str(RELEASE.get("technical_version", "unknown"))
-
-
 def header(name: str) -> str:
     return (
         "---\n"
         f"title: {name}\n"
         "audience:\n  - developer\n  - installer\n  - evaluator\n"
-        "status: stable\nversion: 1.0\n"
+        "status: stable\n"
         "source_of_truth: generated\n"
         "generator: tools/python/generators/generate_documentation.py\n"
         "owners:\n  - core\n"

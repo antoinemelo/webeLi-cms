@@ -5,7 +5,6 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
@@ -26,7 +25,7 @@ generated: false
 
 ## Résultat attendu
 
-Réviser et publier un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Réviser et publier un contenu.
 
 ## Public et droits
 

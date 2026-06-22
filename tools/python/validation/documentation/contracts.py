@@ -142,6 +142,8 @@ def validate(mode: str = "fast") -> ValidationReport:
                 report.add("DOC-004", "Page générée sans générateur déclaré", path=rel)
             if "permissions" in meta:
                 report.add("DOC-010", "La documentation ne doit déclarer aucune règle d’accès", path=rel)
+            if "version" in meta:
+                report.add("DOC-011", "La documentation ne doit pas être rattachée à une version spécifique", path=rel)
 
         for raw in LINK_RE.findall(text):
             target = raw.split("#", 1)[0].strip()
@@ -173,6 +175,14 @@ def validate(mode: str = "fast") -> ValidationReport:
             report.checked()
             if rule in controller_source:
                 report.add("DOC-010", "Ancienne règle d’accès documentaire encore présente", path=str(controller_path.relative_to(ROOT)), rule=rule)
+
+    for path in sorted((ROOT / "docs").rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".json", ".yaml", ".yml", ".html"}:
+            continue
+        report.checked()
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if re.search(r"\bdec_v\d", text, flags=re.I):
+            report.add("DOC-011", "Identifiant de release spécifique présent dans la documentation", path=path.relative_to(ROOT).as_posix())
 
     available = _available_cli_commands()
     report.checked()

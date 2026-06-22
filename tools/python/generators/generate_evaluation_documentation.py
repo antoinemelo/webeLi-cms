@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = evidence_record(
         "cms-evaluation-manifest", status="supported", source=["backend/composer.json", "frontend/admin-vue/package.json", "database/", "tools/cms.py", "docs/evaluation/"], confidence="high",
         limitations=["Generated inventories prove source presence and structure, not complete end-to-end usability."],
-        product_name="DEC CMS", evaluated_version=git_value("describe", "--tags", "--always") or "working-tree", generated_at=DATE,
+        product_name="DEC CMS", generated_at=DATE,
         commit=git_value("rev-parse", "HEAD"), dirty=(git_value("status", "--porcelain") not in (None, "")),
         scope=["runtime", "backoffice", "public-api", "databases", "python-tooling", "documentation", "release"],
         technologies=["PHP 8.2+", "Twig 3", "Vue 3", "TypeScript", "Pinia", "Vite", "SQLite", "Python 3"],

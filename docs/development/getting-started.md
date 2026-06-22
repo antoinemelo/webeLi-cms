@@ -3,7 +3,6 @@ title: Préparer l’environnement de développement
 audience:
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: code
 owners:

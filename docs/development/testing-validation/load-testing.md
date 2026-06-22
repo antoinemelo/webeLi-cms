@@ -5,7 +5,6 @@ audience:
   - operator
   - evaluator
 status: stable
-version: 1.0
 last_verified: 2026-06-18
 source_of_truth: code
 source_paths:

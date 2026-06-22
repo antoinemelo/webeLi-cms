@@ -72,11 +72,9 @@ audience:
   - administrator
   - developer
 status: stable
-version: 1.0
 last_verified: {verified_on}
 source_of_truth: generated
 source_paths:
-  - storage/exports/{manifest['technical_version']}/{manifest['technical_version']}.release-evidence.json
   - tools/python/operations/deployment/d13_bind_release_evidence.py
 owners:
   - core
@@ -87,29 +85,31 @@ generator: tools/python/operations/deployment/d13_bind_release_evidence.py
 
 Ce document est généré automatiquement pour une release **mineure ou majeure**. Les patchs ne déclenchent pas ce processus et conservent la qualification locale standard.
 
-- Version : `{manifest['technical_version']}`
 - Type : `{manifest['release_type']}`
-- Nom : {manifest['release_name']}
 - Audit : `{manifest['audit_status']}`
 - Profil : `{manifest['audit_profile']}`
 - Date UTC : `{manifest['bound_at']}`
-- Archive de release : `{manifest['release_archive']}`
 - SHA-256 release : `{manifest['release_sha256']}`
-- Archive de preuves : `{manifest['evidence_archive']}`
 - SHA-256 preuves : `{manifest['evidence_sha256']}`
 - Étapes démontrées : {manifest['audit_steps_passed']}
 
 ## Vérification indépendante
 
-Depuis le dossier contenant les artefacts :
-
-```bash
-sha256sum -c {manifest['release_checksum_file']}
-sha256sum -c {manifest['evidence_checksum_file']}
-```
-
-L’archive de preuves reste séparée de l’archive exécutable. Le manifeste JSON associé permet de vérifier qu’elles appartiennent au même processus de livraison.
+L’archive de preuves reste séparée de l’archive exécutable. Utilisez les fichiers de sommes de contrôle livrés avec les artefacts ; le manifeste opérationnel associé permet de vérifier qu’ils appartiennent au même processus de livraison.
 """
+
+
+def documentation_manifest(manifest: dict) -> dict:
+    """Retire des références publiques les identifiants propres à une livraison."""
+    private_fields = {
+        "technical_version",
+        "release_name",
+        "release_archive",
+        "release_checksum_file",
+        "evidence_archive",
+        "evidence_checksum_file",
+    }
+    return {key: value for key, value in manifest.items() if key not in private_fields}
 
 
 def parse_args() -> argparse.Namespace:
@@ -191,7 +191,7 @@ def main() -> int:
     MACHINE_READABLE.mkdir(parents=True, exist_ok=True)
     latest_json = MACHINE_READABLE / "latest-release-audit.json"
     latest_md = DOC_EVALUATION / "latest-release-audit.md"
-    latest_json.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    latest_json.write_text(json.dumps(documentation_manifest(manifest), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     latest_md.write_text(markdown(manifest), encoding="utf-8")
 
     print(f"Release liée aux preuves: {release_archive}")

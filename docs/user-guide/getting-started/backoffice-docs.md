@@ -7,7 +7,6 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 2.0
 last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:

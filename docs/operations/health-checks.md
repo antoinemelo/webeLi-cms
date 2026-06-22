@@ -6,7 +6,6 @@ audience:
   - superadministrator
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-17
 source_of_truth: code
 source_paths:

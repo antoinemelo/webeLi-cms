@@ -6,11 +6,9 @@ audience:
   - administrator
   - developer
 status: stable
-version: 1.0
-last_verified: 2026-06-21
+last_verified: 2026-06-22
 source_of_truth: generated
 source_paths:
-  - storage/exports/dec_v07-e02a/dec_v07-e02a.release-evidence.json
   - tools/python/operations/deployment/d13_bind_release_evidence.py
 owners:
   - core
@@ -21,25 +19,14 @@ generator: tools/python/operations/deployment/d13_bind_release_evidence.py
 
 Ce document est généré automatiquement pour une release **mineure ou majeure**. Les patchs ne déclenchent pas ce processus et conservent la qualification locale standard.
 
-- Version : `dec_v07-e02a`
 - Type : `minor`
-- Nom : Beta
 - Audit : `PASS`
 - Profil : `release`
-- Date UTC : `2026-06-21T21:44:00Z`
-- Archive de release : `dec_v07-e02a.zip`
-- SHA-256 release : `78ab845729d21a072209f03e963caf4f511348d16c4ff4f27ca1b4bd414c4b7f`
-- Archive de preuves : `dec_v07-e02a-audit-evidence.zip`
-- SHA-256 preuves : `48d50d83ba9902439a851d3a6f3673d990be44f45f3dab20ee91d18562ca38b9`
+- Date UTC : `2026-06-22T04:49:57Z`
+- SHA-256 release : `04fe6be03cfee346c9a3189dea49e6a5c224649a4adc281a70e5005f77f5ebc8`
+- SHA-256 preuves : `a388917665cd5471006e45c527a14d418369a63d488b4362c7b9e9994800a377`
 - Étapes démontrées : 21
 
 ## Vérification indépendante
 
-Depuis le dossier contenant les artefacts :
-
-```bash
-sha256sum -c dec_v07-e02a.zip.sha256
-sha256sum -c dec_v07-e02a-audit-evidence.zip.sha256
-```
-
-L’archive de preuves reste séparée de l’archive exécutable. Le manifeste JSON associé permet de vérifier qu’elles appartiennent au même processus de livraison.
+L’archive de preuves reste séparée de l’archive exécutable. Utilisez les fichiers de sommes de contrôle livrés avec les artefacts ; le manifeste opérationnel associé permet de vérifier qu’ils appartiennent au même processus de livraison.

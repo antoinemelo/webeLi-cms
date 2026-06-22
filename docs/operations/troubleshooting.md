@@ -4,7 +4,6 @@ audience:
   - installer
   - superadministrator
 status: stable
-version: 1.2
 last_verified: 2026-06-15
 source_of_truth: procedure
 source_paths:

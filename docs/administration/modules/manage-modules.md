@@ -4,7 +4,6 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.1
 last_verified: 2026-06-20
 source_of_truth: code
 owners:
@@ -36,7 +35,7 @@ Le fichier `module.json` décrit le module. Il ne signifie pas que le module est
 
 ## Modules système
 
-Les modules Forms et AI Assistant sont présents dans cette version. Leur simple présence ne signifie pas qu'un fournisseur externe ou un transport est configuré.
+Les modules Forms et AI Assistant font partie des modules système disponibles. Leur simple présence ne signifie pas qu'un fournisseur externe ou un transport est configuré.
 
 Le noyau conserve la compatibilité avec `backend/config/modules.php`, tout en lisant les manifestes système suivants :
 

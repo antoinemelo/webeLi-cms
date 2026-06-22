@@ -4,7 +4,6 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.1
 last_verified: 2026-06-14
 source_of_truth: code
 source_paths:

@@ -3,7 +3,6 @@ title: Architecture du back-office
 audience:
   - developer
 status: stable
-version: 1.1
 last_verified: 2026-06-22
 source_of_truth: manual
 owners:

@@ -5,7 +5,6 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
@@ -25,7 +24,7 @@ generated: false
 
 ## Résultat attendu
 
-Résoudre les erreurs fréquentes du back-office. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Résoudre les erreurs fréquentes du back-office.
 
 ## Public et droits
 

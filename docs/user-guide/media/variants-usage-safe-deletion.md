@@ -5,7 +5,6 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
@@ -24,7 +23,7 @@ generated: false
 
 ## Résultat attendu
 
-Générer des variantes et supprimer un média sans casser un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Générer des variantes et supprimer un média sans casser un contenu.
 
 ## Public et droits
 
