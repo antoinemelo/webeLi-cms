@@ -460,11 +460,12 @@ final class SecurityAdminApiController
         );
 
         return array_map(function (array $r): array {
-            $basePath = $this->normalizeBasePath((string) ($r['base_path'] ?? ''));
+            $storedBasePath = $this->normalizeBasePath((string) ($r['base_path'] ?? ''));
             $host = $this->hostWithoutPort((string) ($r['host'] ?? ''));
             $scheme = in_array((string) ($r['scheme'] ?? 'https'), ['http', 'https'], true) ? (string) $r['scheme'] : 'https';
-            $requestBasePath = $this->requestBasePath($basePath);
-            $publicUrl = $host !== '' ? rtrim($scheme . '://' . $host . $basePath, '/') : '';
+            $requestBasePath = $this->requestBasePath($storedBasePath);
+            $publicBasePath = $this->publicBasePath($storedBasePath);
+            $publicUrl = $host !== '' ? rtrim($scheme . '://' . $host . $publicBasePath, '/') : '';
 
             return [
                 'id' => (int) $r['id'],
@@ -473,9 +474,9 @@ final class SecurityAdminApiController
                 'default_language_code' => (string) $r['default_language_code'],
                 'is_active' => (bool) $r['is_active'],
                 'host' => $host,
-                'base_path' => $basePath,
+                'base_path' => $publicBasePath,
                 'request_base_path' => $requestBasePath,
-                'public_path' => function_exists('url_path') ? url_path($requestBasePath === '' ? '/' : $requestBasePath . '/') : ($requestBasePath ?: '/'),
+                'public_path' => function_exists('url_path') ? url_path($requestBasePath === '' ? '/' : $requestBasePath . '/') : ($publicBasePath ?: '/'),
                 'public_url' => $publicUrl,
             ];
         }, $rows);
@@ -499,6 +500,22 @@ final class SecurityAdminApiController
             $basePath = substr($basePath, strlen($appBasePath)) ?: '';
         }
         return $this->normalizeBasePath($basePath);
+    }
+
+    private function publicBasePath(string $domainBasePath): string
+    {
+        $basePath = $this->normalizeBasePath($domainBasePath);
+        $appBasePath = $this->normalizeBasePath(function_exists('app_base_path') ? app_base_path() : '');
+        if ($appBasePath === '') {
+            return $basePath;
+        }
+        if ($basePath === '' || $basePath === '/') {
+            return $appBasePath;
+        }
+        if ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/')) {
+            return $basePath;
+        }
+        return $this->normalizeBasePath($appBasePath . '/' . ltrim($basePath, '/'));
     }
 
     private function hostWithoutPort(string $host): string

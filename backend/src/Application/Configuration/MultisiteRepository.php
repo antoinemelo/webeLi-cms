@@ -150,9 +150,14 @@ final class MultisiteRepository
     /** @param array<string,mixed> $row @return array<string,mixed> */
     private function siteContract(array $row): array
     {
-        $basePath = (string) ($row['base_path'] ?? '');
+        $storedBasePath = $this->normalizeBasePath((string) ($row['base_path'] ?? ''));
+        $requestBasePath = $this->requestBasePath($storedBasePath);
+        $publicBasePath = $this->publicBasePath($storedBasePath);
         $host = (string) ($row['host'] ?? '');
         $scheme = (string) ($row['scheme'] ?? 'https');
+        $publicPath = function_exists('url_path') ? url_path($requestBasePath === '' ? '/' : $requestBasePath . '/') : ($publicBasePath === '' ? '/' : $publicBasePath . '/');
+        $adminPath = function_exists('admin_url_path_for_site') ? admin_url_path_for_site($requestBasePath, '/admin/app') : ($publicBasePath . '/admin/app');
+
         return [
             'id' => (int) $row['id'],
             'site_key' => (string) $row['site_key'],
@@ -160,16 +165,53 @@ final class MultisiteRepository
             'default_language_code' => (string) $row['default_language_code'],
             'is_active' => (bool) ($row['is_active'] ?? true),
             'host' => $host,
-            'base_path' => $basePath,
+            'base_path' => $publicBasePath,
+            'request_base_path' => $requestBasePath,
             'scheme' => $scheme,
             'enforce_https' => (bool) ($row['enforce_https'] ?? true),
-            'public_url' => $host !== '' ? $scheme . '://' . $host . $basePath . '/' : $basePath . '/',
-            'admin_path' => $basePath . '/admin/app',
+            'public_path' => $publicPath,
+            'public_url' => $host !== '' ? rtrim($scheme . '://' . $host . $publicBasePath, '/') . '/' : $publicPath,
+            'admin_path' => $adminPath,
             'content_count' => (int) ($row['content_count'] ?? 0),
             'language_count' => (int) ($row['language_count'] ?? 0),
             'created_at' => (string) ($row['created_at'] ?? ''),
             'updated_at' => (string) ($row['updated_at'] ?? ''),
         ];
+    }
+
+    private function normalizeBasePath(string $path): string
+    {
+        $path = trim($path);
+        if ($path === '' || $path === '/') {
+            return '';
+        }
+        return '/' . trim($path, '/');
+    }
+
+    private function requestBasePath(string $domainBasePath): string
+    {
+        $basePath = $this->normalizeBasePath($domainBasePath);
+        $appBasePath = $this->normalizeBasePath(function_exists('app_base_path') ? app_base_path() : '');
+        if ($appBasePath !== '' && ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/'))) {
+            $basePath = substr($basePath, strlen($appBasePath)) ?: '';
+        }
+        return $this->normalizeBasePath($basePath);
+    }
+
+    private function publicBasePath(string $domainBasePath): string
+    {
+        $basePath = $this->normalizeBasePath($domainBasePath);
+        $appBasePath = $this->normalizeBasePath(function_exists('app_base_path') ? app_base_path() : '');
+        if ($appBasePath === '') {
+            return $basePath;
+        }
+        if ($basePath === '' || $basePath === '/') {
+            return $appBasePath;
+        }
+        if ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/')) {
+            return $basePath;
+        }
+        return $this->normalizeBasePath($appBasePath . '/' . ltrim($basePath, '/'));
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */

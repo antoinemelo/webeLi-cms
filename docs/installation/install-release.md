@@ -36,7 +36,7 @@ generated: false
 
 ## Sous-répertoire
 
-Pour une installation sous `/cms`, définissez `APP_BASE_PATH=/cms` et vérifiez les routes `/admin`, `/api/v1/health`, les assets et les URL générées.
+Pour une installation sous `/cms`, définissez `APP_BASE_PATH=/cms` et vérifiez les routes `/admin`, `/api/v1/health`, les assets et les URL générées. En multisite par sous-répertoire, un sous-site configuré comme `/site-a` doit être ouvert publiquement sous `/cms/site-a`; les liens du back-office ne doivent jamais perdre le préfixe d’installation.
 
 Pour Hostpoint, l'installation sous `/mod` peut être synchronisée soit par Git depuis la branche `staging`, soit par FTP/FTPS depuis une release préparée. Voir [Déployer sur Hostpoint avec Git ou FTP](../operations/hostpoint-git-ftp.md).
 

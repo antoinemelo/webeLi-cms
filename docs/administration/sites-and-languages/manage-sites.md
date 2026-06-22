@@ -70,6 +70,8 @@ Dans **Configuration > Multisite** :
 
 Un chemin de base doit commencer par `/` lorsqu’il n’est pas vide. N’ajoutez pas de slash final et n’utilisez ni espace, ni segment `.` ou `..`, ni double slash.
 
+Si le CMS est lui-même installé dans un sous-répertoire, par exemple `APP_BASE_PATH=/mod`, le sous-site peut être saisi comme chemin logique `/site-a`. Les URL publiques générées par le back-office, les boutons d’ouverture et les contrats d’API doivent alors pointer vers `/mod/site-a`. Une base déjà enregistrée sous la forme complète `/mod/site-a` reste acceptée et ne doit pas être préfixée une seconde fois.
+
 ### Créer un sous-site
 
 La création d’un sous-site est une opération multisite distincte, exposée par le contrôleur d’administration multisite. Elle nécessite `settings.manage` depuis le site principal.
