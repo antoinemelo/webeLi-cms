@@ -16,7 +16,6 @@ owners:
   - core
   - operations
 document_type: guide
-permissions:
 source_paths:
   - tools/cms.py
   - tools/python/README.md

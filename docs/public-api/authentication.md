@@ -9,7 +9,6 @@ source_of_truth: contract
 owners:
   - api
 document_type: guide
-permissions: []
 source_paths:
   - backend/routes
   - backend/src

@@ -18,7 +18,6 @@ owners:
   - core
   - operations
 document_type: procedure
-permissions: []
 generated: false
 ---
 # Migrations SQLite des modules

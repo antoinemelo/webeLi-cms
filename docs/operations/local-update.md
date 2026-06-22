@@ -17,7 +17,6 @@ source_paths:
 owners:
   - operations
 document_type: procedure
-permissions:
 generated: false
 ---
 # Mise à jour locale SQLite

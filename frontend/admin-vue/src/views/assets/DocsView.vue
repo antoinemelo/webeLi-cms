@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -25,8 +25,8 @@ type DocsDocument = {
 };
 
 type DocsSection = { key: string; label: string; description: string; audience_label: string; documents: DocsDocument[] };
-type DocsIndexPayload = { sections: DocsSection[]; documents: DocsDocument[]; policy?: Array<{ key: string; label: string; audience_label: string }> };
-type DocsShowPayload = { document: DocsDocument & { html: string; markdown?: string; front_matter?: Record<string, unknown> }; navigation: DocsDocument[] };
+type DocsIndexPayload = { sections: DocsSection[]; documents: DocsDocument[]; access?: { authentication_required: boolean; permission_filtering: boolean; all_documentation_exposed: boolean } };
+type DocsShowPayload = { document: DocsDocument & { html: string; markdown?: string; source?: string; front_matter?: Record<string, unknown> }; navigation: DocsDocument[] };
 
 const context = useAdminContextStore();
 const sections = ref<DocsSection[]>([]);
@@ -39,8 +39,7 @@ const q = ref('');
 const selectedSection = ref('all');
 const selectedId = ref('');
 
-// The API filters the index document by document. Keeping a second permission
-// matrix here inevitably hides valid documentation when policies evolve.
+// Documentation access only requires the current authenticated back-office context.
 const canOpenDocs = computed(() => Boolean(context.context));
 
 const filteredSections = computed(() => {
@@ -70,7 +69,7 @@ async function loadIndex(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const response = await adminApi.get<DocsIndexPayload>('/docs', { site_id: context.siteId });
+    const response = await adminApi.get<DocsIndexPayload>('/docs');
     sections.value = response.data.sections || [];
     documents.value = response.data.documents || [];
     const first = documents.value.find((doc) => doc.is_section_index) || documents.value[0];
@@ -92,7 +91,6 @@ async function selectDocument(id: string, options: SelectDocumentOptions = {}): 
   error.value = '';
   try {
     const response = await adminApi.get<DocsShowPayload>('/docs/resolve', {
-      site_id: context.siteId,
       id,
       from_id: options.fromId,
       link_path: options.linkPath
@@ -281,22 +279,21 @@ function onMarkdownClick(event: MouseEvent): void {
 
   if (href && !href.startsWith('#') && !/^[a-z][a-z0-9+.-]*:/i.test(href)) {
     event.preventDefault();
-    error.value = 'Document Markdown introuvable dans la documentation disponible pour ce profil.';
+    error.value = 'Document introuvable dans la documentation.';
   }
 }
 
-watch(() => context.siteId, () => { void loadIndex(); });
 onMounted(loadIndex);
 </script>
 
 <template>
-  <PageHeader title="Documentation" intro="Documents pertinents selon le rôle connecté, accessibles uniquement depuis le menu principal Actifs." />
+  <PageHeader title="Documentation" intro="Toute la documentation du CMS, accessible à chaque utilisateur du back-office depuis le menu principal Actifs." />
 
   <ApiFeedback :error="error" />
 
   <div v-if="!canOpenDocs" class="card empty-state">
-    <h2>Accès restreint</h2>
-    <p class="muted">Aucun espace documentaire n’est disponible pour ce profil.</p>
+    <h2>Session requise</h2>
+    <p class="muted">Connectez-vous au back-office pour consulter la documentation.</p>
   </div>
 
   <template v-else>
@@ -331,7 +328,7 @@ onMounted(loadIndex);
         <div v-if="documentLoading" class="muted">Ouverture du document…</div>
         <div v-else-if="!current" class="empty-state">
           <strong>Sélectionnez un document</strong>
-          <span>Les documents Markdown autorisés s’affichent ici.</span>
+          <span>Sélectionnez une page Markdown ou une référence technique.</span>
         </div>
         <template v-else>
           <header class="docs-viewer__header">

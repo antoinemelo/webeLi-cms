@@ -16,11 +16,6 @@ owners:
   - operations
   - core
 document_type: guide
-permissions:
-  - imports_exports.read
-  - imports_exports.write
-  - imports_exports.manage
-  - pdo_sqlite
 source_paths:
   - backend/routes/api.php
   - tools/cms.py

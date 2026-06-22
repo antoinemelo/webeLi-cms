@@ -15,7 +15,6 @@ source_paths:
 owners:
   - operations
 document_type: procedure
-permissions:
 source_paths:
   - ops/.env.example
   - config/app.php

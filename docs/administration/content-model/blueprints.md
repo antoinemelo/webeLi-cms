@@ -16,12 +16,6 @@ owners:
   - operations
   - core
 document_type: guide
-permissions:
-  - blueprints.read
-  - blueprints.manage
-  - admin.blueprints.write
-  - admin.blueprints.versions.write
-  - admin.blueprints.delete
 source_paths:
   - backend/routes/api.php
   - backend/src/Blueprints

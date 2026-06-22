@@ -18,7 +18,6 @@ owners:
   - operations
   - documentation
 document_type: procedure
-permissions: []
 generated: false
 ---
 # Mettre à jour une instance client avec modules locaux

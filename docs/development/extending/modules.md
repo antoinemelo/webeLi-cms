@@ -18,7 +18,6 @@ owners:
   - core
   - documentation
 document_type: guide
-permissions: []
 generated: false
 ---
 # Modules système et modules clients

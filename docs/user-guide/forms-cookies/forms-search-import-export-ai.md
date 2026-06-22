@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - forms.read/manage
-  - imports_exports.read/write/manage
 source_paths:
   - backend/src/Modules/Forms
   - backend/src/Modules/AiAssistant

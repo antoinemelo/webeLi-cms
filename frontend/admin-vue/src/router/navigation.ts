@@ -61,7 +61,7 @@ export const dashboardLinks: SectionLink[] = [
 
 export const assetLinks: SectionLink[] = [
   { label: 'Médias', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.' },
-  { label: 'Docs', route: '/docs', hint: 'Documentation utile selon le rôle connecté.' }
+  { label: 'Docs', route: '/docs', hint: 'Toute la documentation du CMS.' }
 ];
 
 export const mainNavigation: MainNavigationItem[] = [
@@ -95,7 +95,7 @@ export const adminSearchActions: AdminSearchAction[] = [
     ];
   }),
   searchAction('media.open', 'Actifs', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload', 'actifs']),
-  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', hint: 'Documentation utile selon le rôle connecté.' }, ['docs', 'documentation', 'guide', 'aide']),
+  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', hint: 'Toute la documentation du CMS.' }, ['docs', 'documentation', 'guide', 'aide']),
   ...moduleWorkbenchLinks.map((link) => searchAction(`modules.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Modules', link, ['module', 'extension', 'métier', 'blueprint'])),
   ...structureLinks.map((link) => searchAction(`structure.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Structure', link, ['navigation', 'classement'])),
   searchAction('seo.audit', 'Qualité', { label: 'Audit SEO & IA', navLabel: 'Audit', route: '/seo/audit', permission: 'content.read', hint: 'Scores, problèmes et recommandations.' }, ['seo', 'ia', 'score', 'audit', 'recommandations']),

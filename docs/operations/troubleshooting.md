@@ -16,7 +16,6 @@ source_paths:
 owners:
   - operations
 document_type: procedure
-permissions: []
 generated: false
 ---
 # Dépanner une installation

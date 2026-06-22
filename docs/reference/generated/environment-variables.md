@@ -11,7 +11,6 @@ source_of_truth: generated
 owners:
   - operations
 document_type: reference
-permissions:
 source_paths:
   - ops/.env.example
 generated: true

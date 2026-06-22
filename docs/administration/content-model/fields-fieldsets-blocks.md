@@ -16,7 +16,6 @@ owners:
   - operations
   - core
 document_type: guide
-permissions:
 source_paths:
   - backend/routes/api.php
   - backend/src/Blueprints

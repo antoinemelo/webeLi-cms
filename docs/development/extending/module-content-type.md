@@ -10,7 +10,6 @@ owners:
   - documentation
   - core
 document_type: guide
-permissions: []
 source_paths:
   - backend/src/Module
   - backend/src/Modules

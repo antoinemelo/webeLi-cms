@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.read
-  - content.revisions.restore
 source_paths:
   - backend/routes/api.php
   - backend/src

@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - profile.read
-  - profile.update
 source_paths:
   - backend/routes/admin.php
   - backend/routes/api.php

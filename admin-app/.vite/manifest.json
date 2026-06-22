@@ -1,11 +1,339 @@
 {
+  "_ApiFeedback-B4Gr1hoW.js": {
+    "file": "assets/ApiFeedback-B4Gr1hoW.js",
+    "name": "ApiFeedback",
+    "css": [
+      "assets/ApiFeedback-B_TW4H8c.css"
+    ]
+  },
+  "_ApiFeedback-B_TW4H8c.css": {
+    "file": "assets/ApiFeedback-B_TW4H8c.css",
+    "src": "_ApiFeedback-B_TW4H8c.css"
+  },
+  "_DataTable-cQP36zuV.js": {
+    "file": "assets/DataTable-cQP36zuV.js",
+    "name": "DataTable",
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js"
+    ]
+  },
+  "_MediaPicker-C8fTYzyQ.js": {
+    "file": "assets/MediaPicker-C8fTYzyQ.js",
+    "name": "MediaPicker",
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js"
+    ]
+  },
+  "_PageHeader-Bh5G0_5j.js": {
+    "file": "assets/PageHeader-Bh5G0_5j.js",
+    "name": "PageHeader",
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js"
+    ]
+  },
+  "_StatusBadge-CBvRUZUY.js": {
+    "file": "assets/StatusBadge-CBvRUZUY.js",
+    "name": "StatusBadge",
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js"
+    ]
+  },
+  "_contentEntries-lbTFjhXM.js": {
+    "file": "assets/contentEntries-lbTFjhXM.js",
+    "name": "contentEntries",
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html"
+    ]
+  },
   "index.html": {
-    "file": "assets/index-DLLdTmwx.js",
+    "file": "assets/index-BwE8s7s5.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js"
+    ],
+    "dynamicImports": [
+      "src/views/StudioView.vue",
+      "src/views/ImportsExportsView.vue",
+      "src/views/content/ContentListView.vue",
+      "src/views/content/ContentEditorView.vue",
+      "src/views/content/MediaLibraryView.vue",
+      "src/views/assets/DocsView.vue",
+      "src/views/forms/FormsView.vue",
+      "src/views/modules/ModulesView.vue",
+      "src/views/modules/AiAssistantConfigView.vue",
+      "src/views/content/MenusView.vue",
+      "src/views/content/TaxonomiesView.vue",
+      "src/views/system/BlueprintsView.vue",
+      "src/views/tools/SeoAuditView.vue",
+      "src/views/tools/MaintenanceView.vue",
+      "src/views/system/SystemConfigurationView.vue",
+      "src/views/system/CookiesView.vue",
+      "src/views/iam/IamUsersView.vue",
+      "src/views/iam/IamRolesView.vue",
+      "src/views/iam/IamSessionsView.vue",
+      "src/views/iam/IamAuditView.vue",
+      "src/views/ProfileView.vue"
+    ],
     "css": [
-      "assets/index-DT3tVOOH.css"
+      "assets/index-CukH2fAX.css"
+    ]
+  },
+  "src/views/ImportsExportsView.vue": {
+    "file": "assets/ImportsExportsView-DCHfY2x9.js",
+    "name": "ImportsExportsView",
+    "src": "src/views/ImportsExportsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js",
+      "_StatusBadge-CBvRUZUY.js"
+    ]
+  },
+  "src/views/ProfileView.vue": {
+    "file": "assets/ProfileView-CjqUWCxu.js",
+    "name": "ProfileView",
+    "src": "src/views/ProfileView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/StudioView.vue": {
+    "file": "assets/StudioView-CwpKB33J.js",
+    "name": "StudioView",
+    "src": "src/views/StudioView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html"
+    ]
+  },
+  "src/views/assets/DocsView.vue": {
+    "file": "assets/DocsView-Cr1bDI5p.js",
+    "name": "DocsView",
+    "src": "src/views/assets/DocsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/content/ContentEditorView.vue": {
+    "file": "assets/ContentEditorView-BXQE3kGy.js",
+    "name": "ContentEditorView",
+    "src": "src/views/content/ContentEditorView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_MediaPicker-C8fTYzyQ.js",
+      "_PageHeader-Bh5G0_5j.js",
+      "_StatusBadge-CBvRUZUY.js",
+      "_contentEntries-lbTFjhXM.js"
+    ],
+    "css": [
+      "assets/ContentEditorView-BtJ7X31I.css"
+    ]
+  },
+  "src/views/content/ContentListView.vue": {
+    "file": "assets/ContentListView-DMUrB9d4.js",
+    "name": "ContentListView",
+    "src": "src/views/content/ContentListView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js",
+      "_StatusBadge-CBvRUZUY.js",
+      "_contentEntries-lbTFjhXM.js"
+    ]
+  },
+  "src/views/content/MediaLibraryView.vue": {
+    "file": "assets/MediaLibraryView-D8U6DsOX.js",
+    "name": "MediaLibraryView",
+    "src": "src/views/content/MediaLibraryView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js"
+    ],
+    "css": [
+      "assets/MediaLibraryView-CWMxqLq3.css"
+    ]
+  },
+  "src/views/content/MenusView.vue": {
+    "file": "assets/MenusView-CH2AAUYH.js",
+    "name": "MenusView",
+    "src": "src/views/content/MenusView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ],
+    "css": [
+      "assets/MenusView-TgsRvz19.css"
+    ]
+  },
+  "src/views/content/TaxonomiesView.vue": {
+    "file": "assets/TaxonomiesView-COhka31c.js",
+    "name": "TaxonomiesView",
+    "src": "src/views/content/TaxonomiesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ],
+    "css": [
+      "assets/TaxonomiesView-D5kuSrmi.css"
+    ]
+  },
+  "src/views/forms/FormsView.vue": {
+    "file": "assets/FormsView-c36x5Vid.js",
+    "name": "FormsView",
+    "src": "src/views/forms/FormsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/iam/IamAuditView.vue": {
+    "file": "assets/IamAuditView-BGWBp-E0.js",
+    "name": "IamAuditView",
+    "src": "src/views/iam/IamAuditView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/iam/IamRolesView.vue": {
+    "file": "assets/IamRolesView-I53v5rzj.js",
+    "name": "IamRolesView",
+    "src": "src/views/iam/IamRolesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/iam/IamSessionsView.vue": {
+    "file": "assets/IamSessionsView-B_hZCLPO.js",
+    "name": "IamSessionsView",
+    "src": "src/views/iam/IamSessionsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/iam/IamUsersView.vue": {
+    "file": "assets/IamUsersView-DoWO3S9-.js",
+    "name": "IamUsersView",
+    "src": "src/views/iam/IamUsersView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/modules/AiAssistantConfigView.vue": {
+    "file": "assets/AiAssistantConfigView-DP9jD3g2.js",
+    "name": "AiAssistantConfigView",
+    "src": "src/views/modules/AiAssistantConfigView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_StatusBadge-CBvRUZUY.js"
+    ]
+  },
+  "src/views/modules/ModulesView.vue": {
+    "file": "assets/ModulesView-DvFP8Bby.js",
+    "name": "ModulesView",
+    "src": "src/views/modules/ModulesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_StatusBadge-CBvRUZUY.js"
+    ]
+  },
+  "src/views/system/BlueprintsView.vue": {
+    "file": "assets/BlueprintsView-CoIQS_We.js",
+    "name": "BlueprintsView",
+    "src": "src/views/system/BlueprintsView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/system/CookiesView.vue": {
+    "file": "assets/CookiesView-CJ4VWrOI.js",
+    "name": "CookiesView",
+    "src": "src/views/system/CookiesView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/system/SystemConfigurationView.vue": {
+    "file": "assets/SystemConfigurationView-DR_G3C3u.js",
+    "name": "SystemConfigurationView",
+    "src": "src/views/system/SystemConfigurationView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_MediaPicker-C8fTYzyQ.js",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/tools/MaintenanceView.vue": {
+    "file": "assets/MaintenanceView-DJh09pHm.js",
+    "name": "MaintenanceView",
+    "src": "src/views/tools/MaintenanceView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js"
+    ]
+  },
+  "src/views/tools/SeoAuditView.vue": {
+    "file": "assets/SeoAuditView-1P6hXWKy.js",
+    "name": "SeoAuditView",
+    "src": "src/views/tools/SeoAuditView.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_ApiFeedback-B4Gr1hoW.js",
+      "index.html",
+      "_DataTable-cQP36zuV.js",
+      "_PageHeader-Bh5G0_5j.js",
+      "_StatusBadge-CBvRUZUY.js"
     ]
   }
 }

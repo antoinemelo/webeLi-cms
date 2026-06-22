@@ -17,8 +17,6 @@ owners:
   - operations
   - core
 document_type: guide
-permissions:
-  - maintenance.manage
 generated: false
 ---
 

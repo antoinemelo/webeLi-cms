@@ -15,9 +15,6 @@ source_paths:
 owners:
   - administration
 document_type: guide
-permissions:
-  - settings.read
-  - settings.manage
 source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/ConfigurationApiController.php

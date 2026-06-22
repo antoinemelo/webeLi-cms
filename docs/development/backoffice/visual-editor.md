@@ -9,9 +9,6 @@ source_of_truth: manual
 owners:
   - core
 document_type: guide
-permissions:
-  - contents.read
-  - contents.update
 source_paths:
   - backend/src/Application/Api/Admin/VisualEditingApiController.php
   - backend/src/Application/VisualEditing/VisualEditingMapBuilder.php

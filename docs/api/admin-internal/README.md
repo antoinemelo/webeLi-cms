@@ -10,7 +10,6 @@ source_of_truth: contract
 owners:
   - api
 document_type: reference
-permissions:
 source_paths:
   - backend/routes/api.php
   - docs/reference/contracts/admin-api-v1

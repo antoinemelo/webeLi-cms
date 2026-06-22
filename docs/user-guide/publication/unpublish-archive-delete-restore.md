@@ -15,10 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.publish
-  - content.delete
-  - content.revisions.restore
 source_paths:
   - backend/routes/api.php
   - `python3 tools/cms.py test`

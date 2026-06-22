@@ -16,10 +16,6 @@ owners:
   - operations
   - security
 document_type: guide
-permissions:
-  - sessions.read
-  - sessions.manage
-  - users.email_2fa.manage
 source_paths:
   - backend/src/Application/Iam/IamAdminRepository.php
   - backend/src/Application/Api/Admin/IamAdminApiController.php

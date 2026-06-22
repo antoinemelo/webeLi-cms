@@ -13,95 +13,47 @@ $sectionsMethod = new ReflectionMethod($controller, 'sectionPolicy');
 $sections = $sectionsMethod->invoke($controller);
 (new ReflectionProperty($controller, 'sections'))->setValue($controller, $sections);
 
-$canAccess = new ReflectionMethod($controller, 'canAccessDocument');
-$userGuidePolicy = [
-    'any_permission' => ['content.read', 'seo.read'],
-    'superadmin_documents' => ['user-guide/README.md'],
-];
-$installationPolicy = ['superadmin_only' => true];
-
-$h->assertTrue(
-    $canAccess->invoke($controller, 'user-guide/README.md', $userGuidePolicy, [], ['content.read'], true),
-    'superadmin can read the restricted user guide index'
-);
-$h->assertTrue(
-    !$canAccess->invoke($controller, 'user-guide/README.md', $userGuidePolicy, [], ['content.read'], false),
-    'editor cannot read the superadmin-only user guide index'
-);
-$h->assertTrue(
-    $canAccess->invoke($controller, 'installation/README.md', $installationPolicy, [], [], true),
-    'superadmin can read a superadmin-only section without a listed permission'
-);
-$h->assertTrue(
-    !$canAccess->invoke($controller, 'installation/README.md', $installationPolicy, [], ['settings.read'], false),
-    'ordinary permissions do not bypass a superadmin-only section'
-);
-
-$createEditFrontMatter = ['permissions' => ['content.read', 'content.create', 'content.update']];
-$seoFrontMatter = ['permissions' => ['seo.read', 'seo.manage']];
-$h->assertTrue(
-    $canAccess->invoke($controller, 'user-guide/content/create-edit.md', $userGuidePolicy, $createEditFrontMatter, ['content.read'], false),
-    'editor can read a content procedure matching one granted permission'
-);
-$h->assertTrue(
-    !$canAccess->invoke($controller, 'user-guide/content/create-edit.md', $userGuidePolicy, $createEditFrontMatter, ['seo.read'], false),
-    'SEO-only profile cannot read a content procedure without a matching permission'
-);
-$h->assertTrue(
-    $canAccess->invoke($controller, 'user-guide/seo/seo-workflow.md', $userGuidePolicy, $seoFrontMatter, ['seo.read'], false),
-    'SEO profile can read an SEO procedure'
-);
-$h->assertTrue(
-    !$canAccess->invoke($controller, 'user-guide/seo/seo-workflow.md', $userGuidePolicy, $seoFrontMatter, ['content.read'], false),
-    'content-only profile cannot read an SEO procedure'
-);
-$h->assertTrue(
-    $canAccess->invoke(
-        $controller,
-        'user-guide/forms-cookies/cookie-consent.md',
-        $userGuidePolicy,
-        ['permissions' => ['cookies.read', 'cookies.manage']],
-        ['cookies.read'],
-        false
-    ),
-    'a document permission grants access without requiring a duplicated section permission'
-);
-
-$documentPermissions = new ReflectionMethod($controller, 'documentPermissions');
-$h->assertSame(
-    ['forms.read', 'forms.manage'],
-    $documentPermissions->invoke($controller, ['permissions' => ['forms.read/manage']]),
-    'document permission shorthand is expanded deterministically'
-);
-
-$allSuperadminDocumentsAllowed = true;
-$markdownFiles = (new ReflectionMethod($controller, 'markdownFiles'))->invoke($controller);
+$documentationFiles = (new ReflectionMethod($controller, 'documentationFiles'))->invoke($controller);
 $splitFrontMatter = new ReflectionMethod($controller, 'splitFrontMatter');
-foreach ($markdownFiles as $relativePath) {
-    $sectionKey = explode('/', $relativePath, 2)[0];
-    if (!isset($sections[$sectionKey])) {
-        continue;
-    }
-    [$frontMatter] = $splitFrontMatter->invoke($controller, (string) file_get_contents(base_path('docs/' . $relativePath)));
-    if (!$canAccess->invoke($controller, $relativePath, $sections[$sectionKey], $frontMatter, [], true)) {
-        $allSuperadminDocumentsAllowed = false;
-        break;
-    }
+$h->assertTrue(in_array('README.md', $documentationFiles, true), 'root documentation index is exposed');
+$h->assertTrue(in_array('installation/README.md', $documentationFiles, true), 'installation documentation is exposed without a superadmin rule');
+$h->assertTrue(in_array('evaluation/machine-readable/features.json', $documentationFiles, true), 'machine-readable JSON documentation is exposed');
+$h->assertTrue(in_array('public-api/openapi.v1.yaml', $documentationFiles, true), 'OpenAPI YAML documentation is exposed');
+$h->assertTrue(in_array('public-api/index.html', $documentationFiles, true), 'HTML documentation source is exposed');
+$h->assertTrue(!in_array('public-api/.htaccess', $documentationFiles, true), 'server configuration is not treated as documentation');
+
+$catalog = (new ReflectionMethod($controller, 'documents'))->invoke($controller);
+$h->assertSame(count($documentationFiles), count($catalog), 'every supported documentation file is present in the catalogue');
+$catalogIds = array_column($catalog, 'id');
+$h->assertSame(count($catalogIds), count(array_unique($catalogIds)), 'every documentation file has a unique stable identifier');
+
+$renderSource = new ReflectionMethod($controller, 'renderSourceDocument');
+$safeHtmlSource = $renderSource->invoke($controller, '<script>alert(1)</script>', 'html-source');
+$h->assertTrue(
+    !str_contains($safeHtmlSource, '<script>') && str_contains($safeHtmlSource, '&lt;script&gt;'),
+    'non-Markdown documentation is displayed as escaped source'
+);
+
+$controllerSource = (string) file_get_contents(base_path('backend/src/Application/Api/Admin/DocsApiController.php'));
+foreach (['canAccessDocument', 'documentPermissions', 'superadmin_only', 'superadmin_documents', 'any_permission', 'siteContext'] as $legacyRule) {
+    $h->assertTrue(!str_contains($controllerSource, $legacyRule), 'legacy documentation access rule removed: ' . $legacyRule);
 }
-$h->assertTrue($allSuperadminDocumentsAllowed, 'superadmin can access every indexed Markdown document');
 
 $documentContract = new ReflectionMethod($controller, 'documentContract');
 $withResolvedLinks = new ReflectionMethod($controller, 'withResolvedMarkdownLinks');
 $allDocuments = [];
 $userGuideIndex = null;
 $userGuideBody = '';
-foreach ($markdownFiles as $relativePath) {
-    $sectionKey = explode('/', $relativePath, 2)[0];
+foreach ($documentationFiles as $relativePath) {
+    $sectionKey = str_contains($relativePath, '/') ? explode('/', $relativePath, 2)[0] : 'overview';
     if (!isset($sections[$sectionKey])) {
         continue;
     }
     $absolute = base_path('docs/' . $relativePath);
-    [$frontMatter, $body] = $splitFrontMatter->invoke($controller, (string) file_get_contents($absolute));
+    $source = (string) file_get_contents($absolute);
+    [$frontMatter, $body] = str_ends_with(strtolower($relativePath), '.md')
+        ? $splitFrontMatter->invoke($controller, $source)
+        : [[], $source];
     $document = $documentContract->invoke($controller, $relativePath, $sectionKey, $frontMatter, $body, $absolute);
     $allDocuments[] = $document;
     if ($relativePath === 'user-guide/README.md') {
@@ -119,7 +71,7 @@ preg_match_all('/\[[^\]]+\]\((?!https?:|mailto:|#)[^)]+\.md(?:#[^)]*)?\)/i', $us
 $h->assertSame(
     count($markdownLinks[0]),
     substr_count($renderedUserGuide, 'data-doc-id='),
-    'every internal Markdown link in the superadmin user guide resolves to an indexed document'
+    'every internal Markdown link in the user guide resolves to an indexed document'
 );
 
 $documents = [
@@ -160,15 +112,15 @@ $h->assertTrue(
     'rendered relative link carries its authorized canonical target'
 );
 
-$restrictedHtml = $withResolvedLinks->invoke(
+$installationHtml = $withResolvedLinks->invoke(
     $controller,
-    MarkdownRenderer::toHtml('[Document restreint](installation/README.md)'),
+    MarkdownRenderer::toHtml('[Installation](../installation/README.md)'),
     $index,
-    $documents
+    $allDocuments
 );
 $h->assertTrue(
-    !str_contains($restrictedHtml, 'data-doc-id='),
-    'unavailable target is not exposed by the rendered link'
+    str_contains($installationHtml, 'data-doc-id="installation~index"'),
+    'cross-section links resolve for every authenticated user'
 );
 
-exit($h->finish('UNIT docs access and link resolution'));
+exit($h->finish('UNIT unrestricted docs exposure and link resolution'));

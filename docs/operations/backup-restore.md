@@ -14,7 +14,6 @@ source_paths:
 owners:
   - operations
 document_type: procedure
-permissions:
 source_paths:
   - tools/cms.py
   - tools/python/operations/backup

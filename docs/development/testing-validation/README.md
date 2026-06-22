@@ -9,7 +9,6 @@ source_of_truth: code
 owners:
   - core
 document_type: guide
-permissions:
 source_paths:
   - tools/cms.py
   - tools/python/generators

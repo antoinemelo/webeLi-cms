@@ -16,10 +16,6 @@ owners:
   - operations
   - security
 document_type: guide
-permissions:
-  - security.tokens.manage
-  - security.webhooks.manage
-  - security.cors.manage
 source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/SecurityAdminApiController.php

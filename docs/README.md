@@ -12,7 +12,7 @@ audience:
   - evaluator
 status: stable
 version: 1.0
-last_verified: 2026-06-21
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - README.md
@@ -29,7 +29,7 @@ La documentation est organisée par tâche et par public. Les concepts et procé
 
 ## Accès depuis le back-office
 
-Dans le back-office, les profils autorisés consultent les documents Markdown depuis le menu principal **Actifs > Docs**. La liste est filtrée côté serveur selon les permissions du profil connecté : les documents et espaces non autorisés sont cachés, jamais simplement grisés. Les panneaux individuels ne contiennent pas de liens directs vers la documentation. Les liens Markdown internes sont résolus vers des documents explicitement autorisés, y compris lorsqu’un lien relatif est converti par le viewer en identifiant technique.
+Dans le back-office, chaque utilisateur authentifié consulte toute la documentation depuis le menu principal **Actifs > Docs**. Aucun rôle, aucune permission et aucune affectation de site ne filtre le catalogue. Le viewer expose les pages Markdown ainsi que les références JSON, YAML, HTML source et texte présentes sous `docs/`. Les liens documentaires internes sont résolus vers leur cible indexée, y compris lorsqu’un lien relatif est converti par le viewer en identifiant technique.
 
 ## Espaces documentaires
 
@@ -60,4 +60,4 @@ python3 tools/cms.py docs generate
 python3 tools/cms.py docs check
 ```
 
-`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale, les références vers des commandes CLI existantes et les garde-fous du viewer Markdown du back-office. Il ne vérifie aucune formulation marketing ni phrase exacte.
+`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale, les références vers des commandes CLI existantes, l’absence de filtrage IAM documentaire et les garde-fous du viewer du back-office. Il ne vérifie aucune formulation marketing ni phrase exacte.

@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - media.update
-  - media.delete
 source_paths:
   - backend/routes/api.php
   - backend/src/Media

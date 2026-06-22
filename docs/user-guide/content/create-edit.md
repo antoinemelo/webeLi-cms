@@ -15,11 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.read
-  - content.create
-  - content.update
-  - content.draft.create
 source_paths:
   - backend/routes/api.php
   - backend/src/Content

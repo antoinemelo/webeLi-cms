@@ -15,11 +15,6 @@ owners:
   - operations
   - security
 document_type: guide
-permissions:
-  - database
-  - storage
-  - ops
-  - tools
 source_paths:
   - ops/.env.example
   - .htaccess

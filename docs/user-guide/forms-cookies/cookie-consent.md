@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - cookies.read
-  - cookies.manage
 source_paths:
   - backend/routes/api.php
   - backend/src/Modules/Cookies

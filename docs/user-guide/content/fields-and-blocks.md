@@ -14,8 +14,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.update
 source_paths:
   - backend/src/Application/Content/BlockDocumentNormalizer.php
   - backend/src/Core/NativeHtmlRenderer.php

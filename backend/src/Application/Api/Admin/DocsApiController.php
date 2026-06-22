@@ -10,16 +10,18 @@ use App\Core\MarkdownRenderer;
 use App\Core\Request;
 use App\Core\Response;
 use App\Repository\AuthRepository;
-use App\Repository\SiteRepository;
 
 final class DocsApiController
 {
+    /** @var list<string> */
+    private const DOCUMENT_EXTENSIONS = ['md', 'json', 'yaml', 'yml', 'html', 'txt'];
+    private const CATALOG_READ_LIMIT = 32768;
+
     /** @var array<string,array<string,mixed>> */
     private array $sections;
 
     public function __construct(
         private readonly Request $request,
-        private readonly SiteRepository $sites,
         private readonly AuthRepository $auth,
     ) {
         $this->sections = $this->sectionPolicy();
@@ -28,17 +30,16 @@ final class DocsApiController
     public function index(): Response
     {
         $this->auth->requireAuth();
-        $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
-        $documents = $this->accessibleDocuments((int) $site['id']);
+        // Documentation is global to the installation. A valid back-office session
+        // is sufficient: site assignments and IAM permissions never filter it.
+        $documents = $this->documents();
 
         $sections = [];
-        $visibleSectionKeys = [];
         foreach ($this->sections as $key => $section) {
             $items = array_values(array_filter($documents, static fn(array $doc): bool => ($doc['section_key'] ?? '') === $key));
             if ($items === []) {
                 continue;
             }
-            $visibleSectionKeys[] = $key;
             $sections[] = [
                 'key' => $key,
                 'label' => (string) $section['label'],
@@ -51,8 +52,12 @@ final class DocsApiController
         return Response::success([
             'sections' => $sections,
             'documents' => $documents,
-            'policy' => $this->policySummary($visibleSectionKeys),
-        ], 'admin.docs.index.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site)));
+            'access' => [
+                'authentication_required' => true,
+                'permission_filtering' => false,
+                'all_documentation_exposed' => true,
+            ],
+        ], 'admin.docs.index.v1', $this->documentationMeta());
     }
 
     public function resolve(): Response
@@ -64,8 +69,7 @@ final class DocsApiController
     public function show(string $id): Response
     {
         $this->auth->requireAuth();
-        $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
-        $documents = $this->accessibleDocuments((int) $site['id']);
+        $documents = $this->documents();
         $fromId = isset($this->request->query['from_id']) ? (string) $this->request->query['from_id'] : '';
         $linkPath = isset($this->request->query['link_path']) ? (string) $this->request->query['link_path'] : '';
         $document = $this->resolveRequestedDocument($id, $documents, $fromId);
@@ -74,7 +78,7 @@ final class DocsApiController
         }
 
         if ($document === null) {
-            return Response::error(ErrorCode::ROUTE_NOT_FOUND, 'Document introuvable ou non autorisé.', ErrorCode::httpStatus(ErrorCode::ROUTE_NOT_FOUND));
+            return Response::error(ErrorCode::ROUTE_NOT_FOUND, 'Document introuvable.', ErrorCode::httpStatus(ErrorCode::ROUTE_NOT_FOUND));
         }
 
         $absolute = $this->docsRoot() . '/' . $document['relative_path'];
@@ -83,39 +87,52 @@ final class DocsApiController
         }
 
         $source = (string) file_get_contents($absolute);
-        [$frontMatter, $body] = $this->splitFrontMatter($source);
-
-        $html = $this->withResolvedMarkdownLinks(MarkdownRenderer::toHtml($body), $document, $documents);
+        if (($document['format'] ?? '') === 'markdown') {
+            [$frontMatter, $body] = $this->splitFrontMatter($source);
+            $html = $this->withResolvedMarkdownLinks(MarkdownRenderer::toHtml($body), $document, $documents);
+        } else {
+            $frontMatter = [];
+            $body = $source;
+            $html = $this->renderSourceDocument($source, (string) ($document['format'] ?? 'text'));
+        }
 
         return Response::success([
             'document' => $document + [
                 'front_matter' => $frontMatter,
-                'markdown' => $body,
+                'markdown' => ($document['format'] ?? '') === 'markdown' ? $body : null,
+                'source' => $body,
                 'html' => $html,
             ],
             'navigation' => $documents,
-        ], 'admin.docs.show.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site), ['document_id' => $id]));
+        ], 'admin.docs.show.v1', $this->documentationMeta(['document_id' => $id]));
+    }
+
+    /** @param array<string,mixed> $extra @return array<string,mixed> */
+    private function documentationMeta(array $extra = []): array
+    {
+        return [
+            'contract_version' => AdminApiContract::VERSION,
+            'scope' => 'installation',
+        ] + $extra;
     }
 
     /** @return list<array<string,mixed>> */
-    private function accessibleDocuments(int $siteId): array
+    private function documents(): array
     {
-        $isSuperAdmin = $this->auth->currentUserIsSuperAdmin($siteId) || $this->auth->hasPermission('*', $siteId);
-        $permissions = $this->auth->permissions($siteId);
         $documents = [];
 
-        foreach ($this->markdownFiles() as $relativePath) {
+        foreach ($this->documentationFiles() as $relativePath) {
             $sectionKey = $this->sectionKeyForPath($relativePath);
             if ($sectionKey === null || !isset($this->sections[$sectionKey])) {
                 continue;
             }
-            $section = $this->sections[$sectionKey];
             $absolute = $this->docsRoot() . '/' . $relativePath;
-            $source = (string) file_get_contents($absolute);
-            [$frontMatter, $body] = $this->splitFrontMatter($source);
-            if (!$this->canAccessDocument($relativePath, $section, $frontMatter, $permissions, $isSuperAdmin)) {
-                continue;
-            }
+            // The catalogue only needs front matter and a short summary. Large
+            // OpenAPI/contracts are read in full only when the user opens them.
+            $source = (string) file_get_contents($absolute, false, null, 0, self::CATALOG_READ_LIMIT);
+            [$frontMatter, $body] = $this->formatForPath($relativePath) === 'markdown'
+                ? $this->splitFrontMatter($source)
+                : [[], $source];
             $documents[] = $this->documentContract($relativePath, $sectionKey, $frontMatter, $body, $absolute);
         }
 
@@ -142,8 +159,7 @@ final class DocsApiController
      * le cache d'assets ou l'état du contenu : identifiant canonique, chemin
      * source, chemin relatif, variante #docs/<id> ou ancien identifiant calculé
      * depuis un lien relatif. La résolution reste limitée aux documents déjà
-     * autorisés par accessibleDocuments(), afin de ne jamais exposer une page
-     * cachée pour le profil courant.
+     * indexés depuis le répertoire documentaire canonique.
      *
      * @param list<array<string,mixed>> $documents
      * @return array<string,mixed>|null
@@ -291,64 +307,8 @@ final class DocsApiController
         return false;
     }
 
-    /**
-     * @param array<string,mixed> $section
-     * @param array<string,mixed> $frontMatter
-     * @param list<string> $permissions
-     */
-    private function canAccessDocument(string $relativePath, array $section, array $frontMatter, array $permissions, bool $isSuperAdmin): bool
-    {
-        if ($isSuperAdmin) {
-            return true;
-        }
-        if (in_array($relativePath, (array) ($section['superadmin_documents'] ?? []), true)) {
-            return false;
-        }
-        if (!empty($section['superadmin_only'])) {
-            return false;
-        }
-        $documentPermissions = $this->documentPermissions($frontMatter);
-        $requiredPermissions = $documentPermissions !== []
-            ? $documentPermissions
-            : array_values(array_map('strval', (array) ($section['any_permission'] ?? [])));
-        foreach ($requiredPermissions as $permission) {
-            if (in_array($permission, $permissions, true)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** @param array<string,mixed> $frontMatter @return list<string> */
-    private function documentPermissions(array $frontMatter): array
-    {
-        $declared = $frontMatter['permissions'] ?? [];
-        if (!is_array($declared)) {
-            return [];
-        }
-
-        $permissions = [];
-        foreach ($declared as $value) {
-            $value = trim((string) $value);
-            if ($value === '') {
-                continue;
-            }
-            if (preg_match('/^([a-z][a-z0-9_.-]*)\.([a-z][a-z0-9_-]*)(?:\/([a-z][a-z0-9_-]*))+$/', $value, $match)) {
-                $prefix = $match[1];
-                foreach (explode('/', substr($value, strlen($prefix) + 1)) as $action) {
-                    $permissions[] = $prefix . '.' . $action;
-                }
-                continue;
-            }
-            if (preg_match('/^[a-z][a-z0-9_.-]*\.[a-z][a-z0-9_-]*$/', $value)) {
-                $permissions[] = $value;
-            }
-        }
-        return array_values(array_unique($permissions));
-    }
-
     /** @return list<string> */
-    private function markdownFiles(): array
+    private function documentationFiles(): array
     {
         $root = $this->docsRoot();
         if (!is_dir($root)) {
@@ -356,18 +316,16 @@ final class DocsApiController
         }
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::FOLLOW_SYMLINKS)
+            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS)
         );
         foreach ($iterator as $file) {
             if (!$file instanceof \SplFileInfo || !$file->isFile()) {
                 continue;
             }
             $path = str_replace('\\', '/', $file->getPathname());
-            if (!str_ends_with(strtolower($path), '.md')) {
-                continue;
-            }
             $relative = ltrim(substr($path, strlen($root)), '/');
-            if (str_starts_with($relative, 'evaluation/machine-readable/')) {
+            $extension = strtolower(pathinfo($relative, PATHINFO_EXTENSION));
+            if (!in_array($extension, self::DOCUMENT_EXTENSIONS, true)) {
                 continue;
             }
             $files[] = $relative;
@@ -378,6 +336,9 @@ final class DocsApiController
 
     private function sectionKeyForPath(string $relativePath): ?string
     {
+        if (!str_contains($relativePath, '/')) {
+            return 'overview';
+        }
         $first = explode('/', $relativePath, 2)[0] ?? '';
         return isset($this->sections[$first]) ? $first : null;
     }
@@ -399,7 +360,7 @@ final class DocsApiController
             'summary' => $this->summary($body),
             'relative_path' => $relativePath,
             'source_path' => 'docs/' . $relativePath,
-            'format' => 'markdown',
+            'format' => $this->formatForPath($relativePath),
             'audience' => $frontMatter['audience'] ?? [],
             'audience_label' => (string) $section['audience_label'],
             'status' => (string) ($frontMatter['status'] ?? ''),
@@ -487,6 +448,37 @@ final class DocsApiController
         return ucfirst(str_replace(['-', '_'], ' ', $base));
     }
 
+    private function formatForPath(string $path): string
+    {
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'md' => 'markdown',
+            'json' => 'json',
+            'yaml', 'yml' => 'yaml',
+            'html' => 'html-source',
+            default => 'text',
+        };
+    }
+
+    private function renderSourceDocument(string $source, string $format): string
+    {
+        if ($format === 'json') {
+            $decoded = json_decode($source, true);
+            if (is_array($decoded)) {
+                $encoded = json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (is_string($encoded)) {
+                    $source = $encoded;
+                }
+            }
+        }
+        $language = match ($format) {
+            'json' => 'json',
+            'yaml' => 'yaml',
+            'html-source' => 'html',
+            default => 'text',
+        };
+        return '<pre><code class="language-' . $language . '">' . htmlspecialchars($source, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
+    }
+
     private function documentId(string $relativePath): string
     {
         $id = preg_replace('/\.md$/i', '', $relativePath) ?? $relativePath;
@@ -496,10 +488,9 @@ final class DocsApiController
     }
 
     /**
-     * Ajoute un identifiant de document aux liens Markdown internes déjà autorisés.
+     * Ajoute un identifiant de document aux liens documentaires internes indexés.
      * Le viewer peut ainsi naviguer sans dépendre du chemin relatif rendu dans le HTML.
-     * Les liens vers des documents non autorisés ou absents restent inchangés et ne
-     * révèlent aucun identifiant côté client.
+     * Les liens vers des documents absents restent inchangés.
      *
      * @param array<string,mixed> $current
      * @param list<array<string,mixed>> $documents
@@ -658,95 +649,73 @@ final class DocsApiController
     private function sectionPolicy(): array
     {
         return [
+            'overview' => [
+                'label' => 'Documentation',
+                'description' => 'Point d’entrée global de la documentation.',
+                'audience_label' => 'Tous',
+                'sort_order' => 0,
+            ],
             'getting-started' => [
                 'label' => 'Découvrir et installer localement',
                 'description' => 'Parcours de prise en main pour installer et comprendre une instance locale.',
-                'audience_label' => 'Admin',
+                'audience_label' => 'Tous',
                 'sort_order' => 10,
-                'any_permission' => ['settings.read', 'modules.read', 'users.read', 'roles.read'],
             ],
             'user-guide' => [
                 'label' => 'Créer, réviser et publier',
                 'description' => 'Documentation opérationnelle pour les contenus, médias, menus, publication et SEO éditorial.',
-                'audience_label' => 'Éditeur · Publication · SEO',
+                'audience_label' => 'Tous',
                 'sort_order' => 20,
-                'any_permission' => ['content.read', 'content.update', 'content.publish', 'content.approve', 'seo.read', 'seo.simple', 'seo.manage', 'media.read', 'menu.read', 'taxonomy.read', 'forms.read', 'imports_exports.read', 'settings.read'],
-                'superadmin_documents' => ['user-guide/README.md'],
             ],
             'administration' => [
                 'label' => 'Administrer sites, langues, rôles et modules',
                 'description' => 'Réglages fonctionnels, gouvernance, sécurité applicative et administration des modules.',
-                'audience_label' => 'Admin',
+                'audience_label' => 'Tous',
                 'sort_order' => 30,
-                'any_permission' => ['settings.read', 'settings.manage', 'users.read', 'roles.read', 'modules.read', 'modules.manage', 'blueprints.read', 'security.tokens.read', 'security.webhooks.read', 'security.cors.read'],
             ],
             'installation' => [
                 'label' => 'Installer une release',
                 'description' => 'Préparer, installer ou vérifier une release distribuable.',
-                'audience_label' => 'Superadmin',
+                'audience_label' => 'Tous',
                 'sort_order' => 40,
-                'superadmin_only' => true,
             ],
             'operations' => [
                 'label' => 'Exploiter, sauvegarder, déployer et diagnostiquer',
                 'description' => 'Runbooks, sauvegardes, déploiement, santé applicative, export statique et dépannage.',
-                'audience_label' => 'Admin · Superadmin',
+                'audience_label' => 'Tous',
                 'sort_order' => 50,
-                'any_permission' => ['settings.read', 'settings.manage', 'maintenance.manage', 'modules.manage', 'imports_exports.manage', 'security.tokens.manage'],
             ],
             'api' => [
                 'label' => 'Intégrer l’API publique ou consulter les contrats internes',
                 'description' => 'Présentation des API et des contrats pour intégration contrôlée.',
-                'audience_label' => 'Admin',
+                'audience_label' => 'Tous',
                 'sort_order' => 60,
-                'any_permission' => ['settings.read', 'modules.read', 'blueprints.read', 'security.tokens.read', 'security.webhooks.read'],
             ],
             'public-api' => [
                 'label' => 'API publique',
                 'description' => 'Documentation OpenAPI et exemples pour les endpoints publics.',
-                'audience_label' => 'Admin',
+                'audience_label' => 'Tous',
                 'sort_order' => 61,
-                'any_permission' => ['settings.read', 'modules.read', 'blueprints.read', 'security.tokens.read'],
             ],
             'development' => [
                 'label' => 'Développer et étendre le CMS',
                 'description' => 'Architecture, conventions, extensions, modules, tests et outillage développeur.',
-                'audience_label' => 'Superadmin',
+                'audience_label' => 'Tous',
                 'sort_order' => 70,
-                'superadmin_only' => true,
             ],
             'reference' => [
                 'label' => 'Consulter les inventaires techniques',
                 'description' => 'Inventaires générés, schémas, commandes, routes, permissions et contrats.',
-                'audience_label' => 'Superadmin',
+                'audience_label' => 'Tous',
                 'sort_order' => 80,
-                'superadmin_only' => true,
             ],
             'evaluation' => [
                 'label' => 'Évaluer les capacités et limites',
                 'description' => 'Parcours d’évaluation factuel, preuves, limites, matrices et contrôles reproductibles.',
-                'audience_label' => 'Admin',
+                'audience_label' => 'Tous',
                 'sort_order' => 90,
-                'any_permission' => ['settings.read', 'settings.manage', 'modules.read', 'modules.manage'],
             ],
         ];
     }
 
-    /** @param list<string> $visibleSectionKeys @return list<array<string,string>> */
-    private function policySummary(array $visibleSectionKeys): array
-    {
-        $visible = array_flip($visibleSectionKeys);
-        $items = [];
-        foreach ($this->sections as $key => $section) {
-            if (!isset($visible[$key])) {
-                continue;
-            }
-            $items[] = [
-                'key' => $key,
-                'label' => (string) $section['label'],
-                'audience_label' => (string) $section['audience_label'],
-            ];
-        }
-        return $items;
-    }
 }

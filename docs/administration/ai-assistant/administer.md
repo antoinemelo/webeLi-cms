@@ -10,7 +10,6 @@ source_of_truth: manual
 owners:
   - security
 document_type: guide
-permissions: []
 source_paths:
   - backend/src
   - admin-app/src

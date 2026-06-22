@@ -1,0 +1,1 @@
+import{E as e,I as t,at as n,rt as r,x as i}from"./ApiFeedback-B4Gr1hoW.js";var a=e({__name:`StatusBadge`,props:{status:{}},setup(e){return(a,o)=>(t(),i(`span`,{class:r([`badge`,e.status||`draft`])},n(e.status||`draft`),3))}});export{a as t};

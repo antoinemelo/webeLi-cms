@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - taxonomy.read
-  - taxonomy.manage
 source_paths:
   - backend/routes/api.php
   - database/schema/core.sql

@@ -18,7 +18,6 @@ owners:
   - operations
   - core
 document_type: procedure
-permissions:
 generated: false
 ---
 # Mettre à jour une base existante

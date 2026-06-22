@@ -15,10 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.approve
-  - content.publish
-  - admin.entries.publish
 source_paths:
   - backend/routes/api.php
   - backend/src/Publishing

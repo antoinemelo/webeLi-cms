@@ -44,17 +44,28 @@ ALLOWED_DOC_ACTIONS = {"generate", "check", "evaluation-generate", "evaluation-c
 LEGACY_DIRS = ("docs/archive", "docs/history", "docs/internal")
 
 ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "DOCUMENT_EXTENSIONS", "inventaire explicite des formats documentaires exposés"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "documentationFiles", "indexation exhaustive des sources documentaires prises en charge"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "'permission_filtering' => false", "absence explicite de filtrage IAM documentaire"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "renderSourceDocument", "rendu sûr des références JSON, YAML, HTML source et texte"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "data-doc-id", "résolution serveur des liens Markdown internes"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "withResolvedMarkdownLinks", "enrichissement des liens Markdown rendus"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "resolveRequestedDocument", "résolution serveur robuste des identifiants ou chemins Markdown"),
     ("backend/src/Application/Api/Admin/DocsApiController.php", "link_path", "secours serveur avec chemin de lien Markdown"),
-    ("backend/src/Application/Api/Admin/DocsApiController.php", "documentPermissions", "filtrage de chaque document selon son front matter"),
-    ("backend/src/Application/Api/Admin/DocsApiController.php", "$frontMatter, $permissions, $isSuperAdmin", "application du front matter au contrôle d’accès"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "documentIdFromRelativePath", "résolution client de secours des chemins Markdown"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "explicitDocumentIdFromHref", "navigation client via les liens #docs/<id>"),
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "from_id", "transmission du document source pour les liens relatifs"),
     ("backend/routes/api.php", "/admin/api/docs/resolve", "endpoint stable de résolution des liens Markdown internes"),
     ("backend/routes/api.php", "/admin/api/docs/{id:.+}", "compatibilité avec les anciens liens Markdown encodés dans le chemin"),
+)
+
+FORBIDDEN_DOC_ACCESS_RULES = (
+    "canAccessDocument",
+    "documentPermissions",
+    "superadmin_only",
+    "superadmin_documents",
+    "any_permission",
+    "siteContext",
 )
 
 
@@ -129,6 +140,8 @@ def validate(mode: str = "fast") -> ValidationReport:
                     report.add("DOC-008", "source_paths doit être une liste", path=rel)
             if meta.get("generated") == "true" and not meta.get("generator"):
                 report.add("DOC-004", "Page générée sans générateur déclaré", path=rel)
+            if "permissions" in meta:
+                report.add("DOC-010", "La documentation ne doit déclarer aucune règle d’accès", path=rel)
 
         for raw in LINK_RE.findall(text):
             target = raw.split("#", 1)[0].strip()
@@ -152,6 +165,14 @@ def validate(mode: str = "fast") -> ValidationReport:
             continue
         if snippet not in source_path.read_text(encoding="utf-8", errors="ignore"):
             report.add("DOC-009", "Protection des liens Markdown du viewer Docs incomplète", path=rel, expected=expected)
+
+    controller_path = ROOT / "backend/src/Application/Api/Admin/DocsApiController.php"
+    if controller_path.is_file():
+        controller_source = controller_path.read_text(encoding="utf-8", errors="ignore")
+        for rule in FORBIDDEN_DOC_ACCESS_RULES:
+            report.checked()
+            if rule in controller_source:
+                report.add("DOC-010", "Ancienne règle d’accès documentaire encore présente", path=str(controller_path.relative_to(ROOT)), rule=rule)
 
     available = _available_cli_commands()
     report.checked()

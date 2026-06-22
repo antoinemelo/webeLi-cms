@@ -15,9 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - menu.read
-  - menu.manage
 source_paths:
   - backend/routes/api.php
   - backend/src/Menu

@@ -14,7 +14,6 @@ source_paths:
 owners:
   - core
 document_type: guide
-permissions: []
 source_paths:
   - backend/src
   - frontend

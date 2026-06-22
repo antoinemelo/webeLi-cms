@@ -1,27 +1,30 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import DashboardView from '@/views/DashboardView.vue';
-import MediaLibraryView from '@/views/content/MediaLibraryView.vue';
-import DocsView from '@/views/assets/DocsView.vue';
-import ContentListView from '@/views/content/ContentListView.vue';
-import ContentEditorView from '@/views/content/ContentEditorView.vue';
-import MenusView from '@/views/content/MenusView.vue';
-import TaxonomiesView from '@/views/content/TaxonomiesView.vue';
-import StudioView from '@/views/StudioView.vue';
-import SystemConfigurationView from '@/views/system/SystemConfigurationView.vue';
-import CookiesView from '@/views/system/CookiesView.vue';
-import BlueprintsView from '@/views/system/BlueprintsView.vue';
-import SeoAuditView from '@/views/tools/SeoAuditView.vue';
-import MaintenanceView from '@/views/tools/MaintenanceView.vue';
-import ProfileView from '@/views/ProfileView.vue';
-import IamUsersView from '@/views/iam/IamUsersView.vue';
-import IamRolesView from '@/views/iam/IamRolesView.vue';
-import IamSessionsView from '@/views/iam/IamSessionsView.vue';
-import IamAuditView from '@/views/iam/IamAuditView.vue';
-import FormsView from '@/views/forms/FormsView.vue';
-import ModulesView from '@/views/modules/ModulesView.vue';
-import AiAssistantConfigView from '@/views/modules/AiAssistantConfigView.vue';
-import ImportsExportsView from '@/views/ImportsExportsView.vue';
+
+// Vue Router accepts lazy route components natively. Keeping only the small
+// dashboard eager avoids downloading every administration workspace at login.
+const StudioView = () => import('@/views/StudioView.vue');
+const ImportsExportsView = () => import('@/views/ImportsExportsView.vue');
+const ContentListView = () => import('@/views/content/ContentListView.vue');
+const ContentEditorView = () => import('@/views/content/ContentEditorView.vue');
+const MediaLibraryView = () => import('@/views/content/MediaLibraryView.vue');
+const DocsView = () => import('@/views/assets/DocsView.vue');
+const FormsView = () => import('@/views/forms/FormsView.vue');
+const ModulesView = () => import('@/views/modules/ModulesView.vue');
+const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
+const MenusView = () => import('@/views/content/MenusView.vue');
+const TaxonomiesView = () => import('@/views/content/TaxonomiesView.vue');
+const BlueprintsView = () => import('@/views/system/BlueprintsView.vue');
+const SeoAuditView = () => import('@/views/tools/SeoAuditView.vue');
+const MaintenanceView = () => import('@/views/tools/MaintenanceView.vue');
+const SystemConfigurationView = () => import('@/views/system/SystemConfigurationView.vue');
+const CookiesView = () => import('@/views/system/CookiesView.vue');
+const IamUsersView = () => import('@/views/iam/IamUsersView.vue');
+const IamRolesView = () => import('@/views/iam/IamRolesView.vue');
+const IamSessionsView = () => import('@/views/iam/IamSessionsView.vue');
+const IamAuditView = () => import('@/views/iam/IamAuditView.vue');
+const ProfileView = () => import('@/views/ProfileView.vue');
 
 declare global {
   interface Window {

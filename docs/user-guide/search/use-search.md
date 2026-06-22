@@ -15,7 +15,6 @@ source_paths:
 owners:
   - editorial
 document_type: procedure
-permissions:
 source_paths:
   - backend/routes
   - backend/src

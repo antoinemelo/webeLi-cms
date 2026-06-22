@@ -7,8 +7,8 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.3
-last_verified: 2026-06-21
+version: 2.0
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - docs
@@ -23,7 +23,7 @@ generated: false
 
 ## Résultat attendu
 
-Chaque profil accède depuis le menu principal aux documents utiles pour son rôle, sans liens dispersés dans les panneaux individuels.
+Chaque utilisateur authentifié accède depuis le menu principal à l’intégralité de la documentation, sans filtre lié au rôle, aux permissions ou aux sites affectés.
 
 ## Accès
 
@@ -32,30 +32,14 @@ Chaque profil accède depuis le menu principal aux documents utiles pour son rô
 3. Ouvrez **Docs**.
 4. Utilisez la ligne de recherche pour filtrer par texte et par espace documentaire.
 
-## Règle d’affichage
+## Règle d’accès
 
-La liste est filtrée côté serveur selon les permissions du profil connecté. Un document non autorisé est caché, pas affiché en grisé.
+La documentation est globale à l’installation. Une session valide du back-office suffit. Le backend indexe toutes les sources documentaires prises en charge sous `docs/` et renvoie le même catalogue à chaque utilisateur.
 
-| Espace documentaire | Profil principalement concerné |
-|---|---|
-| Découvrir et installer localement | Admin, Superadmin |
-| Créer, réviser et publier | Éditeur, Publication, SEO, Admin, Superadmin |
-| Administrer sites, langues, rôles et modules | Admin, Superadmin |
-| Installer une release | Superadmin |
-| Exploiter, sauvegarder, déployer et diagnostiquer | Admin, Superadmin |
-| Intégrer l’API publique ou consulter les contrats internes | Admin, Superadmin |
-| Développer et étendre le CMS | Superadmin |
-| Consulter les inventaires techniques | Superadmin |
-| Évaluer les capacités et limites | Admin, Superadmin |
-
-## Exception de sécurité
-
-L’index `docs/user-guide/README.md` est réservé aux superadmins, car il agrège des liens vers des procédures dont toutes les cibles ne sont pas visibles pour les profils éditoriaux. Les sous-pages utiles du guide utilisateur restent accessibles directement dans **Actifs > Docs** selon les permissions du profil.
+Formats exposés : Markdown, JSON, YAML, HTML affiché comme code source et texte brut. Les fichiers de configuration serveur tels que `.htaccess` ne sont pas des documents et ne sont pas indexés.
 
 ## Lecture Markdown
 
-Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers d’autres fichiers Markdown sont résolus côté serveur et côté interface vers un identifiant de document autorisé. Un lien Markdown relatif, par exemple `content/create-edit.md`, ouvre donc directement le document cible dans le viewer quand le profil connecté peut le consulter. Le serveur accepte aussi les variantes générées par le viewer (`#docs/<id>`, chemin `docs/...`, identifiant avec `~`) uniquement si elles correspondent à un document déjà autorisé pour le profil courant.
+Les fichiers Markdown sont rendus dans un viewer dédié. Les liens internes vers toute source documentaire indexée sont résolus côté serveur et côté interface vers un identifiant canonique. Un lien relatif, par exemple `content/create-edit.md`, ouvre donc directement sa cible. Le serveur accepte aussi les variantes générées par le viewer (`#docs/<id>`, chemin `docs/...`, identifiant avec `~`) lorsqu’elles correspondent à un document indexé.
 
-## Limites
-
-Les documents non Markdown, comme certains contrats JSON ou fichiers OpenAPI, restent des sources techniques du dépôt. Le viewer du back-office se concentre sur les pages Markdown lisibles par les utilisateurs.
+Les sources non Markdown sont échappées et rendues dans un bloc de code : aucun HTML documentaire n’est exécuté dans le back-office.

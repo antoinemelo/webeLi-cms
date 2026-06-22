@@ -11,7 +11,6 @@ owners:
   - operations
   - core
 document_type: guide
-permissions: []
 source_paths:
   - backend/src/Modules
   - backend/src/Module
