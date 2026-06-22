@@ -48,4 +48,10 @@ foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml'] as $
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }
 
+$htaccess = (string) file_get_contents(base_path('.htaccess'));
+$openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');
+$genericJsonBlock = strpos($htaccess, 'jsonl?|zip');
+$h->assertTrue($openApiException !== false, 'Apache explicitly routes public OpenAPI JSON/YAML through PHP');
+$h->assertTrue($genericJsonBlock !== false && $openApiException < $genericJsonBlock, 'OpenAPI Apache exception precedes the generic JSON/YAML deny rule');
+
 exit($h->finish('UNIT public API discovery and OpenAPI exposure'));
