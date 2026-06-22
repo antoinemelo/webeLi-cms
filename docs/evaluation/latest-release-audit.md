@@ -22,9 +22,9 @@ Ce document est généré automatiquement pour une release **mineure ou majeure*
 - Type : `minor`
 - Audit : `PASS`
 - Profil : `release`
-- Date UTC : `2026-06-22T15:23:30Z`
-- SHA-256 release : `9edec043f863bcd64e84ee9d4ba8d18b28249ef2b552fb337244d362d2bc1af7`
-- SHA-256 preuves : `9637420f257e1c3cdeee8f23b2aa6d0bc7ba318caf824b64d4517fe0b4d7cb40`
+- Date UTC : `2026-06-22T17:11:10Z`
+- SHA-256 release : `a9d3828511ef043a48c63d7c0585bb660b163243c84ce35246f3d01cf3ebd803`
+- SHA-256 preuves : `1d8c8946d01edd0547f06d2d0cb4639efca5584da95c43db6c40e2214cbe147b`
 - Étapes démontrées : 21
 
 ## Vérification indépendante
