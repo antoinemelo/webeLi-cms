@@ -22,7 +22,7 @@ La commande canonique pour une vérification approfondie est :
 python3 tools/cms.py qualify --profile complete
 ```
 
-Trois profils seulement sont proposés. **Aucun profil de qualification ne reconstruit les bases de données.** La reconstruction est une opération destructive et indépendante, accessible uniquement par `python3 tools/cms.py rebuild` ou par le point 1 du menu d’administration.
+Trois profils seulement sont proposés. **Aucun profil ne reconstruit les bases de l’instance de travail.** La qualification de release crée sa propre instance temporaire et y reconstruit les bases depuis les sources pour Playwright.
 
 ## Profils
 
@@ -32,17 +32,17 @@ Trois profils seulement sont proposés. **Aucun profil de qualification ne recon
 | `complete` | avant intégration ou après une modification importante | lint Python/PHP, tests, validateurs complets, intégrité runtime, sauvegarde/restauration, build frontend, documentation et export statique à blanc |
 | `release` | avant livraison ou déploiement | profil complet, tests Playwright, préflight de production, création du package, vérification de l’archive et installation neuve |
 
-Le profil `complete` ne crée pas de package de release. Le profil `release` exige `E2E_BASE_URL`, `E2E_ADMIN_EMAIL` et `E2E_ADMIN_PASSWORD`. Si ces variables sont absentes, les tests Playwright sont marqués `skipped`, la qualification devient incomplète et la commande retourne le code `2` ; ce code ne représente jamais un succès.
+Le profil `complete` ne crée pas de package de release. Le profil `release` compile le frontend puis lance Playwright sur une copie isolée avec des bases, un compte administrateur et un récepteur webhook éphémères. Aucune variable `E2E_*` n’est requise. Chromium doit avoir été installé une fois avec `python3 tools/cms.py e2e --install-browser`.
 
 ## Reconstruction des bases
 
-La reconstruction ne fait partie d’aucun validateur ni d’aucun profil de qualification :
+La reconstruction de l’instance de travail ne fait partie d’aucun validateur ni d’aucun profil :
 
 ```bash
 python3 tools/cms.py rebuild
 ```
 
-Elle doit être déclenchée explicitement, après vérification de la cible et sauvegarde si nécessaire.
+Elle doit être déclenchée explicitement, après vérification de la cible et sauvegarde si nécessaire. La reconstruction effectuée par Playwright reste confinée à son répertoire temporaire.
 
 ## Codes de retour
 

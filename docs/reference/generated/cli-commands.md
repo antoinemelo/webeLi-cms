@@ -22,13 +22,13 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,export,backup,migrate,instance,release,docs}
+                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,docs}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,export,backup,migrate,instance,release,docs}
+  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,docs}
     init                Créer les structures SQLite sans données métier.
     rebuild             Développement/test: reconstruire les bases et appliquer
                         les seeds natifs.
@@ -37,6 +37,7 @@ positional arguments:
     audit               Produire des preuves reproductibles dans le conteneur d
                         audit.
     test                Exécuter les tests automatisés Python.
+    e2e                 Exécuter Playwright sur une instance CMS isolée.
     export              Générer ou simuler un export statique.
     backup              Créer ou restaurer une sauvegarde SQLite.
     migrate             Planifier ou appliquer les migrations SQLite natives et

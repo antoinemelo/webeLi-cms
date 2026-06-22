@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .evidence import CommandEvidence
 from .runtime import Context
-from tools.python.commands import audit, backup, docs, export, init, instance, migrate, qualify, release, test, validate
+from tools.python.commands import audit, backup, docs, e2e, export, init, instance, migrate, qualify, release, test, validate
 from tools.python.lib.release_metadata import load_release_metadata
 
-COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'instance': instance.run, 'release': release.run, 'docs': docs.run}
+COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'e2e': e2e.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'instance': instance.run, 'release': release.run, 'docs': docs.run}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -29,6 +29,7 @@ def parser() -> argparse.ArgumentParser:
     qualify.configure(sub.add_parser('qualify', help='Qualifier globalement le CMS selon un profil.'))
     audit.configure(sub.add_parser('audit', help='Produire des preuves reproductibles dans le conteneur d audit.'))
     test.configure(sub.add_parser('test', help='Exécuter les tests automatisés Python.'))
+    e2e.configure(sub.add_parser('e2e', help='Exécuter Playwright sur une instance CMS isolée.'))
     export.configure(sub.add_parser('export', help='Générer ou simuler un export statique.'))
     backup.configure(sub.add_parser('backup', help='Créer ou restaurer une sauvegarde SQLite.'))
     migrate.configure(sub.add_parser('migrate', help='Planifier ou appliquer les migrations SQLite natives et de modules.'))

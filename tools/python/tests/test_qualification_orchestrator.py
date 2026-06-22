@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
-from tools.python.qualification.run_all import Result, _exit_code, steps
+from tools.python.qualification.run_all import ROOT, Result, _display_path, _exit_code, steps
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
@@ -47,6 +48,10 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual(1, _exit_code([passed, failed]))
         self.assertEqual(0, _exit_code([passed]))
 
+    def test_report_paths_outside_repository_are_printable(self):
+        self.assertEqual("storage/report.json", _display_path(ROOT / "storage/report.json"))
+        self.assertTrue(_display_path(Path("/tmp/dec-report.json")).endswith("/tmp/dec-report.json"))
+
     def test_frontend_steps_use_node_entrypoints_not_bin_wrappers(self):
         registry = {step.id: step for step in steps()}
         build = registry["frontend-build"]
@@ -68,6 +73,9 @@ class QualificationOrchestratorTest(unittest.TestCase):
             "frontend/admin-vue/node_modules/.bin/playwright",
             e2e.files,
         )
+        self.assertEqual((), e2e.env_vars)
+        self.assertIn("e2e", e2e.command)
+        self.assertIn("--use-built-assets", e2e.command)
 
 
 if __name__ == "__main__":

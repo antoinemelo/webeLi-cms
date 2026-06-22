@@ -76,9 +76,4 @@ def run(ctx, args) -> int:
     if result != 0 or not args.e2e:
         return result
 
-    return execute(
-        ctx,
-        ["npm", "run", "test:e2e"],
-        cwd="frontend/admin-vue",
-        timeout=E2E_TIMEOUT_SECONDS,
-    )
+    return execute(ctx, [sys.executable, str(ctx.root / "tools/cms.py"), "e2e"], timeout=E2E_TIMEOUT_SECONDS)

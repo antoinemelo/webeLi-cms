@@ -10,6 +10,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -83,6 +84,7 @@
         "docs/operations/backup-restore.md",
         "docs/operations/client-instance-update.md",
         "docs/operations/deployment.md",
+        "docs/operations/existing-database-update.md",
         "docs/operations/hostpoint-git-ftp.md",
         "docs/operations/instance-clone.md",
         "docs/operations/instance-update.md",
@@ -99,6 +101,7 @@
         "docs/user-guide/seo/audit-redirects-troubleshooting.md",
         "docs/user-guide/seo/seo-workflow.md",
         "examples/modules/client-notes/README.md",
+        "frontend/admin-vue/README.md",
         "ops/deployment-notes.md",
         "packages/amcms-client/README.md",
         "tools/admin.py",
@@ -111,6 +114,7 @@
         "tools/python/cms/cli.py",
         "tools/python/commands/__init__.py",
         "tools/python/commands/instance.py",
+        "tools/python/commands/test.py",
         "tools/python/diagnostics/list_python_tools.py",
         "tools/python/generators/c40_generate_openapi_headless_v1.py",
         "tools/python/generators/c44_generate_sdk_types_from_openapi.py",
@@ -149,9 +153,16 @@
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tests/test_cli_smoke.py",
+        "tools/python/tests/test_cms_cli.py",
+        "tools/python/tests/test_migrate_plan_readonly.py",
         "tools/python/tests/test_module_foundation.py",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/configuration/repository_layout.py",
         "tools/python/validation/documentation/contracts.py",
@@ -171,6 +182,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -186,6 +198,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -230,6 +243,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "tools/python/tests/test_characterization_baseline.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -259,6 +273,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -297,10 +312,14 @@
         "docs/development/command-reliability.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/latest-release-audit.md",
+        "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/release-audit-policy.md",
         "tools/audit/run-audit.sh",
         "tools/python/operations/deployment/d13_bind_release_evidence.py",
         "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -319,6 +338,7 @@
         "tools/python/commands/audit.py",
         "tools/python/commands/backup.py",
         "tools/python/commands/docs.py",
+        "tools/python/commands/e2e.py",
         "tools/python/commands/export.py",
         "tools/python/commands/init.py",
         "tools/python/commands/instance.py",
@@ -326,6 +346,7 @@
         "tools/python/commands/qualify.py",
         "tools/python/commands/release.py",
         "tools/python/commands/test.py",
+        "tools/python/tests/test_command_runtime_reliability.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py"
       ],
@@ -342,6 +363,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -398,6 +420,21 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/commands/e2e.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/E2E_RESULTS.md",
+        "tools/python/qualification/run_all.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/commands/export.py",
       "category": "command",
       "public": false,
@@ -427,6 +464,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -443,6 +481,7 @@
       "called_by": [
         "docs/operations/client-instance-update.md",
         "docs/operations/instance-update.md",
+        "tools/python/tests/test_instance_clone.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -457,6 +496,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/operations/existing-database-update.md",
         "docs/operations/module-migrations.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py"
@@ -501,6 +541,7 @@
         "tools/python/operations/deployment/d3_deploy_ftp.py",
         "tools/python/operations/deployment/d_deploy.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py",
         "tools/python/validation/operations/release_structure.py"
@@ -519,7 +560,9 @@
       "called_by": [
         "docs/development/testing-validation/load-testing.md",
         "tools/python/generators/generate_tool_manifest.py",
-        "tools/python/tool-manifest.json"
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_LOAD-TEST.md",
+        "tools/tests/load_test.py"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -553,6 +596,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -582,6 +626,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py docs",
@@ -661,6 +706,7 @@
         "docs/reference/generated/schema-versions.md",
         "docs/reference/generated/validators.md",
         "tools/python/commands/docs.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py docs",
@@ -705,6 +751,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -720,6 +767,7 @@
       "entrypoint": false,
       "called_by": [
         "docs/development/python-tooling/cli.md",
+        "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
         "tools/python/commands/migrate.py",
@@ -792,6 +840,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
         "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -807,6 +856,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -853,6 +903,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -870,6 +921,7 @@
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/release-audit-policy.md",
         "tools/audit/run-audit.sh",
+        "tools/python/tests/test_audit_evidence_collection.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -885,6 +937,7 @@
       "entrypoint": false,
       "called_by": [
         "tools/audit/run-audit.sh",
+        "tools/python/tests/test_audit_evidence_collection.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -900,6 +953,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py backup",
@@ -915,6 +969,7 @@
       "entrypoint": false,
       "called_by": [
         "docs/operations/client-instance-update.md",
+        "docs/operations/existing-database-update.md",
         "docs/operations/instance-update.md",
         "docs/operations/local-update.md",
         "tools/python/README.md",
@@ -959,6 +1014,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
@@ -982,6 +1038,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
+        "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
@@ -1097,6 +1154,7 @@
       "entrypoint": false,
       "called_by": [
         "docs/operations/client-instance-update.md",
+        "docs/operations/existing-database-update.md",
         "docs/operations/instance-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
@@ -1151,6 +1209,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
@@ -1202,6 +1261,7 @@
       "called_by": [
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
@@ -1219,6 +1279,8 @@
         "docs/evaluation/latest-release-audit.md",
         "docs/evaluation/release-audit-policy.md",
         "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
@@ -1234,6 +1296,7 @@
       "entrypoint": false,
       "called_by": [
         "tools/python/commands/instance.py",
+        "tools/python/tests/test_instance_clone.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
@@ -1279,6 +1342,7 @@
         "tools/python/operations/deployment/d3_deploy_ftp.py",
         "tools/python/operations/deployment/d_deploy.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/release_structure.py"
       ],
@@ -1320,6 +1384,8 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_audit_and_release_export_layout.py",
+        "tools/python/tests/test_release_archive_vendor_contract.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/release_structure.py"
       ],
@@ -1378,6 +1444,7 @@
         "ops/deployment-notes.md",
         "tools/python/commands/release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py release",
@@ -1393,6 +1460,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1447,12 +1515,45 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/operations/testing/__init__.py",
+      "category": "operation-testing",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/operations/testing/run_playwright_e2e.py",
+      "category": "operation-testing",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/E2E_RESULTS.md",
+        "tools/python/commands/e2e.py",
+        "tools/python/qualification/run_all.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/__init__.py",
       "category": "internal",
       "public": false,
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1481,6 +1582,7 @@
         "tools/python/commands/qualify.py",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d12_quality_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1496,6 +1598,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1541,6 +1644,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1556,6 +1660,7 @@
       "entrypoint": false,
       "called_by": [
         "docs/evaluation/audit-evidence-troubleshooting.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1600,6 +1705,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1629,6 +1735,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1653,11 +1760,24 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_e2e_harness.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_instance_clone.py",
       "category": "test",
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1671,21 +1791,25 @@
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "replacement": "python3 tools/cms.py test",
-      "status": "active",
-      "archived_at": null,
-      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre",
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
-      "destructive": true
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
       "path": "tools/python/tests/test_module_foundation.py",
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,
@@ -1728,6 +1852,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1757,6 +1882,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -1787,6 +1913,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1802,6 +1929,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1866,6 +1994,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1915,6 +2044,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1991,6 +2121,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2007,6 +2138,7 @@
       "called_by": [
         "docs/development/python-tooling/cli.md",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
         "docs/reference/generated/validators.md",
@@ -2066,6 +2198,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2139,6 +2272,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2192,7 +2326,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
       "replacement": null,
@@ -2208,6 +2344,7 @@
       "entrypoint": false,
       "called_by": [
         "docs/administration/modules/manage-modules.md",
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
@@ -2247,6 +2384,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2279,6 +2417,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2348,6 +2487,7 @@
         "tools/python/commands/validate.py",
         "tools/python/generators/generate_documentation.py",
         "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tool-manifest.json",
         "tools/python/validators/registry.py"
       ],
@@ -2382,6 +2522,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2401,6 +2542,7 @@
         "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/tests/test_characterization_baseline.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
@@ -2417,6 +2559,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -2449,6 +2592,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py validate",
@@ -2488,13 +2632,16 @@
     },
     {
       "path": "tools/tests/load_test.py",
-      "category": "test",
+      "category": "load-test",
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "tools/python/tool-manifest.json"
+        "docs/development/testing-validation/load-testing.md",
+        "tools/python/generators/generate_tool_manifest.py",
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_LOAD-TEST.md"
       ],
-      "replacement": "python3 tools/cms.py test",
+      "replacement": "python3 tools/tests/load_test.py --help",
       "status": "active",
       "destructive": false,
       "archived_at": null,

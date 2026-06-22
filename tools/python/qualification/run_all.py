@@ -29,6 +29,13 @@ ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "
 REPORT_DIR = ROOT / "storage" / "qualification"
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
 @dataclass
 class Result:
     id: str
@@ -124,7 +131,20 @@ def steps() -> tuple[Step, ...]:
             ),
             timeout=600,
         ),
-        Step("browser-e2e", "Tests navigateur Playwright", ("release",), ("npm", "run", "test:e2e"), cwd="frontend/admin-vue", executables=("node", "npm"), files=("frontend/admin-vue/playwright.config.ts", "frontend/admin-vue/node_modules/@playwright/test/cli.js"), env_vars=("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD"), timeout=900),
+        Step(
+            "browser-e2e",
+            "Tests navigateur Playwright isolés",
+            ("release",),
+            (py, cms, "e2e", "--use-built-assets"),
+            executables=("php", "node"),
+            files=(
+                "frontend/admin-vue/playwright.config.ts",
+                "frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts",
+                "frontend/admin-vue/node_modules/@playwright/test/cli.js",
+                "tools/python/operations/testing/run_playwright_e2e.py",
+            ),
+            timeout=1200,
+        ),
         Step("docs-generate", "Génération documentaire", ("complete", "release"), (py, cms, "docs", "generate"), timeout=300),
         Step("docs-check", "Contrôle documentaire", ("complete", "release"), (py, cms, "docs", "check"), timeout=300),
         Step("static-export", "Export statique à blanc", ("complete", "release"), (py, cms, "--dry-run", "export"), executables=("php",), files=("backend/bin/console",), timeout=300),
@@ -339,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
         md_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         md_path.write_text(_markdown(args.profile, results, code), encoding="utf-8")
-        print(f"\nRapports: {json_path.relative_to(ROOT)}, {md_path.relative_to(ROOT)}")
+        print(f"\nRapports: {_display_path(json_path)}, {_display_path(md_path)}")
     print(f"Résultat: {payload['status']} — code {code}")
     if code == 2:
         skipped = [result for result in results if result.status == "skipped"]

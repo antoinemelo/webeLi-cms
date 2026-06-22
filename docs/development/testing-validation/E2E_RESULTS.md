@@ -4,44 +4,56 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-06-14
-source_of_truth: manual
+last_verified: 2026-06-22
+source_of_truth: code
+source_paths:
+  - tools/python/operations/testing/run_playwright_e2e.py
+  - frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts
 owners:
   - core
 document_type: reference
 generated: false
 ---
-# Résultats des tests fonctionnels et E2E
+# Tests fonctionnels et E2E
 
-## Commandes exécutées
+## Exécution autonome
 
 ```bash
-php tools/php/tests/run.php
-/usr/bin/python3 -m unittest discover -s tools/python/tests -p 'test*.py'
-cd frontend/admin-vue && npm run build
-cd frontend/admin-vue && npx playwright test --list
+python3 tools/cms.py e2e --install-browser  # une fois par machine
+python3 tools/cms.py e2e
 ```
 
-## Résultats dans l’environnement de préparation
+La seconde commande ne demande ni serveur préexistant, ni identifiant stocké, ni URL de webhook externe. Elle :
 
-- Suite unitaire PHP : réussie, 6 assertions.
-- Suites d’intégration PHP SQLite : enregistrées mais ignorées localement car l’extension `pdo_sqlite` du PHP CLI n’est pas installée dans l’environnement de préparation. Elles s’exécutent automatiquement lorsque cette extension est disponible.
-- Tests Python : 27 réussis, 1 test existant ignoré.
-- Build Vue/TypeScript : réussi.
-- Playwright : 2 scénarios découverts et compilés.
-- Exécution navigateur complète : non lancée, faute de serveur CMS de test et d’identifiants `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`.
+- copie le projet dans un répertoire temporaire ;
+- compile le back-office depuis les sources courantes ;
+- reconstruit toutes les bases depuis les schémas et seeds natifs ;
+- crée un administrateur éphémère avec un mot de passe aléatoire ;
+- démarre le CMS PHP et un récepteur webhook sur des ports libres ;
+- exécute Chromium puis détruit intégralement l’instance.
 
-## Exécution recommandée
+Les bases, comptes et fichiers de l’instance de travail ne sont jamais modifiés. `--keep-instance` conserve la copie temporaire en cas de diagnostic et `--headed` affiche Chromium.
+
+## Parcours couverts
+
+- connexion administrateur en deux étapes ;
+- création, ping, historique persistant et suppression d’un webhook ;
+- livraison réelle vers le récepteur HTTP local ;
+- absence de secret en clair dans l’interface ;
+- refus d’un appel direct à l’API webhook sans authentification.
+
+Le dernier run local complet a exécuté les deux scénarios avec succès. En cas d’échec, captures, vidéo et trace sont écrites dans `frontend/admin-vue/test-results/artifacts/`.
+
+## Cible externe facultative
+
+Une instance déjà démarrée peut encore être testée explicitement :
 
 ```bash
-/usr/bin/python3 tools/cms.py test
 E2E_BASE_URL=http://127.0.0.1:8080 \
 E2E_ADMIN_EMAIL=e2e-admin@example.test \
 E2E_ADMIN_PASSWORD='...' \
 E2E_WEBHOOK_URL=http://127.0.0.1:9876/webhook \
-/usr/bin/python3 tools/cms.py test --e2e
+python3 tools/cms.py e2e
 ```
 
-## Limites connues
-
-Le test navigateur webhook suppose que l’interface expose des attributs sémantiques stables `data-delivery-id` et `data-delivery-status`. S’ils ne sont pas encore rendus, le test échouera utilement et l’interface devra les ajouter plutôt que de revenir à des sélecteurs CSS fragiles.
+Les trois premières variables doivent être fournies ensemble. Cette voie ne crée ni compte ni données et doit donc viser une instance jetable.
