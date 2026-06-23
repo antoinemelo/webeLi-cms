@@ -1,1 +1,0 @@
-import{E as e,L as t,at as n,st as r,x as i}from"./ApiFeedback-S88AVdwt.js";var a=e({__name:`StatusBadge`,props:{status:{}},setup(e){return(a,o)=>(t(),i(`span`,{class:n([`badge`,e.status||`draft`])},r(e.status||`draft`),3))}});export{a as t};

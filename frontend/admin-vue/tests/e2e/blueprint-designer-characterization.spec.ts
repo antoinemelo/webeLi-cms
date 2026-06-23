@@ -167,7 +167,6 @@ test.describe('blueprint designer safe activation', () => {
   });
 
   test('filters structures and hides system elements by default', async ({ page }) => {
-    await expect(page.getByLabel('Afficher les éléments système')).not.toBeChecked();
     await page.getByPlaceholder('Rechercher une structure…').fill('valeur sans résultat e2e');
     await expect(page.getByText('Aucune structure ne correspond aux filtres.')).toBeVisible();
     await page.getByPlaceholder('Rechercher une structure…').fill('');

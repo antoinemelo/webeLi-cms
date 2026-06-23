@@ -4,7 +4,7 @@ audience:
   - installer
   - superadministrator
 status: stable
-last_verified: 2026-06-15
+last_verified: 2026-06-23
 source_of_truth: procedure
 source_paths:
   - ops/.env.example
@@ -22,6 +22,7 @@ generated: false
 - **`pdo_sqlite` indisponible :** activez l’extension PHP correspondante. L’image `Dockerfile.audit` l’installe et vérifie sa présence pendant sa construction.
 - **Erreur `Cannot redeclare class ...ModuleProvider` :** le bootstrap précharge désormais de manière idempotente le contrat `ModuleProvider` et les providers natifs déclarés dans `backend/config/modules.php`, avant l’enregistrement des autoloaders. Le registre fusionne et déduplique aussi les providers issus de la configuration et de la base. Vérifiez enfin que `APP_TWIG_VENDOR_PATH` ne pointe pas vers un Composer racine exposant `App\\`.
 - **Assets 404 en sous-répertoire :** vérifiez `APP_BASE_PATH` et les règles du serveur.
+- **Icône d’aide affichée comme un carré au premier chargement du back-office :** vérifiez que `admin-app/index.html` charge les feuilles CSS critiques avant le script module et conserve le bloc `amcms-admin-critical-ui`. Ce garde-fou évite un flash d’icône non stylée sur `/admin/app/`, notamment quand l’instance est servie sous un préfixe comme `/mod`.
 - **Liens publics de sous-site sans préfixe d’installation :** si l’administration ouvre `/site-a/` au lieu de `/mod/site-a/`, vérifiez `APP_BASE_PATH`, le `public_path` renvoyé par `/admin/api/context` et la configuration `site_domains.base_path`. Le moteur accepte `/site-a` ou `/mod/site-a`, mais les liens exposés doivent toujours inclure le préfixe public complet.
 - **Twig introuvable :** exécutez `composer install --working-dir backend`, ou configurez `APP_TWIG_VENDOR_PATH=../vendor/twig/` lorsqu'une instance sous sous-répertoire partage un `vendor` parent. N’utilisez `APP_TWIG_VENDOR_PATH` que pour une installation Twig autonome sans mapping `App\\`.
 - **Écriture refusée :** corrigez le propriétaire et les droits de `storage/` sans rendre le code globalement inscriptible.
