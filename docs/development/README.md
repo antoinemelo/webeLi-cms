@@ -29,7 +29,11 @@ Le [guide d’extension](extending/README.md) définit la procédure commune. Le
 - [champ ou bloc](extending/field-block.md) ;
 - [table, repository ou service](extending/database-repository.md) ;
 - [commande, validateur ou test](extending/command-validator.md) ;
-- écran du back-office : suivre [l’architecture du back-office](backoffice/architecture.md) et le guide commun.
+- écran du back-office : suivre [l’architecture du back-office](backoffice/architecture.md), le guide commun et le contrat de l’[éditeur visuel](backoffice/visual-editor.md) lorsque l’écran interagit avec la prévisualisation.
+
+## Back-office et rendu éditable
+
+Le back-office combine un éditeur structuré et un éditeur visuel. Les développeurs qui modifient les templates Twig doivent préserver les attributs `data-amcms-*` nécessaires à l’édition in-context et vérifier que la sélection, l’enregistrement et la prévisualisation restent cohérents.
 
 ## Références dérivées du code
 

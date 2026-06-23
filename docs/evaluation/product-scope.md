@@ -26,7 +26,7 @@ evidence_scope:
 
 ## Positionnement observable
 
-Le dépôt implémente un CMS éditorial hybride : rendu public côté serveur en PHP avec Twig, back-office SPA Vue/TypeScript, API publique versionnée et API administrative interne. Le stockage principal est réparti entre plusieurs bases SQLite. Python fournit une façade d’exploitation, de reconstruction, de validation, de sauvegarde, d’export et de release.
+Le dépôt implémente un CMS éditorial hybride : rendu public côté serveur en PHP avec Twig, back-office SPA Vue/TypeScript, API publique versionnée et API administrative interne. Le back-office combine un éditeur structuré basé sur les blueprints et un éditeur visuel in-context basé sur le rendu réel du thème. Le stockage principal est réparti entre plusieurs bases SQLite. Python fournit une façade d’exploitation, de reconstruction, de validation, de sauvegarde, d’export et de release.
 
 ## Publics et projets ciblés
 
@@ -45,12 +45,14 @@ Les guides et permissions couvrent éditeur, publicateur, responsable SEO, admin
 | Catégorie | État | Observation |
 |---|---|---|
 | contenu, révisions, publication | `supported` | schémas, services, API et validateurs présents |
+| éditeur visuel in-context | `partial` | intégration back-office, iframe, attributs Twig et API admin présentes ; parcours E2E complet à qualifier |
 | multisite, multilingue | `supported` | modèles, routes et validateurs dédiés |
 | SEO, sitemap, hreflang, redirections | `supported` | données, runtime et validateurs dédiés |
 | API publique v1 | `supported` | kernel, handlers, OpenAPI et documentation |
 | export statique | `partial` | implémentation et validateurs présents ; environnement cible à vérifier |
 | assistant IA | `experimental` | module, base et contrôles présents ; dépend de fournisseurs/configuration |
 | stockage média S3 | `partial` | driver présent ; exploitation externe non démontrée ici |
+| page builder no-code libre | `not-supported` | l’éditeur visuel expose des champs et blocs contrôlés ; il ne fournit pas une composition libre type constructeur de page |
 | haute disponibilité distribuée | `not-supported` | aucune architecture de cluster démontrée |
 | marketplace d’extensions | `not-supported` | fondation de modules présente, pas de marketplace démontrée |
 

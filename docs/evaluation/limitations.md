@@ -36,6 +36,7 @@ evidence_scope:
 | compatibilité hébergeurs mutualisés | moyen | moyenne | élevée | préflight sur cible | moyenne |
 | API publique sans SLA formel | moyen | moyenne | élevée | politique de version/changelog | moyenne |
 | UX/accessibilité non démontrées exhaustivement | moyen | moyenne | moyenne | audit manuel et utilisateurs | moyenne |
+| éditeur visuel non qualifié par scénario E2E complet | moyen | moyenne | élevée | scénario navigateur sélection, sauvegarde, révision, publication, langue, média et verrous | haute avant diffusion externe |
 | stockage S3, e-mail, webhooks externes | variable | moyenne | moyenne | tests d’intégration et monitoring | moyenne |
 | documentation générée susceptible de dériver | moyen | moyenne | élevée | `docs check` en CI | moyenne |
 

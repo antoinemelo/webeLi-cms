@@ -58,7 +58,7 @@
   {% endif %}
 {% elseif type == 'iframe' %}
   {% set frame_src = data.src|default('') %}
-  {% if frame_src %}
+  {% if frame_src and iframe_src_allowed(frame_src) %}
     <div{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} ratio ratio-16x9 my-4" style="min-height:{{ data.height|default(420) }}px">
       <iframe src="{{ frame_src }}" title="{{ data.title|default('Contenu intégré') }}" loading="lazy" allow="{{ data.allow|default('fullscreen; picture-in-picture') }}" sandbox="{{ data.sandbox|default('allow-scripts allow-same-origin allow-presentation') }}"></iframe>
     </div>

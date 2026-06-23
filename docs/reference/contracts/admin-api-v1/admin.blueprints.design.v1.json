@@ -7,11 +7,28 @@
   "paths": [
     "/admin/api/blueprints/{key}/design"
   ],
+  "request": {
+    "semantics": {
+      "GET": "Retourne le design de travail courant, ses métadonnées de version active et son brouillon courant.",
+      "PUT": "Enregistre ou remplace le brouillon courant. Ne modifie jamais la version active."
+    },
+    "query": {
+      "site_id": "Site courant utilisé pour l’autorisation et la portée locale.",
+      "resource_type": "Type de ressource de la structure.",
+      "scope": "global|site — sélection exacte obligatoire dans l’éditeur multisite."
+    },
+    "identity": [
+      "blueprint_key",
+      "resource_type",
+      "scope"
+    ]
+  },
   "response": {
     "data": {
       "blueprint": {
         "blueprint_key": "page",
         "resource_type": "content_type",
+        "site_id": null,
         "label": "Page"
       },
       "sections": [
@@ -30,6 +47,32 @@
         }
       ],
       "fieldsets": [],
+      "active_version": {
+        "id": 10,
+        "version": 3,
+        "status": "active",
+        "is_active": true
+      },
+      "draft_version": {
+        "id": 11,
+        "version": 4,
+        "status": "draft",
+        "is_active": false
+      },
+      "versions": [
+        {
+          "id": 11,
+          "version": 4,
+          "status": "draft",
+          "is_active": false
+        },
+        {
+          "id": 10,
+          "version": 3,
+          "status": "active",
+          "is_active": true
+        }
+      ],
       "audit": {
         "score": 92,
         "status": "ok|warnings|blocking",
@@ -40,6 +83,7 @@
           {
             "blueprint_key": "page",
             "resource_type": "content_type",
+            "site_id": null,
             "score": 92,
             "status": "warnings",
             "blocking_errors": [],

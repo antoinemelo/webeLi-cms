@@ -456,16 +456,27 @@ function statusSyncPayload() {
       };
     });
 }
+function postVisualMessage(message: Record<string, unknown>): void {
+  const target = iframe.value?.contentWindow;
+  if (!target) return;
+  try {
+    target.postMessage(message, window.location.origin);
+  } catch {
+    // A blocked iframe has an opaque/null origin until it is replaced by a
+    // valid local preview. Avoid noisy browser errors while the next load
+    // cycle recovers.
+  }
+}
 function syncBlockStatuses() {
-  iframe.value?.contentWindow?.postMessage({ type: 'amcms:visual-sync-block-statuses', payload: { blocks: statusSyncPayload() } }, window.location.origin);
+  postVisualMessage({ type: 'amcms:visual-sync-block-statuses', payload: { blocks: statusSyncPayload() } });
 }
 function highlightSelectedBlock() {
   if (!selected.value?.block_id) return;
   syncBlockStatuses();
-  iframe.value?.contentWindow?.postMessage({ type: 'amcms:visual-highlight-block', payload: { blockId: selected.value.block_id } }, window.location.origin);
+  postVisualMessage({ type: 'amcms:visual-highlight-block', payload: { blockId: selected.value.block_id } });
 }
 function requestFrameSize() {
-  iframe.value?.contentWindow?.postMessage({ type: 'amcms:visual-request-size' }, window.location.origin);
+  postVisualMessage({ type: 'amcms:visual-request-size' });
 }
 async function resolveVisualNavigation(url: string) {
   if (!url || navigating.value) return;
@@ -559,12 +570,37 @@ function translationStatusText(item: TranslationItem): string {
   return 'Partiel';
 }
 function withBasePath(path: string): string {
-  if (!path || /^https?:\/\//i.test(path)) return path;
   const base = window.__AMCMS_ADMIN__?.basePath || '';
   const normalizedBase = base === '/' ? '' : `/${String(base).replace(/^\/+|\/+$/g, '')}`;
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  if (normalizedBase && (normalizedPath === normalizedBase || normalizedPath.startsWith(`${normalizedBase}/`))) return normalizedPath;
-  return `${normalizedBase}${normalizedPath}` || '/';
+  if (!path) return path;
+  const withLocalBase = (rawPath: string): string => {
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    if (normalizedBase && (normalizedPath === normalizedBase || normalizedPath.startsWith(`${normalizedBase}/`))) return normalizedPath;
+    return `${normalizedBase}${normalizedPath}` || '/';
+  };
+  const isPreviewPath = (rawPath: string): boolean => {
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    const pathWithoutBase = normalizedBase && normalizedPath.startsWith(`${normalizedBase}/`)
+      ? normalizedPath.slice(normalizedBase.length) || '/'
+      : normalizedPath;
+    return /\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?preview\/\d+(?:\/|$)/i.test(pathWithoutBase);
+  };
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const parsed = new URL(path);
+      const normalizedPath = parsed.pathname.startsWith('/') ? parsed.pathname : `/${parsed.pathname}`;
+      if (isPreviewPath(normalizedPath)) {
+        return `${window.location.origin}${withLocalBase(normalizedPath)}${parsed.search}${parsed.hash}`;
+      }
+      if (parsed.origin !== window.location.origin) {
+        return `${window.location.origin}${withLocalBase(normalizedPath)}${parsed.search}${parsed.hash}`;
+      }
+    } catch {
+      return path;
+    }
+    return path;
+  }
+  return withLocalBase(path);
 }
 function visualChangeNote(field: VisualField): string {
   const label = String(field.label || field.field_path || 'champ').trim();

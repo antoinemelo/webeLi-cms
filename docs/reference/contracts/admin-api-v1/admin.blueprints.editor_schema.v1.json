@@ -19,7 +19,21 @@
           "layout": true
         }
       },
-      "fields": [],
+      "fields": [
+        {
+          "field_key": "seo_title",
+          "field_handle": "seo_title",
+          "field_type": "text",
+          "label": "Titre SEO",
+          "tab_key": "seo",
+          "source_fieldset_key": "seo_basic",
+          "mount_handle": "seo_basic",
+          "config": {
+            "source_fieldset_key": "seo_basic",
+            "mount_handle": "seo_basic"
+          }
+        }
+      ],
       "editor_tabs": [
         {
           "key": "content",
@@ -34,7 +48,9 @@
         {
           "key": "seo",
           "label": "SEO",
-          "fields": []
+          "fields": [
+            "seo_title"
+          ]
         }
       ],
       "validation": {},

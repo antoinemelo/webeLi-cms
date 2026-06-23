@@ -1,0 +1,9 @@
+export type FieldConfig = Record<string, unknown>;
+export type BlueprintField = { id?: number; field_handle: string; field_type: string; label: string; help_text?: string; field_purpose?: string; width: number; is_required?: boolean; is_localized?: boolean; is_system?: boolean; is_deletable?: boolean; sort_order?: number; options?: FieldConfig; validation?: FieldConfig; conditions?: unknown[]; config: FieldConfig };
+export type BlueprintFieldsetMount = { fieldset_key: string; mount_handle: string; label?: string; sort_order?: number; conditions?: unknown[]; config?: FieldConfig };
+export type BlueprintSection = { id?: number; section_key: string; label: string; description?: string; layout: 'tab'|'section'|'sidebar'; sort_order: number; fields: BlueprintField[]; fieldsets: BlueprintFieldsetMount[] };
+export type BlueprintScope = 'global'|'site';
+export type BlueprintRow = { id: number; blueprint_key: string; resource_type: string; label: string; description?: string; site_id?: number|null; is_active?: boolean; active_version: number|null; active_version_label?: string|null; legacy_content_type_id?: number|null; content_type_key?: string|null; usage_count?: number; sections_count: number; fields_count: number; fieldsets_count: number };
+export type FieldsetUsage = { blueprint_key: string; label: string; resource_type: string; site_id?: number|null; scope?: 'global'|'site'|string };
+export type FieldsetRow = { id?: number; fieldset_key: string; label: string; description?: string; fieldset_purpose: string; fields_count: number; usage_count?: number; is_system: boolean; is_deletable: boolean; fields?: BlueprintField[]; used_by?: FieldsetUsage[]; config?: FieldConfig };
+export type FieldType = { handle: string; label: string; purpose: string; is_priority?: boolean; config_schema?: FieldConfig };

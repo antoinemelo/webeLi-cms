@@ -55,9 +55,9 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return array_map(fn(array $row): array => $this->normalizeBlueprintRow($row), $rows);
     }
 
-    public function findByKey(string $key, ?string $resourceType = null, ?int $siteId = null): ?array
+    public function findByKey(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): ?array
     {
-        [$where, $params] = $this->keyWhere($key, $resourceType, $siteId);
+        [$where, $params] = $this->keyWhere($key, $resourceType, $siteId, $scope);
         $row = $this->db->one(
             "SELECT b.*, bv.version AS active_version, bv.version_label AS active_version_label
              FROM blueprints b
@@ -70,9 +70,9 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return $row ? $this->normalizeBlueprintRow($row) : null;
     }
 
-    public function versions(string $key, ?string $resourceType = null, ?int $siteId = null): array
+    public function versions(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array
     {
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint) {
             return [];
         }
@@ -83,9 +83,9 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return array_map(fn(array $row): array => $this->normalizeVersionRow($row), $rows);
     }
 
-    public function activeVersion(string $key, ?string $resourceType = null, ?int $siteId = null): ?array
+    public function activeVersion(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): ?array
     {
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint || empty($blueprint['active_version_id'])) {
             return null;
         }
@@ -144,10 +144,10 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return $this->findByKey($key, $resourceType, $siteId) ?? [];
     }
 
-    public function createVersion(string $key, array $payload, ?int $siteId = null): array
+    public function createVersion(string $key, array $payload, ?int $siteId = null, ?string $scope = null): array
     {
         $resourceType = (string) ($payload['resource_type'] ?? 'content_type');
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint) {
             throw new \RuntimeException(sprintf('Blueprint introuvable : %s.', $key));
         }
@@ -164,7 +164,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
             $this->assertVersionPayloadCanBeActivated($blueprint, $payload);
         }
 
-        $this->db->transaction(function () use ($blueprint, $version, $payload, $status, $isActive, $json): void {
+        $this->db->transaction(function () use ($blueprint, $version, $payload, $status, $isActive, $json, $checksum): void {
             if ($isActive) {
                 $this->db->run('UPDATE blueprint_versions SET is_active = 0, status = CASE WHEN status = \'active\' THEN \'archived\' ELSE status END, archived_at = CURRENT_TIMESTAMP WHERE blueprint_id = :blueprint_id AND is_active = 1', ['blueprint_id' => (int) $blueprint['id']]);
             }
@@ -196,16 +196,22 @@ final class SqlBlueprintRepository implements BlueprintRepository
                     'activated_at' => $isActive ? gmdate('Y-m-d H:i:s') : null,
                 ],
             );
+            if ($isActive) {
+                $this->db->run(
+                    'UPDATE blueprints SET active_version_id = :version_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id',
+                    ['version_id' => $this->db->lastInsertId(), 'id' => (int) $blueprint['id']],
+                );
+            }
         });
 
         $row = $this->db->one('SELECT * FROM blueprint_versions WHERE blueprint_id = :blueprint_id AND version = :version', ['blueprint_id' => (int) $blueprint['id'], 'version' => $version]);
         return $row ? $this->normalizeVersionRow($row) : [];
     }
 
-    public function activate(string $key, int $version, ?int $siteId = null): array
+    public function activate(string $key, int $version, ?int $siteId = null, ?string $resourceType = null, ?string $scope = null): array
     {
-        $resourceType = (string) (($this->db->one('SELECT resource_type FROM blueprints WHERE blueprint_key = :key AND (site_id = :site_id OR site_id IS NULL) ORDER BY site_id IS NOT NULL DESC LIMIT 1', ['key' => $this->normalizeKey($key), 'site_id' => $siteId])['resource_type'] ?? 'content_type'));
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $resourceType = $resourceType !== null && $resourceType !== '' ? $resourceType : (string) (($this->db->one('SELECT resource_type FROM blueprints WHERE blueprint_key = :key AND (site_id = :site_id OR site_id IS NULL) ORDER BY site_id IS NOT NULL DESC LIMIT 1', ['key' => $this->normalizeKey($key), 'site_id' => $siteId])['resource_type'] ?? 'content_type'));
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint) {
             throw new \RuntimeException(sprintf('Blueprint introuvable : %s.', $key));
         }
@@ -219,7 +225,9 @@ final class SqlBlueprintRepository implements BlueprintRepository
             $this->db->run('UPDATE blueprint_versions SET is_active = 1, status = \'active\', activated_at = CURRENT_TIMESTAMP, archived_at = NULL WHERE id = :id', ['id' => (int) $versionRow['id']]);
             $this->db->run('UPDATE blueprints SET active_version_id = :version_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id', ['version_id' => (int) $versionRow['id'], 'id' => (int) $blueprint['id']]);
         });
-        return $this->findByKey($key, $resourceType, $siteId) ?? [];
+        $activated = $this->findByKey($key, $resourceType, $siteId, $scope) ?? [];
+        $activatedVersion = $this->db->one('SELECT * FROM blueprint_versions WHERE id = :id LIMIT 1', ['id' => (int) $versionRow['id']]);
+        return $activated + ['activated_version' => $activatedVersion ? $this->normalizeVersionRow($activatedVersion) : $this->normalizeVersionRow($versionRow)];
     }
 
 
@@ -260,14 +268,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
             $params,
         );
 
-        $fieldsetRows = $this->db->all(
-            "SELECT fs.id, fs.fieldset_key, fs.label, fs.fieldset_purpose, fs.is_system, fs.is_deletable,
-                    COUNT(ff.id) AS fields_count
-             FROM fieldsets fs
-             LEFT JOIN fieldset_fields ff ON ff.fieldset_id = fs.id
-             GROUP BY fs.id
-             ORDER BY fs.fieldset_purpose, fs.fieldset_key"
-        );
+        $fieldsetRows = $this->fieldsets();
 
         $systemFields = $this->db->all(
             "SELECT DISTINCT field_handle, field_type, label, field_purpose, is_required, is_localized
@@ -302,15 +303,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
                 'fields_count' => (int) $row['fields_count'],
                 'fieldsets_count' => (int) $row['fieldsets_count'],
             ], $blueprints),
-            'fieldsets' => array_map(static fn(array $row): array => [
-                'id' => (int) $row['id'],
-                'fieldset_key' => (string) $row['fieldset_key'],
-                'label' => (string) $row['label'],
-                'fieldset_purpose' => (string) $row['fieldset_purpose'],
-                'is_system' => (bool) ((int) $row['is_system']),
-                'is_deletable' => (bool) ((int) $row['is_deletable']),
-                'fields_count' => (int) $row['fields_count'],
-            ], $fieldsetRows),
+            'fieldsets' => $fieldsetRows,
             'system_fields' => array_map(static fn(array $row): array => [
                 'field_handle' => (string) $row['field_handle'],
                 'field_type' => (string) $row['field_type'],
@@ -511,6 +504,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return [
             'blueprint_key' => $blueprintKey,
             'resource_type' => $resourceType,
+            'site_id' => $blueprint['site_id'] === null ? null : (int) $blueprint['site_id'],
             'score' => $score,
             'status' => $blocking !== [] ? 'blocking' : ($warnings !== [] ? 'warnings' : 'ok'),
             'blocking_errors' => array_values(array_unique($blocking)),
@@ -573,9 +567,9 @@ final class SqlBlueprintRepository implements BlueprintRepository
     }
 
     /** @return array<string,mixed> */
-    public function design(string $key, ?string $resourceType = null, ?int $siteId = null): array
+    public function design(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array
     {
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint) {
             throw new \RuntimeException(sprintf('Blueprint introuvable : %s.', $key));
         }
@@ -609,11 +603,21 @@ final class SqlBlueprintRepository implements BlueprintRepository
                 'config' => $this->decodeJson((string) $mount['config_json'], []),
             ];
         }
-        return ['blueprint' => $blueprint, 'sections' => array_values($bySection), 'fieldsets' => $this->fieldsets(), 'audit' => $this->audit($key, $resourceType, $siteId), 'governance' => $this->governanceRules(), 'presets' => $this->presets()];
+        return [
+            'blueprint' => $blueprint,
+            'sections' => array_values($bySection),
+            'fieldsets' => $this->fieldsets(),
+            'active_version' => $this->activeVersion($key, $resourceType, $siteId, $scope),
+            'draft_version' => $this->currentDraftVersion((int) $blueprint['id']),
+            'versions' => $this->versions($key, $resourceType, $siteId, $scope),
+            'audit' => $this->audit($key, $resourceType, $siteId),
+            'governance' => $this->governanceRules(),
+            'presets' => $this->presets(),
+        ];
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
-    public function saveDesign(string $key, array $payload, ?int $siteId = null): array
+    public function saveDesign(string $key, array $payload, ?int $siteId = null, ?string $scope = null): array
     {
         $resourceType = $this->normalizeResourceType((string) ($payload['resource_type'] ?? 'content_type'));
         $blueprintKey = $this->normalizeKey((string) ($payload['blueprint_key'] ?? $key));
@@ -630,16 +634,18 @@ final class SqlBlueprintRepository implements BlueprintRepository
         }
         $sections = $this->withNativeSystemContextFields($sections);
         $this->assertDesignIsValid($blueprintKey, $resourceType, $sections);
-        $this->assertDesignChangeIsSafe($blueprintKey, $resourceType, $siteId, $sections);
+        $targetSiteId = $scope === 'global' ? null : $siteId;
+        $this->assertDesignChangeIsSafe($blueprintKey, $resourceType, $siteId, $sections, $scope);
 
-        $this->db->transaction(function () use ($blueprintKey, $resourceType, $siteId, $legacyId, $label, $description, $sections): void {
-            $existing = $this->findByKey($blueprintKey, $resourceType, $siteId);
+        $draftVersion = null;
+        $this->db->transaction(function () use ($blueprintKey, $resourceType, $siteId, $targetSiteId, $scope, $legacyId, $label, $description, $sections, &$draftVersion): void {
+            $existing = $this->findByKey($blueprintKey, $resourceType, $siteId, $scope);
             if (!$existing) {
                 $this->db->run(
                     'INSERT INTO blueprints(blueprint_key, resource_type, site_id, legacy_content_type_id, label, description, is_active) VALUES(:key,:type,:site,:legacy,:label,:description,1)',
-                    ['key' => $blueprintKey, 'type' => $resourceType, 'site' => $siteId, 'legacy' => $legacyId, 'label' => $label, 'description' => $description]
+                    ['key' => $blueprintKey, 'type' => $resourceType, 'site' => $targetSiteId, 'legacy' => $legacyId, 'label' => $label, 'description' => $description]
                 );
-                $existing = $this->findByKey($blueprintKey, $resourceType, $siteId);
+                $existing = $this->findByKey($blueprintKey, $resourceType, $siteId, $scope);
             } else {
                 $this->db->run('UPDATE blueprints SET resource_type=:type, legacy_content_type_id=:legacy, label=:label, description=:description, updated_at=CURRENT_TIMESTAMP WHERE id=:id', [
                     'type' => $resourceType, 'legacy' => $legacyId, 'label' => $label, 'description' => $description, 'id' => (int) $existing['id']
@@ -699,21 +705,36 @@ final class SqlBlueprintRepository implements BlueprintRepository
                         'bid' => $blueprintId, 'sid' => $sectionId, 'fid' => (int) $fs['id'], 'handle' => $mountHandle,
                         'label' => (string) ($mount['label'] ?? $fs['label']), 'sort' => (int) ($mount['sort_order'] ?? (($fieldsetIndex + 1) * 10)), 'conditions' => $this->jsonValue($mount['conditions'] ?? []), 'config' => $this->jsonValue($mount['config'] ?? []),
                     ]);
-                    $tabFields[] = '@' . $mountHandle;
+                    foreach ($this->schemaFieldsForFieldsetMount((int) $fs['id'], $fsKey, $mountHandle, $sectionKey) as $fieldsetSchemaField) {
+                        $schemaFields[] = $fieldsetSchemaField;
+                        $tabFields[] = (string) $fieldsetSchemaField['field_key'];
+                    }
                 }
                 $editorTabs[] = ['key' => $sectionKey, 'label' => trim((string) ($section['label'] ?? $sectionKey)) ?: $sectionKey, 'sort_order' => $sortOrder, 'fields' => $tabFields];
             }
             $schema = ['schema_version' => 1, 'content_type' => ['type_key' => $blueprintKey, 'name' => $label, 'singular_label' => $label, 'plural_label' => $label], 'fields' => $schemaFields, 'headless' => ['enabled' => true]];
             if ($resourceType === 'block') { $schema['block'] = ['type' => $blueprintKey, 'title' => $label, 'sections' => $editorTabs]; }
-            $this->createVersion($blueprintKey, ['resource_type' => $resourceType, 'version_label' => 'admin-design', 'schema_json' => $schema, 'ui_schema_json' => ['editor_tabs' => $editorTabs], 'validation_json' => ['server' => 'normalized_blueprint_model'], 'seo_policy_json' => ['native_service' => true, 'fields' => ['seo_title','seo_description','canonical_url','robots','og_title','og_description','og_image']], 'workflow_policy_json' => ['default_state' => 'draft'], 'is_active' => true], $siteId);
+            $draftVersion = $this->createOrReplaceDraftVersion((int) $blueprintId, [
+                'resource_type' => $resourceType,
+                'version_label' => 'Brouillon du designer',
+                'schema_json' => $schema,
+                'ui_schema_json' => ['editor_tabs' => $editorTabs],
+                'validation_json' => ['server' => 'normalized_blueprint_model'],
+                'seo_policy_json' => ['native_service' => true, 'fields' => ['seo_title','seo_description','canonical_url','robots','og_title','og_description','og_image']],
+                'workflow_policy_json' => ['default_state' => 'draft'],
+            ]);
         });
-        return $this->design($blueprintKey, $resourceType, $siteId);
+        $design = $this->design($blueprintKey, $resourceType, $siteId, $scope);
+        if (is_array($draftVersion)) {
+            $design['draft_version'] = $draftVersion;
+        }
+        return $design;
     }
 
     /** @return array<string,mixed> */
-    public function deleteBlueprint(string $key, ?string $resourceType = null, ?int $siteId = null): array
+    public function deleteBlueprint(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array
     {
-        $blueprint = $this->findByKey($key, $resourceType, $siteId);
+        $blueprint = $this->findByKey($key, $resourceType, $siteId, $scope);
         if (!$blueprint) { throw new \RuntimeException(sprintf('Blueprint introuvable : %s.', $key)); }
         if (in_array((string) $blueprint['blueprint_key'], self::PROTECTED_BLUEPRINTS, true)) {
             throw new \InvalidArgumentException('Ce blueprint natif est protégé. Désactivez-le ou archivez ses versions plutôt que de le supprimer.');
@@ -734,18 +755,23 @@ final class SqlBlueprintRepository implements BlueprintRepository
     public function fieldsets(): array
     {
         if (!$this->db->tableExists('fieldsets')) { return []; }
-        $rows = $this->db->all('SELECT fs.*, COUNT(ff.id) AS fields_count, COUNT(DISTINCT bf.blueprint_id) AS usage_count FROM fieldsets fs LEFT JOIN fieldset_fields ff ON ff.fieldset_id=fs.id LEFT JOIN blueprint_fieldsets bf ON bf.fieldset_id=fs.id GROUP BY fs.id ORDER BY fs.fieldset_purpose, fs.fieldset_key');
-        return array_map(fn(array $r): array => $this->normalizeFieldsetRow($r), $rows);
+        $rows = $this->db->all('SELECT fs.*, COUNT(ff.id) AS fields_count FROM fieldsets fs LEFT JOIN fieldset_fields ff ON ff.fieldset_id=fs.id GROUP BY fs.id ORDER BY fs.fieldset_purpose, fs.fieldset_key');
+        return array_map(function (array $r): array {
+            $usedBy = $this->fieldsetUsedBy((int) $r['id']);
+            $r['usage_count'] = count($usedBy);
+            return $this->normalizeFieldsetRow($r) + ['used_by' => $usedBy];
+        }, $rows);
     }
 
     /** @return array<string,mixed> */
     public function fieldset(string $key): array
     {
-        $row = $this->db->one('SELECT fs.*, COUNT(DISTINCT bf.blueprint_id) AS usage_count FROM fieldsets fs LEFT JOIN blueprint_fieldsets bf ON bf.fieldset_id=fs.id WHERE fs.fieldset_key=:key GROUP BY fs.id', ['key' => $this->normalizeKey($key)]);
+        $row = $this->db->one('SELECT fs.*, COUNT(ff.id) AS fields_count FROM fieldsets fs LEFT JOIN fieldset_fields ff ON ff.fieldset_id=fs.id WHERE fs.fieldset_key=:key GROUP BY fs.id', ['key' => $this->normalizeKey($key)]);
         if (!$row) { throw new \RuntimeException(sprintf('Fieldset introuvable : %s.', $key)); }
         $fields = $this->db->all('SELECT * FROM fieldset_fields WHERE fieldset_id=:id ORDER BY sort_order, id', ['id' => (int) $row['id']]);
-        $blueprints = $this->db->all('SELECT b.blueprint_key, b.resource_type, b.label FROM blueprint_fieldsets bf JOIN blueprints b ON b.id=bf.blueprint_id WHERE bf.fieldset_id=:id ORDER BY b.resource_type, b.blueprint_key', ['id' => (int) $row['id']]);
-        return $this->normalizeFieldsetRow($row) + ['fields' => array_map(fn(array $f): array => $this->normalizeFieldRow($f), $fields), 'used_by' => array_map(static fn(array $b): array => ['blueprint_key' => (string) $b['blueprint_key'], 'resource_type' => (string) $b['resource_type'], 'label' => (string) $b['label']], $blueprints)];
+        $usedBy = $this->fieldsetUsedBy((int) $row['id']);
+        $row['usage_count'] = count($usedBy);
+        return $this->normalizeFieldsetRow($row) + ['fields' => array_map(fn(array $f): array => $this->normalizeFieldRow($f), $fields), 'used_by' => $usedBy];
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -780,10 +806,31 @@ final class SqlBlueprintRepository implements BlueprintRepository
     public function deleteFieldset(string $key): array
     {
         $fieldset = $this->fieldset($key);
-        if (!$fieldset['is_deletable']) { throw new \InvalidArgumentException('Ce fieldset système ne peut pas être supprimé.'); }
+        if ($fieldset['is_system'] || !$fieldset['is_deletable']) { throw new \InvalidArgumentException('Ce fieldset système ne peut pas être supprimé.'); }
         if ((int) ($fieldset['usage_count'] ?? 0) > 0) { throw new \InvalidArgumentException('Ce fieldset est utilisé dans un ou plusieurs blueprints. Retirez ses usages avant suppression.'); }
         $this->db->run('DELETE FROM fieldsets WHERE fieldset_key=:key', ['key' => $this->normalizeKey($key)]);
         return ['deleted' => true, 'fieldset_key' => $this->normalizeKey($key)];
+    }
+
+    /** @return list<array{blueprint_key:string,label:string,resource_type:string,site_id:int|null,scope:string}> */
+    private function fieldsetUsedBy(int $fieldsetId): array
+    {
+        if ($fieldsetId <= 0 || !$this->db->tableExists('blueprint_fieldsets')) { return []; }
+        $blueprints = $this->db->all(
+            'SELECT DISTINCT b.blueprint_key, b.resource_type, b.label, b.site_id
+             FROM blueprint_fieldsets bf
+             JOIN blueprints b ON b.id=bf.blueprint_id
+             WHERE bf.fieldset_id=:id
+             ORDER BY b.resource_type, b.site_id IS NOT NULL DESC, b.blueprint_key',
+            ['id' => $fieldsetId]
+        );
+        return array_map(static fn(array $b): array => [
+            'blueprint_key' => (string) $b['blueprint_key'],
+            'resource_type' => (string) $b['resource_type'],
+            'label' => (string) $b['label'],
+            'site_id' => $b['site_id'] === null ? null : (int) $b['site_id'],
+            'scope' => $b['site_id'] === null ? 'global' : 'site',
+        ], $blueprints);
     }
 
 
@@ -887,6 +934,84 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return (int) ($row['next_version'] ?? 1);
     }
 
+    /** @return array<string,mixed>|null */
+    private function currentDraftVersion(int $blueprintId): ?array
+    {
+        if ($blueprintId <= 0 || !$this->db->tableExists('blueprint_versions')) {
+            return null;
+        }
+        $row = $this->db->one(
+            "SELECT * FROM blueprint_versions
+             WHERE blueprint_id = :blueprint_id AND is_active = 0 AND status = 'draft'
+             ORDER BY version DESC
+             LIMIT 1",
+            ['blueprint_id' => $blueprintId]
+        );
+        return $row ? $this->normalizeVersionRow($row) : null;
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    private function createOrReplaceDraftVersion(int $blueprintId, array $payload): array
+    {
+        if ($blueprintId <= 0) {
+            throw new \InvalidArgumentException('Blueprint introuvable pour le brouillon.');
+        }
+        $normalizedPolicies = $this->canonicalizer->normalizeVersionPayload($payload + ['status' => 'draft', 'is_active' => false]);
+        $json = fn(string $key, array $default = []): string => $this->encodePolicy($normalizedPolicies[$key] ?? $default, $key);
+        $checksum = $this->canonicalizer->checksum($normalizedPolicies);
+        $existing = $this->db->one(
+            "SELECT * FROM blueprint_versions
+             WHERE blueprint_id = :blueprint_id AND is_active = 0 AND status = 'draft'
+             ORDER BY version DESC
+             LIMIT 1",
+            ['blueprint_id' => $blueprintId]
+        );
+        $version = $existing ? (int) $existing['version'] : $this->nextVersion($blueprintId);
+        $params = [
+            'blueprint_id' => $blueprintId,
+            'version' => $version,
+            'version_label' => isset($payload['version_label']) ? (string) $payload['version_label'] : 'Brouillon du designer',
+            'schema_json' => $json('schema_json', []),
+            'ui_schema_json' => $json('ui_schema_json', []),
+            'validation_json' => $json('validation_json', []),
+            'seo_policy_json' => $json('seo_policy_json', []),
+            'routing_policy_json' => $json('routing_policy_json', []),
+            'workflow_policy_json' => $json('workflow_policy_json', []),
+            'translation_policy_json' => $json('translation_policy_json', []),
+            'permissions_policy_json' => $json('permissions_policy_json', []),
+            'checksum_sha256' => $checksum,
+        ];
+        if ($existing) {
+            $updateParams = $params;
+            unset($updateParams['blueprint_id'], $updateParams['version']);
+            $this->db->run(
+                "UPDATE blueprint_versions
+                 SET version_label=:version_label, status='draft', schema_json=:schema_json, ui_schema_json=:ui_schema_json,
+                     validation_json=:validation_json, seo_policy_json=:seo_policy_json, routing_policy_json=:routing_policy_json,
+                     workflow_policy_json=:workflow_policy_json, translation_policy_json=:translation_policy_json,
+                     permissions_policy_json=:permissions_policy_json, checksum_sha256=:checksum_sha256,
+                     is_active=0, activated_at=NULL, archived_at=NULL
+                 WHERE id=:id",
+                $updateParams + ['id' => (int) $existing['id']]
+            );
+        } else {
+            $this->db->run(
+                "INSERT INTO blueprint_versions(
+                    blueprint_id, version, version_label, status, schema_json, ui_schema_json, validation_json,
+                    seo_policy_json, routing_policy_json, workflow_policy_json, translation_policy_json,
+                    permissions_policy_json, checksum_sha256, is_active, activated_at, archived_at
+                 ) VALUES(
+                    :blueprint_id, :version, :version_label, 'draft', :schema_json, :ui_schema_json, :validation_json,
+                    :seo_policy_json, :routing_policy_json, :workflow_policy_json, :translation_policy_json,
+                    :permissions_policy_json, :checksum_sha256, 0, NULL, NULL
+                 )",
+                $params
+            );
+        }
+        $row = $this->db->one('SELECT * FROM blueprint_versions WHERE blueprint_id=:blueprint_id AND version=:version LIMIT 1', ['blueprint_id' => $blueprintId, 'version' => $version]);
+        return $row ? $this->normalizeVersionRow($row) : [];
+    }
+
     private function normalizeKey(string $key): string
     {
         $key = strtolower(trim($key));
@@ -894,7 +1019,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
         return trim($key, '-');
     }
 
-    private function keyWhere(string $key, ?string $resourceType, ?int $siteId): array
+    private function keyWhere(string $key, ?string $resourceType, ?int $siteId, ?string $scope = null): array
     {
         $where = ['b.blueprint_key = :blueprint_key'];
         $params = ['blueprint_key' => $this->normalizeKey($key)];
@@ -902,7 +1027,13 @@ final class SqlBlueprintRepository implements BlueprintRepository
             $where[] = 'b.resource_type = :resource_type';
             $params['resource_type'] = $resourceType;
         }
-        if ($siteId !== null) {
+        if ($scope === 'global') {
+            $where[] = 'b.site_id IS NULL';
+        } elseif ($scope === 'site') {
+            if ($siteId === null) { throw new \InvalidArgumentException('La portée site exige un site courant.'); }
+            $where[] = 'b.site_id = :site_id';
+            $params['site_id'] = $siteId;
+        } elseif ($siteId !== null) {
             $where[] = '(b.site_id = :site_id OR b.site_id IS NULL)';
             $params['site_id'] = $siteId;
         }
@@ -985,6 +1116,23 @@ final class SqlBlueprintRepository implements BlueprintRepository
                 $this->normalizeFieldType((string) ($field['field_type'] ?? $field['type'] ?? 'text'));
                 $this->normalizeWidth($field['width'] ?? 100);
             }
+            foreach (is_array($section['fieldsets'] ?? null) ? $section['fieldsets'] : [] as $mount) {
+                if (!is_array($mount)) { continue; }
+                $fsKey = $this->normalizeKey((string) ($mount['fieldset_key'] ?? ''));
+                if ($fsKey === '') { throw new \InvalidArgumentException('Chaque montage de fieldset doit référencer un fieldset_key.'); }
+                $fieldset = $this->db->one('SELECT id FROM fieldsets WHERE fieldset_key=:key', ['key' => $fsKey]);
+                if (!$fieldset) { throw new \InvalidArgumentException(sprintf('Fieldset introuvable : %s.', $fsKey)); }
+                $fieldsetFields = $this->db->all('SELECT * FROM fieldset_fields WHERE fieldset_id=:id ORDER BY sort_order, id', ['id' => (int) $fieldset['id']]);
+                foreach ($fieldsetFields as $field) {
+                    $handle = $this->normalizeKey((string) ($field['field_handle'] ?? ''));
+                    if ($handle === '') { throw new \InvalidArgumentException(sprintf('Le fieldset %s contient un champ sans handle.', $fsKey)); }
+                    if (isset($handles[$handle])) { throw new \InvalidArgumentException(sprintf('Handle de champ dupliqué via le fieldset %s : %s.', $fsKey, $handle)); }
+                    if ($this->isReservedFieldHandle($handle)) { throw new \InvalidArgumentException(sprintf('Handle réservé dans le fieldset %s : %s.', $fsKey, $handle)); }
+                    $handles[$handle] = true;
+                    $this->normalizeFieldType((string) ($field['field_type'] ?? 'text'));
+                    $this->normalizeWidth($field['width'] ?? 100);
+                }
+            }
         }
     }
 
@@ -1003,12 +1151,12 @@ final class SqlBlueprintRepository implements BlueprintRepository
     }
 
     /** @param list<mixed> $sections */
-    private function assertDesignChangeIsSafe(string $blueprintKey, string $resourceType, ?int $siteId, array $sections): void
+    private function assertDesignChangeIsSafe(string $blueprintKey, string $resourceType, ?int $siteId, array $sections, ?string $scope = null): void
     {
         if (in_array($blueprintKey, self::RESERVED_HANDLES, true)) {
             throw new \InvalidArgumentException(sprintf('Le handle "%s" est réservé au système, au front ou à l’API.', $blueprintKey));
         }
-        $existing = $this->findByKey($blueprintKey, $resourceType, $siteId);
+        $existing = $this->findByKey($blueprintKey, $resourceType, $siteId, $scope);
         if (!$existing) { return; }
         $incoming = $this->collectSectionFieldHandles($sections);
         $current = $this->db->all('SELECT field_handle, is_system, is_deletable, config_json FROM blueprint_fields WHERE blueprint_id=:id', ['id' => (int) $existing['id']]);
@@ -1034,7 +1182,7 @@ final class SqlBlueprintRepository implements BlueprintRepository
         if (!$this->db->tableExists('fieldsets')) { return; }
         $row = $this->db->one('SELECT id, is_system, is_deletable FROM fieldsets WHERE fieldset_key=:key', ['key' => $fieldsetKey]);
         if (!$row) { return; }
-        if ((int) $row['is_system'] === 1 && (int) $row['is_deletable'] !== 1) {
+        if ((int) $row['is_system'] === 1) {
             throw new \InvalidArgumentException('Ce fieldset système est protégé. Créez une variante éditoriale plutôt que de le modifier directement.');
         }
         $incoming = [];
@@ -1064,6 +1212,76 @@ final class SqlBlueprintRepository implements BlueprintRepository
             }
         }
         return $handles;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function schemaFieldsForFieldsetMount(int $fieldsetId, string $fieldsetKey, string $mountHandle, string $sectionKey): array
+    {
+        $rows = $this->db->all('SELECT * FROM fieldset_fields WHERE fieldset_id=:id ORDER BY sort_order, id', ['id' => $fieldsetId]);
+        $fields = [];
+        foreach ($rows as $row) {
+            $handle = $this->normalizeKey((string) ($row['field_handle'] ?? ''));
+            if ($handle === '') { continue; }
+            $type = $this->normalizeFieldType((string) ($row['field_type'] ?? 'text'));
+            $fieldPurpose = $this->fieldPurpose($handle, (string) ($row['field_purpose'] ?? 'content'));
+            $config = $this->decodeJson((string) ($row['config_json'] ?? '{}'), []);
+            $field = [
+                'field_handle' => $handle,
+                'field_type' => $type,
+                'field_purpose' => $fieldPurpose,
+                'config' => is_array($config) ? $config : [],
+                'is_system' => (bool) ((int) ($row['is_system'] ?? 0)),
+                'is_deletable' => (bool) ((int) ($row['is_deletable'] ?? 1)),
+                'is_editable' => true,
+            ];
+            $classification = $this->fieldClassification($handle, $field, $fieldPurpose);
+            $fieldPurpose = $classification['field_purpose'];
+            $isRequired = (bool) ((int) ($row['is_required'] ?? 0));
+            if (in_array($handle, ['title', 'slug'], true)) { $isRequired = true; }
+            $validation = $this->decodeJson((string) ($row['validation_json'] ?? '{}'), []);
+            $validation = is_array($validation) ? $validation : [];
+            if ($isRequired && $classification['field_scope'] !== 'system_context') { $validation['required'] = true; }
+            if ($fieldPurpose === 'seo') { $validation = $this->withSeoValidation($handle, $validation); }
+            $mergedConfig = $this->mergeFieldConfig(is_array($config) ? $config : [], $classification);
+            $mergedConfig['source_fieldset_key'] = $fieldsetKey;
+            $mergedConfig['source_fieldset_id'] = $fieldsetId;
+            $mergedConfig['mount_handle'] = $mountHandle;
+            $fields[] = [
+                'field_key' => $handle,
+                'field_handle' => $handle,
+                'field_type' => $type,
+                'type' => $type,
+                'label' => trim((string) ($row['label'] ?? $handle)) ?: $handle,
+                'help_text' => (string) ($row['help_text'] ?? ''),
+                'tab_key' => $sectionKey,
+                'width' => $this->normalizeWidth($row['width'] ?? 100),
+                'required' => $isRequired,
+                'is_required' => $isRequired,
+                'localized' => (bool) ((int) ($row['is_localized'] ?? 1)),
+                'is_localized' => (bool) ((int) ($row['is_localized'] ?? 1)),
+                'system' => (bool) ((int) ($row['is_system'] ?? 0)) || $classification['field_scope'] !== 'editorial',
+                'is_system' => (bool) ((int) ($row['is_system'] ?? 0)) || $classification['field_scope'] !== 'editorial',
+                'purpose' => $fieldPurpose,
+                'field_purpose' => $fieldPurpose,
+                'field_scope' => $classification['field_scope'],
+                'scope' => $classification['field_scope'],
+                'value_source' => $classification['value_source'],
+                'source' => $classification['value_source'],
+                'ui_visibility' => $classification['ui_visibility'],
+                'visibility' => $classification['ui_visibility'],
+                'editable' => $classification['is_editable'],
+                'is_editable' => $classification['is_editable'],
+                'is_deletable' => $classification['field_scope'] === 'editorial' ? (bool) ((int) ($row['is_deletable'] ?? 1)) : false,
+                'options' => $this->decodeJson((string) ($row['options_json'] ?? '{}'), []),
+                'validation' => $validation,
+                'conditions' => $this->decodeJson((string) ($row['conditions_json'] ?? '[]'), []),
+                'config' => $mergedConfig,
+                'source_fieldset_key' => $fieldsetKey,
+                'source_fieldset_id' => $fieldsetId,
+                'mount_handle' => $mountHandle,
+            ];
+        }
+        return $fields;
     }
 
     /** @param array<string,mixed> $blueprint */

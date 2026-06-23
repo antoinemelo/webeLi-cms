@@ -1,6 +1,10 @@
 ---
 title: Guide utilisateur
 audience:
+  - editor
+  - publisher
+  - seo
+  - administrator
   - superadministrator
 status: stable
 last_verified: 2026-06-21
@@ -17,6 +21,7 @@ Le guide suit les parcours du back-office. Les menus visibles dépendent du rôl
 ## Contenus
 
 - [Créer, modifier et prévisualiser](content/create-edit.md)
+- [Utiliser l’éditeur visuel](content/visual-editor.md)
 - [Champs, fieldsets et blocs](content/fields-and-blocks.md)
 - [Statuts, révisions et recherche éditoriale](content/statuses-revisions-search.md)
 

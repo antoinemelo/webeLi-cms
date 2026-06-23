@@ -34,6 +34,7 @@ La référence exhaustive et extractible est [`machine-readable/features.json`](
 | contenu | pages, articles, types | `supported` | permissions contenu | back-office/API admin | contrôleurs contenu, schéma core | scénarios UX manuels |
 | modèle | blueprints, champs, fieldsets, blocs | `supported` | admin/modélisateur | back-office/API | registres, schéma, validateurs | compatibilité extensions à qualifier |
 | workflow | brouillon, révision, prévisualisation | `supported` | éditeur/publicateur | admin + preview | révisions, Preview API | concurrence à tester |
+| édition | éditeur visuel in-context | `partial` | éditeur/publicateur/SEO | onglet Visuel + API admin | `VisualEditorShell.vue`, contrats `admin.visual.*`, attributs Twig `data-amcms-*` | parcours E2E navigateur complet à rejouer |
 | workflow | publication/dépublication/archivage | `supported` | permissions dédiées | admin/API | pipeline et validateurs | planification complète à vérifier |
 | sites | multisite et langues | `supported` | admin | admin/API/public | schéma, seeds, c4 | cas extrêmes non exhaustifs |
 | médias | upload, métadonnées, variantes | `supported` | media.* | admin/API | services Media | charge et antivirus non démontrés |

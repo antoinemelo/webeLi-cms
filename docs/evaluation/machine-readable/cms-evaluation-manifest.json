@@ -40,7 +40,8 @@
     "docs/evaluation/limitations.md",
     "docs/evaluation/product-scope.md",
     "docs/evaluation/release-audit-policy.md",
-    "docs/evaluation/reproducible-checks.md"
+    "docs/evaluation/reproducible-checks.md",
+    "docs/evaluation/visual-editor.md"
   ],
   "evidence": [
     "backend/composer.json",

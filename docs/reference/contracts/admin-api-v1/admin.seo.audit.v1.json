@@ -98,7 +98,7 @@
               "label": "Canonique cohérente",
               "recommendation": "La canonique doit pointer vers cette page, sauf consolidation volontaire.",
               "details": {
-                "canonical_url": "https://webe.li/mod/mod/",
+                "canonical_url": "https://webe.li/canonical-conflict/",
                 "expected_url": "https://webe.li/"
               }
             }

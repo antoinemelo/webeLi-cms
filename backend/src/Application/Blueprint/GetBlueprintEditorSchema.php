@@ -23,6 +23,7 @@ final class GetBlueprintEditorSchema
         }
 
         $schema = self::fromBlueprintVersion($blueprint, $version);
+        $schema = $this->withMountedFieldsets($schema, (int) ($blueprint['id'] ?? 0));
         $schema = $this->withBlueprintFieldHelp($schema, (int) ($blueprint['id'] ?? 0));
         return $this->withNativeTaxonomyPolicy($schema, (string) ($schema['content_type']['type_key'] ?? $key), $siteId);
     }
@@ -284,6 +285,213 @@ final class GetBlueprintEditorSchema
 
         $schema['blueprint_field_help'] = $helpByHandle;
         return $schema;
+    }
+
+    /**
+     * Fieldset mounts are the canonical shared relation. Older active versions
+     * stored only an "@mount" marker, while newer projections include concrete
+     * sourced fields. Rebuild the sourced portion from the mounted fieldsets so
+     * the editor schema always reflects the current shared group without
+     * duplicating it as direct blueprint fields.
+     *
+     * @param array<string,mixed> $schema
+     * @return array<string,mixed>
+     */
+    private function withMountedFieldsets(array $schema, int $blueprintId): array
+    {
+        if ($this->db === null || $blueprintId <= 0 || !$this->db->tableExists('blueprint_fieldsets') || !$this->db->tableExists('fieldset_fields')) {
+            return $schema;
+        }
+
+        $mounts = $this->db->all(
+            'SELECT bf.id, bf.fieldset_id, bf.mount_handle, bf.sort_order, fs.fieldset_key, bs.section_key, bs.label AS section_label, bs.sort_order AS section_sort_order
+             FROM blueprint_fieldsets bf
+             JOIN fieldsets fs ON fs.id = bf.fieldset_id
+             LEFT JOIN blueprint_sections bs ON bs.id = bf.section_id
+             WHERE bf.blueprint_id = :blueprint_id
+             ORDER BY COALESCE(bs.sort_order, 9990), bf.sort_order, bf.id',
+            ['blueprint_id' => $blueprintId],
+        );
+        if ($mounts === []) {
+            return $schema;
+        }
+
+        $mountedKeys = [];
+        foreach ($mounts as $mount) {
+            $key = (string) ($mount['fieldset_key'] ?? '');
+            if ($key !== '') { $mountedKeys[$key] = true; }
+        }
+
+        $hasVersionedMountedFields = false;
+        foreach (is_array($schema['fields'] ?? null) ? $schema['fields'] : [] as $field) {
+            if (!is_array($field)) { continue; }
+            $source = (string) ($field['source_fieldset_key'] ?? '');
+            if ($source === '' && is_array($field['config'] ?? null)) {
+                $source = (string) ($field['config']['source_fieldset_key'] ?? '');
+            }
+            if ($source !== '' && isset($mountedKeys[$source])) {
+                $hasVersionedMountedFields = true;
+                break;
+            }
+        }
+        if ($hasVersionedMountedFields) {
+            return $schema;
+        }
+
+        $removedHandles = [];
+        $keepField = static function (array $field) use ($mountedKeys, &$removedHandles): bool {
+            $source = '';
+            if (isset($field['source_fieldset_key'])) {
+                $source = (string) $field['source_fieldset_key'];
+            } elseif (isset($field['config']) && is_array($field['config']) && isset($field['config']['source_fieldset_key'])) {
+                $source = (string) $field['config']['source_fieldset_key'];
+            }
+            if ($source !== '' && isset($mountedKeys[$source])) {
+                $handle = self::fieldHandle($field);
+                if ($handle !== '') { $removedHandles[$handle] = true; }
+                return false;
+            }
+            return true;
+        };
+
+        $fields = [];
+        foreach (is_array($schema['fields'] ?? null) ? $schema['fields'] : [] as $field) {
+            if (is_array($field) && $keepField($field)) { $fields[] = $field; }
+        }
+        $contextFields = [];
+        foreach (is_array($schema['system_context']['fields'] ?? null) ? $schema['system_context']['fields'] : [] as $field) {
+            if (is_array($field) && $keepField($field)) { $contextFields[] = $field; }
+        }
+
+        $tabs = is_array($schema['editor_tabs'] ?? null) ? array_values(array_filter($schema['editor_tabs'], 'is_array')) : [];
+        foreach ($tabs as &$tab) {
+            $nextTabFields = [];
+            foreach (is_array($tab['fields'] ?? null) ? $tab['fields'] : [] as $field) {
+                if (is_string($field)) {
+                    if (!isset($removedHandles[$field]) && !str_starts_with($field, '@')) { $nextTabFields[] = $field; }
+                    continue;
+                }
+                if (is_array($field)) {
+                    $handle = self::fieldHandle($field);
+                    if ($handle === '' || !isset($removedHandles[$handle])) { $nextTabFields[] = $field; }
+                }
+            }
+            $tab['fields'] = $nextTabFields;
+        }
+        unset($tab);
+
+        $editableHandles = [];
+        foreach ($fields as $field) {
+            $handle = self::fieldHandle($field);
+            if ($handle !== '') { $editableHandles[$handle] = true; }
+        }
+        foreach ($contextFields as $field) {
+            $handle = self::fieldHandle($field);
+            if ($handle !== '') { $editableHandles[$handle] = true; }
+        }
+
+        foreach ($mounts as $mount) {
+            $sectionKey = (string) ($mount['section_key'] ?? 'content');
+            $sectionLabel = trim((string) ($mount['section_label'] ?? $sectionKey)) ?: $sectionKey;
+            $sectionSort = (int) ($mount['section_sort_order'] ?? 9990);
+            $mountFields = $this->mountedFieldsetFields(
+                (int) ($mount['fieldset_id'] ?? 0),
+                (string) ($mount['fieldset_key'] ?? ''),
+                (string) ($mount['mount_handle'] ?? ''),
+                $sectionKey,
+            );
+            if ($mountFields === []) {
+                continue;
+            }
+
+            $tabIndex = null;
+            foreach ($tabs as $index => $tab) {
+                if (is_array($tab) && (string) ($tab['key'] ?? '') === $sectionKey) {
+                    $tabIndex = $index;
+                    break;
+                }
+            }
+            if ($tabIndex === null) {
+                $tabs[] = ['key' => $sectionKey, 'label' => $sectionLabel, 'sort_order' => $sectionSort, 'fields' => []];
+                $tabIndex = array_key_last($tabs);
+            }
+
+            foreach ($mountFields as $field) {
+                $handle = self::fieldHandle($field);
+                if ($handle === '' || isset($editableHandles[$handle])) {
+                    continue;
+                }
+                $editableHandles[$handle] = true;
+                if (self::isContextField($field)) {
+                    $contextFields[] = $field;
+                    continue;
+                }
+                $fields[] = $field;
+                $tabs[$tabIndex]['fields'][] = $handle;
+            }
+        }
+
+        $schema['fields'] = $fields;
+        $schema['system_context'] = ['fields' => $contextFields];
+        $schema['editor_tabs'] = array_values(array_filter($tabs, static fn(array $tab): bool => (is_array($tab['fields'] ?? null) && $tab['fields'] !== []) || (string) ($tab['key'] ?? '') === 'taxonomies'));
+        $uiSchema = is_array($schema['ui_schema'] ?? null) ? $schema['ui_schema'] : [];
+        $uiSchema['editor_tabs'] = $schema['editor_tabs'];
+        $schema['ui_schema'] = $uiSchema;
+        return $schema;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function mountedFieldsetFields(int $fieldsetId, string $fieldsetKey, string $mountHandle, string $sectionKey): array
+    {
+        if ($fieldsetId <= 0) {
+            return [];
+        }
+        $rows = $this->db?->all('SELECT * FROM fieldset_fields WHERE fieldset_id=:id ORDER BY sort_order, id', ['id' => $fieldsetId]) ?? [];
+        $fields = [];
+        foreach ($rows as $row) {
+            $handle = (string) ($row['field_handle'] ?? '');
+            if ($handle === '') { continue; }
+            $config = self::decodeJson((string) ($row['config_json'] ?? '{}'), []);
+            $config = is_array($config) ? $config : [];
+            $config['source_fieldset_key'] = $fieldsetKey;
+            $config['source_fieldset_id'] = $fieldsetId;
+            $config['mount_handle'] = $mountHandle;
+            $field = self::withFieldClassification([
+                'field_key' => $handle,
+                'field_handle' => $handle,
+                'field_type' => (string) ($row['field_type'] ?? 'text'),
+                'type' => (string) ($row['field_type'] ?? 'text'),
+                'label' => (string) ($row['label'] ?? $handle),
+                'help_text' => (string) ($row['help_text'] ?? ''),
+                'tab_key' => $sectionKey,
+                'width' => (int) ($row['width'] ?? 100),
+                'required' => (bool) ((int) ($row['is_required'] ?? 0)),
+                'is_required' => (bool) ((int) ($row['is_required'] ?? 0)),
+                'localized' => (bool) ((int) ($row['is_localized'] ?? 1)),
+                'is_localized' => (bool) ((int) ($row['is_localized'] ?? 1)),
+                'system' => (bool) ((int) ($row['is_system'] ?? 0)),
+                'is_system' => (bool) ((int) ($row['is_system'] ?? 0)),
+                'is_deletable' => (bool) ((int) ($row['is_deletable'] ?? 1)),
+                'field_purpose' => (string) ($row['field_purpose'] ?? 'content'),
+                'purpose' => (string) ($row['field_purpose'] ?? 'content'),
+                'options' => self::decodeJson((string) ($row['options_json'] ?? '{}'), []),
+                'validation' => self::decodeJson((string) ($row['validation_json'] ?? '{}'), []),
+                'conditions' => self::decodeJson((string) ($row['conditions_json'] ?? '[]'), []),
+                'config' => $config,
+                'source_fieldset_key' => $fieldsetKey,
+                'source_fieldset_id' => $fieldsetId,
+                'mount_handle' => $mountHandle,
+            ]);
+            $fields[] = $field;
+        }
+        return $fields;
+    }
+
+    /** @return mixed */
+    private static function decodeJson(string $json, mixed $fallback): mixed
+    {
+        $decoded = json_decode($json, true);
+        return json_last_error() === JSON_ERROR_NONE ? $decoded : $fallback;
     }
 
     /**

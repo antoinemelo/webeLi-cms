@@ -14,6 +14,7 @@ type DocsDocument = {
   relative_path: string;
   source_path: string;
   format: 'markdown' | string;
+  audience?: string[];
   audience_label?: string;
   status?: string;
   version?: string;
@@ -36,11 +37,65 @@ const loading = ref(false);
 const documentLoading = ref(false);
 const error = ref('');
 const q = ref('');
+const selectedAudience = ref('all');
 const selectedSection = ref('all');
 const selectedId = ref('');
 
 // Documentation access only requires the current authenticated back-office context.
 const canOpenDocs = computed(() => Boolean(context.context));
+
+const audienceLabels: Record<string, string> = {
+  editor: 'Rédaction',
+  publisher: 'Publication',
+  seo: 'SEO',
+  administrator: 'Administration',
+  superadministrator: 'Super admin',
+  installer: 'Installation',
+  'api-integrator': 'API',
+  developer: 'Développement',
+  evaluator: 'Évaluation',
+  'documentation-maintainer': 'Documentation'
+};
+
+const audienceOrder = [
+  'editor',
+  'publisher',
+  'seo',
+  'administrator',
+  'superadministrator',
+  'installer',
+  'api-integrator',
+  'developer',
+  'evaluator',
+  'documentation-maintainer'
+];
+
+const hiddenAudienceTabs = new Set([
+  'ai-evaluator',
+  'developers',
+  'evaluators',
+  'operator',
+  'operators',
+  'release-managers',
+  'seo-manager'
+]);
+
+const profileTabs = computed(() => {
+  const counts = new Map<string, number>();
+  documents.value.forEach((doc) => {
+    docAudiences(doc)
+      .filter((audience) => !hiddenAudienceTabs.has(audience))
+      .forEach((audience) => counts.set(audience, (counts.get(audience) || 0) + 1));
+  });
+  const orderedKeys = [
+    ...audienceOrder.filter((key) => counts.has(key)),
+    ...[...counts.keys()].filter((key) => !audienceOrder.includes(key)).sort()
+  ];
+  return [
+    { key: 'all', label: 'Tous', count: documents.value.length },
+    ...orderedKeys.map((key) => ({ key, label: audienceLabels[key] || titleizeAudience(key), count: counts.get(key) || 0 }))
+  ];
+});
 
 const filteredSections = computed(() => {
   const term = q.value.trim().toLowerCase();
@@ -50,18 +105,33 @@ const filteredSections = computed(() => {
       ...section,
       documents: section.documents.filter((doc) => {
         const haystack = [doc.title, doc.summary, doc.source_path, doc.audience_label, doc.document_type].filter(Boolean).join(' ').toLowerCase();
-        return !term || haystack.includes(term);
+        const matchesTerm = !term || haystack.includes(term);
+        const matchesAudience = selectedAudience.value === 'all' || docAudiences(doc).includes(selectedAudience.value);
+        return matchesTerm && matchesAudience;
       })
     }))
     .filter((section) => section.documents.length > 0);
 });
 
+const filteredDocuments = computed(() => filteredSections.value.flatMap((section) => section.documents));
 const currentSection = computed(() => sections.value.find((section) => section.key === current.value?.section_key));
 
 function labelForStatus(status?: string): string {
   if (!status) return '';
   const labels: Record<string, string> = { stable: 'stable', draft: 'brouillon', generated: 'généré' };
   return labels[status] || status;
+}
+
+function docAudiences(doc: DocsDocument): string[] {
+  return Array.isArray(doc.audience) ? doc.audience.filter(Boolean) : [];
+}
+
+function titleizeAudience(value: string): string {
+  return value
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 async function loadIndex(): Promise<void> {
@@ -79,6 +149,33 @@ async function loadIndex(): Promise<void> {
   } finally {
     loading.value = false;
   }
+}
+
+function selectAudience(audience: string): void {
+  selectedAudience.value = audience;
+  const currentVisible = current.value && filteredDocuments.value.some((doc) => doc.id === current.value?.id);
+  if (!currentVisible) {
+    const first = filteredDocuments.value.find((doc) => doc.is_section_index) || filteredDocuments.value[0];
+    if (first) void selectDocument(first.id);
+  }
+}
+
+function handleAudienceTabKeydown(event: KeyboardEvent, audience: string): void {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  const tabs = profileTabs.value;
+  const currentIndex = Math.max(0, tabs.findIndex((tab) => tab.key === audience));
+  const targetIndex = event.key === 'Home'
+    ? 0
+    : event.key === 'End'
+      ? tabs.length - 1
+      : event.key === 'ArrowLeft'
+        ? (currentIndex - 1 + tabs.length) % tabs.length
+        : (currentIndex + 1) % tabs.length;
+  const target = tabs[targetIndex];
+  if (!target) return;
+  selectAudience(target.key);
+  requestAnimationFrame(() => document.getElementById(`docs-profile-tab-${target.key}`)?.focus());
 }
 
 type SelectDocumentOptions = { fromId?: string; linkPath?: string };
@@ -297,6 +394,24 @@ onMounted(loadIndex);
   </div>
 
   <template v-else>
+    <nav class="editor-tabs docs-profile-tabs" role="tablist" aria-label="Filtrer la documentation par profil">
+      <button
+        v-for="tab in profileTabs"
+        :id="`docs-profile-tab-${tab.key}`"
+        :key="tab.key"
+        type="button"
+        :class="['editor-tab', { active: selectedAudience === tab.key }]"
+        role="tab"
+        :aria-selected="selectedAudience === tab.key"
+        :tabindex="selectedAudience === tab.key ? 0 : -1"
+        @click="selectAudience(tab.key)"
+        @keydown="handleAudienceTabKeydown($event, tab.key)"
+      >
+        {{ tab.label }}
+        <span class="docs-profile-tabs__count">{{ tab.count }}</span>
+      </button>
+    </nav>
+
     <section class="card docs-toolbar">
       <input v-model="q" class="input docs-toolbar__search" type="search" placeholder="Rechercher dans les titres, chemins et résumés…" />
       <select v-model="selectedSection" class="select docs-toolbar__section" aria-label="Filtrer par espace documentaire">

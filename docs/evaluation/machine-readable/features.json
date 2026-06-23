@@ -194,6 +194,37 @@
     "command": null,
     "confidence": "high",
     "data": null,
+    "domain": "editing",
+    "evidence": [
+      "frontend/admin-vue/src/components/editor/VisualEditorShell.vue",
+      "frontend/theme-default/assets/js/visual-editing-bridge.js",
+      "backend/src/Application/Api/Admin/VisualEditingApiController.php",
+      "backend/routes/api.php"
+    ],
+    "feature": "visual-editor-in-context",
+    "id": "feature-visual-editor-in-context-21a65d387c",
+    "interface": null,
+    "last_verified": "2026-06-22",
+    "limitations": [
+      "The controlled visual editor is implemented and documented; a full browser E2E path must still verify selection, save, revision, publication, language, media and locks."
+    ],
+    "permission": null,
+    "source": [
+      "frontend/admin-vue/src/components/editor/VisualEditorShell.vue",
+      "frontend/theme-default/assets/js/visual-editing-bridge.js",
+      "backend/src/Application/Api/Admin/VisualEditingApiController.php",
+      "backend/routes/api.php"
+    ],
+    "status": "partial",
+    "tests": [],
+    "validators": []
+  },
+  {
+    "api": null,
+    "audience": "administrative-or-public",
+    "command": null,
+    "confidence": "high",
+    "data": null,
     "domain": "workflow",
     "evidence": [
       "backend/src/Application/Publication/PublishedProjectionPipeline.php",

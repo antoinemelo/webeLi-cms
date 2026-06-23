@@ -30,6 +30,11 @@ La documentation est organisée par tâche et par public. Les concepts et procé
 
 Dans le back-office, chaque utilisateur authentifié consulte toute la documentation depuis le menu principal **Actifs > Docs**. Aucun rôle, aucune permission et aucune affectation de site ne filtre le catalogue. Le viewer expose les pages Markdown ainsi que les références JSON, YAML, HTML source et texte présentes sous `docs/`. Les liens documentaires internes sont résolus vers leur cible indexée, y compris lorsqu’un lien relatif est converti par le viewer en identifiant technique.
 
+
+## Capacités éditoriales clés
+
+Le CMS combine un modèle de contenu structuré et une édition visuelle contrôlée. Les blueprints définissent les champs, blocs et règles de validation ; l’éditeur visuel permet de relire et modifier les zones exposées par les templates dans le rendu réel du site. Cette approche vise à garder une structure de données propre tout en offrant une expérience concrète aux équipes éditoriales.
+
 ## Espaces documentaires
 
 | Besoin | Espace canonique |

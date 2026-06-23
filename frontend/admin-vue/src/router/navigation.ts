@@ -30,8 +30,8 @@ export const contentLinks: SectionLink[] = [
 export const structureLinks: SectionLink[] = [
   { label: 'Menus', route: '/menus', permission: 'menu.read', hint: 'Navigation publique et emplacements.' },
   { label: 'Taxonomies', route: '/taxonomies', permission: 'taxonomy.read', hint: 'Catégories, tags et vocabulaires.' },
-  { label: 'Blueprints', route: '/blueprints', permission: 'blueprints.read', hint: 'Modèles éditoriaux, champs, tabs et fieldsets réutilisables.' },
-  { label: 'Modèles blueprints', navLabel: 'Modèles blueprints', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et modèles déclarés par les modules.' },
+  { label: 'Structures de contenu', route: '/blueprints', permission: 'blueprints.read', hint: 'Structures éditoriales, champs, onglets et groupes réutilisables.' },
+  { label: 'Structures des modules', navLabel: 'Structures des modules', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et structures déclarées par les modules.' },
   { label: 'Cookies', route: '/cookies', permission: 'cookies.read', hint: 'Consentements, services tiers, bannière et scripts conditionnels.' }
 ];
 

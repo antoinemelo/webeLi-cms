@@ -70,8 +70,17 @@ const currentSiteId = computed(() => context.siteId ?? context.context?.site.id 
 const logoutAction = computed(() => window.__AMCMS_ADMIN__?.logoutPath || `${window.__AMCMS_ADMIN__?.apiBasePath?.replace(/\/api$/g, '') || ''}/logout`);
 
 function onSiteChange(event: Event) {
-  const value = Number((event.target as HTMLSelectElement).value || 0);
+  const select = event.target as HTMLSelectElement;
+  const value = Number(select.value || 0);
   if (value > 0 && value !== currentSiteId.value) {
+    const allowed = window.dispatchEvent(new CustomEvent('amcms:before-site-change', {
+      cancelable: true,
+      detail: { fromSiteId: currentSiteId.value, toSiteId: value }
+    }));
+    if (!allowed) {
+      select.value = String(currentSiteId.value);
+      return;
+    }
     context.switchSite(value, route.fullPath);
   }
 }

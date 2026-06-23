@@ -182,8 +182,8 @@
     return `${location.origin}${pathBase}`.replace(/\/+$/, '');
   }
   function publicApiBaseUrl(siteId){ return absolutePublicPath('/api/v1', siteId); }
-  // Public API endpoints are site-aware: a selected sub-site such as /mod/site_a
-  // must generate /mod/site_a/api/v1 and /mod/site_a/api/v1/openapi.*.
+  // Public API endpoints are site-aware: a selected sub-site such as /site_a
+  // must generate the same site-aware base path before /api/v1 and /api/v1/openapi.*.
   function publicDocsUrl(file='index.html', siteId){ return absolutePublicPath(`/docs/public-api/${file}`, siteId); }
   function openApiUrl(siteId){ return absolutePublicPath('/api/v1/openapi.json', siteId); }
   function openApiYamlUrl(siteId){ return absolutePublicPath('/api/v1/openapi.yaml', siteId); }

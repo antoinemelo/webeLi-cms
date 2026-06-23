@@ -878,7 +878,21 @@ function publicBasePath(): string {
 
 function withBasePath(path: string): string {
   if (!path) return '';
-  if (/^(https?:)?\/\//i.test(path) || /^(mailto|tel):/i.test(path)) return path;
+  if (/^(mailto|tel):/i.test(path)) return path;
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const parsed = new URL(path);
+      if (parsed.origin !== window.location.origin) {
+        return joinSlashPaths(publicBasePath(), parsed.pathname || '/');
+      }
+      return `${parsed.pathname || '/'}${parsed.search}${parsed.hash}`;
+    } catch {
+      return path;
+    }
+  }
+  if (/^\/\//.test(path)) {
+    return joinSlashPaths(publicBasePath(), path.replace(/^\/+[^/]+/, '') || '/');
+  }
   return joinSlashPaths(publicBasePath(), path);
 }
 function openPublic() { if (publicUrlWithBasePath.value) window.open(publicUrlWithBasePath.value, '_blank', 'noopener'); }

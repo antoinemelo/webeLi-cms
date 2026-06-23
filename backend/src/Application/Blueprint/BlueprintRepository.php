@@ -10,13 +10,13 @@ interface BlueprintRepository
     public function list(?string $resourceType = null, ?int $siteId = null): array;
 
     /** @return array<string,mixed>|null */
-    public function findByKey(string $key, ?string $resourceType = null, ?int $siteId = null): ?array;
+    public function findByKey(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): ?array;
 
     /** @return list<array<string,mixed>> */
-    public function versions(string $key, ?string $resourceType = null, ?int $siteId = null): array;
+    public function versions(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array;
 
     /** @return array<string,mixed>|null */
-    public function activeVersion(string $key, ?string $resourceType = null, ?int $siteId = null): ?array;
+    public function activeVersion(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): ?array;
 
     /** @return array<string,mixed>|null */
     public function findVersionById(int $versionId): ?array;
@@ -28,10 +28,10 @@ interface BlueprintRepository
     public function createBlueprint(array $payload): array;
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
-    public function createVersion(string $key, array $payload, ?int $siteId = null): array;
+    public function createVersion(string $key, array $payload, ?int $siteId = null, ?string $scope = null): array;
 
     /** @return array<string,mixed> */
-    public function activate(string $key, int $version, ?int $siteId = null): array;
+    public function activate(string $key, int $version, ?int $siteId = null, ?string $resourceType = null, ?string $scope = null): array;
 
     /** @return array<string,mixed> */
     public function modelOverview(?int $siteId = null): array;
@@ -46,13 +46,13 @@ interface BlueprintRepository
     public function fieldTypes(): array;
 
     /** @return array<string,mixed> */
-    public function design(string $key, ?string $resourceType = null, ?int $siteId = null): array;
+    public function design(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array;
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
-    public function saveDesign(string $key, array $payload, ?int $siteId = null): array;
+    public function saveDesign(string $key, array $payload, ?int $siteId = null, ?string $scope = null): array;
 
     /** @return array<string,mixed> */
-    public function deleteBlueprint(string $key, ?string $resourceType = null, ?int $siteId = null): array;
+    public function deleteBlueprint(string $key, ?string $resourceType = null, ?int $siteId = null, ?string $scope = null): array;
 
     /** @return list<array<string,mixed>> */
     public function fieldsets(): array;
