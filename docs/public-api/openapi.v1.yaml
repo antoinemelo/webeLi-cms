@@ -1124,9 +1124,7 @@ paths:
       description: "Retourne une liste paginée de médias publics, avec filtre optionnel par media_type."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "site"

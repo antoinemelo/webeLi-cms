@@ -5,7 +5,7 @@
   "description": "Retourne une liste paginée de médias publics, avec filtre optionnel par media_type.",
   "method": "GET",
   "source": "media_assets ready/valid",
-  "security": "Public read endpoint; may be protected by bearer scope media:read; ready/valid assets only; no quarantine/private path exposure.",
+  "security": "No bearer required; public read endpoint; ready/valid assets only; no quarantine/private path exposure.",
   "path": "/api/v1/media",
   "query_params": {
     "site": {

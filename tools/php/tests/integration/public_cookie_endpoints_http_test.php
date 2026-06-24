@@ -195,6 +195,18 @@ try {
     $h->assertSame(422, $invalidJsonResponse['status'], 'anonymous cookie consent still validates malformed JSON');
     $h->assertSame('INVALID_JSON', $invalidJsonResponse['json']['error']['code'] ?? null, 'malformed JSON keeps the public API validation error contract');
 
+    $mediaResponse = http_request($baseUrl . '/api/v1/media?limit=10');
+    $h->assertSame(200, $mediaResponse['status'], 'anonymous GET /api/v1/media?limit=10 returns 200');
+    $h->assertSame('public.media.index.v1', $mediaResponse['json']['meta']['contract'] ?? null, 'anonymous media index contract is returned');
+    $h->assertTrue(array_key_exists('pagination', $mediaResponse['json']['data'] ?? []), 'anonymous media index exposes pagination');
+    $h->assertSame(10, $mediaResponse['json']['data']['pagination']['limit'] ?? null, 'anonymous media index keeps requested limit');
+
+    $typedMediaResponse = http_request($baseUrl . '/api/v1/media?type=image&limit=10');
+    $h->assertSame(200, $typedMediaResponse['status'], 'anonymous GET /api/v1/media?type=image&limit=10 returns 200');
+    $h->assertSame('public.media.index.v1', $typedMediaResponse['json']['meta']['contract'] ?? null, 'anonymous typed media index contract is returned');
+    $h->assertSame('image', $typedMediaResponse['json']['meta']['media_type'] ?? null, 'anonymous typed media index keeps the type alias filter');
+    $h->assertTrue(array_key_exists('pagination', $typedMediaResponse['json']['data'] ?? []), 'anonymous typed media index exposes pagination');
+
     $protectedResponse = http_request($baseUrl . '/api/v1/content');
     $h->assertSame(401, $protectedResponse['status'], 'anonymous GET /api/v1/content remains protected');
     $h->assertSame('AUTH_REQUIRED', $protectedResponse['json']['error']['code'] ?? null, 'protected endpoint returns auth-required error');

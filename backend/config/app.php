@@ -80,6 +80,7 @@ return [
             '#^/api/v1/cookies/consent$#',
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
+            '#^/api/v1/media$#',
         ],
         'protected_paths' => [
             '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media)(?:/|$)#',

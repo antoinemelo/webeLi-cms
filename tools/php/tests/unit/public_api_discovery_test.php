@@ -47,12 +47,14 @@ foreach ($publicCookieOperations as [$path, $method]) {
     $h->assertSame([], $operation['security'] ?? null, 'canonical OpenAPI keeps cookies endpoint anonymous: ' . strtoupper($method) . ' ' . $path);
 }
 $h->assertSame([['BearerAuth' => []]], $jsonPayload['paths']['/api/v1/content']['get']['security'] ?? null, 'canonical OpenAPI keeps protected content endpoint behind Bearer auth');
+$h->assertSame([], $jsonPayload['paths']['/api/v1/media']['get']['security'] ?? null, 'canonical OpenAPI keeps public media index endpoint anonymous');
 
 $referenceOpenApi = json_decode((string) file_get_contents(base_path('docs/reference/contracts/public-api/openapi.v1.json')), true);
 foreach ($publicCookieOperations as [$path, $method]) {
     $operation = $referenceOpenApi['paths'][$path][$method] ?? null;
     $h->assertSame([], $operation['security'] ?? null, 'reference OpenAPI keeps cookies endpoint anonymous: ' . strtoupper($method) . ' ' . $path);
 }
+$h->assertSame([], $referenceOpenApi['paths']['/api/v1/media']['get']['security'] ?? null, 'reference OpenAPI keeps public media index endpoint anonymous');
 
 $yaml = $controller->openApiYaml();
 $h->assertSame(200, $yaml->status(), 'OpenAPI YAML is served');
@@ -61,7 +63,7 @@ $h->assertTrue(str_contains($yaml->body(), 'openapi: "3.1.0"'), 'OpenAPI YAML pa
 
 $config = require base_path('backend/config/app.php');
 $publicPatterns = $config['public_api_auth']['public_paths'] ?? [];
-foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/cookies/consent', '/api/v1/forms/contact', '/api/v1/forms/contact/submit'] as $path) {
+foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/cookies/consent', '/api/v1/forms/contact', '/api/v1/forms/contact/submit', '/api/v1/media'] as $path) {
     $public = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, $path) === 1);
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }

@@ -399,15 +399,23 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
         {
             $limit = max(1, min(100, $limit));
             $offset = max(0, $offset);
-            $params = ['site_id' => $siteId, 'language' => $languageCode];
+
+            $filterParams = ['site_id' => $siteId];
             $where = ["ma.site_id = :site_id", "ma.lifecycle_status = 'ready'", "ma.validation_status = 'valid'", 'ma.public_path IS NOT NULL'];
             if ($type !== '') {
                 $where[] = 'ma.media_type = :media_type';
-                $params['media_type'] = $type;
+                $filterParams['media_type'] = $type;
             }
+
             $whereSql = implode(' AND ', $where);
-            $totalRow = $this->db->one("SELECT COUNT(*) AS total FROM media_assets ma WHERE $whereSql", $params);
+            $totalRow = $this->db->one("SELECT COUNT(*) AS total FROM media_assets ma WHERE $whereSql", $filterParams);
             $total = (int) ($totalRow['total'] ?? 0);
+
+            $selectParams = $filterParams + [
+                'language' => $languageCode,
+                'limit' => $limit,
+                'offset' => $offset,
+            ];
             $rows = $this->db->all(
                 "SELECT ma.*, mal.alt_text, mal.caption, mal.title AS localized_title
                  FROM media_assets ma
@@ -415,7 +423,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
                  WHERE $whereSql
                  ORDER BY ma.updated_at DESC, ma.id DESC
                  LIMIT :limit OFFSET :offset",
-                $params + ['limit' => $limit, 'offset' => $offset]
+                $selectParams
             );
             $items = array_map(static function (array $row): array {
                 $publicPath = trim((string) ($row['public_path'] ?? $row['path'] ?? ''));
