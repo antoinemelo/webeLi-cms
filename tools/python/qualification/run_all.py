@@ -36,6 +36,20 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def _as_text(value: object) -> str:
+    """Normalise les sorties subprocess en texte exploitable dans les rapports.
+
+    subprocess.TimeoutExpired peut exposer stdout/stderr sous forme de bytes,
+    même lorsque la commande a été lancée avec text=True. La qualification doit
+    alors afficher l'erreur initiale sans provoquer une erreur interne.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 @dataclass
 class Result:
     id: str
@@ -174,36 +188,54 @@ def _environment_check() -> tuple[int, str, str]:
 
 
 def _frontend_dependencies_check() -> tuple[int, str, str]:
+    """Vérifie le lockfile et l'audit sécurité sans modifier node_modules.
+
+    La qualification ne doit pas lancer npm ci automatiquement : c'est lent,
+    dépendant du réseau, et cela peut bloquer tout le profil complete/release.
+    Le contrôle P0-06 porte ici sur l'absence de vulnérabilités high/critical
+    dans le graphe verrouillé. Le build frontend, exécuté juste après, vérifie
+    séparément que les dépendances locales installées sont réellement utilisables.
+    """
     frontend = ROOT / "frontend/admin-vue"
-    command = ["npm", "ls", "--depth=0", "--json"]
-    proc = subprocess.run(
-        command,
-        cwd=frontend,
-        text=True,
-        capture_output=True,
-        timeout=60,
+    lockfile = frontend / "package-lock.json"
+    lock_text = lockfile.read_text(encoding="utf-8")
+    forbidden_registries = (
+        "packages.applied-caas-gateway1.internal.api.openai.org",
+        "artifactory/api/npm/npm-public",
     )
-    bootstrap = frontend / "node_modules/bootstrap/package.json"
-    vue_tsc = frontend / "node_modules/vue-tsc/bin/vue-tsc.js"
-    vite = frontend / "node_modules/vite/bin/vite.js"
-    missing = [
-        path.relative_to(frontend).as_posix()
-        for path in (bootstrap, vue_tsc, vite)
-        if not path.is_file()
-    ]
-    if proc.returncode == 0 and not missing:
-        return 0, "Dépendances frontend installées et cohérentes.", ""
-    details = []
-    if missing:
-        details.append("Fichiers absents: " + ", ".join(missing))
-    output = (proc.stdout or proc.stderr).strip()
-    if output:
-        details.append(output)
-    details.append(
-        "Réinstallez les dépendances avec : "
-        "cd frontend/admin-vue && rm -rf node_modules && npm ci"
-    )
-    return 2, "", "\n".join(details)
+    leaked = [item for item in forbidden_registries if item in lock_text]
+    if leaked:
+        return (
+            1,
+            "",
+            "package-lock.json contient un registre non public: " + ", ".join(leaked)
+            + "\nRégénérez le lockfile avec un registre public puis relancez npm ci.",
+        )
+
+    audit_command = ["npm", "audit", "--audit-level=high"]
+    try:
+        audit_proc = subprocess.run(
+            audit_command,
+            cwd=frontend,
+            text=True,
+            capture_output=True,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None)).strip()
+        stderr = _as_text(getattr(exc, "stderr", None)).strip()
+        detail = "\n".join(part for part in (stdout, stderr) if part)
+        return 124, detail, "npm audit --audit-level=high a dépassé 180s."
+
+    output = "\n".join(part for part in (_as_text(audit_proc.stdout).strip(), _as_text(audit_proc.stderr).strip()) if part)
+    if audit_proc.returncode != 0:
+        return (
+            audit_proc.returncode,
+            output,
+            "npm audit --audit-level=high a détecté au moins une vulnérabilité high/critical.",
+        )
+
+    return 0, "Audit sécurité frontend OK.\n$ npm audit --audit-level=high\n" + (output or "found 0 vulnerabilities"), ""
 
 
 def _php_lint() -> tuple[int, str, str]:
@@ -287,9 +319,11 @@ def _run_step(step: Step) -> Result:
     except FileNotFoundError as exc:
         return Result(step.id, step.label, "skipped", int((time.monotonic() - start) * 1000), list(step.command), None, "", "", str(exc))
     except subprocess.TimeoutExpired as exc:
-        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 124, exc.stdout or "", exc.stderr or "", f"Timeout après {step.timeout}s")
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 124, stdout, stderr, f"Timeout après {step.timeout}s")
     except Exception as exc:  # noqa: BLE001
-        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 3, "", str(exc), "Erreur interne")
+        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 3, "", _as_text(exc), "Erreur interne")
 
 
 def _markdown(profile: str, results: list[Result], exit_code: int) -> str:
@@ -299,7 +333,7 @@ def _markdown(profile: str, results: list[Result], exit_code: int) -> str:
         lines.append(f"| {result.label} | `{result.status}` | {result.duration_ms} ms |")
     for result in results:
         if result.status != "passed":
-            lines.extend(["", f"## {result.label}", "", f"Statut : `{result.status}`", "", result.reason or result.stderr.strip() or "Aucun détail."])
+            lines.extend(["", f"## {result.label}", "", f"Statut : `{result.status}`", "", result.reason or _as_text(result.stderr).strip() or "Aucun détail."])
     return "\n".join(lines) + "\n"
 
 
@@ -341,7 +375,7 @@ def main(argv: list[str] | None = None) -> int:
         marker = {"passed": "OK", "failed": "FAILED", "skipped": "SKIPPED"}[result.status]
         print(f"[{marker}] {step.label} ({result.duration_ms} ms)")
         if result.status == "failed":
-            detail = "\n".join(part for part in (result.stdout.strip(), result.stderr.strip()) if part)
+            detail = "\n".join(part for part in (_as_text(result.stdout).strip(), _as_text(result.stderr).strip()) if part)
         else:
             detail = result.reason
         if detail:

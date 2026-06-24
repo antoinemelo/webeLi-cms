@@ -37,10 +37,10 @@ Trois profils seulement sont proposés. **Aucun profil ne reconstruit les bases 
 | Profil | Usage | Contenu principal |
 |---|---|---|
 | `quick` | boucle locale courte | environnement, syntaxe Python et validateurs structurels rapides |
-| `complete` | avant intégration ou après une modification importante | lint Python/PHP, tests, validateurs complets, intégrité runtime, sauvegarde/restauration, build frontend, documentation et export statique à blanc |
+| `complete` | avant intégration ou après une modification importante | lint Python/PHP, tests, validateurs complets, intégrité runtime, sauvegarde/restauration, audit npm high/critical, build frontend, documentation et export statique à blanc |
 | `release` | depuis le dépôt source complet, avant livraison ou déploiement | profil complet, tests Playwright, préflight de production, création du package, vérification de l’archive et installation neuve |
 
-Le profil `complete` ne crée pas de package de release. Le profil `release` compile le frontend puis lance Playwright sur une copie isolée avec des bases, un compte administrateur et un récepteur webhook éphémères. Aucune variable `E2E_*` n’est requise. Chromium doit avoir été installé une fois avec `python3 tools/cms.py e2e --install-browser`.
+Le profil `complete` ne crée pas de package de release. Les profils `complete` et `release` exécutent `npm audit --audit-level=high` dans `frontend/admin-vue` avant le build frontend, sans lancer `npm ci` automatiquement. L’installation des dépendances reste une étape explicite de préparation locale ou de CI : `cd frontend/admin-vue && npm ci`. Le profil `release` compile le frontend puis lance Playwright sur une copie isolée avec des bases, un compte administrateur et un récepteur webhook éphémères. Aucune variable `E2E_*` n’est requise. Chromium doit avoir été installé une fois avec `python3 tools/cms.py e2e --install-browser`.
 
 ## Reconstruction des bases
 

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 5173",
     "build": "node ./node_modules/vue-tsc/bin/vue-tsc.js --noEmit && node ./node_modules/vite/bin/vite.js build",
+    "audit:high": "npm audit --audit-level=high",
     "preview": "node ./node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173",
     "test:e2e": "node ./node_modules/@playwright/test/cli.js test",
     "test:e2e:headed": "node ./node_modules/@playwright/test/cli.js test --headed"
@@ -14,17 +15,17 @@
     "@vitejs/plugin-vue": "6.0.6",
     "bootstrap": "5.3.8",
     "pinia": "3.0.4",
-    "vite": "8.0.10",
+    "vite": "8.1.0",
     "vue": "3.5.33",
     "vue-router": "5.0.6"
   },
   "devDependencies": {
-    "@playwright/test": "1.52.0",
+    "@playwright/test": "1.61.1",
     "typescript": "6.0.3",
     "vue-tsc": "3.2.7"
   },
   "engines": {
-    "node": "22.16.0",
-    "npm": "10.9.2"
+    "node": ">=22.16.0 <23",
+    "npm": ">=10.9.2 <11"
   }
 }
