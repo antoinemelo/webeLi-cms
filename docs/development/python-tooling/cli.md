@@ -175,6 +175,8 @@ python3 tools/cms.py docs tree --release
 
 Ce second mode écrit par défaut `TREE.release.txt`. Les deux modes acceptent `--check`, `--stdout` et `--output` pour les usages CI ou diagnostic.
 
+Lors du packaging, `d2_package_release.py` rafraîchit automatiquement `TREE.txt` avant la copie, puis reconstruit `TREE.release.txt` depuis le staging final, après injection éventuelle des bases SQLite. Une archive de release ne dépend donc plus d’un manifeste TREE oublié ou obsolète.
+
 Une contribution n’est pas terminée lorsque le code a changé mais que les références générées ou `TREE.txt` sont encore anciens.
 
 

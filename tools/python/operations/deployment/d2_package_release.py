@@ -7,6 +7,7 @@ if str(_DEC_CMS_PROJECT_ROOT) not in _dec_sys.path:
     _dec_sys.path.insert(0, str(_DEC_CMS_PROJECT_ROOT))
 
 import argparse
+import subprocess
 import shutil
 import sqlite3
 import zipfile
@@ -236,6 +237,37 @@ FORBIDDEN_STAGE_SUFFIXES = (
 REQUIRED_SQLITE_DATABASES = native_database_names(release=True)
 
 
+def generate_tree_manifest(mode: str, root: Path, output: Path, *, include_databases: bool) -> None:
+    """Rafraîchit les manifestes TREE pendant le packaging.
+
+    Le générateur est lancé en sous-processus pour éviter un import circulaire:
+    generate_tree_manifest.py réutilise les règles DEFAULT_EXCLUDES/KEEP_FILES de
+    ce module afin que TREE.release.txt décrive exactement la release packagée.
+    """
+    script = ROOT / "tools" / "python" / "generators" / "generate_tree_manifest.py"
+    if not script.is_file():
+        raise RuntimeError(f"Générateur TREE introuvable: {script}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.touch(exist_ok=True)
+    command = [
+        _dec_sys.executable,
+        str(script),
+        f"--{mode}",
+        "--root",
+        str(root),
+        "--output",
+        str(output),
+    ]
+    if mode == "release" and not include_databases:
+        command.append("--exclude-databases")
+    completed = subprocess.run(command, cwd=str(ROOT), text=True)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"Génération TREE en échec ({mode}, code {completed.returncode}): "
+            + " ".join(command)
+        )
+
+
 def is_forbidden_stage_file(rel: str) -> bool:
     parts = set(rel.split("/"))
     return (
@@ -411,10 +443,19 @@ def main() -> int:
     package_name = args.name or release_metadata.package_name()
     release_id = args.release_id or default_release_id(package_name, ROOT)
     include_databases = not args.exclude_databases
+
+    # Le manifeste source doit être frais avant la copie: sinon l’archive de
+    # release embarquerait un TREE.txt déjà obsolète.
+    generate_tree_manifest("source", ROOT, ROOT / "TREE.txt", include_databases=include_databases)
+
     copy_tree(ROOT, stage_dir, DEFAULT_EXCLUDES, include_databases=include_databases, include_vendor=args.include_vendor)
     if include_databases:
         inject_stage_databases(stage_dir)
         validate_stage_databases(stage_dir)
+
+    # Le manifeste release est calculé depuis le staging final, après injection
+    # contrôlée des bases SQLite, pour refléter l’archive installable réelle.
+    generate_tree_manifest("release", stage_dir, stage_dir / "TREE.release.txt", include_databases=include_databases)
 
     manifest = build_release_manifest(
         stage_dir,
