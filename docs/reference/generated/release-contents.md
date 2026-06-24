@@ -90,6 +90,16 @@ generated: true
 - `tools/tests`
 - `tools/tests/*`
 - `tools/tests/**`
+- `tools/php/tests`
+- `tools/php/tests/*`
+- `tools/php/tests/**`
+- `tools/php/test_*.php`
+- `frontend/admin-vue/tests`
+- `frontend/admin-vue/tests/*`
+- `frontend/admin-vue/tests/**`
+- `frontend/admin-vue/test-results`
+- `frontend/admin-vue/test-results/*`
+- `frontend/admin-vue/test-results/**`
 - `*.zip`
 - `**/*.zip`
 - `*.tar`

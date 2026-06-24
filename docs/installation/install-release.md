@@ -23,6 +23,12 @@ generated: false
 ---
 # Installer une release officielle
 
+## Contextes de contrôle
+
+Une archive release installée doit rester autonome : elle contient le runtime, les assets compilés, les bases SQLite seedées et la documentation publique, mais pas les tests source ni les dépendances de build. Les commandes garanties dans ce contexte sont `smoke`, `validate` et `docs check`.
+
+Le dépôt source complet sert au développement et à la préparation d'une livraison. Il contient les tests source et permet d'exécuter `test` et `qualify`.
+
 ## Procédure
 
 1. Décompressez l’archive dans un chemin définitif, ou clonez la branche attendue lorsque l'environnement est explicitement synchronisé par Git. Les commandes citées utilisent des guillemets afin de supporter les espaces : `cd "/chemin/avec espaces/mod"`.
@@ -32,7 +38,15 @@ generated: false
 5. Initialisez une installation vide avec `python3 tools/cms.py init`; utilisez `--with-reference-seed` uniquement pour une instance de démonstration prévue à cet effet.
 6. Créez le premier superadministrateur par le mécanisme fourni par la release ou par une procédure d’exploitation contrôlée ; ne conservez aucun identifiant de seed de démonstration.
 7. Configurez le serveur web pour pointer vers la racine publique attendue et respecter `.htaccess` sur Apache.
-8. Exécutez les validations et le smoke test.
+8. Exécutez les contrôles adaptés à une archive release installée :
+
+   ```bash
+   python3 tools/cms.py smoke
+   python3 tools/cms.py validate
+   python3 tools/cms.py docs check
+   ```
+
+   N’exécutez pas `python3 tools/cms.py test` pour qualifier une archive release : les tests source sont volontairement exclus du package. Si cette commande est lancée dans une release, elle doit afficher un message explicite et renvoyer le code `2`.
 
 ## Sous-répertoire
 

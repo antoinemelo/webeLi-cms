@@ -1,1 +1,4 @@
-"""Smoke and regression tests for the local CMS Python tools."""
+"""Tests source du CLI DEC CMS.
+
+Ce paquet est volontairement exclu des archives de release.
+"""

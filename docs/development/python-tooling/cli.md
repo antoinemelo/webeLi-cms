@@ -117,14 +117,24 @@ python3 tools/cms.py rebuild
 
 `rebuild` est destructif pour les bases ciblées. Utilisez-le sur un environnement de développement, de test ou de récupération contrôlée après sauvegarde vérifiée. Pour une instance contenant des données à conserver, suivez la procédure de mise à jour ou de restauration documentée au lieu de reconstruire sans contrôle.
 
-## Lancer les validateurs et les tests
+## Lancer les validateurs, smoke tests et tests source
+
+Dans une archive release installée, utilisez uniquement les contrôles autonomes :
 
 ```bash
+python3 tools/cms.py smoke
 python3 tools/cms.py validate
-python3 tools/cms.py test
+python3 tools/cms.py docs check
 ```
 
-Pour cibler ou comprendre les sélections disponibles, consultez l’aide de la sous-commande. En CI, préférez la sortie JSON afin de distinguer proprement succès, avertissements et erreurs.
+Dans le dépôt source complet, ajoutez les tests et la qualification :
+
+```bash
+python3 tools/cms.py test
+python3 tools/cms.py qualify --profile complete
+```
+
+`test` recherche les tests source sous `tools/python/tests`. Si ce répertoire est absent, la commande renvoie un code `2` avec un message qui rappelle d'utiliser `smoke`, `validate` et `docs check` pour une release. Pour cibler ou comprendre les sélections disponibles, consultez l’aide de la sous-commande. En CI, préférez la sortie JSON afin de distinguer proprement succès, avertissements et erreurs.
 
 Le validateur documentaire canonique peut aussi être exécuté directement lorsqu’un diagnostic précis est nécessaire :
 

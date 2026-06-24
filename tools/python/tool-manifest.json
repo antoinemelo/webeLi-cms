@@ -551,6 +551,26 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/commands/smoke.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/reference/generated/cli-commands.md",
+        "tools/python/cms/cli.py",
+        "tools/python/operations/deployment/d4_verify_release_archive.py",
+        "tools/python/operations/deployment/d5_smoke_test_release_structure.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/operations/release_structure.py"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/commands/test.py",
       "category": "command",
       "public": false,

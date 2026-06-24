@@ -9,6 +9,7 @@ if str(_DEC_CMS_PROJECT_ROOT) not in _dec_sys.path:
 import argparse
 import json
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -25,6 +26,8 @@ REQUIRED_FILES = [
     "backend/routes/api.php",
     "backend/bootstrap/runtime.php",
     "config/release.json",
+    "tools/cms.py",
+    "tools/python/commands/smoke.py",
     "ops/_env.example",
     "storage/.htaccess",
     "storage/media/.htaccess",
@@ -59,6 +62,9 @@ FORBIDDEN_PREFIXES = [
     "docs/history/",
     "tools/python/tests/",
     "tools/tests/",
+    "tools/php/tests/",
+    "frontend/admin-vue/tests/",
+    "frontend/admin-vue/test-results/",
 ]
 
 FORBIDDEN_PATH_PARTS = {
@@ -83,6 +89,11 @@ ALLOWED_EXPORT_GUARDS = {
     "storage/exports/static/.htaccess",
 }
 SECRET_NAME_PATTERNS = (".env", ".env.local", ".env.production", ".env.prod", "ftp.deploy.json")
+RELEASE_COMMANDS = (
+    (("smoke",), 60),
+    (("validate",), 240),
+    (("docs", "check"), 180),
+)
 
 
 def has_forbidden_prefix(name: str, *, include_vendor: bool) -> bool:
@@ -135,6 +146,62 @@ def verify_sqlite_from_zip(zf: zipfile.ZipFile, member: str, errors: list[str]) 
         if integrity != "ok":
             fail(errors, f"Base SQLite invalide dans l'archive: {member} integrity_check={integrity}")
 
+
+
+def _tail(text: str, limit: int = 2000) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return "…" + text[-limit:]
+
+
+def verify_release_commands_from_archive(archive: Path, root_prefix: str, errors: list[str]) -> None:
+    """Extrait l'archive et exécute les commandes garanties en contexte release.
+
+    Ce contrôle de packaging empêche une release de paraître valide alors que
+    `smoke`, `validate` ou `docs check` dépendraient de tests source, de caches,
+    de node_modules ou d'autres fichiers volontairement exclus du package.
+    """
+    with tempfile.TemporaryDirectory(prefix="dec-cms-release-commands-") as tmp:
+        tmp_root = Path(tmp)
+        with zipfile.ZipFile(archive) as zf:
+            zf.extractall(tmp_root)
+        install_root = tmp_root / root_prefix.rstrip("/") if root_prefix else tmp_root
+        if not (install_root / "tools" / "cms.py").is_file():
+            fail(errors, "Contrôle commandes release impossible: tools/cms.py absent après extraction.")
+            return
+        for command, timeout in RELEASE_COMMANDS:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(install_root / "tools" / "cms.py"),
+                    "--root",
+                    str(install_root),
+                    "--command-timeout",
+                    str(timeout),
+                    *command,
+                ],
+                cwd=install_root,
+                text=True,
+                capture_output=True,
+                timeout=timeout + 30,
+            )
+            if proc.returncode != 0:
+                label = " ".join(command)
+                detail = "\n".join(
+                    part
+                    for part in (
+                        f"stdout:\n{_tail(proc.stdout)}" if proc.stdout.strip() else "",
+                        f"stderr:\n{_tail(proc.stderr)}" if proc.stderr.strip() else "",
+                    )
+                    if part
+                )
+                fail(
+                    errors,
+                    "Commande release non autonome dans l'archive: "
+                    f"python3 tools/cms.py {label} (code {proc.returncode})."
+                    + ("\n" + detail if detail else ""),
+                )
 
 def main() -> int:
     args = parse_args()
@@ -216,6 +283,9 @@ def main() -> int:
                     fail(errors, "release-manifest.json doit déclarer include_databases=true pour une release v1 standard.")
                 if not manifest.get("release_id") or not manifest.get("technical_version"):
                     fail(errors, "release-manifest.json doit contenir release_id et technical_version.")
+                notes = manifest.get("notes")
+                if isinstance(notes, list) and not any("smoke, validate et docs check" in str(note) for note in notes):
+                    warnings.append("Manifest sans note explicite sur les commandes release autonomes.")
                 manifest_files = manifest.get("files")
                 if isinstance(manifest_files, dict):
                     for required in REQUIRED_FILES:
@@ -223,6 +293,9 @@ def main() -> int:
                             continue
                         if required not in manifest_files:
                             warnings.append(f"Manifest sans entrée fichier: {required}")
+
+            if not errors:
+                verify_release_commands_from_archive(archive, root_prefix, errors)
 
     if args.json:
         print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings, "archive": str(archive)}, ensure_ascii=False, indent=2))

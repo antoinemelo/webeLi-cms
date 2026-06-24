@@ -24,13 +24,15 @@ evidence_scope:
 ---
 # Contrôles reproductibles
 
-Exécuter depuis la racine du dépôt, dans une copie de travail. Sauvegarder toute donnée utile avant les commandes destructives.
+Exécuter depuis la racine du dépôt, dans une copie de travail. Sauvegarder toute donnée utile avant les commandes destructives. Pour une archive release installée, utiliser le bloc de contrôles release ci-dessous : il ne dépend pas des tests source exclus du package.
 
 | Contrôle | Commande exacte | Produit / attendu | Interprétation d’un échec |
 |---|---|---|---|
 | aide CLI | `python3 tools/cms.py --help` | liste des commandes stables | façade ou Python indisponible |
-| tests | `python3 tools/cms.py test` | code retour 0 | lire le premier test en échec |
+| smoke release | `python3 tools/cms.py smoke` | code retour 0 | archive ou installation incomplète |
 | validateurs rapides | `python3 tools/cms.py validate` | code retour 0 | contrat local incohérent |
+| documentation release | `python3 tools/cms.py docs check` | code retour 0 | documentation générée obsolète ou package incomplet |
+| tests source | `python3 tools/cms.py test` | code retour 0 dans le dépôt source complet ; code 2 explicite si tests absents | lire le premier test en échec ou utiliser les contrôles release si l’on est dans une archive |
 | qualification rapide | `python3 tools/cms.py qualify --profile quick` | résumé OK | blocage avant release |
 | documentation générée | `python3 tools/cms.py docs check` | références fraîches | générer ou corriger le générateur |
 | migrations non mutatives | `python3 tools/cms.py migrate --plan` | plan lisible, aucun fichier SQLite modifié | migrateur trop dangereux |

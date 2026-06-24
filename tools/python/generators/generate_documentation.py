@@ -22,6 +22,8 @@ GENERATED_SCAN_EXCLUDED_PARTS = {
     "__pycache__",
     "node_modules",
     "vendor",
+    "tests",
+    "test-results",
 }
 
 
@@ -183,6 +185,7 @@ def render_cli() -> str:
         ("qualify", ("qualify",)),
         ("audit", ("audit",)),
         ("test", ("test",)),
+        ("smoke", ("smoke",)),
         ("export", ("export",)),
         ("backup", ("backup",)),
         ("migrate", ("migrate",)),

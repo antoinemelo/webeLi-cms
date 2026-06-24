@@ -18,7 +18,7 @@ generated: true
 
 | Variable | Références dans le dépôt |
 |---|---|
-| `APP_BASE_PATH` | `backend/config/app.php`, `backend/src/Shared/Support/helpers.php`, `tools/php/tests/integration/multisite_base_path_test.php`, `tools/python/operations/database/b2_cleanup_noindex_search_documents.py` |
+| `APP_BASE_PATH` | `backend/config/app.php`, `backend/src/Shared/Support/helpers.php`, `tools/python/operations/database/b2_cleanup_noindex_search_documents.py` |
 | `APP_EDITORIAL_IMPORT_MAX_ARCHIVE_BYTES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_FILES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_UNCOMPRESSED_BYTES` | `backend/config/app.php` |

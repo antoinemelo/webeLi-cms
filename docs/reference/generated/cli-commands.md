@@ -22,13 +22,13 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,docs}
+                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,docs}
+  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs}
     init                Créer les structures SQLite sans données métier.
     rebuild             Développement/test: reconstruire les bases et appliquer
                         les seeds natifs.
@@ -44,6 +44,8 @@ positional arguments:
                         de modules.
     instance            Gérer les instances locales du CMS.
     release             Préparer et vérifier une release.
+    smoke               Smoke test structurel non destructif d’une archive
+                        release installée.
     docs                Générer ou vérifier la documentation de référence.
 
 options:
@@ -167,6 +169,17 @@ options:
   --target-duration TARGET_DURATION
                         Durée cible en secondes ; son dépassement produit un
                         avertissement (défaut : 120).
+```
+
+## `tools/cms.py smoke`
+
+```text
+usage: tools/cms.py smoke [-h] [--structural-only]
+
+options:
+  -h, --help         show this help message and exit
+  --structural-only  Conservé pour compatibilité: le smoke test release est
+                     volontairement structurel et non destructif.
 ```
 
 ## `tools/cms.py export`
