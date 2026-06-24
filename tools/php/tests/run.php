@@ -12,6 +12,7 @@ $tests = [
     'integration/webhook_repository_test.php',
     'integration/multisite_locale_test.php',
     'integration/multisite_base_path_test.php',
+    'integration/frontend_search_payload_test.php',
     'integration/public_api_headless_content_test.php',
 ];
 

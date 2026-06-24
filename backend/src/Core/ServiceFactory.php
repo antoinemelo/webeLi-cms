@@ -731,6 +731,7 @@ final class ServiceFactory
     {
         return $this->once('resolve_public_route', fn() => new ResolvePublicRoute(
             $this->publicContent(),
+            $this->publicSearch(),
             $this->publicRouteReads(),
             $this->sites(),
             $this->taxonomies(),
