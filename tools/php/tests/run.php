@@ -14,6 +14,7 @@ $tests = [
     'integration/multisite_base_path_test.php',
     'integration/frontend_search_payload_test.php',
     'integration/public_api_headless_content_test.php',
+    'integration/public_cookie_endpoints_http_test.php',
 ];
 
 /**

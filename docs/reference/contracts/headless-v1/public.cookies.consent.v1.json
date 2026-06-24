@@ -5,7 +5,7 @@
   "description": "Enregistre le choix de consentement sans exposer de donnée sensible.",
   "method": "POST",
   "source": "canonical public application use case",
-  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "security": "Public endpoint: no bearer token is required; CORS, rate-limit and payload validation still apply.",
   "path": "/api/v1/cookies/consent",
   "query_params": {
     "lang": {

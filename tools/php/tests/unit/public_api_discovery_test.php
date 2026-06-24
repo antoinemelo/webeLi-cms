@@ -11,10 +11,11 @@ $h = new TestHarness();
 $routes = require base_path('backend/routes/api.php');
 $router = new Router();
 
-foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/forms/contact'] as $path) {
+foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/forms/contact'] as $path) {
     $h->assertTrue($router->match('GET', $path, $routes) !== null, 'public API route is registered: ' . $path);
 }
 $h->assertTrue($router->match('POST', '/api/v1/forms/contact/submit', $routes) !== null, 'public API route is registered: /api/v1/forms/contact/submit');
+$h->assertTrue($router->match('POST', '/api/v1/cookies/consent', $routes) !== null, 'public API route is registered: /api/v1/cookies/consent');
 
 $controller = new PublicApiDocsController();
 $discovery = $controller->discovery();
@@ -37,6 +38,22 @@ $h->assertSame(200, $json->status(), 'OpenAPI JSON is served');
 $h->assertTrue(str_contains((string) ($json->headers()['Content-Type'] ?? ''), 'application/json'), 'OpenAPI JSON MIME is correct');
 $h->assertSame('3.1.0', $jsonPayload['openapi'] ?? null, 'OpenAPI JSON payload is valid');
 
+$publicCookieOperations = [
+    ['/api/v1/cookies/config', 'get'],
+    ['/api/v1/cookies/consent', 'post'],
+];
+foreach ($publicCookieOperations as [$path, $method]) {
+    $operation = $jsonPayload['paths'][$path][$method] ?? null;
+    $h->assertSame([], $operation['security'] ?? null, 'canonical OpenAPI keeps cookies endpoint anonymous: ' . strtoupper($method) . ' ' . $path);
+}
+$h->assertSame([['BearerAuth' => []]], $jsonPayload['paths']['/api/v1/content']['get']['security'] ?? null, 'canonical OpenAPI keeps protected content endpoint behind Bearer auth');
+
+$referenceOpenApi = json_decode((string) file_get_contents(base_path('docs/reference/contracts/public-api/openapi.v1.json')), true);
+foreach ($publicCookieOperations as [$path, $method]) {
+    $operation = $referenceOpenApi['paths'][$path][$method] ?? null;
+    $h->assertSame([], $operation['security'] ?? null, 'reference OpenAPI keeps cookies endpoint anonymous: ' . strtoupper($method) . ' ' . $path);
+}
+
 $yaml = $controller->openApiYaml();
 $h->assertSame(200, $yaml->status(), 'OpenAPI YAML is served');
 $h->assertTrue(str_contains((string) ($yaml->headers()['Content-Type'] ?? ''), 'application/yaml'), 'OpenAPI YAML MIME is correct');
@@ -44,7 +61,7 @@ $h->assertTrue(str_contains($yaml->body(), 'openapi: "3.1.0"'), 'OpenAPI YAML pa
 
 $config = require base_path('backend/config/app.php');
 $publicPatterns = $config['public_api_auth']['public_paths'] ?? [];
-foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/forms/contact', '/api/v1/forms/contact/submit'] as $path) {
+foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/cookies/consent', '/api/v1/forms/contact', '/api/v1/forms/contact/submit'] as $path) {
     $public = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, $path) === 1);
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }

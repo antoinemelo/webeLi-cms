@@ -76,6 +76,8 @@ return [
         'public_paths' => [
             '#^/api/v1/health$#',
             '#^/api/v1/openapi\.(?:json|yaml)$#',
+            '#^/api/v1/cookies/config$#',
+            '#^/api/v1/cookies/consent$#',
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
         ],
