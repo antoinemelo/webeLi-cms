@@ -161,7 +161,21 @@ python3 tools/cms.py docs check
 
 `docs generate` met à jour les références dérivées du code. `docs check` ne doit pas modifier les fichiers : il vérifie que les sorties générées sont à jour et que la gouvernance documentaire est respectée.
 
-Une contribution n’est pas terminée lorsque le code a changé mais que les références générées sont encore anciennes.
+Pour maintenir le manifeste racine de l’arborescence, utilisez la commande dédiée :
+
+```bash
+python3 tools/cms.py docs tree --source
+```
+
+Elle régénère `TREE.txt` depuis l’arbre source en excluant les répertoires volatils (`storage/`, caches, dépendances, archives locales). Pour documenter le contenu d’une release installable selon les règles du packager, utilisez :
+
+```bash
+python3 tools/cms.py docs tree --release
+```
+
+Ce second mode écrit par défaut `TREE.release.txt`. Les deux modes acceptent `--check`, `--stdout` et `--output` pour les usages CI ou diagnostic.
+
+Une contribution n’est pas terminée lorsque le code a changé mais que les références générées ou `TREE.txt` sont encore anciens.
 
 
 ## Chaîne headless v1 à exécuter

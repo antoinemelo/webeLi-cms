@@ -40,7 +40,7 @@ ALLOWED_SOURCE_TYPES = {
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 CLI_RE = re.compile(r"(?:python3|/usr/bin/python3)\s+tools/cms\.py\s+([a-z][a-z0-9-]*)(?:\s+([a-z][a-z0-9-]*))?")
-ALLOWED_DOC_ACTIONS = {"generate", "check", "evaluation-generate", "evaluation-check"}
+ALLOWED_DOC_ACTIONS = {"generate", "check", "tree", "evaluation-generate", "evaluation-check"}
 LEGACY_DIRS = ("docs/archive", "docs/history", "docs/internal")
 
 ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (

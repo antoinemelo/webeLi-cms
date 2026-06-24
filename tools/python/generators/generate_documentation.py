@@ -194,6 +194,11 @@ def render_cli() -> str:
         ("instance update", ("instance", "update")),
         ("release", ("release",)),
         ("docs", ("docs",)),
+        ("docs generate", ("docs", "generate")),
+        ("docs check", ("docs", "check")),
+        ("docs tree", ("docs", "tree")),
+        ("docs evaluation-generate", ("docs", "evaluation-generate")),
+        ("docs evaluation-check", ("docs", "evaluation-check")),
     )
     for label, args in topics:
         body += f"## `tools/cms.py {label}`\n\n```text\n{command_help(*args)}\n```\n\n"

@@ -765,6 +765,24 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/generators/generate_tree_manifest.py",
+      "category": "generator",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/python-tooling/cli.md",
+        "docs/reference/generated/cli-commands.md",
+        "tools/python/commands/docs.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py docs",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/lib/__init__.py",
       "category": "library",
       "public": false,

@@ -337,21 +337,78 @@ options:
 
 ```text
 usage: tools/cms.py docs [-h]
-                         {generate,check,evaluation-generate,evaluation-check}
+                         {generate,check,evaluation-generate,tree,evaluation-check}
                          ...
 
 positional arguments:
-  {generate,check,evaluation-generate,evaluation-check}
+  {generate,check,evaluation-generate,tree,evaluation-check}
     generate            Régénérer les références, OpenAPI et types SDK publics.
     check               Vérifier la fraîcheur des références, OpenAPI, types SDK
                         et gouvernance documentaire.
     evaluation-generate
                         Régénérer les données machine-readable de l’espace
                         d’évaluation.
+    tree                Générer ou vérifier TREE.txt / TREE.release.txt.
     evaluation-check    Vérifier les données et preuves de l’espace
                         d’évaluation.
 
 options:
   -h, --help            show this help message and exit
+```
+
+## `tools/cms.py docs generate`
+
+```text
+usage: tools/cms.py docs generate [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs check`
+
+```text
+usage: tools/cms.py docs check [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs tree`
+
+```text
+usage: tools/cms.py docs tree [-h] [--source | --release] [--root ROOT]
+                              [--output OUTPUT] [--stdout] [--check]
+                              [--exclude-databases]
+
+options:
+  -h, --help           show this help message and exit
+  --source             Mode source: TREE.txt, sans storage/, dépendances ni
+                       artefacts locaux.
+  --release            Mode release: TREE.release.txt, selon les règles de
+                       packaging.
+  --root ROOT          Racine à scanner. Défaut: racine du projet courant.
+  --output OUTPUT      Fichier de sortie explicite.
+  --stdout             Écrire le manifeste sur stdout.
+  --check              Comparer sans modifier.
+  --exclude-databases  En mode release, exclure les bases SQLite.
+```
+
+## `tools/cms.py docs evaluation-generate`
+
+```text
+usage: tools/cms.py docs evaluation-generate [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs evaluation-check`
+
+```text
+usage: tools/cms.py docs evaluation-check [-h]
+
+options:
+  -h, --help  show this help message and exit
 ```
 
