@@ -1451,8 +1451,9 @@ def rebuild_public_projections(required: bool = True) -> int:
         print(f"ERREUR: {exc}", file=sys.stderr)
         return 1
 
-    php = shutil.which("php")
-    if php is None or not CONSOLE.exists():
+    configured_php = cms_subprocess_env().get("CMS_PHP_BINARY")
+    php = configured_php if configured_php else shutil.which("php")
+    if php is None or not Path(php).exists() or not CONSOLE.exists():
         message = (
             "PHP CLI ou backend/bin/console introuvable: les projections ne sont pas reconstruites. "
             "Installez PHP CLI ou relancez avec --skip-projections si vous voulez seulement injecter les donnees."
@@ -1645,7 +1646,7 @@ def demo_page_blocks(lang: str, title: str, summary: str, body: str, entry_key: 
                 "anchor": "",
                 "data": {
                     "items": [
-                        {"label": labels["contact_cta"], "url": "mailto:contact@webe.li", "style": "primary", "target": "_self"},
+                        {"label": labels["contact_cta"], "url": "mailto:contact@example.test", "style": "primary", "target": "_self"},
                     ]
                 },
                 "sort_order": 2,

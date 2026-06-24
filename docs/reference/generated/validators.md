@@ -29,6 +29,7 @@ generated: true
 | `PERMISSION_MODEL` | `permissions` | `fast`, `full`, `slow` | `tools.python.validation.permissions.model` |
 | `API_SPEC` | `api` | `fast`, `full`, `slow` | `tools.python.validation.api.specification` |
 | `SECURITY_BASELINE` | `security` | `fast`, `full`, `slow` | `tools.python.validation.security.baseline` |
+| `PII_EMAIL_GUARD` | `security` | `fast`, `full`, `slow` | `tools.python.validation.security.pii` |
 | `MEDIA_STORAGE_MODEL` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.media` |
 | `OPERATIONS_MANIFESTS` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.manifests` |
 | `MODULE_MANIFESTS` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.module_manifests` |

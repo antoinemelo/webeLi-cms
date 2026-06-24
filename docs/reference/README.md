@@ -36,5 +36,6 @@ generated: false
 
 - [Contrats de l’API administrative v1](contracts/admin-api-v1/README.md)
 - [OpenAPI public](../public-api/openapi.v1.json)
+- [Politique des adresses de démonstration](demo-data-policy.md)
 
 Les pages générées ne doivent pas être corrigées manuellement. Modifiez leur source puis lancez `python3 tools/cms.py docs generate`.

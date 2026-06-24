@@ -132,7 +132,7 @@ return [
     ],
     'mail' => [
         'transport' => env('MAIL_TRANSPORT', 'mail'),
-        'from_email' => env('MAIL_FROM_EMAIL', 'no-reply@webe.li'),
+        'from_email' => env('MAIL_FROM_EMAIL', 'no-reply@example.test'),
         'from_name' => env('MAIL_FROM_NAME', 'DEC CMS'),
     ],
     'media_upload_max_bytes' => (int) env('APP_MEDIA_UPLOAD_MAX_BYTES', 8388608),

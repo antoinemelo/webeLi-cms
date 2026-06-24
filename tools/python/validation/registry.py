@@ -21,6 +21,7 @@ VALIDATORS=(
     Validator('PERMISSION_MODEL', "tools.python.validation.permissions.model", 'permissions'),
     Validator('API_SPEC', "tools.python.validation.api.specification", 'api'),
     Validator('SECURITY_BASELINE', "tools.python.validation.security.baseline", 'security'),
+    Validator('PII_EMAIL_GUARD', "tools.python.validation.security.pii", 'security'),
     Validator('MEDIA_STORAGE_MODEL', "tools.python.validation.operations.media", 'operations'),
     Validator('OPERATIONS_MANIFESTS', "tools.python.validation.operations.manifests", 'operations'),
     Validator('MODULE_MANIFESTS', "tools.python.validation.operations.module_manifests", 'operations'),
