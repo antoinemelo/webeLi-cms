@@ -644,6 +644,7 @@ docs/reference/contracts/headless-v1/public.taxonomies.v1.json
 docs/reference/contracts/public-api/openapi.v1.json
 docs/reference/contracts/public-api/openapi.v1.yaml
 docs/reference/demo-data-policy.md
+docs/reference/editorial-e2e-flow.md
 docs/reference/generated/README.md
 docs/reference/generated/cli-commands.md
 docs/reference/generated/configuration.md
@@ -657,6 +658,7 @@ docs/reference/generated/release-contents.md
 docs/reference/generated/routes.md
 docs/reference/generated/schema-versions.md
 docs/reference/generated/validators.md
+docs/reference/roles-permissions-matrix.md
 docs/user-guide/README.md
 docs/user-guide/ai-assistant/use.md
 docs/user-guide/content/create-edit.md
@@ -794,6 +796,7 @@ frontend/admin-vue/src/vite-env.d.ts
 frontend/admin-vue/test-results/artifacts/.last-run.json
 frontend/admin-vue/test-results/e2e-junit.xml
 frontend/admin-vue/tests/e2e/blueprint-designer-characterization.spec.ts
+frontend/admin-vue/tests/e2e/editorial-publish-flow.spec.ts
 frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts
 frontend/admin-vue/tsconfig.json
 frontend/admin-vue/vite.config.ts
@@ -986,6 +989,7 @@ tools/php/tests/integration/multisite_locale_test.php
 tools/php/tests/integration/public_api_headless_content_test.php
 tools/php/tests/integration/public_api_media_test.php
 tools/php/tests/integration/public_cookie_endpoints_http_test.php
+tools/php/tests/integration/roles_matrix_http_test.php
 tools/php/tests/integration/webhook_repository_test.php
 tools/php/tests/run.php
 tools/php/tests/unit/bootstrap_autoload_test.php
