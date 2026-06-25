@@ -161,7 +161,7 @@ final class AuthRepository
             return 'ok';
         }
 
-        $recovery = TotpService::verifyRecoveryCode($code, $user['totp_recovery_codes_json'] ?? null);
+        $recovery = TotpService::verifyRecoveryCode($code, $user['totp_recovery_codes_json'] ?? null, $this->totpAppKey());
         if (!empty($recovery['ok'])) {
             $this->db->run('UPDATE iam_users SET totp_recovery_codes_json = :hashes, updated_at = :updated_at WHERE id = :id', [
                 'hashes' => $recovery['hashes'],

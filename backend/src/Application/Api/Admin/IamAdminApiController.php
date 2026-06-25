@@ -222,7 +222,7 @@ final class IamAdminApiController
     {
         $this->requireIamPermission('users.email_2fa.manage');
         if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
-        try { $result = $this->iam->regenerateTotpRecoveryCodes($id); }
+        try { $result = $this->iam->regenerateTotpRecoveryCodes($id, $this->auth->totpAppKey()); }
         catch (\Throwable $e) { return $this->validationFromException($e); }
         $this->audit('iam.user.totp_recovery_regenerated', 'iam_user', $id);
         return Response::success(['user'=>$result['user'],'recovery_codes'=>$result['recovery_codes'],'message'=>'Nouveaux codes de récupération générés. Les anciens codes sont invalidés.'], 'admin.iam.users.totp.recovery.v1', ['contract_version'=>AdminApiContract::VERSION]);

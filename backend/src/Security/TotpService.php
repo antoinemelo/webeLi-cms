@@ -11,6 +11,7 @@ namespace App\Security;
 final class TotpService
 {
     private const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    private const RECOVERY_HASH_PREFIX = 'hmac-sha256:';
 
     public static function generateSecret(int $bytes = 20): string
     {
@@ -27,14 +28,14 @@ final class TotpService
         return $codes;
     }
 
-    public static function hashRecoveryCodes(array $codes): string
+    public static function hashRecoveryCodes(array $codes, string $appKey = ''): string
     {
-        $hashes = array_map(static fn(string $code): string => password_hash(self::normalizeRecoveryCode($code), PASSWORD_DEFAULT), $codes);
+        $hashes = array_map(static fn(string $code): string => self::recoveryHash(self::normalizeRecoveryCode($code), $appKey), $codes);
         return json_encode($hashes, JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
     /** @return array{ok:bool,hashes:string} */
-    public static function verifyRecoveryCode(string $code, ?string $hashesJson): array
+    public static function verifyRecoveryCode(string $code, ?string $hashesJson, string $appKey = ''): array
     {
         $normalized = self::normalizeRecoveryCode($code);
         $hashes = json_decode((string) $hashesJson, true);
@@ -42,7 +43,7 @@ final class TotpService
             return ['ok' => false, 'hashes' => is_string($hashesJson) ? $hashesJson : '[]'];
         }
         foreach ($hashes as $index => $hash) {
-            if (is_string($hash) && password_verify($normalized, $hash)) {
+            if (is_string($hash) && self::recoveryHashMatches($normalized, $hash, $appKey)) {
                 unset($hashes[$index]);
                 return ['ok' => true, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]'];
             }
@@ -183,6 +184,21 @@ final class TotpService
     private static function normalizeRecoveryCode(string $code): string
     {
         return strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $code) ?? '');
+    }
+
+    private static function recoveryHash(string $normalizedCode, string $appKey = ''): string
+    {
+        $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+        return self::RECOVERY_HASH_PREFIX . hash_hmac('sha256', $normalizedCode, $key);
+    }
+
+    private static function recoveryHashMatches(string $normalizedCode, string $hash, string $appKey = ''): bool
+    {
+        if (str_starts_with($hash, self::RECOVERY_HASH_PREFIX)) {
+            return hash_equals(self::recoveryHash($normalizedCode, $appKey), $hash);
+        }
+
+        return password_verify($normalizedCode, $hash);
     }
 
     private static function fallbackKey(): string

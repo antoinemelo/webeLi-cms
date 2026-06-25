@@ -23,12 +23,12 @@ $h->assertTrue(!TotpService::verifyCode($secret, '', 1, 60), 'empty TOTP code re
 $sampleRecoveryCodes = TotpService::recoveryCodes();
 $h->assertSame(8, count($sampleRecoveryCodes), 'recovery code count');
 $h->assertTrue((bool) preg_match('/^[A-F0-9]{5}-[A-F0-9]{5}$/', $sampleRecoveryCodes[0]), 'recovery code format');
-$sampleRecoveryHashes = TotpService::hashRecoveryCodes($sampleRecoveryCodes);
+$sampleRecoveryHashes = TotpService::hashRecoveryCodes($sampleRecoveryCodes, 'test-key');
 $h->assertTrue(!str_contains($sampleRecoveryHashes, $sampleRecoveryCodes[0]), 'recovery codes are not stored in clear text');
 $spacedRecovery = substr($sampleRecoveryCodes[0], 0, 5) . ' ' . substr($sampleRecoveryCodes[0], 6);
-$recoveryResult = TotpService::verifyRecoveryCode($spacedRecovery, $sampleRecoveryHashes);
+$recoveryResult = TotpService::verifyRecoveryCode($spacedRecovery, $sampleRecoveryHashes, 'test-key');
 $h->assertTrue($recoveryResult['ok'], 'recovery code accepts spaces and hyphens');
-$h->assertTrue(!TotpService::verifyRecoveryCode($sampleRecoveryCodes[0], $recoveryResult['hashes'])['ok'], 'recovery code is one-use');
+$h->assertTrue(!TotpService::verifyRecoveryCode($sampleRecoveryCodes[0], $recoveryResult['hashes'], 'test-key')['ok'], 'recovery code is one-use');
 
 $nativeIamSchema = (string) file_get_contents(base_path('database/iam.sql'));
 $h->assertTrue(str_contains($nativeIamSchema, 'totp_recovery_codes_json TEXT'), 'native IAM schema contains recovery code storage');
@@ -80,7 +80,7 @@ try {
     $auditContext = (string) $pdo->query("SELECT group_concat(context_json, '\n') FROM iam_audit_logs WHERE action_key='auth.totp_recovery_used'")->fetchColumn();
     $h->assertTrue(!str_contains($auditContext, $enabled['recovery_codes'][0]) && !str_contains($auditContext, str_replace('-', '', $enabled['recovery_codes'][0])), 'recovery code is not written to audit context');
     $h->assertSame('ok', $auth->attemptWithTotp('totp@example.test', 'correct-password', TotpService::currentCode($preparedSecret))['status'], 'totp login accepts current code');
-    $regenerated = $iam->regenerateTotpRecoveryCodes(1);
+    $regenerated = $iam->regenerateTotpRecoveryCodes(1, 'test-key');
     $h->assertSame(8, count($regenerated['recovery_codes']), 'regeneration returns recovery codes');
     $h->assertTrue($regenerated['recovery_codes'][0] !== $enabled['recovery_codes'][0], 'regeneration replaces recovery codes');
     $h->assertSame('invalid_totp', $auth->attemptWithTotp('totp@example.test', 'correct-password', $enabled['recovery_codes'][2])['status'], 'regeneration invalidates old unused recovery codes');

@@ -234,7 +234,7 @@ final class IamAdminRepository
             'login_mode' => 'totp',
             'required' => $required ? 1 : 0,
             'secret' => TotpService::encryptSecret($secret, $appKey),
-            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes),
+            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes, $appKey),
             'enabled_at' => $now,
             'updated_at' => $now,
             'id' => $userId,
@@ -249,14 +249,14 @@ final class IamAdminRepository
         return $this->setLoginMode($userId, 'password');
     }
 
-    public function regenerateTotpRecoveryCodes(int $userId): array
+    public function regenerateTotpRecoveryCodes(int $userId, string $appKey = ''): array
     {
         $user = $this->findUser($userId);
         if (!$user) throw new \InvalidArgumentException('USER_NOT_FOUND');
         if (($user['login_mode'] ?? 'password') !== 'totp') throw new \InvalidArgumentException('TOTP_NOT_ENABLED');
         $recoveryCodes = TotpService::recoveryCodes();
         $this->db->run('UPDATE iam_users SET totp_recovery_codes_json=:recovery_codes, updated_at=:updated_at WHERE id=:id', [
-            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes),
+            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes, $appKey),
             'updated_at' => now_utc(),
             'id' => $userId,
         ]);
