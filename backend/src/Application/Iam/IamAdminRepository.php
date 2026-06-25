@@ -228,18 +228,20 @@ final class IamAdminRepository
         if ($secret === '' || !TotpService::verifyCode($secret, $code, 1)) {
             throw new \InvalidArgumentException('INVALID_TOTP_CODE');
         }
+        $recoveryCodes = TotpService::recoveryCodes();
         $now = now_utc();
-        $this->db->run('UPDATE iam_users SET login_mode=:login_mode, totp_enabled=1, totp_required=:required, totp_secret_protected=:secret, totp_recovery_codes_json=NULL, totp_enabled_at=:enabled_at, updated_at=:updated_at WHERE id=:id', [
+        $this->db->run('UPDATE iam_users SET login_mode=:login_mode, totp_enabled=1, totp_required=:required, totp_secret_protected=:secret, totp_recovery_codes_json=:recovery_codes, totp_enabled_at=:enabled_at, updated_at=:updated_at WHERE id=:id', [
             'login_mode' => 'totp',
             'required' => $required ? 1 : 0,
             'secret' => TotpService::encryptSecret($secret, $appKey),
+            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes),
             'enabled_at' => $now,
             'updated_at' => $now,
             'id' => $userId,
         ]);
         $this->db->run('DELETE FROM iam_email_2fa_challenges WHERE user_id=:id', ['id' => $userId]);
         $this->revokeSessions($userId);
-        return ['user' => $this->findUser($userId) ?? [], 'recovery_codes' => []];
+        return ['user' => $this->findUser($userId) ?? [], 'recovery_codes' => $recoveryCodes];
     }
 
     public function disableTotp(int $userId): array
@@ -252,7 +254,14 @@ final class IamAdminRepository
         $user = $this->findUser($userId);
         if (!$user) throw new \InvalidArgumentException('USER_NOT_FOUND');
         if (($user['login_mode'] ?? 'password') !== 'totp') throw new \InvalidArgumentException('TOTP_NOT_ENABLED');
-        return ['user' => $this->findUser($userId) ?? [], 'recovery_codes' => []];
+        $recoveryCodes = TotpService::recoveryCodes();
+        $this->db->run('UPDATE iam_users SET totp_recovery_codes_json=:recovery_codes, updated_at=:updated_at WHERE id=:id', [
+            'recovery_codes' => TotpService::hashRecoveryCodes($recoveryCodes),
+            'updated_at' => now_utc(),
+            'id' => $userId,
+        ]);
+        $this->revokeSessions($userId);
+        return ['user' => $this->findUser($userId) ?? [], 'recovery_codes' => $recoveryCodes];
     }
 
     public function setLoginMode(int $userId, string $mode): array

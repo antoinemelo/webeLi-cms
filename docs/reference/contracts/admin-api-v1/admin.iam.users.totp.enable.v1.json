@@ -22,7 +22,7 @@
   "response": {
     "data": {
       "user": "iam user summary including login_mode",
-      "recovery_codes": "empty array; recovery codes are P1-02 debt",
+      "recovery_codes": "non-empty one-use recovery codes for TOTP activation; empty only when mode=email_code compatibility path is used",
       "message": "Deprecated compatibility endpoint. Prefer /login-mode or /login-mode/totp/confirm."
     },
     "meta": {

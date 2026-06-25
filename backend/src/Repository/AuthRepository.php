@@ -136,7 +136,9 @@ final class AuthRepository
                 $this->audit((int) $user['id'], 'auth.totp_required', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
                 return ['status' => 'totp_required', 'user_id' => (int) $user['id']];
             }
-            if ($verification !== 'ok') {
+            if ($verification === 'ok_recovery') {
+                $this->audit((int) $user['id'], 'auth.totp_recovery_used', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
+            } elseif ($verification !== 'ok') {
                 $this->audit((int) $user['id'], 'auth.totp_failed', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
                 return ['status' => 'invalid_totp', 'user_id' => (int) $user['id']];
             }
@@ -155,7 +157,21 @@ final class AuthRepository
         if ($secret === '') {
             return 'invalid';
         }
-        return TotpService::verifyCode($secret, $code, 1) ? 'ok' : 'invalid';
+        if (TotpService::verifyCode($secret, $code, 1)) {
+            return 'ok';
+        }
+
+        $recovery = TotpService::verifyRecoveryCode($code, $user['totp_recovery_codes_json'] ?? null);
+        if (!empty($recovery['ok'])) {
+            $this->db->run('UPDATE iam_users SET totp_recovery_codes_json = :hashes, updated_at = :updated_at WHERE id = :id', [
+                'hashes' => $recovery['hashes'],
+                'updated_at' => now_utc(),
+                'id' => (int) $user['id'],
+            ]);
+            return 'ok_recovery';
+        }
+
+        return 'invalid';
     }
 
     private function openSession(array $user, array $meta = []): void

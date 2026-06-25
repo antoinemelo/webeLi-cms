@@ -53,6 +53,8 @@ Pendant ce parcours, le mot de passe n’est pas demandé. Le code est limité d
 
 Lorsque `login_mode=totp`, l’utilisateur saisit son mot de passe puis un code à 6 chiffres généré par une application d’authentification. Le secret est généré en Base32, activé uniquement après confirmation d’un premier code valide, puis stocké chiffré au repos. Après activation, le secret n’est plus renvoyé par l’API.
 
+L’activation TOTP génère aussi des codes de récupération à usage unique. Ils sont affichés une seule fois, au moment de l’activation ou de la régénération. Le CMS stocke uniquement leurs hashes dans `iam_users.totp_recovery_codes_json`; un code utilisé est supprimé immédiatement.
+
 ## Changer le mode de connexion
 
 1. Ouvrez **Utilisateurs**, puis la fiche du compte concerné.
@@ -60,7 +62,8 @@ Lorsque `login_mode=totp`, l’utilisateur saisit son mot de passe puis un code 
 3. Vérifiez que l’adresse email est correcte et que le compte est actif.
 4. Choisissez **Mot de passe classique**, **Code par e-mail** ou **Mot de passe + application TOTP**.
 5. Pour `totp`, préparez le secret, scannez l’URI `otpauth` ou saisissez le secret manuel dans l’application, puis confirmez un code courant.
-6. Confirmez l’opération et demandez à l’utilisateur de tester une nouvelle connexion.
+6. Copiez les codes de récupération affichés et transmettez-les par un canal approprié si le compte n’est pas le vôtre.
+7. Confirmez l’opération et demandez à l’utilisateur de tester une nouvelle connexion.
 
 Chaque changement de mode révoque les sessions actives de l’utilisateur.
 
@@ -72,6 +75,13 @@ Chaque changement de mode révoque les sessions actives de l’utilisateur.
 4. Confirmez l’opération. Les sessions actives sont révoquées.
 
 Ne désactivez pas un mode sans vérifier que l’utilisateur dispose encore d’un moyen valide de se connecter.
+
+## Régénérer les codes de récupération TOTP
+
+1. Ouvrez la fiche d’un utilisateur en mode `totp`.
+2. Choisissez **Régénérer les codes de récupération**.
+3. Copiez immédiatement la nouvelle liste. Les anciens codes deviennent invalides.
+4. Contrôlez le journal d’audit si la régénération répond à un incident.
 
 ## Consulter et révoquer les sessions
 

@@ -33,6 +33,6 @@ generated: false
 
 Les anciens endpoints `/admin/api/iam/users/{id}/totp/*` sont conservés temporairement comme compatibilité. Les endpoints explicites `/admin/api/iam/users/{id}/login-mode*` sont à utiliser pour les nouveaux clients.
 
-## Dette restante
+## Clôture P1-02
 
-P1-02 / recovery codes reste hors périmètre P1-01. Les réponses gardent `recovery_codes: []` sur les endpoints de compatibilité.
+Les codes de récupération TOTP sont implémentés après P1-01 : génération à l’activation, affichage unique, stockage hashé, usage unique, régénération et audit sans code en clair. Le mode `email_code` ne reçoit pas de codes de récupération.

@@ -155,7 +155,7 @@ final class IamAdminApiController
         try { $result = $this->iam->enableTotp($id, (string)($payload['secret'] ?? ''), (string)($payload['code'] ?? ''), true, $this->auth->totpAppKey()); }
         catch (\Throwable $e) { return $this->validationFromException($e); }
         $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>'totp']);
-        return Response::success(['user'=>$result['user'],'login_mode'=>'totp','message'=>'Mode mot de passe + application TOTP activé et sessions révoquées.'], 'admin.iam.users.login_mode.totp.confirm.v1', ['contract_version'=>AdminApiContract::VERSION]);
+        return Response::success(['user'=>$result['user'],'login_mode'=>'totp','recovery_codes'=>$result['recovery_codes'],'message'=>'Mode mot de passe + application TOTP activé et sessions révoquées. Copiez les codes de récupération maintenant.'], 'admin.iam.users.login_mode.totp.confirm.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
     public function disableLoginModeTotp(int $id): Response
@@ -205,7 +205,7 @@ final class IamAdminApiController
         $message = $loginMode === 'email_code'
             ? 'Connexion par code email activée. Au prochain login, un code sera envoyé par email et aucun mot de passe ne sera demandé.'
             : 'Mode mot de passe + application TOTP activé et sessions révoquées.';
-        return Response::success(['user'=>$result['user'],'recovery_codes'=>[],'message'=>$message], 'admin.iam.users.totp.enable.v1', ['contract_version'=>AdminApiContract::VERSION]);
+        return Response::success(['user'=>$result['user'],'recovery_codes'=>$result['recovery_codes'],'message'=>$message], 'admin.iam.users.totp.enable.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
     public function disableTotp(int $id): Response

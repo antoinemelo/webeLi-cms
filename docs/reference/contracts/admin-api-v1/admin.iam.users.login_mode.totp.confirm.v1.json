@@ -21,6 +21,9 @@
     "data": {
       "user": "iam user summary including login_mode=totp",
       "login_mode": "totp",
+      "recovery_codes": [
+        "one-use recovery codes displayed only in this response"
+      ],
       "message": "Mode mot de passe + application TOTP activé et sessions révoquées."
     },
     "meta": {

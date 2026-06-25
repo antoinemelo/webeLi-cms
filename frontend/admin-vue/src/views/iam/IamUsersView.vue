@@ -39,6 +39,7 @@ const loginMode = ref<LoginMode>('password');
 const pendingLoginMode = ref<LoginMode>('password');
 const totpSetup = ref<TotpSetup | null>(null);
 const totpConfirmCode = ref('');
+const recoveryCodes = ref<string[]>([]);
 
 const activeCount = computed(() => users.value.filter((u) => u.is_active).length);
 const inactiveCount = computed(() => users.value.filter((u) => !u.is_active).length);
@@ -123,6 +124,7 @@ function newUser(): void {
   pendingLoginMode.value = 'password';
   totpSetup.value = null;
   totpConfirmCode.value = '';
+  recoveryCodes.value = [];
 }
 
 async function edit(id: number, notify = true): Promise<void> {
@@ -135,6 +137,7 @@ async function edit(id: number, notify = true): Promise<void> {
     pendingLoginMode.value = loginMode.value;
     totpSetup.value = null;
     totpConfirmCode.value = '';
+    recoveryCodes.value = [];
     form.value = {
       email: selected.value.email,
       first_name: selected.value.first_name,
@@ -166,6 +169,7 @@ async function applyLoginMode(): Promise<void> {
       const res = await adminApi.post<{totp: TotpSetup; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/prepare`), { issuer: 'DEC CMS' });
       totpSetup.value = res.data.totp;
       totpConfirmCode.value = '';
+      recoveryCodes.value = [];
       message.value = res.data.message || 'Secret TOTP préparé. Confirmez un code pour activer.';
       return;
     }
@@ -174,6 +178,7 @@ async function applyLoginMode(): Promise<void> {
     loginMode.value = res.data.login_mode;
     pendingLoginMode.value = res.data.login_mode;
     totpSetup.value = null;
+    recoveryCodes.value = [];
     message.value = res.data.message || 'Mode de connexion mis à jour.';
     await load();
   } catch (err) { error.value = apiErrorMessage(err, 'Changement du mode de connexion impossible.'); }
@@ -184,12 +189,13 @@ async function confirmTotp(): Promise<void> {
   if (!selected.value || !totpSetup.value) return;
   saving.value = true; error.value = ''; message.value = '';
   try {
-    const res = await adminApi.post<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/confirm`), { secret: totpSetup.value.secret, code: totpConfirmCode.value });
+    const res = await adminApi.post<{user: User; login_mode: LoginMode; recovery_codes: string[]; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/confirm`), { secret: totpSetup.value.secret, code: totpConfirmCode.value });
     selected.value = res.data.user;
     loginMode.value = 'totp';
     pendingLoginMode.value = 'totp';
     totpSetup.value = null;
     totpConfirmCode.value = '';
+    recoveryCodes.value = res.data.recovery_codes || [];
     message.value = res.data.message || 'TOTP activé.';
     await load();
   } catch (err) { error.value = apiErrorMessage(err, 'Confirmation TOTP impossible.'); }
@@ -205,9 +211,23 @@ async function disableTotp(): Promise<void> {
     loginMode.value = 'password';
     pendingLoginMode.value = 'password';
     totpSetup.value = null;
+    recoveryCodes.value = [];
     message.value = res.data.message || 'TOTP désactivé.';
     await load();
   } catch (err) { error.value = apiErrorMessage(err, 'Désactivation TOTP impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function regenerateRecoveryCodes(): Promise<void> {
+  if (!selected.value || loginMode.value !== 'totp') return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; recovery_codes: string[]; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/totp/recovery-codes`), {});
+    selected.value = res.data.user;
+    recoveryCodes.value = res.data.recovery_codes || [];
+    message.value = res.data.message || 'Codes de récupération régénérés.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Régénération des codes impossible.'); }
   finally { saving.value = false; }
 }
 
@@ -383,6 +403,7 @@ onMounted(() => { newUser(); load(); });
             <div class="form-actions">
               <button type="button" class="btn ghost" :disabled="saving || !canManageLoginMode || pendingLoginMode === loginMode" @click="applyLoginMode">{{ pendingLoginMode === 'totp' ? 'Préparer TOTP' : 'Appliquer le mode' }}</button>
               <button v-if="loginMode === 'totp'" type="button" class="btn danger" :disabled="saving || !canManageLoginMode" @click="disableTotp">Désactiver TOTP</button>
+              <button v-if="loginMode === 'totp'" type="button" class="btn ghost" :disabled="saving || !canManageLoginMode" @click="regenerateRecoveryCodes">Régénérer les codes de récupération</button>
             </div>
             <div v-if="totpSetup" class="iam-subpanel">
               <div class="split-head"><div><h3>Activation TOTP</h3><p class="muted">Scannez le payload otpauth avec une application compatible ou saisissez le secret manuel.</p></div></div>
@@ -393,6 +414,10 @@ onMounted(() => { newUser(); load(); });
               <div class="form-actions">
                 <button type="button" class="btn primary" :disabled="saving || totpConfirmCode.length !== 6" @click="confirmTotp">Confirmer et activer TOTP</button>
               </div>
+            </div>
+            <div v-if="recoveryCodes.length" class="iam-subpanel">
+              <div class="split-head"><div><h3>Codes de récupération</h3><p class="muted">Copiez ces codes maintenant. Ils ne seront plus affichés et chacun n’est utilisable qu’une seule fois.</p></div></div>
+              <textarea class="input" rows="6" :value="recoveryCodes.join('\n')" readonly></textarea>
             </div>
           </section>
 

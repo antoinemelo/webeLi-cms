@@ -21,21 +21,22 @@ final class TotpService
     {
         $codes = [];
         for ($i = 0; $i < $count; $i++) {
-            $codes[] = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $raw = strtoupper(bin2hex(random_bytes(5)));
+            $codes[] = substr($raw, 0, 5) . '-' . substr($raw, 5, 5);
         }
         return $codes;
     }
 
     public static function hashRecoveryCodes(array $codes): string
     {
-        $hashes = array_map(static fn(string $code): string => password_hash(self::normalizeCode($code), PASSWORD_DEFAULT), $codes);
+        $hashes = array_map(static fn(string $code): string => password_hash(self::normalizeRecoveryCode($code), PASSWORD_DEFAULT), $codes);
         return json_encode($hashes, JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
-    /** @return array{ok:bool,hashes:string,used_code?:string} */
+    /** @return array{ok:bool,hashes:string} */
     public static function verifyRecoveryCode(string $code, ?string $hashesJson): array
     {
-        $normalized = self::normalizeCode($code);
+        $normalized = self::normalizeRecoveryCode($code);
         $hashes = json_decode((string) $hashesJson, true);
         if ($normalized === '' || !is_array($hashes)) {
             return ['ok' => false, 'hashes' => is_string($hashesJson) ? $hashesJson : '[]'];
@@ -43,7 +44,7 @@ final class TotpService
         foreach ($hashes as $index => $hash) {
             if (is_string($hash) && password_verify($normalized, $hash)) {
                 unset($hashes[$index]);
-                return ['ok' => true, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]', 'used_code' => $normalized];
+                return ['ok' => true, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]'];
             }
         }
         return ['ok' => false, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]'];
@@ -177,6 +178,11 @@ final class TotpService
     private static function normalizeCode(string $code): string
     {
         return preg_replace('/\D+/', '', $code) ?? '';
+    }
+
+    private static function normalizeRecoveryCode(string $code): string
+    {
+        return strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $code) ?? '');
     }
 
     private static function fallbackKey(): string

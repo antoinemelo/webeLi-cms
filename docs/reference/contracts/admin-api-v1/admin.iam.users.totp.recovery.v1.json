@@ -19,7 +19,9 @@
   "response": {
     "data": {
       "user": "iam user summary",
-      "recovery_codes": "empty array; TOTP recovery codes remain P1-02 debt",
+      "recovery_codes": [
+        "new one-use recovery codes displayed only in this response"
+      ],
       "message": "..."
     },
     "meta": {
