@@ -1091,6 +1091,7 @@ tools/python/tests/test_qualification_orchestrator.py
 tools/python/tests/test_release_archive_vendor_contract.py
 tools/python/tests/test_release_package_cli.py
 tools/python/tests/test_runtime_bootstrap_and_audit_evidence.py
+tools/python/tests/test_static_export_multisite.py
 tools/python/tests/test_test_suite_structure.py
 tools/python/tool-manifest.json
 tools/python/validation/__init__.py

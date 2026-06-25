@@ -157,6 +157,7 @@ def steps() -> tuple[Step, ...]:
                 "frontend/admin-vue/node_modules/@playwright/test/cli.js",
                 "tools/python/operations/testing/run_playwright_e2e.py",
             ),
+            action=_browser_e2e_check,
             timeout=1200,
         ),
         Step("docs-generate", "Génération documentaire", ("complete", "release"), (py, cms, "docs", "generate"), timeout=300),
@@ -185,6 +186,61 @@ def _environment_check() -> tuple[int, str, str]:
     suffix = "\nDépendances optionnelles absentes: " + ", ".join(missing) if missing else ""
     return 0, "\n".join(lines) + suffix, ""
 
+
+
+def _playwright_chromium_status() -> tuple[int, str, str]:
+    """Vérifie rapidement que Chromium Playwright est installé localement.
+
+    Mettre à jour @playwright/test peut changer le chemin attendu dans
+    ~/.cache/ms-playwright. La qualification ne télécharge pas de navigateur
+    automatiquement, car cette opération est longue et dépend du réseau.
+    """
+    frontend = ROOT / "frontend/admin-vue"
+    cli = frontend / "node_modules/@playwright/test/cli.js"
+    if not cli.is_file():
+        return 2, "", "Playwright absent. Exécutez d'abord: cd frontend/admin-vue && npm ci"
+
+    probe = subprocess.run(
+        [
+            "node",
+            "-e",
+            "const { chromium } = require('@playwright/test'); process.stdout.write(chromium.executablePath());",
+        ],
+        cwd=frontend,
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+    if probe.returncode != 0:
+        detail = "\n".join(part for part in (_as_text(probe.stdout).strip(), _as_text(probe.stderr).strip()) if part)
+        return probe.returncode, detail, "Impossible de résoudre le chemin Chromium de Playwright."
+
+    executable = Path(_as_text(probe.stdout).strip())
+    if not executable.is_file():
+        return (
+            2,
+            f"Chromium Playwright attendu: {executable}",
+            "Navigateur Chromium Playwright absent. "
+            "Installez-le une fois par machine après npm ci: "
+            "python3 tools/cms.py e2e --install-browser",
+        )
+    return 0, f"Chromium Playwright détecté: {executable}", ""
+
+
+def _browser_e2e_check() -> tuple[int, str, str]:
+    """Exécute les E2E seulement si le navigateur Playwright est disponible."""
+    browser_code, browser_stdout, browser_stderr = _playwright_chromium_status()
+    if browser_code != 0:
+        return browser_code, browser_stdout, browser_stderr
+
+    command = [sys.executable, str(ROOT / "tools/cms.py"), "e2e", "--use-built-assets"]
+    try:
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=1200)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return 124, stdout, stderr + "\nTimeout après 1200s"
+    return returncode, browser_stdout + "\n" + stdout, stderr
 
 
 def _frontend_dependencies_check() -> tuple[int, str, str]:

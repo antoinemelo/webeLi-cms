@@ -190,10 +190,41 @@ class WebhookReceiver(BaseHTTPRequestHandler):
         return
 
 
+def playwright_chromium_executable() -> Path:
+    node = require_executable("node")
+    if not PLAYWRIGHT_CLI.is_file():
+        raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
+    completed = subprocess.run(
+        [
+            node,
+            "-e",
+            "const { chromium } = require('@playwright/test'); process.stdout.write(chromium.executablePath());",
+        ],
+        cwd=FRONTEND,
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("Impossible de résoudre Chromium Playwright.\n" + completed.stdout + completed.stderr)
+    return Path(completed.stdout.strip())
+
+
+def require_playwright_chromium() -> None:
+    executable = playwright_chromium_executable()
+    if not executable.is_file():
+        raise RuntimeError(
+            "Navigateur Chromium Playwright absent.\n"
+            f"Chemin attendu: {executable}\n"
+            "Installez-le une fois par machine après npm ci: python3 tools/cms.py e2e --install-browser"
+        )
+
+
 def run_playwright(environment: dict[str, str], *, headed: bool) -> int:
     node = require_executable("node")
     if not PLAYWRIGHT_CLI.is_file():
         raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
+    require_playwright_chromium()
     command = [node, str(PLAYWRIGHT_CLI), "test"]
     if headed:
         command.append("--headed")

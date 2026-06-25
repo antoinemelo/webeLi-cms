@@ -1911,6 +1911,20 @@
       "reason": "Module de test suivi par le manifeste de rationalisation CLI"
     },
     {
+      "path": "tools/python/tests/test_static_export_multisite.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module de test suivi par le manifeste de rationalisation CLI"
+    },
+    {
       "path": "tools/python/tests/test_test_suite_structure.py",
       "category": "test",
       "public": false,

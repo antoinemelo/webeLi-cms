@@ -19,8 +19,17 @@ generated: false
 ## Exécution autonome
 
 ```bash
-python3 tools/cms.py e2e --install-browser  # une fois par machine
+cd frontend/admin-vue
+npm ci
+cd ../..
+python3 tools/cms.py e2e --install-browser  # une fois par machine, après npm ci
 python3 tools/cms.py e2e
+```
+
+Après une mise à jour de `@playwright/test`, le navigateur en cache peut ne plus correspondre au chemin attendu par Playwright. Dans ce cas, l'erreur indique un chemin sous `~/.cache/ms-playwright` et la commande à relancer est :
+
+```bash
+python3 tools/cms.py e2e --install-browser
 ```
 
 La seconde commande ne demande ni serveur préexistant, ni identifiant stocké, ni URL de webhook externe. Elle :
