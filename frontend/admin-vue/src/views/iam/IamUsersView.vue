@@ -366,62 +366,65 @@ onMounted(() => { newUser(); load(); });
             <span>Configuration avancée</span>
           </summary>
           <label class="field"><span>Locale</span><input v-model="form.locale" class="input" placeholder="fr-CH"></label>
-        </details>
-        <section v-if="selected" class="iam-subpanel">
-          <div class="split-head">
-            <div>
-              <h3>Mode de connexion</h3>
-              <p class="muted">Mode actuel : {{ loginModeLabel(loginMode) }}</p>
+
+          <section v-if="selected" class="iam-subpanel">
+            <div class="split-head">
+              <div>
+                <h3>Mode de connexion</h3>
+                <p class="muted">Mode actuel : {{ loginModeLabel(loginMode) }}</p>
+              </div>
+              <span class="badge">{{ loginMode }}</span>
             </div>
-            <span class="badge">{{ loginMode }}</span>
-          </div>
-          <div class="role-grid role-grid--compact">
-            <label><input v-model="pendingLoginMode" type="radio" value="password" :disabled="!canManageLoginMode"> <span>Mot de passe classique</span><small>Connexion avec le mot de passe du compte.</small></label>
-            <label><input v-model="pendingLoginMode" type="radio" value="email_code" :disabled="!canManageLoginMode"> <span>Code par e-mail</span><small>Code temporaire envoyé par e-mail. Ce n’est pas un TOTP.</small></label>
-            <label><input v-model="pendingLoginMode" type="radio" value="totp" :disabled="!canManageLoginMode"> <span>Mot de passe + application TOTP</span><small>Application d’authentification standard, URI otpauth.</small></label>
-          </div>
-          <div class="form-actions">
-            <button type="button" class="btn ghost" :disabled="saving || !canManageLoginMode || pendingLoginMode === loginMode" @click="applyLoginMode">{{ pendingLoginMode === 'totp' ? 'Préparer TOTP' : 'Appliquer le mode' }}</button>
-            <button v-if="loginMode === 'totp'" type="button" class="btn danger" :disabled="saving || !canManageLoginMode" @click="disableTotp">Désactiver TOTP</button>
-          </div>
-          <div v-if="totpSetup" class="iam-subpanel">
-            <div class="split-head"><div><h3>Activation TOTP</h3><p class="muted">Scannez le payload otpauth avec une application compatible ou saisissez le secret manuel.</p></div></div>
-            <label class="field"><span>Secret manuel</span><input class="input" :value="totpSetup.manual_entry_key" readonly></label>
-            <label class="field"><span>URI otpauth / payload QR</span><textarea class="input" rows="3" :value="totpSetup.otpauth_uri" readonly></textarea></label>
-            <p class="muted">Paramètres : {{ totpSetup.digits }} chiffres, {{ totpSetup.period }} secondes, {{ totpSetup.algorithm }}.</p>
-            <label class="field"><span>Code de confirmation</span><input v-model="totpConfirmCode" class="input" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="123456"></label>
+            <div class="role-grid role-grid--compact">
+              <label><input v-model="pendingLoginMode" type="radio" value="password" :disabled="!canManageLoginMode"> <span>Mot de passe classique</span><small>Connexion avec le mot de passe du compte.</small></label>
+              <label><input v-model="pendingLoginMode" type="radio" value="email_code" :disabled="!canManageLoginMode"> <span>Code par e-mail</span><small>Code temporaire envoyé par e-mail. Ce n’est pas un TOTP.</small></label>
+              <label><input v-model="pendingLoginMode" type="radio" value="totp" :disabled="!canManageLoginMode"> <span>Mot de passe + application TOTP</span><small>Application d’authentification standard, URI otpauth.</small></label>
+            </div>
             <div class="form-actions">
-              <button type="button" class="btn primary" :disabled="saving || totpConfirmCode.length !== 6" @click="confirmTotp">Confirmer et activer TOTP</button>
+              <button type="button" class="btn ghost" :disabled="saving || !canManageLoginMode || pendingLoginMode === loginMode" @click="applyLoginMode">{{ pendingLoginMode === 'totp' ? 'Préparer TOTP' : 'Appliquer le mode' }}</button>
+              <button v-if="loginMode === 'totp'" type="button" class="btn danger" :disabled="saving || !canManageLoginMode" @click="disableTotp">Désactiver TOTP</button>
             </div>
-          </div>
-        </section>
+            <div v-if="totpSetup" class="iam-subpanel">
+              <div class="split-head"><div><h3>Activation TOTP</h3><p class="muted">Scannez le payload otpauth avec une application compatible ou saisissez le secret manuel.</p></div></div>
+              <label class="field"><span>Secret manuel</span><input class="input" :value="totpSetup.manual_entry_key" readonly></label>
+              <label class="field"><span>URI otpauth / payload QR</span><textarea class="input" rows="3" :value="totpSetup.otpauth_uri" readonly></textarea></label>
+              <p class="muted">Paramètres : {{ totpSetup.digits }} chiffres, {{ totpSetup.period }} secondes, {{ totpSetup.algorithm }}.</p>
+              <label class="field"><span>Code de confirmation</span><input v-model="totpConfirmCode" class="input" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="123456"></label>
+              <div class="form-actions">
+                <button type="button" class="btn primary" :disabled="saving || totpConfirmCode.length !== 6" @click="confirmTotp">Confirmer et activer TOTP</button>
+              </div>
+            </div>
+          </section>
+
+          <section v-if="!isSiteScopedAdmin" class="iam-subpanel">
+            <div class="split-head"><div><h3>Rôles globaux <InfoHint text="À réserver aux comptes d’administration transversale." placement="end" /></h3></div><span class="badge">{{ selectedRoleNames.length }}</span></div>
+            <div class="role-grid role-grid--compact">
+              <label v-for="role in roles" :key="role.id"><input v-model="form.role_ids" type="checkbox" :value="role.id"> <span>{{ role.name }}</span><small>{{ role.role_key }}</small></label>
+            </div>
+          </section>
+
+          <section class="iam-subpanel">
+            <div class="split-head"><div><h3>Accès par site <InfoHint text="Attribuez un rôle à un site précis sans donner un accès global." placement="end" /></h3></div></div>
+            <div class="iam-site-role-builder">
+              <input v-if="isSiteScopedAdmin" class="input" :value="siteName(currentSiteId)" readonly aria-label="Site courant">
+              <select v-else v-model.number="siteRoleDraft.site_id" class="select" aria-label="Site">
+                <option :value="0">Site…</option>
+                <option v-for="site in siteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
+              </select>
+              <select v-model.number="siteRoleDraft.role_id" class="select"><option :value="0">Rôle…</option><option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option></select>
+              <button type="button" class="btn ghost" @click="addSiteRole">Ajouter</button>
+            </div>
+            <div v-if="form.site_roles.length" class="token-row token-row--wrap">
+              <span v-for="(sr,index) in form.site_roles" :key="`${sr.site_id}-${sr.role_id}-${index}`" class="token token--closable">{{ siteName(sr.site_id) }} · {{ roleName(sr.role_id) || `rôle #${sr.role_id}` }} <button type="button" @click="removeSiteRole(index)">×</button></span>
+            </div>
+            <p v-else class="muted">Aucun rôle limité par site.</p>
+            <p v-if="roleRequiredMessage" class="alert alert-warning iam-role-required" role="alert">{{ roleRequiredMessage }}</p>
+          </section>
+        </details>
+        <p v-if="roleRequiredMessage && !showAdvancedConfiguration" class="alert alert-warning iam-role-required" role="alert">Ouvrez la configuration avancée pour attribuer au moins un rôle global ou un accès par site avant de créer le compte.</p>
+
         <label class="checkline iam-active-toggle"><input v-model="form.is_active" type="checkbox"> Compte actif</label>
         <label v-if="!form.is_active" class="field"><span>Motif de désactivation</span><input v-model="form.disabled_reason" class="input" placeholder="Optionnel, journalisé côté audit"></label>
-
-        <section v-if="!isSiteScopedAdmin" class="iam-subpanel">
-          <div class="split-head"><div><h3>Rôles globaux <InfoHint text="À réserver aux comptes d’administration transversale." placement="end" /></h3></div><span class="badge">{{ selectedRoleNames.length }}</span></div>
-          <div class="role-grid role-grid--compact">
-            <label v-for="role in roles" :key="role.id"><input v-model="form.role_ids" type="checkbox" :value="role.id"> <span>{{ role.name }}</span><small>{{ role.role_key }}</small></label>
-          </div>
-        </section>
-
-        <section class="iam-subpanel">
-          <div class="split-head"><div><h3>Accès par site <InfoHint text="Attribuez un rôle à un site précis sans donner un accès global." placement="end" /></h3></div></div>
-          <div class="iam-site-role-builder">
-            <input v-if="isSiteScopedAdmin" class="input" :value="siteName(currentSiteId)" readonly aria-label="Site courant">
-            <select v-else v-model.number="siteRoleDraft.site_id" class="select" aria-label="Site">
-              <option :value="0">Site…</option>
-              <option v-for="site in siteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
-            </select>
-            <select v-model.number="siteRoleDraft.role_id" class="select"><option :value="0">Rôle…</option><option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option></select>
-            <button type="button" class="btn ghost" @click="addSiteRole">Ajouter</button>
-          </div>
-          <div v-if="form.site_roles.length" class="token-row token-row--wrap">
-            <span v-for="(sr,index) in form.site_roles" :key="`${sr.site_id}-${sr.role_id}-${index}`" class="token token--closable">{{ siteName(sr.site_id) }} · {{ roleName(sr.role_id) || `rôle #${sr.role_id}` }} <button type="button" @click="removeSiteRole(index)">×</button></span>
-          </div>
-          <p v-else class="muted">Aucun rôle limité par site.</p>
-          <p v-if="roleRequiredMessage" class="alert alert-warning iam-role-required" role="alert">{{ roleRequiredMessage }}</p>
-        </section>
 
         <div class="form-actions">
           <button class="btn primary" :disabled="saving || Boolean(roleRequiredMessage)">Enregistrer</button>

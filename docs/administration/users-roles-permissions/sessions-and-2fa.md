@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-25
 source_of_truth: code
 source_paths:
   - backend/src
@@ -56,7 +56,7 @@ Lorsque `login_mode=totp`, l’utilisateur saisit son mot de passe puis un code 
 ## Changer le mode de connexion
 
 1. Ouvrez **Utilisateurs**, puis la fiche du compte concerné.
-2. Accédez à **Mode de connexion**.
+2. Ouvrez **Configuration avancée**, puis accédez à **Mode de connexion**.
 3. Vérifiez que l’adresse email est correcte et que le compte est actif.
 4. Choisissez **Mot de passe classique**, **Code par e-mail** ou **Mot de passe + application TOTP**.
 5. Pour `totp`, préparez le secret, scannez l’URI `otpauth` ou saisissez le secret manuel dans l’application, puis confirmez un code courant.
@@ -67,7 +67,7 @@ Chaque changement de mode révoque les sessions actives de l’utilisateur.
 ## Désactiver ou remplacer le TOTP
 
 1. Ouvrez la fiche de l’utilisateur.
-2. Accédez à **Mode de connexion**.
+2. Ouvrez **Configuration avancée**, puis accédez à **Mode de connexion**.
 3. Choisissez **Mot de passe classique** ou **Code par e-mail**, ou préparez une rotation TOTP.
 4. Confirmez l’opération. Les sessions actives sont révoquées.
 

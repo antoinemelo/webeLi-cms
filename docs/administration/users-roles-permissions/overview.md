@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-25
 source_of_truth: manual
 owners:
   - documentation
@@ -28,6 +28,7 @@ Conséquences pratiques :
 
 - n’attribuez un rôle global que lorsque l’utilisateur doit réellement intervenir sur tous les sites ;
 - utilisez un rôle par site pour limiter un éditeur ou un publicateur à un périmètre précis ;
+- dans la fiche utilisateur du back-office, les réglages **Mode de connexion**, **Rôles globaux** et **Accès par site** se trouvent dans **Configuration avancée** afin de garder les champs courants lisibles ;
 - la disparition d’une carte ou d’un bouton dans le back-office ne remplace jamais le contrôle backend ;
 - vérifiez les accès avec un compte distinct après toute modification de rôle.
 
