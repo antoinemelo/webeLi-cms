@@ -99,7 +99,7 @@ Ces commandes doivent rester vides. Si un fichier est trouvé, il faut corriger 
 
 ## Configuration runtime
 
-`ops/.env` est explicitement autorisé dans la release car il est nécessaire au runtime. Ne pas le confondre avec des fichiers d’environnement locaux : `.env`, `.env.local`, `backend/.env`, `frontend/.env`, `ops/.env.local`, `ops/.env.dev`, `ops/.env.test`, `*.env.bak` et `*.env.save` doivent rester exclus ou bloqués.
+`ops/.env` est nécessaire à une instance déployée, mais il est propre à l'instance et ne doit pas être inclus dans l'archive release officielle. La release fournit `ops/.env.example`; la configuration réelle est créée ou conservée côté serveur. Les fichiers `.env`, `.env.local`, `backend/.env`, `frontend/.env`, `ops/.env`, `ops/.env.local`, `ops/.env.dev`, `ops/.env.test`, `*.env.bak` et `*.env.save` doivent rester exclus ou bloqués dans le package.
 
 ## Points de vigilance
 

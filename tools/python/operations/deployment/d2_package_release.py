@@ -110,15 +110,15 @@ DEFAULT_EXCLUDES = [
     "backend/vendor",
     "backend/vendor/*",
     "admin-app/assets/*.js.map",
-    # Fichiers de configuration locale interdits. `ops/.env` est volontairement
-    # absent: c'est le fichier runtime de production autorisé et vérifié par
-    # d4_verify_release_archive.py.
+    # Fichiers de configuration locale interdits. Une release distribue les
+    # exemples, jamais le fichier ops/.env rempli avec des secrets d'instance.
     ".env",
     ".env.*",
     "backend/.env",
     "backend/.env.*",
     "frontend/.env",
     "frontend/.env.*",
+    "ops/.env",
     "ops/.env.local",
     "ops/.env.dev",
     "ops/.env.test",
@@ -235,6 +235,35 @@ FORBIDDEN_STAGE_SUFFIXES = (
 )
 
 REQUIRED_SQLITE_DATABASES = native_database_names(release=True)
+RELEASE_VERIFIED_COMMANDS = [
+    "python3 tools/cms.py smoke",
+    "python3 tools/cms.py validate",
+    "python3 tools/cms.py docs check",
+    "python3 tools/cms.py test (code 2 explicite si les tests source sont absents)",
+]
+
+
+def run_required_command(label: str, command: list[str]) -> None:
+    completed = subprocess.run(command, cwd=str(ROOT), text=True)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"{label} en échec avant packaging (code {completed.returncode}): "
+            + " ".join(command)
+        )
+
+
+def ensure_generated_artifacts_fresh() -> None:
+    """Rafraîchit les artefacts générés qui doivent être frais dans l'archive.
+
+    Le packaging est un point d'entrée public: il ne doit pas dépendre d'une
+    discipline manuelle préalable ni produire une archive qui nécessite
+    `docs generate` juste après extraction.
+    """
+    cms = ROOT / "tools" / "cms.py"
+    run_required_command("Génération documentation", [_dec_sys.executable, str(cms), "docs", "generate"])
+    run_required_command("Génération documentation d'évaluation", [_dec_sys.executable, str(cms), "docs", "evaluation-generate"])
+    run_required_command("Contrôle documentation", [_dec_sys.executable, str(cms), "docs", "check"])
+    run_required_command("Contrôle documentation d'évaluation", [_dec_sys.executable, str(cms), "docs", "evaluation-check"])
 
 
 def generate_tree_manifest(mode: str, root: Path, output: Path, *, include_databases: bool) -> None:
@@ -444,6 +473,8 @@ def main() -> int:
     release_id = args.release_id or default_release_id(package_name, ROOT)
     include_databases = not args.exclude_databases
 
+    ensure_generated_artifacts_fresh()
+
     # Le manifeste source doit être frais avant la copie: sinon l’archive de
     # release embarquerait un TREE.txt déjà obsolète.
     generate_tree_manifest("source", ROOT, ROOT / "TREE.txt", include_databases=include_databases)
@@ -480,6 +511,9 @@ def main() -> int:
         ],
         release_metadata=release_metadata.to_dict(),
     )
+    manifest["release_root_prefix"] = release_metadata.package_root
+    manifest["generated_docs_fresh"] = True
+    manifest["verified_commands"] = RELEASE_VERIFIED_COMMANDS
     manifest_path = stage_dir / "storage" / "deployments" / "release-manifest.json"
     write_json(manifest_path, manifest)
     assert_clean_stage(stage_dir)

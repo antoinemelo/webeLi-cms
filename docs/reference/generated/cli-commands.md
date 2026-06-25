@@ -312,8 +312,9 @@ options:
 usage: tools/cms.py release [-h] [--ci] [--interactive-prepare] [--build-admin]
                             [--run-essential-validators] [--package]
                             [--verify-archive] [--deploy {ftp,sftp}]
-                            [--skip-preflight] [--exclude-databases]
-                            [--include-vendor] [--no-zip] [--clean-stage]
+                            [--archive ARCHIVE] [--skip-preflight]
+                            [--exclude-databases] [--include-vendor] [--no-zip]
+                            [--clean-stage]
 
 options:
   -h, --help            show this help message and exit
@@ -326,6 +327,8 @@ options:
   --package
   --verify-archive
   --deploy {ftp,sftp}
+  --archive ARCHIVE     Archive ZIP à vérifier avec --verify-archive en mode
+                        vérification autonome.
   --skip-preflight
   --exclude-databases
   --include-vendor

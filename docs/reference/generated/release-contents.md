@@ -129,6 +129,7 @@ generated: true
 - `backend/.env.*`
 - `frontend/.env`
 - `frontend/.env.*`
+- `ops/.env`
 - `ops/.env.local`
 - `ops/.env.dev`
 - `ops/.env.test`

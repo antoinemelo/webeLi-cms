@@ -71,9 +71,9 @@ python3 tools/cms.py qualify --profile quick
 
 ## Configuration runtime autorisée
 
-Le fichier `ops/.env` fait partie du runtime de production AM-CMS : il est autorisé dans la release et peut être nécessaire au fonctionnement du CMS.
+Le fichier `ops/.env` fait partie de la configuration de l'instance déployée, mais pas de l'archive release officielle. Le package distribue `ops/.env.example`; la configuration réelle est créée ou conservée sur la cible par les procédures d'installation ou de mise à jour.
 
-Tous les autres fichiers d’environnement locaux restent interdits dans une archive de production, notamment `.env`, `.env.local`, `backend/.env`, `frontend/.env`, `ops/.env.local`, `ops/.env.dev`, `ops/.env.test`, `*.env.bak` et `*.env.save`.
+Tous les fichiers d’environnement locaux restent interdits dans une archive de production, notamment `.env`, `.env.local`, `backend/.env`, `frontend/.env`, `ops/.env`, `ops/.env.local`, `ops/.env.dev`, `ops/.env.test`, `*.env.bak` et `*.env.save`.
 
 ## Points à vérifier manuellement
 

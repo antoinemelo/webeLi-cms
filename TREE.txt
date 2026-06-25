@@ -48,6 +48,7 @@ backend/bootstrap/app.php
 backend/bootstrap/config.php
 backend/bootstrap/runtime.php
 backend/composer.json
+backend/composer.lock
 backend/config/app.php
 backend/config/cms.php
 backend/config/databases.php

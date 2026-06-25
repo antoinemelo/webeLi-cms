@@ -23,9 +23,11 @@ generated: false
 
 ## Contextes de contrôle
 
-Une archive release installée doit rester autonome : elle contient le runtime, les assets compilés, les bases SQLite seedées et la documentation publique, mais pas les tests source ni les dépendances de build. Les commandes garanties dans ce contexte sont `smoke`, `validate` et `docs check`.
+Une archive release installée doit rester autonome : elle contient le runtime, les assets compilés, les bases SQLite seedées et la documentation publique, mais pas les tests source, les dépendances de build ni `ops/.env`. Les commandes garanties dans ce contexte sont `smoke`, `validate` et `docs check`.
 
-Le dépôt source complet sert au développement et à la préparation d'une livraison. Il contient les tests source et permet d'exécuter `test` et `qualify`.
+Le dépôt source complet sert au développement et à la préparation d'une livraison. Il contient les tests source et permet d'exécuter `test`, `qualify`, `docs generate` et le packaging.
+
+Une archive de preuves est un artefact séparé réservé aux releases mineures ou majeures : elle documente l'audit reproductible et ne doit pas être confondue avec l'archive installable.
 
 ## Procédure
 
@@ -45,6 +47,26 @@ Le dépôt source complet sert au développement et à la préparation d'une liv
    ```
 
    N’exécutez pas `python3 tools/cms.py test` pour qualifier une archive release : les tests source sont volontairement exclus du package. Si cette commande est lancée dans une release, elle doit afficher un message explicite et renvoyer le code `2`.
+
+## Vérifier une archive
+
+Depuis le dépôt source complet, vérifiez une archive existante sans relancer Composer, npm ni une chaîne CI :
+
+```bash
+python3 tools/cms.py release --verify-archive --archive storage/exports/<technical_version>/<technical_version>.zip
+make verify-release VERIFY_ARCHIVE=storage/exports/<technical_version>/<technical_version>.zip
+```
+
+Cette vérification extrait l'archive dans un répertoire temporaire, contrôle la structure, les bases SQLite, l'absence de fichiers interdits ou secrets, puis exécute dans l'archive extraite :
+
+```bash
+python3 tools/cms.py smoke
+python3 tools/cms.py validate
+python3 tools/cms.py docs check
+python3 tools/cms.py test
+```
+
+Le dernier contrôle doit retourner le code `2` avec un message explicite lorsque les tests source ne sont pas distribués.
 
 ## Sous-répertoire
 

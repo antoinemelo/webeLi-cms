@@ -6,7 +6,7 @@
       "backend/routes/web.php"
     ],
     "id": "route-get-backend-routes-web-php-e39b981f41",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -24,7 +24,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-backend-routes-admin-php-5bc01d6862",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -42,7 +42,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-backend-routes-admin-php-ee904309d4",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -60,7 +60,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-actions-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-6a1c44f1cd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -78,7 +78,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-budget-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-b5c9629ee5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -96,7 +96,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-editorial-test-generation-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-12fa26eafc",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -114,7 +114,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-models-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-147711f81f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -132,7 +132,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-delete-admin-api-ai-models-providerkey-modelkey-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-fadae18b59",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -150,7 +150,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-prompts-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-14fee60d31",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -168,7 +168,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-provider-types-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-5fe81283f3",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -186,7 +186,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-delete-admin-api-ai-provider-types-key-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-b0578d3bfb",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -204,7 +204,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-providers-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-de148b131c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -222,7 +222,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-providers-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-228f9026c0",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -240,7 +240,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-providers-test-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-3b0c2a3ffb",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -258,7 +258,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-providers-test-stream-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-7c184cbcc5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -276,7 +276,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-delete-admin-api-ai-providers-key-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-711aa1264c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -294,7 +294,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-settings-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-da8ff310d3",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -312,7 +312,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-settings-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-300475dc4d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -330,7 +330,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-site-settings-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-8562ae034b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -348,7 +348,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-site-settings-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-410178593f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -366,7 +366,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-status-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-02def80d35",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -384,7 +384,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-suggestions-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-10af47dd89",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -402,7 +402,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-propose-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-c5af69cf24",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -420,7 +420,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-id-accept-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-6603aabf0d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -438,7 +438,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-id-apply-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-16c37d0768",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -456,7 +456,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-id-expire-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-ec9dfe1049",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -474,7 +474,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-id-propose-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-55b04452d7",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -492,7 +492,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-suggestions-id-reject-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-73b1d55b8e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -510,7 +510,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-tasks-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-470d42da40",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -528,7 +528,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-tasks-id-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-f2088b98e8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -546,7 +546,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-post-admin-api-ai-tasks-id-cancel-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-ec705824f7",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -564,7 +564,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-delete-admin-api-ai-usage-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-28976c43df",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -582,7 +582,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "route-get-admin-api-ai-usage-backend-src-modules-aiassistant-aiassistantmoduleprovider-php-2db29698e5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -600,7 +600,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-block-blueprints-backend-routes-api-php-829ee21b4e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -618,7 +618,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-block-blueprints-type-backend-routes-api-php-4862c46f33",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -636,7 +636,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-backend-routes-api-php-900a6307bc",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -654,7 +654,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-blueprints-backend-routes-api-php-71808ed703",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -672,7 +672,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-model-backend-routes-api-php-03f7d53e73",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -690,7 +690,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-blueprints-key-backend-routes-api-php-e47e2dfa4e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -708,7 +708,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-key-backend-routes-api-php-4722044c26",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -726,7 +726,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-blueprints-key-activate-backend-routes-api-php-2a8888f34d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -744,7 +744,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-key-design-backend-routes-api-php-e79ab4798b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -762,7 +762,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-put-admin-api-blueprints-key-design-backend-routes-api-php-1c85aadae7",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -780,7 +780,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-key-editor-schema-backend-routes-api-php-7f503adc31",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -798,7 +798,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-blueprints-key-versions-backend-routes-api-php-ba35437a82",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -816,7 +816,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-blueprints-key-versions-backend-routes-api-php-b3fe14b59d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -834,7 +834,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-capabilities-backend-routes-api-php-8bf17ef25e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -852,7 +852,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-capabilities-key-apply-backend-routes-api-php-32d29aba8e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -870,7 +870,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-capabilities-key-dry-run-backend-routes-api-php-dce04b5fe7",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -888,7 +888,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-configuration-backend-routes-api-php-3d5d0bd761",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -906,7 +906,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-configuration-backend-routes-api-php-f170e72980",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -924,7 +924,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-content-types-backend-routes-api-php-586b926876",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -942,7 +942,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-content-types-type-editor-schema-backend-routes-api-php-975c514d44",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -960,7 +960,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-context-backend-routes-api-php-5b86f4b00b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -978,7 +978,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-cookies-backend-routes-api-php-787d2c1793",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -996,7 +996,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-cookies-bindings-backend-routes-api-php-5d56c64234",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1014,7 +1014,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-cookies-bindings-id-backend-routes-api-php-b80bb8500d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1032,7 +1032,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-cookies-bindings-id-backend-routes-api-php-bd49133d8e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1050,7 +1050,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-cookies-categories-backend-routes-api-php-c846e9f3d8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1068,7 +1068,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-cookies-categories-id-backend-routes-api-php-e61b72d775",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1086,7 +1086,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-cookies-categories-id-backend-routes-api-php-e633ff4f24",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1104,7 +1104,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-cookies-logs-backend-routes-api-php-445fd03f75",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1122,7 +1122,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-cookies-services-backend-routes-api-php-9ff35670d8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1140,7 +1140,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-cookies-services-id-backend-routes-api-php-546c0d42f1",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1158,7 +1158,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-cookies-services-id-backend-routes-api-php-4f555885ae",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1176,7 +1176,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-cookies-settings-backend-routes-api-php-23253ea463",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1194,7 +1194,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-docs-backend-routes-api-php-8e9f6d858e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1212,7 +1212,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-docs-resolve-backend-routes-api-php-e809936144",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1230,7 +1230,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-docs-id-backend-routes-api-php-f1a8460017",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1248,7 +1248,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-backend-routes-api-php-ed6ce7cade",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1266,7 +1266,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-entries-backend-routes-api-php-33ffb0ae02",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1284,7 +1284,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-entries-id-backend-routes-api-php-f440ef5d4c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1302,7 +1302,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-id-backend-routes-api-php-5ed448bc37",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1320,7 +1320,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-entries-id-backend-routes-api-php-b347422571",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1338,7 +1338,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-entries-id-archive-backend-routes-api-php-2ba02d8726",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1356,7 +1356,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-id-preview-backend-routes-api-php-499c7977c9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1374,7 +1374,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-entries-id-publish-backend-routes-api-php-0f7865765d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1392,7 +1392,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-id-revisions-backend-routes-api-php-b79600753d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1410,7 +1410,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-entries-id-revisions-prune-before-published-backend-routes-api-php-13eaf0edf8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1428,7 +1428,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-id-revisions-revisionid-backend-routes-api-php-6dc8004970",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1446,7 +1446,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-entries-id-revisions-revisionid-preview-backend-routes-api-php-7e1cfa7860",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1464,7 +1464,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-entries-id-revisions-revisionid-restore-backend-routes-api-php-25f3f5e498",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1482,7 +1482,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-entries-id-unpublish-backend-routes-api-php-a7aeb32fdb",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1500,7 +1500,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-field-types-backend-routes-api-php-933af5af51",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1518,7 +1518,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-fieldsets-backend-routes-api-php-6156fa7ca0",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1536,7 +1536,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-fieldsets-backend-routes-api-php-ff9fcdb03f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1554,7 +1554,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-fieldsets-key-backend-routes-api-php-2229035470",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1572,7 +1572,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-fieldsets-key-backend-routes-api-php-02e0f52c39",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1590,7 +1590,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-put-admin-api-fieldsets-key-backend-routes-api-php-10267b4aae",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1608,7 +1608,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-forms-backend-routes-api-php-353d977d04",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1626,7 +1626,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-forms-backend-routes-api-php-f459d8508c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1644,7 +1644,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-forms-id-backend-routes-api-php-1ee0bffe58",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1662,7 +1662,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-forms-id-backend-routes-api-php-088c83bd1e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1680,7 +1680,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-forms-id-backend-routes-api-php-9069fdf04a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1698,7 +1698,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-forms-id-export-csv-backend-routes-api-php-a2a937fd63",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1716,7 +1716,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-forms-id-submissions-backend-routes-api-php-de66fe3e0e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1734,7 +1734,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-audit-logs-backend-routes-api-php-c70e07ca71",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1752,7 +1752,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-permissions-backend-routes-api-php-25f8519612",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1770,7 +1770,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-roles-backend-routes-api-php-285eddf1cd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1788,7 +1788,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-roles-backend-routes-api-php-7abc4c9341",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1806,7 +1806,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-iam-roles-id-backend-routes-api-php-b3b522c96a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1824,7 +1824,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-sessions-backend-routes-api-php-08c25ce916",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1842,7 +1842,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-iam-sessions-id-backend-routes-api-php-7c2d107c86",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1860,7 +1860,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-sites-backend-routes-api-php-fa36b153f9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1878,7 +1878,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-users-backend-routes-api-php-c96b75746e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1896,7 +1896,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-backend-routes-api-php-5908b0cc6c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1914,7 +1914,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-iam-users-id-backend-routes-api-php-1cb6bab6a0",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1932,7 +1932,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-iam-users-id-backend-routes-api-php-d3aab72972",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1950,7 +1950,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-iam-users-id-backend-routes-api-php-71a22bc608",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1968,7 +1968,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-activate-backend-routes-api-php-dd2b58d9e5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -1986,7 +1986,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-deactivate-backend-routes-api-php-3c07da3bbf",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2003,8 +2003,116 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-admin-api-iam-users-id-login-mode-backend-routes-api-php-6f083e2d80",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/iam/users/{id}/login-mode",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-iam-users-id-login-mode-backend-routes-api-php-900f0be494",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/iam/users/{id}/login-mode",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-iam-users-id-login-mode-totp-confirm-backend-routes-api-php-8f4fc55756",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/iam/users/{id}/login-mode/totp/confirm",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-iam-users-id-login-mode-totp-disable-backend-routes-api-php-9dcd529dc6",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/iam/users/{id}/login-mode/totp/disable",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-iam-users-id-login-mode-totp-prepare-backend-routes-api-php-e4ab5c26cb",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/iam/users/{id}/login-mode/totp/prepare",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-iam-users-id-login-mode-totp-rotate-backend-routes-api-php-5232c545cc",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/iam/users/{id}/login-mode/totp/rotate",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-post-admin-api-iam-users-id-reset-password-backend-routes-api-php-0dce9b2be5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2022,7 +2130,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-totp-disable-backend-routes-api-php-d0394bec0c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2040,7 +2148,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-totp-enable-backend-routes-api-php-6f9a934390",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2058,7 +2166,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-totp-prepare-backend-routes-api-php-c10dfe0f8e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2076,7 +2184,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-iam-users-id-totp-recovery-codes-backend-routes-api-php-bbba53a634",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2094,7 +2202,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-imports-exports-backend-routes-api-php-6b871726dd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2112,7 +2220,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-imports-exports-editorial-releaseid-a-za-z0-9-zip-backend-routes-api-php-d3fcf6814d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2130,7 +2238,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-imports-execute-backend-routes-api-php-788ec8ac64",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2148,7 +2256,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-imports-inspect-backend-routes-api-php-fbb613b7f7",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2166,7 +2274,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-imports-exports-imports-importid-a-za-z0-9-backend-routes-api-php-65189b6480",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2184,7 +2292,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-static-actions-all-languages-backend-routes-api-php-555eea7362",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2202,7 +2310,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-static-actions-language-backend-routes-api-php-7f190aa8d2",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2220,7 +2328,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-static-actions-page-backend-routes-api-php-8858c3a13f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2238,7 +2346,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-static-actions-rerun-backend-routes-api-php-2e1a2237ae",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2256,7 +2364,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-imports-exports-static-actions-site-backend-routes-api-php-8fe753605d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2274,7 +2382,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-imports-exports-static-releaseid-a-za-z0-9-backend-routes-api-php-7106f73464",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2292,7 +2400,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-imports-exports-static-releaseid-a-za-z0-9-manifest-backend-routes-api-php-72d742de65",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2310,7 +2418,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-imports-exports-static-releaseid-a-za-z0-9-report-backend-routes-api-php-e05a47d734",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2328,7 +2436,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-imports-exports-static-releaseid-a-za-z0-9-zip-backend-routes-api-php-d1efee3134",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2346,7 +2454,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-maintenance-backend-routes-api-php-e3d543e9e8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2364,7 +2472,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-maintenance-audit-logs-backend-routes-api-php-90eacad708",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2382,7 +2490,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-maintenance-cache-clear-backend-routes-api-php-58b6322a51",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2400,7 +2508,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-maintenance-runtime-logs-backend-routes-api-php-ba478276c1",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2418,7 +2526,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-maintenance-search-reindex-backend-routes-api-php-13fbadf5c9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2436,7 +2544,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-backend-routes-api-php-cf56d946b4",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2454,7 +2562,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-media-backend-routes-api-php-d8ce2a6b22",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2472,7 +2580,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-folders-backend-routes-api-php-ec48318cad",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2490,7 +2598,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-media-folders-backend-routes-api-php-83eba1b98e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2508,7 +2616,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-media-folders-id-backend-routes-api-php-e0be3e0039",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2526,7 +2634,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-hygiene-backend-routes-api-php-62d93c605e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2544,7 +2652,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-settings-backend-routes-api-php-481737db37",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2562,7 +2670,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-unused-backend-routes-api-php-fc432483a4",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2580,7 +2688,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-variant-presets-backend-routes-api-php-0f7482bf0b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2598,7 +2706,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-media-id-backend-routes-api-php-cdb9206e0b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2616,7 +2724,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-media-id-backend-routes-api-php-9bae09c772",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2634,7 +2742,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-media-id-backend-routes-api-php-b0156b5afd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2652,7 +2760,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-media-id-attach-backend-routes-api-php-8aeea04637",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2670,7 +2778,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-media-id-variants-backend-routes-api-php-d298b62572",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2688,7 +2796,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-menus-backend-routes-api-php-b37933c11b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2706,7 +2814,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-menus-backend-routes-api-php-0785c3d6ca",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2724,7 +2832,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-menus-key-backend-routes-api-php-fef9d2da8d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2742,7 +2850,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-menus-key-backend-routes-api-php-b2f20c237c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2760,7 +2868,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-menus-key-backend-routes-api-php-c4dc49eb5a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2778,7 +2886,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-put-admin-api-menus-key-items-backend-routes-api-php-f6d1d108c8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2796,7 +2904,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-modules-backend-routes-api-php-61425e9817",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2814,7 +2922,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-modules-key-backend-routes-api-php-d21f207252",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2832,7 +2940,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-modules-key-blueprints-backend-routes-api-php-d5f9001d65",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2850,7 +2958,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-modules-key-disable-backend-routes-api-php-3a2b517dc9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2868,7 +2976,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-modules-key-enable-backend-routes-api-php-50665c9049",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2886,7 +2994,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-modules-key-health-backend-routes-api-php-d2d1b14156",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2904,7 +3012,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-modules-key-install-backend-routes-api-php-4e2270f394",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2922,7 +3030,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-modules-key-migrate-backend-routes-api-php-c7b6d29c24",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2940,7 +3048,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-modules-key-resources-resource-schema-backend-routes-api-php-76109f4a08",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2958,7 +3066,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-multisite-backend-routes-api-php-644213c17e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2976,7 +3084,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-multisite-sites-backend-routes-api-php-29081afb62",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -2994,7 +3102,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-multisite-sites-id-backend-routes-api-php-ef31ec016c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3012,7 +3120,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-profile-backend-routes-api-php-8b64a3c5cf",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3030,7 +3138,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-profile-backend-routes-api-php-98a01b658c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3048,7 +3156,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-profile-password-backend-routes-api-php-41887e2ffd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3066,7 +3174,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-security-backend-routes-api-php-720cefe143",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3084,7 +3192,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-security-cors-siteid-backend-routes-api-php-c32091e02d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3102,7 +3210,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-security-tokens-backend-routes-api-php-eac74281a2",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3120,7 +3228,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-security-tokens-test-backend-routes-api-php-ae7457b661",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3138,7 +3246,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-security-tokens-id-backend-routes-api-php-edd2a4aa35",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3156,7 +3264,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-security-tokens-id-backend-routes-api-php-6c43c074de",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3174,7 +3282,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-security-webhooks-backend-routes-api-php-5d39814c7b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3192,7 +3300,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-security-webhooks-deliveries-cleanup-backend-routes-api-php-3f255b6d6b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3210,7 +3318,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-security-webhooks-id-backend-routes-api-php-c4506d33e2",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3228,7 +3336,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-security-webhooks-id-backend-routes-api-php-3c5315c2d5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3246,7 +3354,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-security-webhooks-id-deliveries-backend-routes-api-php-fc8eaa661c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3264,7 +3372,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-security-webhooks-id-ping-backend-routes-api-php-7c166de1f6",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3282,7 +3390,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-seo-audit-backend-routes-api-php-63c70902e4",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3300,7 +3408,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-taxonomies-backend-routes-api-php-1ecdd37c95",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3318,7 +3426,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-taxonomies-backend-routes-api-php-c9b265dfcf",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3336,7 +3444,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-taxonomies-key-backend-routes-api-php-4444a1fdb3",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3354,7 +3462,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-taxonomies-key-backend-routes-api-php-083361d271",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3372,7 +3480,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-taxonomies-key-terms-backend-routes-api-php-74696f0a4a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3390,7 +3498,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-taxonomies-key-terms-id-backend-routes-api-php-3e4c77eee0",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3408,7 +3516,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-patch-admin-api-taxonomies-key-terms-id-backend-routes-api-php-dd9c5480d1",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3426,7 +3534,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-taxonomy-terms-backend-routes-api-php-b37c38b7ed",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3444,7 +3552,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-delete-admin-api-visual-entries-id-block-lock-backend-routes-api-php-bb2fece631",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3462,7 +3570,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-visual-entries-id-block-lock-backend-routes-api-php-f5accbdcc9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3480,7 +3588,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-visual-entries-id-block-locks-backend-routes-api-php-1efe232f73",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3498,7 +3606,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-admin-api-visual-entries-id-field-backend-routes-api-php-c97bb5689c",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3516,7 +3624,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-visual-entries-id-map-backend-routes-api-php-f514c662a9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3534,7 +3642,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-visual-entries-id-preview-backend-routes-api-php-54c47d8558",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3552,7 +3660,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-visual-entries-id-translation-status-backend-routes-api-php-ef7d787472",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3570,7 +3678,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-admin-api-visual-resolve-backend-routes-api-php-a2ebf686ce",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3588,7 +3696,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-app-backend-routes-admin-php-1e02ab9d8f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3606,7 +3714,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-app-backend-routes-admin-php-93b9fdfe0d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3624,7 +3732,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-app-path-backend-routes-admin-php-a4c97c4633",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3642,7 +3750,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-forgot-password-backend-routes-admin-php-2ed9e5029e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3660,7 +3768,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-post-admin-forgot-password-backend-routes-admin-php-27bb4ff211",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3678,7 +3786,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-login-backend-routes-admin-php-c6d6f06fcb",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3696,7 +3804,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-post-admin-login-backend-routes-admin-php-8f28635049",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3714,7 +3822,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-post-admin-logout-backend-routes-admin-php-bf7fe036f9",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3732,7 +3840,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-reset-password-backend-routes-admin-php-19a3e4a08b",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3750,7 +3858,7 @@
       "backend/routes/admin.php"
     ],
     "id": "route-post-admin-reset-password-backend-routes-admin-php-cdda475c72",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3767,8 +3875,26 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-api-v1-backend-routes-api-php-81afa0862a",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-get-api-v1-content-backend-routes-api-php-cb254965a8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3786,7 +3912,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-content-by-path-backend-routes-api-php-5b4087df1d",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3804,7 +3930,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-content-type-backend-routes-api-php-514f18cfff",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3822,7 +3948,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-content-type-slug-backend-routes-api-php-63251d0dab",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3840,7 +3966,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-cookies-config-backend-routes-api-php-4a476574d2",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3858,7 +3984,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-api-v1-cookies-consent-backend-routes-api-php-8e2fed81dd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3876,7 +4002,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-forms-key-backend-routes-api-php-f35b6603dc",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3894,7 +4020,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-post-api-v1-forms-key-submit-backend-routes-api-php-1a0fd0f7af",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3912,7 +4038,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-health-backend-routes-api-php-65a2e2a777",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3930,7 +4056,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-languages-backend-routes-api-php-a54920cd6f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3948,7 +4074,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-media-backend-routes-api-php-321299913a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3966,7 +4092,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-media-id-backend-routes-api-php-35becaf5cc",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -3984,7 +4110,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-menus-backend-routes-api-php-a6d4e65a3a",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4002,7 +4128,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-menus-key-backend-routes-api-php-a2b06fdc0f",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4020,7 +4146,7 @@
       "backend/src/Modules/Forms/FormsModuleProvider.php"
     ],
     "id": "route-get-api-v1-modules-forms-forms-schema-backend-src-modules-forms-formsmoduleprovider-php-a92ee0910e",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4038,7 +4164,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-modules-module-resource-schema-backend-routes-api-php-232215eec5",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4055,8 +4181,44 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-api-v1-openapi-json-backend-routes-api-php-19c1f57f54",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/openapi.json",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-openapi-yaml-backend-routes-api-php-61ece22421",
+    "last_verified": "2026-06-25",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/openapi.yaml",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-get-api-v1-route-backend-routes-api-php-05c3dfe817",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4074,7 +4236,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-routes-backend-routes-api-php-25da575144",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4092,7 +4254,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-search-backend-routes-api-php-efb8975230",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4110,7 +4272,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-taxonomies-backend-routes-api-php-61170b60f3",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4128,7 +4290,7 @@
       "backend/routes/api.php"
     ],
     "id": "route-get-api-v1-taxonomies-taxonomy-backend-routes-api-php-8ec24436ab",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4146,7 +4308,7 @@
       "backend/routes/web.php"
     ],
     "id": "route-get-docs-public-api-backend-routes-web-php-d60278b217",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4164,7 +4326,7 @@
       "backend/routes/web.php"
     ],
     "id": "route-get-docs-public-api-file-index-html-openapi-v1-json-openapi-v1-yaml-quickstart-md-authentication-md-errors-md-examples-md-backend-routes-web-php-27da570cd8",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4182,7 +4344,7 @@
       "backend/routes/web.php"
     ],
     "id": "route-get-examples-example-headless-next-headless-nuxt-headless-astro-headless-vanilla-readme-md-backend-routes-web-php-0784e84daf",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -4200,7 +4362,7 @@
       "backend/routes/web.php"
     ],
     "id": "route-get-path-backend-routes-web-php-5daefdc0fd",
-    "last_verified": "2026-06-22",
+    "last_verified": "2026-06-25",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],

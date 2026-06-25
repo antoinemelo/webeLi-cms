@@ -32,6 +32,7 @@ Exécuter depuis la racine du dépôt, dans une copie de travail. Sauvegarder to
 | validateurs rapides | `python3 tools/cms.py validate` | code retour 0 | contrat local incohérent |
 | documentation release | `python3 tools/cms.py docs check` | code retour 0 | documentation générée obsolète ou package incomplet |
 | tests source | `python3 tools/cms.py test` | code retour 0 dans le dépôt source complet ; code 2 explicite si tests absents | lire le premier test en échec ou utiliser les contrôles release si l’on est dans une archive |
+| vérification archive | `python3 tools/cms.py release --verify-archive --archive storage/exports/<technical_version>/<technical_version>.zip` | extrait l'archive puis lance `smoke`, `validate`, `docs check` et le contrôle `test` code 2 | package incomplet, documentation obsolète, base invalide ou fichier interdit |
 | qualification rapide | `python3 tools/cms.py qualify --profile quick` | résumé OK | blocage avant release |
 | documentation générée | `python3 tools/cms.py docs check` | références fraîches | générer ou corriger le générateur |
 | migrations non mutatives | `python3 tools/cms.py migrate --plan` | plan lisible, aucun fichier SQLite modifié | migrateur trop dangereux |
@@ -51,3 +52,9 @@ Exécuter depuis la racine du dépôt, dans une copie de travail. Sauvegarder to
 ## Limites volontaires
 
 Le socle ne fournit pas de marketplace, pas de téléchargement distant de modules, pas de down migrations automatiques et pas de résolution automatique de conflits applicatifs. L’objectif est un contrôle local reproductible.
+
+## Contextes
+
+Le dépôt source complet contient les tests, les générateurs et les dépendances de développement. Une archive release installée contient les commandes autonomes, les assets compilés, la documentation publique générée et les bases SQLite seedées, mais pas les tests source, `node_modules`, les caches, les exports précédents ni `ops/.env`.
+
+Le packaging rafraîchit les références générées avant copie afin qu'une archive fraîche passe immédiatement `python3 tools/cms.py docs check` après extraction. Les archives de preuves sont séparées de l'archive installable et ne sont obligatoires que pour les releases mineures ou majeures.

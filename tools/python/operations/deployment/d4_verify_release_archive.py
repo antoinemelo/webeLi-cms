@@ -7,12 +7,14 @@ if str(_DEC_CMS_PROJECT_ROOT) not in _dec_sys.path:
     _dec_sys.path.insert(0, str(_DEC_CMS_PROJECT_ROOT))
 
 import argparse
+import hashlib
 import json
 import sqlite3
 import subprocess
 import sys
 import tempfile
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.python.lib.release_metadata import load_release_metadata
@@ -80,8 +82,7 @@ FORBIDDEN_SUFFIXES = [
     ".pyc", ".pyo", ".log", ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
     ".js.map", ".zip", ".tar", ".tgz", ".tar.gz", ".bak", ".backup", ".tmp",
 ]
-FORBIDDEN_NAMES = {"ops/ftp.deploy.json", ".env"}
-ALLOWED_RUNTIME_ENV_FILES = {"ops/.env"}
+FORBIDDEN_NAMES = {"ops/ftp.deploy.json", "ops/.env", ".env"}
 ALLOWED_EXPORT_GUARDS = {
     "storage/exports/.gitkeep",
     "storage/exports/.htaccess",
@@ -94,6 +95,21 @@ RELEASE_COMMANDS = (
     (("validate",), 240),
     (("docs", "check"), 180),
 )
+RELEASE_TEST_COMMAND = (("test",), 60)
+RELEASE_VERIFIED_COMMANDS = [
+    "python3 tools/cms.py smoke",
+    "python3 tools/cms.py validate",
+    "python3 tools/cms.py docs check",
+    "python3 tools/cms.py test (code 2 explicite si les tests source sont absents)",
+]
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def has_forbidden_prefix(name: str, *, include_vendor: bool) -> bool:
@@ -202,6 +218,39 @@ def verify_release_commands_from_archive(archive: Path, root_prefix: str, errors
                     f"python3 tools/cms.py {label} (code {proc.returncode})."
                     + ("\n" + detail if detail else ""),
                 )
+        command, timeout = RELEASE_TEST_COMMAND
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(install_root / "tools" / "cms.py"),
+                "--root",
+                str(install_root),
+                "--command-timeout",
+                str(timeout),
+                "--json",
+                *command,
+            ],
+            cwd=install_root,
+            text=True,
+            capture_output=True,
+            timeout=timeout + 30,
+        )
+        output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        if proc.returncode != 2 or "release-archive-or-source-tests-missing" not in output:
+            detail = "\n".join(
+                part
+                for part in (
+                    f"stdout:\n{_tail(proc.stdout)}" if proc.stdout.strip() else "",
+                    f"stderr:\n{_tail(proc.stderr)}" if proc.stderr.strip() else "",
+                )
+                if part
+            )
+            fail(
+                errors,
+                "Commande test incorrecte en contexte archive: "
+                f"python3 tools/cms.py test doit retourner le code 2 explicite, code obtenu {proc.returncode}."
+                + ("\n" + detail if detail else ""),
+            )
 
 def main() -> int:
     args = parse_args()
@@ -273,8 +322,6 @@ def main() -> int:
                     fail(errors, f"Répertoire local interdit dans l'archive: {name}")
                 if any(name.endswith(suffix) for suffix in FORBIDDEN_SUFFIXES):
                     fail(errors, f"Suffixe interdit dans l'archive: {name}")
-                if name in ALLOWED_RUNTIME_ENV_FILES:
-                    continue
                 if name in FORBIDDEN_NAMES or Path(name).name in SECRET_NAME_PATTERNS:
                     fail(errors, f"Secret/config locale interdit dans l'archive: {name}")
 
@@ -283,6 +330,14 @@ def main() -> int:
                     fail(errors, "release-manifest.json doit déclarer include_databases=true pour une release v1 standard.")
                 if not manifest.get("release_id") or not manifest.get("technical_version"):
                     fail(errors, "release-manifest.json doit contenir release_id et technical_version.")
+                expected_root_prefix = root_prefix.rstrip("/")
+                if manifest.get("release_root_prefix") != expected_root_prefix:
+                    fail(errors, f"release-manifest.json doit déclarer release_root_prefix={expected_root_prefix}.")
+                if manifest.get("generated_docs_fresh") is not True:
+                    fail(errors, "release-manifest.json doit déclarer generated_docs_fresh=true.")
+                verified_commands = manifest.get("verified_commands")
+                if not isinstance(verified_commands, list) or not all(command in verified_commands for command in RELEASE_VERIFIED_COMMANDS[:3]):
+                    fail(errors, "release-manifest.json doit lister les commandes release vérifiées.")
                 notes = manifest.get("notes")
                 if isinstance(notes, list) and not any("smoke, validate et docs check" in str(note) for note in notes):
                     warnings.append("Manifest sans note explicite sur les commandes release autonomes.")
@@ -297,8 +352,13 @@ def main() -> int:
             if not errors:
                 verify_release_commands_from_archive(archive, root_prefix, errors)
 
+    verification = {
+        "archive_sha256": sha256_file(archive) if archive.exists() and archive.is_file() else None,
+        "verification_timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "verified_commands": RELEASE_VERIFIED_COMMANDS,
+    }
     if args.json:
-        print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings, "archive": str(archive)}, ensure_ascii=False, indent=2))
+        print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings, "archive": str(archive), **verification}, ensure_ascii=False, indent=2))
     else:
         print("[verify release archive]")
         for warning in warnings:

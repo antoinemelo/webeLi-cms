@@ -54,7 +54,7 @@ Ne pas transférer inutilement les éléments suivants vers une production simpl
 
 Le stage de release doit être généré par `d2_package_release.py` ou par la commande de release du CMS. Il ne doit pas être construit par simple copie récursive du dépôt de développement.
 
-Exception de configuration : `ops/.env` est un fichier runtime autorisé et attendu en production pour ce projet. Les autres fichiers `.env` locaux ou variantes de développement restent interdits.
+Configuration : `ops/.env` est attendu sur l'instance de production, mais il n'est pas distribué dans l'archive release officielle. Le package contient `ops/.env.example`; les fichiers `.env` locaux ou variantes de développement restent interdits dans l'archive.
 
 ## Après transfert
 

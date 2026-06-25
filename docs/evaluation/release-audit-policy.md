@@ -22,13 +22,15 @@ owners:
 
 ## Périmètre
 
-L’audit reproductible est une condition obligatoire pour les releases **mineures** et **majeures**. Il n’est pas déclenché automatiquement pour les **patchs**, afin de conserver un flux de correction léger. Les patchs restent soumis à la qualification locale de release, au préflight, au packaging et à la vérification de l’archive.
+L’audit reproductible est une condition obligatoire pour les releases **mineures** et **majeures**. Il n’est pas déclenché automatiquement pour les **patchs**, afin de conserver un flux de correction léger. Les patchs restent soumis à la qualification locale de release, au préflight, au packaging et à la vérification autonome de l’archive installable.
 
 | Type | Qualification locale | Audit reproductible | Association des preuves |
 |---|---:|---:|---:|
 | patch | obligatoire | non automatique | non |
 | minor | incluse dans l’audit | obligatoire | obligatoire |
 | major | incluse dans l’audit | obligatoire | obligatoire |
+
+Un patch ne doit donc pas annoncer une archive de preuves complète si l'audit reproductible n'a pas été exécuté. Une mineure ou une majeure échoue si l'audit reproductible, la vérification d'archive ou l'association des preuves échoue.
 
 ## Chaîne mineure/majeure
 
@@ -97,6 +99,15 @@ Audit release manuel :
 python3 tools/cms.py audit --profile release --build
 ```
 
+Vérification autonome d'une archive déjà produite :
+
+```bash
+python3 tools/cms.py release --verify-archive --archive storage/exports/<technical_version>/<technical_version>.zip
+make verify-release VERIFY_ARCHIVE=storage/exports/<technical_version>/<technical_version>.zip
+```
+
+Cette commande ne lance pas Composer, npm ni la chaîne CI. Elle extrait le ZIP dans un répertoire temporaire et exécute depuis l'archive extraite `smoke`, `validate` et `docs check`. Elle vérifie aussi que `python3 tools/cms.py test` retourne le code `2` explicite lorsque les tests source sont absents.
+
 Le profil `release` utilise une borne globale adaptée aux audits longs. La
 façade applique par défaut un timeout global de 7200 secondes pour ce profil,
 afin de ne pas interrompre prématurément un audit qui construit l’admin, recrée
@@ -117,7 +128,7 @@ docs/evaluation/latest-release-audit.md
 docs/evaluation/machine-readable/latest-release-audit.json
 ```
 
-Ils sont des index synthétiques. L’archive de preuves complète demeure dans `storage/exports/<technical_version>/` ou dans le canal de distribution de la release.
+Ils sont des index synthétiques réservés à la dernière mineure ou majeure auditée. Ils ne prouvent pas à eux seuls un patch sans audit reproductible. L’archive de preuves complète demeure dans `storage/exports/<technical_version>/` ou dans le canal de distribution de la release.
 
 
 ## Contrat de compacité et de complétude
