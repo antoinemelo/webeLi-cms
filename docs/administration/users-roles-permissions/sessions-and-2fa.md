@@ -10,17 +10,16 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
-
-owners:
-  - operations
-  - security
-document_type: guide
-source_paths:
   - backend/src/Application/Iam/IamAdminRepository.php
   - backend/src/Application/Api/Admin/IamAdminApiController.php
   - frontend/admin-vue/src/views/iam/IamUsersView.vue
   - database/migrations/iam
   - `python3 tools/cms.py test`
+
+owners:
+  - operations
+  - security
+document_type: guide
 generated: false
 ---
 # Gérer les sessions et les modes de connexion IAM

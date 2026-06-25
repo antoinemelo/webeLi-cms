@@ -10,15 +10,14 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
+  - backend/routes/api.php
+  - backend/src/Blueprints
+  - database/schema/core.sql
 
 owners:
   - operations
   - core
 document_type: guide
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Blueprints
-  - database/schema/core.sql
 generated: false
 ---
 # Administrer champs, fieldsets et blocs

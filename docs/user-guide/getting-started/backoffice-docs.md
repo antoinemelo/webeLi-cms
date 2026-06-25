@@ -29,8 +29,9 @@ Chaque utilisateur authentifié accède depuis le menu principal à l’intégra
 1. Ouvrez le back-office.
 2. Dans le menu principal, choisissez **Actifs**.
 3. Ouvrez **Docs**.
-4. Utilisez les onglets de profils pour afficher les pages utiles à un type d’usage : rédaction, publication, SEO, administration, installation, API, développement ou évaluation.
-5. Utilisez la ligne de recherche et le filtre d’espace documentaire pour affiner la liste affichée.
+4. Ouvrez [Choisir son parcours documentaire](../../getting-started/choose-your-path.md) si vous ne savez pas quel guide lire en premier.
+5. Utilisez les onglets de profils pour afficher les pages utiles à un type d’usage : rédaction, publication, SEO, administration, installation, API, développement ou évaluation.
+6. Utilisez la ligne de recherche et le filtre d’espace documentaire pour affiner la liste affichée.
 
 ## Règle d’accès
 
@@ -39,6 +40,8 @@ La documentation est globale à l’installation. Une session valide du back-off
 Formats exposés : Markdown, JSON, YAML, HTML affiché comme code source et texte brut. Les fichiers de configuration serveur tels que `.htaccess` ne sont pas des documents et ne sont pas indexés.
 
 Les onglets de profils sont uniquement des filtres d’affichage. Ils ne représentent pas des droits d’accès et ne changent pas le catalogue renvoyé par le backend. L’onglet **Tous** reste disponible pour consulter l’intégralité de la documentation. Une page qui déclare plusieurs audiences apparaît dans chaque onglet concerné.
+
+Les audiences canoniques du catalogue sont `editor`, `publisher`, `seo`, `administrator`, `superadministrator`, `installer`, `api-integrator`, `developer`, `evaluator` et, pour la maintenance des docs, `documentation-maintainer`.
 
 ## Lecture Markdown
 

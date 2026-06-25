@@ -10,16 +10,15 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
-
-owners:
-  - administration
-document_type: guide
-source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/ConfigurationApiController.php
   - backend/src/Application/Api/Admin/MultisiteApiController.php
   - backend/src/Application/Configuration/ConfigurationRepository.php
   - frontend/admin-vue/src/views/system/SystemConfigurationView.vue
+
+owners:
+  - administration
+document_type: guide
 generated: false
 ---
 # Gérer les sites et les langues

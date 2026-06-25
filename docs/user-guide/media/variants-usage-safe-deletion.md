@@ -10,13 +10,12 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Media
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Media
 generated: false
 ---
 # Générer des variantes et supprimer un média sans casser un contenu

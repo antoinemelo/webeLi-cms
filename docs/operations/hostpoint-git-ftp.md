@@ -1,7 +1,6 @@
 ---
 title: Déploiement Hostpoint par Git ou FTP
 audience:
-  - operator
   - administrator
 status: draft
 last_verified: 2026-06-20

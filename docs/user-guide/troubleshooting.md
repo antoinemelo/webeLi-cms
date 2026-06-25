@@ -10,14 +10,12 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/src
-  - backend/routes/api.php
-  - admin-app/src
 generated: false
 ---
 # Résoudre les erreurs fréquentes du back-office

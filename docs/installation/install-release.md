@@ -10,15 +10,13 @@ source_paths:
   - backend/composer.json
   - frontend/admin-vue/package.json
   - config
+  - tools/cms.py
+  - ops/.env.example
+  - .htaccess
 
 owners:
   - operations
 document_type: procedure
-source_paths:
-  - tools/cms.py
-  - ops/.env.example
-  - backend/composer.json
-  - .htaccess
 generated: false
 ---
 # Installer une release officielle

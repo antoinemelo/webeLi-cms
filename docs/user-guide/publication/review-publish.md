@@ -10,15 +10,14 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-source_paths:
   - backend/routes/api.php
   - backend/src/Publishing
   - backend/src/Content
   - `python3 tools/cms.py test`
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Réviser et publier un contenu

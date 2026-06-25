@@ -2,7 +2,7 @@
 title: Utiliser l’assistant IA
 audience:
   - editor
-  - seo-manager
+  - seo
 status: stable
 last_verified: 2026-06-14
 source_of_truth: manual

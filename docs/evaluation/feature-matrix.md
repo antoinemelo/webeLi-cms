@@ -3,7 +3,6 @@ title: Matrice fonctionnelle
 document_type: evaluation
 audience:
   - evaluator
-  - ai-evaluator
 status: stable
 last_verified: 2026-06-14
 source_of_truth: manual

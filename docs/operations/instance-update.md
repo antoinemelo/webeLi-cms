@@ -1,7 +1,6 @@
 ---
 title: Mettre à jour une instance client localement
 audience:
-  - operator
   - administrator
   - developer
 status: stable

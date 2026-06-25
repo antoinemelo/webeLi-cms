@@ -10,14 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Modules/Cookies
+  - database/modules/cookies.sql
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Modules/Cookies
-  - database/modules/cookies.sql
 generated: false
 ---
 # Configurer et vérifier le consentement aux cookies

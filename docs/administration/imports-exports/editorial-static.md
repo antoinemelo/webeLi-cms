@@ -10,16 +10,15 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
+  - backend/routes/api.php
+  - tools/cms.py
+  - tools/python
+  - docs/reference/contracts/editorial-package-1.0
 
 owners:
   - operations
   - core
 document_type: guide
-source_paths:
-  - backend/routes/api.php
-  - tools/cms.py
-  - tools/python
-  - docs/reference/contracts/editorial-package-1.0
 generated: false
 ---
 # Administrer imports, exports éditoriaux et export statique

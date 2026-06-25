@@ -1,10 +1,11 @@
 ---
 title: Résultats de validation CI
 audience:
-  - developers
-  - operators
-  - evaluators
+  - developer
+  - administrator
+  - evaluator
 status: current
+last_verified: 2026-06-25
 source_of_truth: .github/workflows/quality.yml; .github/workflows/release.yml
 owners:
   - core-team

@@ -3,7 +3,6 @@ title: Contrôles reproductibles
 document_type: evaluation
 audience:
   - evaluator
-  - ai-evaluator
 status: stable
 last_verified: 2026-06-20
 source_of_truth: procedure

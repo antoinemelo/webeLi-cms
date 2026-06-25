@@ -1,7 +1,6 @@
 ---
 title: Déployer une instance AM-CMS
 audience:
-  - operator
   - administrator
   - developer
 status: stable

@@ -9,16 +9,15 @@ source_of_truth: procedure
 source_paths:
   - tools/python/operations
   - tools/python/qualification/run_all.py
+  - ops/.env.example
+  - .htaccess
+  - backend/src/Security
+  - config/app.php
 
 owners:
   - operations
   - security
 document_type: guide
-source_paths:
-  - ops/.env.example
-  - .htaccess
-  - backend/src/Security
-  - config/app.php
 generated: false
 ---
 # Sécuriser une instance de production

@@ -10,13 +10,12 @@ source_paths:
   - backend/composer.json
   - frontend/admin-vue/package.json
   - config
+  - ops/.env.example
+  - config/app.php
 
 owners:
   - operations
 document_type: procedure
-source_paths:
-  - ops/.env.example
-  - config/app.php
 generated: false
 ---
 # Configurer l’instance

@@ -10,15 +10,14 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-source_paths:
   - backend/src/Modules/Forms
   - backend/src/Modules/AiAssistant
   - backend/routes/api.php
   - database/modules
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Utiliser formulaires, recherche, imports, exports et assistant IA

@@ -10,15 +10,14 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-source_paths:
   - backend/routes/api.php
   - backend/src/Content
   - database/schema/core.sql
   - admin-app/src
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Créer, modifier et prévisualiser un contenu

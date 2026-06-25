@@ -3,7 +3,6 @@ title: Évaluation de l’éditeur visuel
 document_type: evaluation
 audience:
   - evaluator
-  - ai-evaluator
 status: stable
 last_verified: 2026-06-22
 source_of_truth: manual

@@ -10,15 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - database/schema/core.sql
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src
-  - database/schema/core.sql
-  - admin-app/src
 generated: false
 ---
 # Comprendre les statuts, révisions et recherche éditoriale

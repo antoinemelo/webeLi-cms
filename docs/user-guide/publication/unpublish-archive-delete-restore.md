@@ -10,14 +10,12 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - `python3 tools/cms.py test`
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - `python3 tools/cms.py test`
-  - backend/src
 generated: false
 ---
 # Dépublier, archiver, supprimer ou restaurer

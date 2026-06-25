@@ -2,7 +2,7 @@
 title: Tests de charge traçables
 audience:
   - developer
-  - operator
+  - administrator
   - evaluator
 status: stable
 last_verified: 2026-06-18

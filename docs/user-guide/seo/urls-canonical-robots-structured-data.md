@@ -10,14 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/src/Seo
+  - frontend
+  - backend/routes/web.php
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/src/Seo
-  - frontend
-  - backend/routes/web.php
 generated: false
 ---
 # Gérer URL, canonique, hreflang, robots et données structurées

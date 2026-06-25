@@ -2,7 +2,7 @@
 title: Fiabilité des commandes opérationnelles
 audience:
   - developer
-  - operator
+  - administrator
   - evaluator
 status: stable
 last_verified: 2026-06-15

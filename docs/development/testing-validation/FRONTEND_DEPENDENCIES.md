@@ -1,9 +1,10 @@
 ---
 title: Dépendances frontend de qualification
 audience:
-  - developers
-  - operators
+  - developer
+  - administrator
 status: current
+last_verified: 2026-06-25
 source_of_truth: frontend/admin-vue/package-lock.json
 owners:
   - core-team

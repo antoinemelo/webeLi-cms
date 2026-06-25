@@ -475,6 +475,7 @@ docs/evaluation/release-audit-policy.md
 docs/evaluation/reproducible-checks.md
 docs/evaluation/visual-editor.md
 docs/getting-started/README.md
+docs/getting-started/choose-your-path.md
 docs/installation/README.md
 docs/installation/configuration-reference.md
 docs/installation/install-release.md

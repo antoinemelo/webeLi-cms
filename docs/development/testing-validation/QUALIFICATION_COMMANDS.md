@@ -1,10 +1,11 @@
 ---
 title: Commandes de qualification
 audience:
-  - developers
-  - operators
-  - release-managers
+  - developer
+  - administrator
+  - evaluator
 status: current
+last_verified: 2026-06-25
 source_of_truth: code
 source_paths:
   - tools/python/qualification/run_all.py

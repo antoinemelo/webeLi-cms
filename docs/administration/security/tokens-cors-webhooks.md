@@ -10,18 +10,17 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
-
-owners:
-  - operations
-  - security
-document_type: guide
-source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/SecurityAdminApiController.php
   - backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php
   - frontend/admin-vue/src/admin/securityPanel.ts
   - database/migrations/iam
   - `python3 tools/cms.py validate --category security`
+
+owners:
+  - operations
+  - security
+document_type: guide
 generated: false
 ---
 # Sécuriser les accès API, les webhooks et le CORS

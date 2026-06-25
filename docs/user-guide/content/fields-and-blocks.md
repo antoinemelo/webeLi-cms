@@ -9,17 +9,16 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-source_paths:
   - backend/src/Application/Content/BlockDocumentNormalizer.php
   - backend/src/Core/NativeHtmlRenderer.php
   - frontend/admin-vue/src/components/editor/BlockEditor.vue
   - frontend/admin-vue/src/components/blueprints/BlueprintFieldEditorModal.vue
   - frontend/theme-default/templates/partials/content-block.twig
   - database/seeds/native_blueprints.json
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Utiliser les champs et les blocs de contenu

@@ -10,14 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Media
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Media
-  - admin-app/src
 generated: false
 ---
 # Téléverser, classer et documenter les médias

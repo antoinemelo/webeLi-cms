@@ -2,7 +2,7 @@
 title: Utiliser la CLI et les outils Python
 audience:
   - developer
-  - operator
+  - administrator
 status: stable
 last_verified: 2026-06-14
 source_of_truth: code
@@ -10,16 +10,15 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - tools/python
+  - tools/cms.py
+  - tools/python/README.md
+  - tools/python/tool-manifest.json
+  - tools/python/generators/generate_documentation.py
 
 owners:
   - core
   - operations
 document_type: guide
-source_paths:
-  - tools/cms.py
-  - tools/python/README.md
-  - tools/python/tool-manifest.json
-  - tools/python/generators/generate_documentation.py
 generated: false
 ---
 # Utiliser la CLI et les outils Python

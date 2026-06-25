@@ -1,7 +1,6 @@
 ---
 title: Export statique éditorial
 audience:
-  - operator
   - administrator
 status: stable
 last_verified: 2026-06-24

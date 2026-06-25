@@ -15,6 +15,10 @@ generated: false
 ---
 # Prise en main
 
+## Choisir son parcours
+
+Commencez par [choisir votre parcours documentaire](choose-your-path.md) si vous ouvrez les docs depuis le back-office et ne savez pas quel espace lire. Les profils sont des filtres de lecture, pas des permissions.
+
 ## Utiliser une release existante
 
 1. Vérifiez les [prérequis](../installation/requirements.md).
@@ -51,6 +55,7 @@ La reconstruction supprime et recrée les bases SQLite natives, applique les see
 
 ## Lire ensuite
 
+- [Choisir son parcours documentaire](choose-your-path.md)
 - [Guide utilisateur](../user-guide/README.md)
 - [Administration](../administration/README.md)
 - [Architecture et développement](../development/README.md)

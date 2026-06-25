@@ -10,16 +10,15 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
+  - backend/routes/api.php
+  - backend/src/Blueprints
+  - database/schema/core.sql
+  - `python3 tools/cms.py validate --category content`
 
 owners:
   - operations
   - core
 document_type: guide
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Blueprints
-  - database/schema/core.sql
-  - `python3 tools/cms.py validate --category content`
 generated: false
 ---
 # Gérer le cycle de vie des blueprints

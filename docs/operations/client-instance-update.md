@@ -2,7 +2,6 @@
 title: Mettre à jour une instance client avec modules locaux
 audience:
   - installer
-  - operator
   - administrator
   - developer
 status: stable

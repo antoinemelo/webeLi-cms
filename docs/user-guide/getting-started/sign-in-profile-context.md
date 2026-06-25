@@ -10,15 +10,14 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-source_paths:
   - backend/routes/admin.php
   - backend/routes/api.php
   - admin-app/src
   - database/seeds/iam_seed.sql
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Se connecter et choisir son contexte

@@ -9,13 +9,12 @@ source_of_truth: procedure
 source_paths:
   - tools/python/operations
   - tools/python/qualification/run_all.py
+  - tools/cms.py
+  - tools/python/operations/backup
 
 owners:
   - operations
 document_type: procedure
-source_paths:
-  - tools/cms.py
-  - tools/python/operations/backup
 generated: false
 ---
 # Sauvegarder, restaurer et revenir en arrière

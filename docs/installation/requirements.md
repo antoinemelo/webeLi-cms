@@ -10,17 +10,14 @@ source_paths:
   - backend/composer.json
   - frontend/admin-vue/package.json
   - config
+  - ops/.env.example
+  - tools/cms.py
+  - frontend/admin-vue/package-lock.json
+  - frontend/admin-vue/.nvmrc
 
 owners:
   - operations
 document_type: procedure
-source_paths:
-  - backend/composer.json
-  - ops/.env.example
-  - tools/cms.py
-  - frontend/admin-vue/package.json
-  - frontend/admin-vue/package-lock.json
-  - frontend/admin-vue/.nvmrc
 generated: false
 ---
 # Vérifier les prérequis

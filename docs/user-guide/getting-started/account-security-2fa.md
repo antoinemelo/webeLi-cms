@@ -10,15 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - ops/.env.example
+  - database/migrations/iam
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src
-  - ops/.env.example
-  - database/migrations/iam
 generated: false
 ---
 # Sécuriser son compte et utiliser la double authentification

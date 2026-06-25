@@ -2,7 +2,6 @@
 title: Index des preuves
 audience:
   - evaluator
-  - ai-evaluator
 status: stable
 last_verified: 2026-06-14
 source_of_truth: procedure

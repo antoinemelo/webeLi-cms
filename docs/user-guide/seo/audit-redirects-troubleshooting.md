@@ -10,14 +10,13 @@ source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Seo
+  - `python3 tools/cms.py validate --category content`
 
 owners:
   - editorial
 document_type: procedure
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Seo
-  - `python3 tools/cms.py validate --category content`
 generated: false
 ---
 # Utiliser l’audit SEO et les redirections

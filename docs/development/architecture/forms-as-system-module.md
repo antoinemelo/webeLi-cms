@@ -9,16 +9,14 @@ source_paths:
   - backend/src
   - frontend/admin-vue/src
   - tools/python
+  - frontend
+  - admin-app/src
+  - database
 
 owners:
   - core
   - documentation
 document_type: guide
-source_paths:
-  - backend/src
-  - frontend
-  - admin-app/src
-  - database
 generated: false
 ---
 

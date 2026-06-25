@@ -18,6 +18,8 @@ generated: false
 
 Le guide suit les parcours du back-office. Les menus visibles dépendent du rôle, des permissions et du site actif ; masquer une action dans l’interface ne remplace jamais l’autorisation côté serveur.
 
+Si vous ne savez pas par où commencer, utilisez [Choisir son parcours documentaire](../getting-started/choose-your-path.md). La page regroupe les lectures utiles pour les profils éditeur, publicateur, SEO, administrateur et superadministrateur.
+
 ## Contenus
 
 - [Créer, modifier et prévisualiser](content/create-edit.md)
