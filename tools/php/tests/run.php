@@ -5,6 +5,8 @@ $tests = [
     'unit/bootstrap_autoload_test.php',
     'unit/health_check_test.php',
     'unit/editorial_status_test.php',
+    'unit/iam_login_modes_test.php',
+    'unit/totp_service_test.php',
     'unit/docs_access_test.php',
     'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',

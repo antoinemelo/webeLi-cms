@@ -102,7 +102,7 @@ function groupForBlueprint(item: BlueprintRow): string {
   // Cette heuristique isolée ne sert que de repli jusqu'à l'ajout éventuel d'une métadonnée native.
   const key = `${item.blueprint_key} ${item.label}`.toLowerCase();
   if (key.startsWith('module_')) return 'Modules métier';
-  if (key.includes('security_') || key.includes('iam_email_2fa')) return 'Système';
+  if (key.includes('security_') || key.includes('iam_login_mode')) return 'Système';
   return 'Studio';
 }
 

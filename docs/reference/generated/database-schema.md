@@ -167,6 +167,6 @@ generated: true
 | `iam_sessions` | id, user_id, session_token_hash, ip_address, user_agent, last_seen_at, expires_at, created_at |
 | `iam_user_roles` | id, user_id, role_id |
 | `iam_user_site_roles` | id, user_id, site_id, role_id, created_at |
-| `iam_users` | id, email, email_normalized, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at |
+| `iam_users` | id, email, email_normalized, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, login_mode, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at |
 | `schema_migrations` | id, migration, migrated_at |
 

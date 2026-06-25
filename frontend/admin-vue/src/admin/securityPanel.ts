@@ -380,35 +380,8 @@
   }
 
   async function injectTotpInUserAdvanced(){
-    if (!canManageEmail2fa()) return;
-    const advanced = findUserAdvancedContainer();
-    if (!advanced || advanced.querySelector('[data-amcms-user-totp]')) return;
-    const email = currentEditorEmail();
-    if (!email || !isIamUsersRoute()) return;
-    const users = usersCache.length ? usersCache : await loadUsers().catch(()=>[]);
-    const user = users.find(u => String(u.email || '').toLowerCase() === email);
-    if (!user) return;
-    const card = document.createElement('section');
-    card.dataset.amcmsUserTotp = '1';
-    card.className = 'amcms-security-card';
-    card.innerHTML = `<p>Connexion par code email : <span class="amcms-security-pill ${user.totp_enabled ? 'ok' : 'off'}">${user.totp_enabled ? 'active' : 'inactive'}</span></p><div data-amcms-security-message class="amcms-security-muted"></div><div class="amcms-security-actions">${user.totp_enabled ? `<button type="button" class="amcms-security-btn danger" data-totp-disable="${user.id}">Désactiver la connexion par code email</button>` : `<button type="button" class="amcms-security-btn primary" data-totp-enable="${user.id}">Activer la connexion par code email</button>`}</div>`;
-    advanced.appendChild(card);
-    card.querySelector('[data-totp-enable]')?.addEventListener('click', () => enableTotp(card, user.id));
-    card.querySelector('[data-totp-disable]')?.addEventListener('click', async () => {
-      if (!confirm('Désactiver la connexion par code email pour cet utilisateur et révoquer ses sessions ?')) return;
-      try { await api(`/iam/users/${user.id}/totp/disable`, {method:'POST', body:dataBody({})}); usersCache = []; message(card, 'Connexion par code email désactivée. Rechargez la fiche pour voir le nouveau statut.'); } catch(e){ message(card, e.message, false); }
-    });
-  }
-
-  async function enableTotp(root, id){
-    if (!confirm('Activer la connexion par code email pour cet utilisateur ? Au login, un code sera envoyé par email et le mot de passe ne sera plus demandé.')) return;
-    try{
-      await api(`/iam/users/${id}/totp/enable`, {method:'POST', body:dataBody({required:true, mode:'email'})});
-      usersCache = [];
-      message(root, 'Connexion par code email activée. Rechargez la fiche pour voir le nouveau statut.');
-    } catch(e){
-      message(root, e.message || 'Activation 2FA impossible.', false);
-    }
+    // Native IAM users view owns login_mode/password/email_code/totp controls.
+    // The former injected email-code control is intentionally deprecated.
   }
 
 

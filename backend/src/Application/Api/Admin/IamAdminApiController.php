@@ -111,6 +111,68 @@ final class IamAdminApiController
         return Response::success(['temporary_password'=>$temporary,'expires_policy'=>'À transmettre hors CMS puis à changer à la première connexion selon politique projet.'], 'admin.iam.users.reset_password.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
+    public function loginMode(int $id): Response
+    {
+        $this->requireIamPermission('users.read');
+        if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        $user = $this->iam->findUser($id);
+        if (!$user) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        return Response::success(['user_id'=>$id,'login_mode'=>$user['login_mode'] ?? 'password','user'=>$user], 'admin.iam.users.login_mode.v1', ['contract_version'=>AdminApiContract::VERSION]);
+    }
+
+    public function changeLoginMode(int $id): Response
+    {
+        $this->requireIamPermission('users.email_2fa.manage');
+        if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        $payload = AdminApiContract::dataPayload($this->request, false);
+        $mode = (string)($payload['login_mode'] ?? $payload['mode'] ?? '');
+        if ($mode === 'totp') {
+            return Response::error('VALIDATION_FAILED', 'Préparez puis confirmez un code TOTP avant activation.', 422, ['fields'=>['login_mode'=>['Le mode TOTP exige une confirmation de code.']]]);
+        }
+        try { $user = $mode === 'email_code' ? $this->iam->enableEmailCodeLogin($id) : $this->iam->setLoginMode($id, 'password'); }
+        catch (\Throwable $e) { return $this->validationFromException($e); }
+        $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>$user['login_mode'] ?? $mode]);
+        return Response::success(['user'=>$user,'login_mode'=>$user['login_mode'] ?? $mode,'message'=>'Mode de connexion mis à jour et sessions révoquées.'], 'admin.iam.users.login_mode.v1', ['contract_version'=>AdminApiContract::VERSION]);
+    }
+
+    public function prepareLoginModeTotp(int $id): Response
+    {
+        $this->requireIamPermission('users.email_2fa.manage');
+        if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        $payload = AdminApiContract::dataPayload($this->request, false);
+        $issuer = trim((string)($payload['issuer'] ?? 'DEC CMS')) ?: 'DEC CMS';
+        try { $setup = $this->iam->prepareTotp($id, $issuer); }
+        catch (\Throwable $e) { return $this->validationFromException($e); }
+        $this->audit('iam.user.totp_prepare', 'iam_user', $id);
+        return Response::success(['totp'=>$setup,'message'=>'Scannez le QR/payload ou saisissez le secret, puis confirmez un code TOTP.'], 'admin.iam.users.login_mode.totp.prepare.v1', ['contract_version'=>AdminApiContract::VERSION]);
+    }
+
+    public function confirmLoginModeTotp(int $id): Response
+    {
+        $this->requireIamPermission('users.email_2fa.manage');
+        if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        $payload = AdminApiContract::dataPayload($this->request, false);
+        try { $result = $this->iam->enableTotp($id, (string)($payload['secret'] ?? ''), (string)($payload['code'] ?? ''), true, $this->auth->totpAppKey()); }
+        catch (\Throwable $e) { return $this->validationFromException($e); }
+        $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>'totp']);
+        return Response::success(['user'=>$result['user'],'login_mode'=>'totp','message'=>'Mode mot de passe + application TOTP activé et sessions révoquées.'], 'admin.iam.users.login_mode.totp.confirm.v1', ['contract_version'=>AdminApiContract::VERSION]);
+    }
+
+    public function disableLoginModeTotp(int $id): Response
+    {
+        $this->requireIamPermission('users.email_2fa.manage');
+        if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
+        try { $user = $this->iam->setLoginMode($id, 'password'); }
+        catch (\Throwable $e) { return $this->validationFromException($e); }
+        $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>'password','previous'=>'totp']);
+        return Response::success(['user'=>$user,'login_mode'=>'password','message'=>'TOTP désactivé, retour au mot de passe classique et sessions révoquées.'], 'admin.iam.users.login_mode.v1', ['contract_version'=>AdminApiContract::VERSION]);
+    }
+
+    public function rotateLoginModeTotp(int $id): Response
+    {
+        return $this->prepareLoginModeTotp($id);
+    }
+
 
     public function prepareTotp(int $id): Response
     {
@@ -120,7 +182,7 @@ final class IamAdminApiController
         $issuer = trim((string)($payload['issuer'] ?? 'DEC CMS')) ?: 'DEC CMS';
         $setup = $this->iam->prepareTotp($id, $issuer);
         $this->audit('iam.user.totp_prepare', 'iam_user', $id);
-        return Response::success(['totp'=>$setup,'message'=>'La 2FA par email est disponible pour cet utilisateur.'], 'admin.iam.users.totp.prepare.v1', ['contract_version'=>AdminApiContract::VERSION]);
+        return Response::success(['totp'=>$setup,'message'=>'Secret TOTP généré. Confirmez un premier code valide pour activer le mode mot de passe + application TOTP.'], 'admin.iam.users.totp.prepare.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
     public function enableTotp(int $id): Response
@@ -128,10 +190,22 @@ final class IamAdminApiController
         $this->requireIamPermission('users.email_2fa.manage');
         if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
         $payload = AdminApiContract::dataPayload($this->request, false);
-        try { $result = $this->iam->enableTotp($id, '', '', array_key_exists('required', $payload) ? !empty($payload['required']) : true, $this->auth->totpAppKey()); }
+        $mode = (string)($payload['mode'] ?? '');
+        try {
+            if ($mode === 'email' || $mode === 'email_code') {
+                $user = $this->iam->enableEmailCodeLogin($id);
+                $result = ['user'=>$user, 'recovery_codes'=>[]];
+            } else {
+                $result = $this->iam->enableTotp($id, (string)($payload['secret'] ?? ''), (string)($payload['code'] ?? ''), array_key_exists('required', $payload) ? !empty($payload['required']) : true, $this->auth->totpAppKey());
+            }
+        }
         catch (\Throwable $e) { return $this->validationFromException($e); }
-        $this->audit('iam.user.totp_enabled', 'iam_user', $id);
-        return Response::success(['user'=>$result['user'],'recovery_codes'=>[],'message'=>'2FA par email activée. Au prochain login, un code sera envoyé par email et aucun mot de passe ne sera demandé.'], 'admin.iam.users.totp.enable.v1', ['contract_version'=>AdminApiContract::VERSION]);
+        $loginMode = (string)($result['user']['login_mode'] ?? 'totp');
+        $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>$loginMode,'compat_endpoint'=>'totp.enable']);
+        $message = $loginMode === 'email_code'
+            ? 'Connexion par code email activée. Au prochain login, un code sera envoyé par email et aucun mot de passe ne sera demandé.'
+            : 'Mode mot de passe + application TOTP activé et sessions révoquées.';
+        return Response::success(['user'=>$result['user'],'recovery_codes'=>[],'message'=>$message], 'admin.iam.users.totp.enable.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
     public function disableTotp(int $id): Response
@@ -140,8 +214,8 @@ final class IamAdminApiController
         if (!$this->ensureScopedUserAccess($id)) return Response::error('USER_NOT_FOUND', 'Utilisateur introuvable.', 404);
         try { $user = $this->iam->disableTotp($id); }
         catch (\Throwable $e) { return $this->validationFromException($e); }
-        $this->audit('iam.user.totp_disabled', 'iam_user', $id);
-        return Response::success(['user'=>$user,'message'=>'2FA désactivée et sessions révoquées.'], 'admin.iam.users.totp.disable.v1', ['contract_version'=>AdminApiContract::VERSION]);
+        $this->audit('iam.user.login_mode_changed', 'iam_user', $id, ['login_mode'=>'password','compat_endpoint'=>'totp.disable']);
+        return Response::success(['user'=>$user,'message'=>'Mode mot de passe classique activé et sessions révoquées.'], 'admin.iam.users.totp.disable.v1', ['contract_version'=>AdminApiContract::VERSION]);
     }
 
     public function regenerateTotpRecoveryCodes(int $id): Response
@@ -295,6 +369,7 @@ final class IamAdminApiController
             'USER_ROLE_REQUIRED' => AdminApiContract::validationResponse(['roles'=>['Attribuez au moins un rôle global ou un accès par site avant de créer le compte.']], 'Utilisateur invalide.'),
             'INVALID_ROLE_KEY' => AdminApiContract::validationResponse(['role_key'=>['Clé de rôle invalide.']], 'Rôle invalide.'),
             'INVALID_TOTP_CODE' => AdminApiContract::validationResponse(['code'=>['Code 2FA invalide.']], 'Code 2FA invalide.'),
+            'INVALID_LOGIN_MODE' => AdminApiContract::validationResponse(['login_mode'=>['Mode de connexion invalide.']], 'Utilisateur invalide.'),
             'TOTP_NOT_ENABLED' => Response::error('TOTP_NOT_ENABLED', 'La 2FA n’est pas activée pour cet utilisateur.', 409),
             default => throw $e,
         };

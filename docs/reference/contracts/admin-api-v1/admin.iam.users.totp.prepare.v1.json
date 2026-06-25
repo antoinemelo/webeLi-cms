@@ -13,19 +13,24 @@
   },
   "request": {
     "POST": {
-      "mode": "optional string, email by default"
+      "issuer": "optional string, default DEC CMS"
     }
   },
   "response": {
     "data": {
       "totp": {
         "user_id": "integer",
-        "email": "user email receiving login codes",
-        "mode": "email",
+        "email": "user email",
+        "mode": "totp",
+        "secret": "Base32 secret returned only before activation",
+        "manual_entry_key": "same Base32 secret for manual entry",
+        "otpauth_uri": "otpauth://totp/...",
+        "qr_payload": "same value as otpauth_uri",
+        "algorithm": "SHA1",
         "digits": 6,
-        "expires_in_seconds": 600
+        "period": 30
       },
-      "message": "..."
+      "message": "Deprecated compatibility endpoint. Prefer /login-mode/totp/prepare."
     },
     "meta": {
       "contract": "admin.iam.users.totp.prepare.v1",

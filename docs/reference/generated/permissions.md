@@ -33,6 +33,7 @@ generated: true
 | `admin.forms.delete` |
 | `admin.forms.write` |
 | `admin.iam.roles.update` |
+| `admin.iam.users.login_mode.update` |
 | `admin.iam.users.update` |
 | `admin.imports_exports.delete` |
 | `admin.media.folders.update` |

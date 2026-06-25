@@ -14,14 +14,16 @@
   "request": {
     "POST": {
       "required": "optional boolean, default true",
-      "mode": "optional string, email by default"
+      "mode": "optional string. Use email_code for compatibility email code login; omit or use totp with secret and code for real TOTP.",
+      "secret": "Base32 secret required for TOTP activation",
+      "code": "6 digit TOTP code required for TOTP activation"
     }
   },
   "response": {
     "data": {
-      "user": "iam user summary with totp_enabled/totp_required",
-      "recovery_codes": "empty array for email-based 2FA",
-      "message": "..."
+      "user": "iam user summary including login_mode",
+      "recovery_codes": "empty array; recovery codes are P1-02 debt",
+      "message": "Deprecated compatibility endpoint. Prefer /login-mode or /login-mode/totp/confirm."
     },
     "meta": {
       "contract": "admin.iam.users.totp.enable.v1",

@@ -12,7 +12,7 @@ final class TotpService
 {
     private const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-    public static function generateSecret(int $bytes = 10): string
+    public static function generateSecret(int $bytes = 20): string
     {
         return self::base32Encode(random_bytes($bytes));
     }
@@ -57,14 +57,13 @@ final class TotpService
     public static function verifyCode(string $secret, string $code, int $window = 1, ?int $timestamp = null): bool
     {
         $code = self::normalizeCode($code);
-        if (!preg_match('/^\d{4,6}$/', $code)) {
+        if (!preg_match('/^\d{6}$/', $code)) {
             return false;
         }
         $timestamp = $timestamp ?? time();
         for ($i = -$window; $i <= $window; $i++) {
             $expected = self::code($secret, $timestamp + ($i * 30));
-            $comparable = strlen($code) < 6 ? substr($expected, -strlen($code)) : $expected;
-            if (hash_equals($comparable, $code)) {
+            if (hash_equals($expected, $code)) {
                 return true;
             }
         }
@@ -82,7 +81,15 @@ final class TotpService
             $cipher = sodium_crypto_secretbox($secret, $nonce, $key);
             return 'sodium:' . base64_encode($nonce . $cipher);
         }
-        return 'plain:' . $secret;
+        if (function_exists('openssl_encrypt')) {
+            $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+            $iv = random_bytes(16);
+            $cipher = openssl_encrypt($secret, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+            if (is_string($cipher)) {
+                return 'openssl:' . base64_encode($iv . $cipher);
+            }
+        }
+        throw new \RuntimeException('TOTP_SECRET_ENCRYPTION_UNAVAILABLE');
     }
 
     public static function decryptSecret(?string $protected, string $appKey = ''): string
@@ -102,10 +109,18 @@ final class TotpService
             $plain = sodium_crypto_secretbox_open($cipher, $nonce, $key);
             return is_string($plain) ? $plain : '';
         }
-        if (str_starts_with($protected, 'plain:')) {
-            return substr($protected, 6);
+        if (str_starts_with($protected, 'openssl:') && function_exists('openssl_decrypt')) {
+            $raw = base64_decode(substr($protected, 8), true);
+            if ($raw === false || strlen($raw) <= 16) {
+                return '';
+            }
+            $iv = substr($raw, 0, 16);
+            $cipher = substr($raw, 16);
+            $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+            $plain = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+            return is_string($plain) ? $plain : '';
         }
-        return $protected;
+        return '';
     }
 
     public static function otpauthUri(string $issuer, string $account, string $secret): string

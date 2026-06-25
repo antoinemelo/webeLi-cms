@@ -18,7 +18,7 @@
   },
   "response": {
     "data": {
-      "user": "iam user summary with totp disabled",
+      "user": "iam user summary with login_mode=password",
       "message": "..."
     },
     "meta": {

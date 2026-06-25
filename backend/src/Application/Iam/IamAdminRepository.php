@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Iam;
 
 use App\Core\Database;
+use App\Security\TotpService;
 
 final class IamAdminRepository
 {
@@ -67,7 +68,7 @@ final class IamAdminRepository
         $total = (int)($this->db->one("SELECT count(*) AS c FROM iam_users {$clause}", $params)['c'] ?? 0);
         $limit = max(1, min(100, (int)($filters['limit'] ?? 25)));
         $offset = max(0, (int)($filters['offset'] ?? 0));
-        $rows = $this->db->all("SELECT id,email,first_name,last_name,locale,is_active,disabled_at,disabled_reason,last_login_at,created_at,updated_at,totp_enabled,totp_required,totp_enabled_at,
+        $rows = $this->db->all("SELECT id,email,first_name,last_name,locale,is_active,disabled_at,disabled_reason,last_login_at,created_at,updated_at,login_mode,totp_enabled,totp_required,totp_enabled_at,
             (SELECT count(*) FROM iam_sessions s WHERE s.user_id=iam_users.id AND s.expires_at > CURRENT_TIMESTAMP) AS active_session_count
             FROM iam_users {$clause} ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset", $params + ['limit'=>$limit,'offset'=>$offset]);
         return ['rows'=>array_map(fn($r)=>$this->userSummary($r), $rows), 'total'=>$total];
@@ -75,7 +76,7 @@ final class IamAdminRepository
 
     public function findUser(int $id): ?array
     {
-        $row = $this->db->one('SELECT id,email,first_name,last_name,locale,is_active,disabled_at,disabled_reason,last_login_at,created_at,updated_at,totp_enabled,totp_required,totp_enabled_at FROM iam_users WHERE id=:id LIMIT 1', ['id'=>$id]);
+        $row = $this->db->one('SELECT id,email,first_name,last_name,locale,is_active,disabled_at,disabled_reason,last_login_at,created_at,updated_at,login_mode,totp_enabled,totp_required,totp_enabled_at FROM iam_users WHERE id=:id LIMIT 1', ['id'=>$id]);
         if (!$row) return null;
         $user = $this->userSummary($row);
         $user['roles'] = $this->globalRoleIds($id);
@@ -90,7 +91,8 @@ final class IamAdminRepository
         $password = (string)($data['password'] ?? '');
         $nextActive = array_key_exists('is_active', $data) ? !empty($data['is_active']) : true;
         $now = now_utc();
-        $this->db->run('INSERT INTO iam_users(email,email_normalized,password_hash,first_name,last_name,locale,is_active,created_at,updated_at) VALUES(:email,:email_normalized,:password_hash,:first_name,:last_name,:locale,:is_active,:created_at,:updated_at)', [
+        $loginMode = self::sanitizeLoginMode((string)($data['login_mode'] ?? 'password'));
+        $this->db->run('INSERT INTO iam_users(email,email_normalized,password_hash,first_name,last_name,locale,is_active,login_mode,totp_enabled,totp_required,created_at,updated_at) VALUES(:email,:email_normalized,:password_hash,:first_name,:last_name,:locale,:is_active,:login_mode,:totp_enabled,:totp_required,:created_at,:updated_at)', [
             'email'=>$email,
             'email_normalized'=>self::normalize($email),
             'password_hash'=>password_hash($password, PASSWORD_DEFAULT),
@@ -98,6 +100,9 @@ final class IamAdminRepository
             'last_name'=>self::limit(trim((string)($data['last_name'] ?? '')),120),
             'locale'=>self::limit(trim((string)($data['locale'] ?? 'fr-CH')),16),
             'is_active'=>$nextActive ? 1 : 0,
+            'login_mode'=>$loginMode,
+            'totp_enabled'=>$loginMode === 'password' ? 0 : 1,
+            'totp_required'=>$loginMode === 'totp' ? 1 : 0,
             'created_at'=>$now,
             'updated_at'=>$now,
         ]);
@@ -200,21 +205,34 @@ final class IamAdminRepository
     {
         $user = $this->findUser($userId);
         if (!$user) throw new \InvalidArgumentException('USER_NOT_FOUND');
+        $secret = TotpService::generateSecret();
         return [
             'user_id' => $userId,
             'email' => (string) $user['email'],
-            'mode' => 'email',
+            'mode' => 'totp',
+            'issuer' => $issuer,
+            'secret' => $secret,
+            'manual_entry_key' => $secret,
+            'otpauth_uri' => TotpService::otpauthUri($issuer, (string) $user['email'], $secret),
+            'qr_payload' => TotpService::otpauthUri($issuer, (string) $user['email'], $secret),
+            'algorithm' => 'SHA1',
             'digits' => 6,
-            'expires_in_seconds' => 600,
+            'period' => 30,
         ];
     }
 
     public function enableTotp(int $userId, string $secret = '', string $code = '', bool $required = true, string $appKey = ''): array
     {
         if (!$this->findUser($userId)) throw new \InvalidArgumentException('USER_NOT_FOUND');
+        $secret = strtoupper(preg_replace('/[^A-Z2-7]/', '', $secret) ?? '');
+        if ($secret === '' || !TotpService::verifyCode($secret, $code, 1)) {
+            throw new \InvalidArgumentException('INVALID_TOTP_CODE');
+        }
         $now = now_utc();
-        $this->db->run('UPDATE iam_users SET totp_enabled=1, totp_required=:required, totp_secret_protected=NULL, totp_recovery_codes_json=NULL, totp_enabled_at=:enabled_at, updated_at=:updated_at WHERE id=:id', [
+        $this->db->run('UPDATE iam_users SET login_mode=:login_mode, totp_enabled=1, totp_required=:required, totp_secret_protected=:secret, totp_recovery_codes_json=NULL, totp_enabled_at=:enabled_at, updated_at=:updated_at WHERE id=:id', [
+            'login_mode' => 'totp',
             'required' => $required ? 1 : 0,
+            'secret' => TotpService::encryptSecret($secret, $appKey),
             'enabled_at' => $now,
             'updated_at' => $now,
             'id' => $userId,
@@ -226,21 +244,40 @@ final class IamAdminRepository
 
     public function disableTotp(int $userId): array
     {
-        if (!$this->findUser($userId)) throw new \InvalidArgumentException('USER_NOT_FOUND');
-        $this->db->run('UPDATE iam_users SET totp_enabled=0, totp_required=0, totp_secret_protected=NULL, totp_recovery_codes_json=NULL, totp_enabled_at=NULL, updated_at=:updated_at WHERE id=:id', [
-            'updated_at' => now_utc(),
-            'id' => $userId,
-        ]);
-        $this->revokeSessions($userId);
-        return $this->findUser($userId) ?? [];
+        return $this->setLoginMode($userId, 'password');
     }
 
     public function regenerateTotpRecoveryCodes(int $userId): array
     {
         $user = $this->findUser($userId);
         if (!$user) throw new \InvalidArgumentException('USER_NOT_FOUND');
-        if (empty($user['totp_enabled'])) throw new \InvalidArgumentException('TOTP_NOT_ENABLED');
+        if (($user['login_mode'] ?? 'password') !== 'totp') throw new \InvalidArgumentException('TOTP_NOT_ENABLED');
         return ['user' => $this->findUser($userId) ?? [], 'recovery_codes' => []];
+    }
+
+    public function setLoginMode(int $userId, string $mode): array
+    {
+        if (!$this->findUser($userId)) throw new \InvalidArgumentException('USER_NOT_FOUND');
+        $mode = self::sanitizeLoginMode($mode);
+        $now = now_utc();
+        $this->db->run('UPDATE iam_users SET login_mode=:login_mode, totp_enabled=:totp_enabled, totp_required=:totp_required, totp_secret_protected=NULL, totp_recovery_codes_json=NULL, totp_enabled_at=:totp_enabled_at, updated_at=:updated_at WHERE id=:id', [
+            'login_mode' => $mode,
+            'totp_enabled' => $mode === 'password' ? 0 : 1,
+            'totp_required' => $mode === 'totp' ? 1 : 0,
+            'totp_enabled_at' => $mode === 'password' ? null : $now,
+            'updated_at' => $now,
+            'id' => $userId,
+        ]);
+        if ($mode !== 'email_code') {
+            $this->db->run('DELETE FROM iam_email_2fa_challenges WHERE user_id=:id', ['id' => $userId]);
+        }
+        $this->revokeSessions($userId);
+        return $this->findUser($userId) ?? [];
+    }
+
+    public function enableEmailCodeLogin(int $userId): array
+    {
+        return $this->setLoginMode($userId, 'email_code');
     }
 
     public function permissions(): array
@@ -408,7 +445,8 @@ final class IamAdminRepository
     }
     private function globalRoleIds(int $userId): array { return array_map('intval', array_column($this->db->all('SELECT role_id FROM iam_user_roles WHERE user_id=:id ORDER BY role_id',['id'=>$userId]), 'role_id')); }
     private function siteRoleRows(int $userId): array { return array_map(fn($r)=>['site_id'=>(int)$r['site_id'],'role_id'=>(int)$r['role_id']], $this->db->all('SELECT site_id,role_id FROM iam_user_site_roles WHERE user_id=:id ORDER BY site_id,role_id',['id'=>$userId])); }
-    private function userSummary(array $r): array { $first=(string)($r['first_name']??'');$last=(string)($r['last_name']??'');$id=(int)$r['id'];return ['id'=>$id,'email'=>(string)$r['email'],'first_name'=>$first,'last_name'=>$last,'name'=>trim($first.' '.$last) ?: (string)$r['email'],'locale'=>(string)($r['locale']??'fr-CH'),'is_active'=>(bool)$r['is_active'],'disabled_at'=>$r['disabled_at']??null,'disabled_reason'=>$r['disabled_reason']??null,'last_login_at'=>$r['last_login_at']??null,'active_session_count'=>(int)($r['active_session_count']??0),'totp_enabled'=>(bool)($r['totp_enabled']??0),'totp_required'=>(bool)($r['totp_required']??0),'totp_enabled_at'=>$r['totp_enabled_at']??null,'roles'=>$this->globalRoleIds($id),'role_ids'=>$this->globalRoleIds($id),'site_roles'=>$this->siteRoleRows($id),'created_at'=>(string)($r['created_at']??''),'updated_at'=>(string)($r['updated_at']??'')]; }
+    private function userSummary(array $r): array { $first=(string)($r['first_name']??'');$last=(string)($r['last_name']??'');$id=(int)$r['id'];$mode=self::sanitizeLoginMode((string)($r['login_mode']??(!empty($r['totp_enabled'])?'email_code':'password')));return ['id'=>$id,'email'=>(string)$r['email'],'first_name'=>$first,'last_name'=>$last,'name'=>trim($first.' '.$last) ?: (string)$r['email'],'locale'=>(string)($r['locale']??'fr-CH'),'is_active'=>(bool)$r['is_active'],'disabled_at'=>$r['disabled_at']??null,'disabled_reason'=>$r['disabled_reason']??null,'last_login_at'=>$r['last_login_at']??null,'active_session_count'=>(int)($r['active_session_count']??0),'login_mode'=>$mode,'email_code_enabled'=>$mode==='email_code','totp_enabled'=>$mode==='totp','totp_required'=>$mode==='totp','totp_enabled_at'=>$r['totp_enabled_at']??null,'roles'=>$this->globalRoleIds($id),'role_ids'=>$this->globalRoleIds($id),'site_roles'=>$this->siteRoleRows($id),'created_at'=>(string)($r['created_at']??''),'updated_at'=>(string)($r['updated_at']??'')]; }
+    private static function sanitizeLoginMode(string $mode): string { if (in_array($mode, ['password','email_code','totp'], true)) return $mode; throw new \InvalidArgumentException('INVALID_LOGIN_MODE'); }
     private static function normalize(string $email): string { $email=trim($email); return function_exists('mb_strtolower')?mb_strtolower($email):strtolower($email); }
     private static function limit(string $v,int $m): string { $v=str_replace("\0",'',$v); return function_exists('mb_substr')?mb_substr($v,0,$m):substr($v,0,$m); }
     private static function roleKey(string $v): string { $v=strtolower(trim($v)); if(!preg_match('/^[a-z][a-z0-9_]{1,63}$/',$v)) throw new \InvalidArgumentException('INVALID_ROLE_KEY'); return $v; }

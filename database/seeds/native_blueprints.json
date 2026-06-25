@@ -4694,16 +4694,16 @@
         "enabled": false
       }
     },
-    "iam_email_2fa": {
-      "label": "Connexion par code email",
-      "description": "Activation ou désactivation de la connexion par code email depuis la configuration avancée d’un utilisateur.",
+    "iam_login_mode": {
+      "label": "Mode de connexion IAM",
+      "description": "Choix du mode de connexion password, email_code ou totp depuis la fiche utilisateur.",
       "schema_version": 1,
       "resource_type": "system",
       "capabilities": {
         "user_scoped": true,
         "sensitive": true,
         "audited": true,
-        "passwordless_when_enabled": true
+        "passwordless_when_enabled": false
       },
       "editor_tabs": [
         {
@@ -4713,7 +4713,7 @@
             "title",
             "user_id",
             "email",
-            "totp_enabled"
+            "login_mode"
           ],
           "sort_order": 10
         }
@@ -4733,7 +4733,7 @@
           "is_system": true,
           "is_deletable": false,
           "sort_order": 1,
-          "default": "Connexion par code email",
+          "default": "Mode de connexion IAM",
           "help_text": "Titre système stable utilisé par la gouvernance des blueprints."
         },
         {
@@ -4763,12 +4763,17 @@
           "value_source": "context"
         },
         {
-          "field_key": "totp_enabled",
-          "label": "Connexion par code email",
-          "field_type": "toggle",
+          "field_key": "login_mode",
+          "label": "Mode de connexion",
+          "field_type": "select",
           "tab_key": "advanced",
-          "default": false,
-          "help_text": "Si actif, le login demande uniquement le code email après saisie de l’adresse, sans mot de passe."
+          "default": "password",
+          "options": [
+            {"value": "password", "label": "Mot de passe classique"},
+            {"value": "email_code", "label": "Code par e-mail"},
+            {"value": "totp", "label": "Mot de passe + application TOTP"}
+          ],
+          "help_text": "login_mode est la source de vérité. Le code par e-mail n’est pas un TOTP."
         }
       ],
       "validation": {

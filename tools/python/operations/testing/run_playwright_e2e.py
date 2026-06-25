@@ -156,8 +156,8 @@ def create_e2e_admin(instance: Path, php: str, email: str, password: str) -> Non
     with sqlite3.connect(database) as connection:
         cursor = connection.execute(
             """
-            INSERT INTO iam_users(email, email_normalized, password_hash, first_name, last_name, locale, is_active, totp_enabled, totp_required)
-            VALUES(?, ?, ?, 'E2E', 'Administrator', 'fr-CH', 1, 0, 0)
+            INSERT INTO iam_users(email, email_normalized, password_hash, first_name, last_name, locale, is_active, login_mode, totp_enabled, totp_required)
+            VALUES(?, ?, ?, 'E2E', 'Administrator', 'fr-CH', 1, 'password', 0, 0)
             """,
             (email, email.lower(), password_hash),
         )

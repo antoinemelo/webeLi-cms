@@ -26,4 +26,8 @@ Chaque appel exige une session valide, le contexte de site et de langue lorsque 
 - [Authentification, contexte et portées](../../public-api/authentication.md)
 - [Politique de compatibilité](../README.md)
 
+## IAM et modes de connexion
+
+Les clients internes doivent utiliser les endpoints `/admin/api/iam/users/{id}/login-mode*` pour gérer `password`, `email_code` et `totp`. Les anciens endpoints `/totp/*` sont conservés comme compatibilité temporaire et ne doivent plus être utilisés pour représenter le code e-mail.
+
 Pour une intégration externe, utilisez l’[API publique](../README.md).

@@ -41,7 +41,7 @@ La matrice IAM distingue la consultation d’un réglage de sa modification. Un 
 | Tokens API | `security.tokens.read` | `security.tokens.manage` | La consultation permet de voir l’inventaire et l’état des tokens. La gestion autorise leur création, leur révocation et la modification de leurs scopes. |
 | Webhooks | `security.webhooks.read` | `security.webhooks.manage` | La lecture donne accès aux endpoints et à leur état. La gestion permet de créer, modifier, désactiver ou relancer une configuration. |
 | CORS | `security.cors.read` | `security.cors.manage` | Les origines autorisées restent liées au site courant. La modification doit être limitée aux administrateurs qui comprennent l’impact sur l’API publique. |
-| Connexion par code email | — | `users.email_2fa.manage` | Cette permission permet d’activer ou de désactiver la connexion par code email dans la configuration avancée d’un utilisateur. |
+| Modes de connexion IAM | — | `users.email_2fa.manage` | Permission conservée par compatibilité pour modifier `login_mode` : mot de passe, code par e-mail ou mot de passe + TOTP. Le code e-mail n’est pas un TOTP. |
 | Modèles de contenu | permissions `blueprints.*` | permissions `blueprints.*` | Les blueprints restent séparés des réglages de sécurité. Ils sont mentionnés ici pour rappeler qu’un rôle d’administration du contenu ne doit pas recevoir automatiquement les droits sur les tokens, webhooks ou CORS. |
 
 Les permissions de lecture déterminent l’accès aux informations. Les permissions de gestion contrôlent les actions qui modifient l’état du système. Le back-office s’appuie sur cette distinction pour afficher ou masquer les onglets et les commandes, mais le backend reste l’autorité finale.

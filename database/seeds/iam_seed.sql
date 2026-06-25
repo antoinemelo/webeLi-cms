@@ -53,7 +53,7 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('security.webhooks.manage', 'Gérer les webhooks', 'Créer, modifier, activer, désactiver et supprimer les webhooks de publication.'),
 ('security.cors.read', 'Lire le CORS par site', 'Consulter les origines CORS autorisées pour l’API headless du site.'),
 ('security.cors.manage', 'Gérer le CORS par site', 'Modifier les origines CORS autorisées pour l’API headless du site.'),
-('users.email_2fa.manage', 'Gérer la connexion par code email', 'Activer ou désactiver la connexion par code email depuis la fiche utilisateur.'),
+('users.email_2fa.manage', 'Gérer les modes de connexion IAM', 'Modifier le mode de connexion password, email_code ou totp depuis la fiche utilisateur.'),
 ('themes.read', 'Lire les thèmes', 'Consulter les thèmes.'),
 ('themes.manage', 'Gérer les thèmes', 'Configurer les thèmes.'),
 ('modules.read', 'Lire les modules', 'Consulter le catalogue, l’état, les dépendances et le diagnostic des modules.'),

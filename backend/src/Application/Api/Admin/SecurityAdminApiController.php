@@ -364,7 +364,7 @@ final class SecurityAdminApiController
         if (!$this->coreDb->tableExists('blueprints') || !$this->coreDb->tableExists('blueprint_fields')) {
             return [];
         }
-        $keys = ['security_api_token', 'security_webhook', 'security_cors', 'iam_email_2fa'];
+        $keys = ['security_api_token', 'security_webhook', 'security_cors', 'iam_login_mode'];
         $placeholders = implode(',', array_fill(0, count($keys), '?'));
         $rows = $this->coreDb->all("SELECT id, blueprint_key, label, description FROM blueprints WHERE resource_type = 'system' AND blueprint_key IN ({$placeholders})", $keys);
         $out = [];

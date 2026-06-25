@@ -29,3 +29,4 @@ generated: true
 | `database/migrations/iam/0004_totp_2fa.sql` | `0004_totp_2fa` |
 | `database/migrations/iam/0005_ai_assistant_permissions.sql` | `0005_ai_assistant_permissions` |
 | `database/migrations/iam/0006_imports_exports_permissions.sql` | `0006_imports_exports_permissions` |
+| `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |

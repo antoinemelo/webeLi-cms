@@ -9,11 +9,13 @@ import InfoHint from '@/components/ui/InfoHint.vue';
 
 type Role = { id:number; role_key:string; name:string; description?:string };
 type SiteOption = { id:number; site_key:string; name:string; default_language_code?:string; is_active?:boolean; host?:string; base_path?:string };
-type User = { id:number; email:string; first_name:string; last_name:string; name:string; locale:string; is_active:boolean; disabled_at?:string|null; disabled_reason?:string|null; active_session_count:number; roles?:number[]; role_ids?:number[]; site_roles?:Array<{site_id:number;role_id:number}>; sessions?:Array<Record<string, unknown>>; last_login_at?:string|null; created_at?:string; updated_at?:string };
+type LoginMode = 'password' | 'email_code' | 'totp';
+type User = { id:number; email:string; first_name:string; last_name:string; name:string; locale:string; is_active:boolean; disabled_at?:string|null; disabled_reason?:string|null; active_session_count:number; login_mode?:LoginMode; email_code_enabled?:boolean; totp_enabled?:boolean; roles?:number[]; role_ids?:number[]; site_roles?:Array<{site_id:number;role_id:number}>; sessions?:Array<Record<string, unknown>>; last_login_at?:string|null; created_at?:string; updated_at?:string };
 type UsersPayload = { users: User[] };
 type RolesPayload = { roles: Role[] };
 type SitesPayload = { sites: SiteOption[] };
 type UserPayload = { user: User; message?: string };
+type TotpSetup = { user_id:number; email:string; secret:string; manual_entry_key:string; otpauth_uri:string; qr_payload:string; algorithm:string; digits:number; period:number };
 
 const context = useAdminContextStore();
 const loading = ref(false);
@@ -33,6 +35,10 @@ const siteRoleDraft = ref({ site_id: 1, role_id: 0 });
 const showInitialPassword = ref(false);
 const showAdvancedConfiguration = ref(false);
 const initialPasswordInput = ref<HTMLInputElement | null>(null);
+const loginMode = ref<LoginMode>('password');
+const pendingLoginMode = ref<LoginMode>('password');
+const totpSetup = ref<TotpSetup | null>(null);
+const totpConfirmCode = ref('');
 
 const activeCount = computed(() => users.value.filter((u) => u.is_active).length);
 const inactiveCount = computed(() => users.value.filter((u) => !u.is_active).length);
@@ -59,6 +65,7 @@ const hasAssignedRole = computed(() => form.value.role_ids.length > 0 || form.va
 const roleRequiredMessage = computed(() => !selected.value && !hasAssignedRole.value ? 'Attribuez au moins un rôle global ou un accès par site avant de créer le compte.' : '');
 const roleCounts = computed(() => roles.value.map((role) => ({ ...role, count: users.value.filter((u) => (u.roles || u.role_ids || []).includes(role.id) || (u.site_roles || []).some((sr) => sr.role_id === role.id)).length })).filter((r) => r.count > 0));
 const visibleUsers = computed(() => users.value.filter((u) => showInactive.value || u.is_active));
+const canManageLoginMode = computed(() => context.can('users.email_2fa.manage') || context.can('users.manage'));
 
 function listQuery(extra: Record<string, string|number|boolean|undefined|null> = {}) { return isSiteScopedAdmin.value ? { site_id: currentSiteId.value, ...extra } : { ...extra }; }
 function scopedPath(path: string): string { return isSiteScopedAdmin.value ? `${path}?site_id=${currentSiteId.value}` : path; }
@@ -112,6 +119,10 @@ function newUser(): void {
   siteRoleDraft.value = { site_id: currentSiteId.value, role_id: roles.value[0]?.id || 0 };
   showInitialPassword.value = false;
   showAdvancedConfiguration.value = false;
+  loginMode.value = 'password';
+  pendingLoginMode.value = 'password';
+  totpSetup.value = null;
+  totpConfirmCode.value = '';
 }
 
 async function edit(id: number, notify = true): Promise<void> {
@@ -120,6 +131,10 @@ async function edit(id: number, notify = true): Promise<void> {
   try {
     const res = await adminApi.get<UserPayload>(`/iam/users/${id}`, listQuery());
     selected.value = res.data.user;
+    loginMode.value = selected.value.login_mode || (selected.value.totp_enabled ? 'totp' : 'password');
+    pendingLoginMode.value = loginMode.value;
+    totpSetup.value = null;
+    totpConfirmCode.value = '';
     form.value = {
       email: selected.value.email,
       first_name: selected.value.first_name,
@@ -135,6 +150,65 @@ async function edit(id: number, notify = true): Promise<void> {
     showInitialPassword.value = false;
     showAdvancedConfiguration.value = false;
   } catch (err) { error.value = apiErrorMessage(err, 'Utilisateur introuvable.'); }
+}
+
+function loginModeLabel(mode: LoginMode): string {
+  if (mode === 'email_code') return 'Code par e-mail';
+  if (mode === 'totp') return 'Mot de passe + application TOTP';
+  return 'Mot de passe classique';
+}
+
+async function applyLoginMode(): Promise<void> {
+  if (!selected.value || !canManageLoginMode.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    if (pendingLoginMode.value === 'totp') {
+      const res = await adminApi.post<{totp: TotpSetup; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/prepare`), { issuer: 'DEC CMS' });
+      totpSetup.value = res.data.totp;
+      totpConfirmCode.value = '';
+      message.value = res.data.message || 'Secret TOTP préparé. Confirmez un code pour activer.';
+      return;
+    }
+    const res = await adminApi.patch<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode`), { login_mode: pendingLoginMode.value });
+    selected.value = res.data.user;
+    loginMode.value = res.data.login_mode;
+    pendingLoginMode.value = res.data.login_mode;
+    totpSetup.value = null;
+    message.value = res.data.message || 'Mode de connexion mis à jour.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Changement du mode de connexion impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function confirmTotp(): Promise<void> {
+  if (!selected.value || !totpSetup.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/confirm`), { secret: totpSetup.value.secret, code: totpConfirmCode.value });
+    selected.value = res.data.user;
+    loginMode.value = 'totp';
+    pendingLoginMode.value = 'totp';
+    totpSetup.value = null;
+    totpConfirmCode.value = '';
+    message.value = res.data.message || 'TOTP activé.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Confirmation TOTP impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function disableTotp(): Promise<void> {
+  if (!selected.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/disable`), {});
+    selected.value = res.data.user;
+    loginMode.value = 'password';
+    pendingLoginMode.value = 'password';
+    totpSetup.value = null;
+    message.value = res.data.message || 'TOTP désactivé.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Désactivation TOTP impossible.'); }
+  finally { saving.value = false; }
 }
 
 async function save(): Promise<void> {
@@ -293,6 +367,34 @@ onMounted(() => { newUser(); load(); });
           </summary>
           <label class="field"><span>Locale</span><input v-model="form.locale" class="input" placeholder="fr-CH"></label>
         </details>
+        <section v-if="selected" class="iam-subpanel">
+          <div class="split-head">
+            <div>
+              <h3>Mode de connexion</h3>
+              <p class="muted">Mode actuel : {{ loginModeLabel(loginMode) }}</p>
+            </div>
+            <span class="badge">{{ loginMode }}</span>
+          </div>
+          <div class="role-grid role-grid--compact">
+            <label><input v-model="pendingLoginMode" type="radio" value="password" :disabled="!canManageLoginMode"> <span>Mot de passe classique</span><small>Connexion avec le mot de passe du compte.</small></label>
+            <label><input v-model="pendingLoginMode" type="radio" value="email_code" :disabled="!canManageLoginMode"> <span>Code par e-mail</span><small>Code temporaire envoyé par e-mail. Ce n’est pas un TOTP.</small></label>
+            <label><input v-model="pendingLoginMode" type="radio" value="totp" :disabled="!canManageLoginMode"> <span>Mot de passe + application TOTP</span><small>Application d’authentification standard, URI otpauth.</small></label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn ghost" :disabled="saving || !canManageLoginMode || pendingLoginMode === loginMode" @click="applyLoginMode">{{ pendingLoginMode === 'totp' ? 'Préparer TOTP' : 'Appliquer le mode' }}</button>
+            <button v-if="loginMode === 'totp'" type="button" class="btn danger" :disabled="saving || !canManageLoginMode" @click="disableTotp">Désactiver TOTP</button>
+          </div>
+          <div v-if="totpSetup" class="iam-subpanel">
+            <div class="split-head"><div><h3>Activation TOTP</h3><p class="muted">Scannez le payload otpauth avec une application compatible ou saisissez le secret manuel.</p></div></div>
+            <label class="field"><span>Secret manuel</span><input class="input" :value="totpSetup.manual_entry_key" readonly></label>
+            <label class="field"><span>URI otpauth / payload QR</span><textarea class="input" rows="3" :value="totpSetup.otpauth_uri" readonly></textarea></label>
+            <p class="muted">Paramètres : {{ totpSetup.digits }} chiffres, {{ totpSetup.period }} secondes, {{ totpSetup.algorithm }}.</p>
+            <label class="field"><span>Code de confirmation</span><input v-model="totpConfirmCode" class="input" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="123456"></label>
+            <div class="form-actions">
+              <button type="button" class="btn primary" :disabled="saving || totpConfirmCode.length !== 6" @click="confirmTotp">Confirmer et activer TOTP</button>
+            </div>
+          </div>
+        </section>
         <label class="checkline iam-active-toggle"><input v-model="form.is_active" type="checkbox"> Compte actif</label>
         <label v-if="!form.is_active" class="field"><span>Motif de désactivation</span><input v-model="form.disabled_reason" class="input" placeholder="Optionnel, journalisé côté audit"></label>
 

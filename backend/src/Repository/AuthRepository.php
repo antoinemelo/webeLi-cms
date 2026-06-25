@@ -9,6 +9,7 @@ use App\Core\Database;
 use App\Core\ErrorCode;
 use App\Security\Csrf;
 use App\Security\SessionManager;
+use App\Security\TotpService;
 
 final class AuthRepository
 {
@@ -28,18 +29,23 @@ final class AuthRepository
     }
 
 
-    /** @return array{exists:bool,totp_enabled:bool,challenge:string,email:string} */
+    /** @return array{exists:bool,totp_enabled:bool,login_mode:string,challenge:string,email:string} */
     public function loginChallengeForEmail(string $email): array
     {
         $emailNormalized = self::normalizeEmail($email);
-        $user = $this->db->one('SELECT id, email, totp_enabled FROM iam_users WHERE email_normalized = :email_normalized AND is_active = 1 LIMIT 1', [
+        $user = $this->db->one('SELECT id, email, login_mode, totp_enabled FROM iam_users WHERE email_normalized = :email_normalized AND is_active = 1 LIMIT 1', [
             'email_normalized' => $emailNormalized,
         ]);
-        $totpEnabled = $user ? !empty($user['totp_enabled']) : false;
+        $loginMode = $user ? self::loginMode($user) : 'password';
         return [
             'exists' => $user !== null,
-            'totp_enabled' => $totpEnabled,
-            'challenge' => $totpEnabled ? 'email_2fa' : 'password',
+            'totp_enabled' => $loginMode !== 'password',
+            'login_mode' => $loginMode,
+            'challenge' => match ($loginMode) {
+                'email_code' => 'email_code',
+                'totp' => 'totp',
+                default => 'password',
+            },
             'email' => $user ? (string) $user['email'] : $emailNormalized,
         ];
     }
@@ -48,10 +54,10 @@ final class AuthRepository
     public function createEmailTwoFactorChallenge(string $email, array $meta = []): array
     {
         $emailNormalized = self::normalizeEmail($email);
-        $user = $this->db->one('SELECT id, email, totp_enabled FROM iam_users WHERE email_normalized = :email_normalized AND is_active = 1 LIMIT 1', [
+        $user = $this->db->one('SELECT id, email, login_mode, totp_enabled FROM iam_users WHERE email_normalized = :email_normalized AND is_active = 1 LIMIT 1', [
             'email_normalized' => $emailNormalized,
         ]);
-        if (!$user || empty($user['totp_enabled'])) {
+        if (!$user || self::loginMode($user) !== 'email_code') {
             $this->audit(null, 'auth.email_2fa_not_available', 'iam_user', null, ['email' => $emailNormalized, 'ip' => $meta['ip'] ?? null]);
             return ['status' => 'invalid_credentials'];
         }
@@ -81,12 +87,12 @@ final class AuthRepository
         $emailNormalized = self::normalizeEmail($email);
         $code = preg_replace('/\D+/', '', trim($code)) ?? '';
         $user = $this->db->one('SELECT * FROM iam_users WHERE email_normalized = :email_normalized AND is_active = 1 LIMIT 1', ['email_normalized' => $emailNormalized]);
-        if (!$user || empty($user['totp_enabled'])) {
+        if (!$user || self::loginMode($user) !== 'email_code') {
             $this->audit(null, 'auth.email_2fa_failed', 'iam_user', null, ['email' => $emailNormalized, 'ip' => $meta['ip'] ?? null]);
             return ['status' => 'invalid_credentials'];
         }
         if ($code === '') {
-            return ['status' => 'totp_required', 'user_id' => (int) $user['id']];
+            return ['status' => 'email_code_required', 'user_id' => (int) $user['id']];
         }
 
         $challenge = $this->db->one('SELECT * FROM iam_email_2fa_challenges WHERE user_id = :user_id AND consumed_at IS NULL AND expires_at > :now ORDER BY id DESC LIMIT 1', [
@@ -95,15 +101,15 @@ final class AuthRepository
         ]);
         if (!$challenge) {
             $this->audit((int) $user['id'], 'auth.email_2fa_expired', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
-            return ['status' => 'expired_totp', 'user_id' => (int) $user['id']];
+            return ['status' => 'expired_email_code', 'user_id' => (int) $user['id']];
         }
         if ((int) ($challenge['attempt_count'] ?? 0) >= 5) {
-            return ['status' => 'invalid_totp', 'user_id' => (int) $user['id']];
+            return ['status' => 'invalid_email_code', 'user_id' => (int) $user['id']];
         }
         if (!password_verify($code, (string) $challenge['code_hash'])) {
             $this->db->run('UPDATE iam_email_2fa_challenges SET attempt_count = attempt_count + 1 WHERE id = :id', ['id' => (int) $challenge['id']]);
             $this->audit((int) $user['id'], 'auth.email_2fa_failed', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
-            return ['status' => 'invalid_totp', 'user_id' => (int) $user['id']];
+            return ['status' => 'invalid_email_code', 'user_id' => (int) $user['id']];
         }
 
         $this->db->run('UPDATE iam_email_2fa_challenges SET consumed_at = :consumed_at WHERE id = :id', [
@@ -124,7 +130,7 @@ final class AuthRepository
             return ['status' => 'invalid_credentials'];
         }
 
-        if (!empty($user['totp_enabled'])) {
+        if (self::loginMode($user) === 'totp') {
             $verification = $this->verifyTotpForUserRow($user, $totpCode);
             if ($verification === 'missing') {
                 $this->audit((int) $user['id'], 'auth.totp_required', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null]);
@@ -142,7 +148,14 @@ final class AuthRepository
 
     private function verifyTotpForUserRow(array $user, string $code): string
     {
-        return trim($code) === '' ? 'missing' : 'invalid';
+        if (trim($code) === '') {
+            return 'missing';
+        }
+        $secret = TotpService::decryptSecret($user['totp_secret_protected'] ?? null, $this->totpAppKey());
+        if ($secret === '') {
+            return 'invalid';
+        }
+        return TotpService::verifyCode($secret, $code, 1) ? 'ok' : 'invalid';
     }
 
     private function openSession(array $user, array $meta = []): void
@@ -173,7 +186,7 @@ final class AuthRepository
             'session_secret' => $token,
         ];
         $this->permissionsBySite = [];
-        $this->audit((int) $user['id'], 'auth.login_success', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null, 'email_2fa' => !empty($user['totp_enabled'])]);
+        $this->audit((int) $user['id'], 'auth.login_success', 'iam_user', (int) $user['id'], ['ip' => $meta['ip'] ?? null, 'login_mode' => self::loginMode($user)]);
     }
 
     public function totpAppKey(): string
@@ -231,6 +244,15 @@ final class AuthRepository
         return function_exists('mb_strtolower') ? mb_strtolower($email) : strtolower($email);
     }
 
+    private static function loginMode(array $user): string
+    {
+        $mode = (string) ($user['login_mode'] ?? '');
+        if (in_array($mode, ['password', 'email_code', 'totp'], true)) {
+            return $mode;
+        }
+        return !empty($user['totp_enabled']) ? 'email_code' : 'password';
+    }
+
     private static function limit(string $value, int $max): string
     {
         $value = str_replace("\0", '', $value);
@@ -251,7 +273,7 @@ final class AuthRepository
             return [];
         }
 
-        $row = $this->db->one('SELECT id, email, first_name, last_name, locale, is_active, last_login_at, created_at, updated_at, totp_enabled, totp_required FROM iam_users WHERE id = :id LIMIT 1', [
+        $row = $this->db->one('SELECT id, email, first_name, last_name, locale, is_active, last_login_at, created_at, updated_at, login_mode, totp_enabled, totp_required FROM iam_users WHERE id = :id LIMIT 1', [
             'id' => (int) $user['id'],
         ]);
 

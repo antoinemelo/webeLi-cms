@@ -97,6 +97,7 @@ generated: true
 | `GET` | `/admin/api/iam/sites` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/iam/users` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/iam/users/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/iam/users/{id}/login-mode` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/imports-exports` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/imports-exports/editorial/{releaseId:[A-Za-z0-9._-]+}/zip` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}/manifest` | API administrative | `backend/routes/api.php` |
@@ -170,6 +171,7 @@ generated: true
 | `PATCH` | `/admin/api/forms/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/iam/roles/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/iam/users/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/iam/users/{id}/login-mode` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/media/folders/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/media/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/menus/{key}` | API administrative | `backend/routes/api.php` |
@@ -214,6 +216,10 @@ generated: true
 | `POST` | `/admin/api/iam/users` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/iam/users/{id}/activate` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/iam/users/{id}/deactivate` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/iam/users/{id}/login-mode/totp/confirm` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/iam/users/{id}/login-mode/totp/disable` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/iam/users/{id}/login-mode/totp/prepare` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/iam/users/{id}/login-mode/totp/rotate` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/iam/users/{id}/reset-password` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/iam/users/{id}/totp/disable` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/iam/users/{id}/totp/enable` | API administrative | `backend/routes/api.php` |

@@ -58,4 +58,4 @@ Les réglages de sécurité administrables reposent aussi sur des blueprints sys
 
 Le blueprint `security_api_token` décrit les tokens d’API. Il porte notamment les champs `title`, `name`, `scopes`, `expires_at`, `is_active` et `site_id`. Sa `permissions_policy` s’appuie sur `security.tokens.read` pour la consultation et `security.tokens.manage` pour les opérations de gestion.
 
-Les blueprints `security_webhook`, `security_cors` et `iam_email_2fa` suivent le même principe. Ils restent rattachés à la matrice IAM et doivent être modifiés avec prudence, car une incohérence entre leurs champs, leurs permissions et l’interface d’administration peut rendre un réglage de sécurité inaccessible ou incorrectement exposé.
+Les blueprints `security_webhook`, `security_cors` et `iam_login_mode` suivent le même principe. Ils restent rattachés à la matrice IAM et doivent être modifiés avec prudence, car une incohérence entre leurs champs, leurs permissions et l’interface d’administration peut rendre un réglage de sécurité inaccessible ou incorrectement exposé.

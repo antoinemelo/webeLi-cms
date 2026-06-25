@@ -38,14 +38,13 @@ Sécuriser son compte et utiliser la double authentification.
 ## Procédure
 
 1. Ouvrez le profil et changez le mot de passe avec un mot de passe unique d’au moins la longueur configurée.
-2. Activez TOTP depuis l’écran de sécurité lorsqu’il est proposé, scannez le secret avec une application compatible et confirmez un code.
-3. Enregistrez les codes de récupération hors du navigateur.
-4. Pour la 2FA par e-mail, vérifiez l’adresse et la capacité de livraison du transport configuré.
-5. En cas de perte du second facteur, utilisez un code de récupération ou demandez à un superadministrateur de désactiver/réinitialiser le facteur.
+2. Si le mode TOTP est proposé, scannez l’URI `otpauth://totp/...` ou saisissez le secret manuel dans une application compatible, puis confirmez un code à 6 chiffres.
+3. Pour le mode code par e-mail, vérifiez l’adresse et la capacité de livraison du transport configuré. Ce mode n’est pas un TOTP.
+4. En cas de perte du second facteur, demandez à un superadministrateur de désactiver ou réinitialiser le mode de connexion.
 
 ## Risques et récupération
 
-Ne copiez jamais le secret TOTP dans un ticket. La désactivation administrative doit être journalisée. Une réinitialisation de mot de passe peut révoquer les sessions selon `APP_PASSWORD_RESET_REVOKE_SESSIONS`.
+Ne copiez jamais le secret TOTP dans un ticket. La désactivation administrative doit être journalisée. Une réinitialisation de mot de passe peut révoquer les sessions selon `APP_PASSWORD_RESET_REVOKE_SESSIONS`. Les codes de récupération TOTP restent une dette séparée (`P1-02`) et ne sont pas couverts par P1-01.
 
 ## Limites
 

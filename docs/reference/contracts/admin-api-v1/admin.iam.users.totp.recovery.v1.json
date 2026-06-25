@@ -19,7 +19,7 @@
   "response": {
     "data": {
       "user": "iam user summary",
-      "recovery_codes": "empty array for email-based 2FA",
+      "recovery_codes": "empty array; TOTP recovery codes remain P1-02 debt",
       "message": "..."
     },
     "meta": {
