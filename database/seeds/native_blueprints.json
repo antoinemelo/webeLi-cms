@@ -4307,8 +4307,12 @@
               "label": "Lecture contenus"
             },
             {
-              "value": "routes:read",
-              "label": "Lecture routes"
+              "value": "media:read",
+              "label": "Lecture médias"
+            },
+            {
+              "value": "search:read",
+              "label": "Lecture recherche"
             },
             {
               "value": "menus:read",
@@ -4317,10 +4321,6 @@
             {
               "value": "taxonomies:read",
               "label": "Lecture taxonomies"
-            },
-            {
-              "value": "media:read",
-              "label": "Lecture médias"
             },
             {
               "value": "*",

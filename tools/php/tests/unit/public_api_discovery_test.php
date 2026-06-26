@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Application\Frontend\PublicApiDocsController;
+use App\Core\Request;
 use App\Core\Router;
 
 $h = new TestHarness();
@@ -73,5 +74,13 @@ $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');
 $genericJsonBlock = strpos($htaccess, 'jsonl?|zip');
 $h->assertTrue($openApiException !== false, 'Apache explicitly routes public OpenAPI JSON/YAML through PHP');
 $h->assertTrue($genericJsonBlock !== false && $openApiException < $genericJsonBlock, 'OpenAPI Apache exception precedes the generic JSON/YAML deny rule');
+$h->assertTrue(str_contains($htaccess, 'HTTP_AUTHORIZATION'), 'Root Apache config forwards Authorization to PHP');
+$publicHtaccess = (string) file_get_contents(base_path('backend/public/.htaccess'));
+$h->assertTrue(str_contains($publicHtaccess, 'HTTP_AUTHORIZATION'), 'Public document-root Apache config forwards Authorization to PHP');
+
+$request = new Request('GET', '/api/v1/search', [], [], ['REDIRECT_HTTP_AUTHORIZATION' => 'Bearer redirected'], [], []);
+$h->assertSame('Bearer redirected', $request->header('Authorization'), 'Request reads redirected Authorization header');
+$request = new Request('GET', '/api/v1/search', [], [], ['AUTHORIZATION' => 'Bearer direct'], [], []);
+$h->assertSame('Bearer direct', $request->header('Authorization'), 'Request reads direct Authorization header fallback');
 
 exit($h->finish('UNIT public API discovery and OpenAPI exposure'));

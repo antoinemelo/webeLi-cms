@@ -47,7 +47,7 @@ final class SecurityAdminApiController
             'webhooks' => $canWebhooks ? $this->webhooks($siteId) : [],
             'cors' => $canCors ? ($siteId > 0 ? [$this->corsForSite($siteId)] : $this->corsSettings()) : [],
             'webhook_stats' => $canWebhooks ? $this->webhookStats($siteId) : ['pending' => 0, 'failed' => 0, 'succeeded' => 0, 'total' => 0],
-            'available_scopes' => ['headless:read', 'content:read', 'routes:read', 'menus:read', 'taxonomies:read', 'media:read', '*'],
+            'available_scopes' => ['headless:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read', '*'],
             'available_webhook_events' => ['content.published', 'content.unpublished', 'content.updated', '*'],
             'blueprints' => $this->securityBlueprints(),
         ], self::CONTRACT, ['contract_version' => AdminApiContract::VERSION]);

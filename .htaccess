@@ -2,6 +2,10 @@ Options -Indexes
 RewriteEngine On
 AddDefaultCharset UTF-8
 
+# Transmettre Authorization à PHP/FastCGI pour l'API headless Bearer.
+SetEnvIfNoCase Authorization "^(.*)$" HTTP_AUTHORIZATION=$1
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Défense en profondeur si le document root pointe sur la racine du package.
 RewriteRule ^(?:storage|database|tools|ops)(?:/|$) - [F,L]
 RewriteRule ^(?:config)(?:/|$) - [F,L]

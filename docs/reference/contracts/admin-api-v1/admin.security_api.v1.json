@@ -182,10 +182,10 @@
       "available_scopes": [
         "headless:read",
         "content:read",
-        "routes:read",
+        "media:read",
+        "search:read",
         "menus:read",
         "taxonomies:read",
-        "media:read",
         "*"
       ],
       "available_webhook_events": [

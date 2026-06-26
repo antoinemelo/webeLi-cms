@@ -3,7 +3,7 @@ title: Authentification API headless v1
 audience:
   - api-integrator
 status: stable
-last_verified: 2026-06-22
+last_verified: 2026-06-26
 source_of_truth: contract
 owners:
   - api
@@ -25,6 +25,8 @@ L’API headless v1 peut être protégée par token Bearer selon la configuratio
 Authorization: Bearer <token>
 Accept: application/json
 ```
+
+Sur Apache/FastCGI, le serveur doit transmettre cet en-tête à PHP. La release fournit des règles `.htaccess` qui propagent `Authorization` vers `HTTP_AUTHORIZATION`. Si un hébergeur surcharge cette configuration, un appel avec un Bearer invalide doit répondre `Bearer token invalide ou inactif.` ; s’il répond encore `Bearer token manquant.`, l’en-tête est perdu avant le runtime CMS.
 
 Exemple `fetch` :
 
@@ -56,12 +58,22 @@ Les scopes attendus sont ciblés par famille d’usage :
 
 | Scope | Usage |
 |---|---|
-| `content:read` | Routes, langues et contenus publiés. |
+| `headless:read` | Alias de compatibilité qui donne accès aux lectures `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. |
+| `content:read` | Routes, langues, résolution de route et contenus publiés. |
 | `media:read` | Médias publics prêts et validés. |
 | `search:read` | Recherche publique. |
 | `menus:read` | Menus publics actifs. |
 | `taxonomies:read` | Taxonomies et termes publics actifs. |
-| `headless:read` | Alias de compatibilité lecture headless. |
+
+Les endpoints protégés attendent ces scopes :
+
+| Endpoint | Scope requis |
+|---|---|
+| `GET /api/v1/route`, `/routes`, `/languages`, `/content`, `/content/{type}`, `/content/{type}/{slug}`, `/content-by-path` | `content:read` |
+| `GET /api/v1/media`, `/media/{id}` | `media:read` |
+| `GET /api/v1/search` | `search:read` |
+| `GET /api/v1/menus`, `/menus/{key}` | `menus:read` |
+| `GET /api/v1/taxonomies`, `/taxonomies/{taxonomy}` | `taxonomies:read` |
 
 Un token doit être traité comme un secret applicatif. Il ne doit pas être exposé dans un dépôt Git public ni injecté dans un bundle front-end public lorsque la sécurité attend une confidentialité stricte. Pour un site statique public, utilisez seulement un token prévu pour cet usage ou un proxy serveur.
 

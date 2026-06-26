@@ -3,7 +3,7 @@ title: Quickstart API headless v1
 audience:
   - api-integrator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-06-26
 source_of_truth: contract
 owners:
   - api
@@ -43,6 +43,8 @@ async function getJson(path) {
 ```
 
 L’en-tête `Authorization` est nécessaire lorsque l’authentification publique par token est activée. Lorsque cette protection est désactivée côté installation, les endpoints de lecture peuvent répondre sans token.
+
+Les scopes de lecture reconnus sont `headless:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. L’alias `headless:read` couvre les cinq scopes spécialisés de lecture.
 
 ## Paramètres de contexte
 

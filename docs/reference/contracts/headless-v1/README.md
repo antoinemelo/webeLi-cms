@@ -159,7 +159,9 @@ Lorsque `APP_PUBLIC_API_AUTH_ENABLED` est activé, les endpoints headless peuven
 Authorization: Bearer <token>
 ```
 
-Les tokens sont enregistrés dans `api_tokens`. Le token brut n’est pas stocké ; seul `token_hash` est conservé, calculé avec `hash('sha256', $token)`. Les scopes restent précis par usage : `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read`. L’alias `headless:read` peut rester accepté pour compatibilité via `scope_aliases`.
+Les tokens sont enregistrés dans `api_tokens`. Le token brut n’est pas stocké ; seul `token_hash` est conservé, calculé avec `hash('sha256', $token)`. Les scopes reconnus sont `headless:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. L’alias `headless:read` donne accès aux scopes spécialisés via `scope_aliases`.
+
+Sur Apache/FastCGI, l’en-tête `Authorization` doit être transmis au runtime PHP. Les `.htaccess` livrés propagent cet en-tête vers `HTTP_AUTHORIZATION`. Si un appel avec `Authorization: Bearer <token-invalide>` renvoie `Bearer token manquant.`, le serveur n’a pas transmis l’en-tête ; s’il renvoie `Bearer token invalide ou inactif.`, le CMS reçoit bien l’en-tête et valide ensuite le token.
 
 La configuration CORS publique peut être définie par site avec `cors_allowed_origins`, en s’appuyant sur `site_settings` et les domaines actifs. Cette partie est vérifiée par `API_SPEC` et `SECURITY_BASELINE` et `API_SPEC` et `SECURITY_BASELINE`.
 
