@@ -58,8 +58,9 @@ Les scopes attendus sont ciblés par famille d’usage :
 
 | Scope | Usage |
 |---|---|
-| `headless:read` | Alias de compatibilité qui donne accès aux lectures `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. |
-| `content:read` | Routes, langues, résolution de route et contenus publiés. |
+| `headless:read` | Alias de compatibilité qui donne accès aux lectures `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. |
+| `routes:read` | Routes publiques, langues et résolution de route. |
+| `content:read` | Contenus publiés et, par compatibilité, routes/langues nécessaires à la lecture headless. |
 | `media:read` | Médias publics prêts et validés. |
 | `search:read` | Recherche publique. |
 | `menus:read` | Menus publics actifs. |
@@ -69,7 +70,8 @@ Les endpoints protégés attendent ces scopes :
 
 | Endpoint | Scope requis |
 |---|---|
-| `GET /api/v1/route`, `/routes`, `/languages`, `/content`, `/content/{type}`, `/content/{type}/{slug}`, `/content-by-path` | `content:read` |
+| `GET /api/v1/route`, `/routes`, `/languages` | `routes:read` ou `content:read` |
+| `GET /api/v1/content`, `/content/{type}`, `/content/{type}/{slug}`, `/content-by-path` | `content:read` |
 | `GET /api/v1/media`, `/media/{id}` | `media:read` |
 | `GET /api/v1/search` | `search:read` |
 | `GET /api/v1/menus`, `/menus/{key}` | `menus:read` |

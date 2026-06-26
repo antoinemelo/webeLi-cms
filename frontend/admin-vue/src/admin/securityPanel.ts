@@ -13,7 +13,7 @@
     tokens: 'API headless publique : tokens Bearer, documentation, OpenAPI et exemples front-end pour le site sélectionné.',
     webhooks: 'Configuration des webhooks de publication signés par site.'
   };
-  const HEADLESS_PUBLIC_SCOPES = ['headless:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'];
+  const HEADLESS_PUBLIC_SCOPES = ['headless:read', 'routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'];
 
   const h = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const dataBody = (data) => JSON.stringify({data});
@@ -194,7 +194,7 @@
   function selectedLang(){ return String(adminContext?.current_content_language_code || adminContext?.current_language_code || adminContext?.site?.default_language_code || adminContext?.language || adminContext?.lang || adminContext?.locale || 'fr').slice(0, 2) || 'fr'; }
   function headlessScopes(state){
     const raw = Array.isArray(state?.available_scopes) ? state.available_scopes : [];
-    const normalized = new Set([...HEADLESS_PUBLIC_SCOPES, ...raw.filter(scope => /^(headless|content|media|search|menus|taxonomies):read$/.test(String(scope)))]);
+    const normalized = new Set([...HEADLESS_PUBLIC_SCOPES, ...raw.filter(scope => /^(headless|routes|content|media|search|menus|taxonomies):read$/.test(String(scope)))]);
     return [...normalized];
   }
   function codeBlock(title, code){

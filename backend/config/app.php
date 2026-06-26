@@ -86,10 +86,12 @@ return [
             '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media)(?:/|$)#',
         ],
         'scope_aliases' => [
-            'headless:read' => ['content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'],
+            'headless:read' => ['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'],
+            'content:read' => ['routes:read'],
         ],
         'endpoint_scopes' => [
-            '#^/api/v1/(?:route|content|content-by-path|routes|languages)(?:/|$)#' => 'content:read',
+            '#^/api/v1/(?:route|routes|languages)(?:/|$)#' => 'routes:read',
+            '#^/api/v1/(?:content|content-by-path)(?:/|$)#' => 'content:read',
             '#^/api/v1/search$#' => 'search:read',
             '#^/api/v1/menus(?:/|$)#' => 'menus:read',
             '#^/api/v1/taxonomies(?:/|$)#' => 'taxonomies:read',

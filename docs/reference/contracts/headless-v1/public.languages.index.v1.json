@@ -5,7 +5,7 @@
   "description": "Retourne les langues configurées pour le site courant, avec statut actif/défaut/courant et informations hreflang.",
   "method": "GET",
   "source": "site_languages + languages",
-  "security": "Public read endpoint; may be protected by bearer scope content:read; site language config only.",
+  "security": "Public read endpoint; may be protected by bearer scope routes:read or content:read; site language config only.",
   "path": "/api/v1/languages",
   "query_params": {
     "site": {

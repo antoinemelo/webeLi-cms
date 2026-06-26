@@ -5,7 +5,7 @@
   "description": "Retourne le même payload public normalisé que le front HTML pour une route donnée : contenu, SEO, menus, taxonomies, médias et listing éventuel. Les redirections retournent un payload redirect avec le statut correspondant.",
   "method": "GET",
   "source": "ResolvePublicRoute + public_content_snapshots",
-  "security": "Public read endpoint; may be protected by bearer scope content:read; published snapshots only; no draft/preview exposure.",
+  "security": "Public read endpoint; may be protected by bearer scope routes:read or content:read; published snapshots only; no draft/preview exposure.",
   "path": "/api/v1/route",
   "query_params": {
     "site": {

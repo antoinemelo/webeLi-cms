@@ -91,7 +91,7 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 - Les erreurs ne doivent pas exposer de trace technique.
 - Les endpoints de lecture peuvent être protégés par Bearer token selon la configuration de sécurité existante.
 - Les endpoints publics de formulaires (`/api/v1/forms/{key}` et `/api/v1/forms/{key}/submit`) restent anonymes afin que le frontend public n’expose aucun secret applicatif.
-- Les scopes attendus restent : `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read` ou l’alias de compatibilité `headless:read`.
+- Les scopes attendus restent : `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read` ou l’alias de compatibilité `headless:read`.
 
 ## Génération OpenAPI v1
 
@@ -159,7 +159,7 @@ Lorsque `APP_PUBLIC_API_AUTH_ENABLED` est activé, les endpoints headless peuven
 Authorization: Bearer <token>
 ```
 
-Les tokens sont enregistrés dans `api_tokens`. Le token brut n’est pas stocké ; seul `token_hash` est conservé, calculé avec `hash('sha256', $token)`. Les scopes reconnus sont `headless:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. L’alias `headless:read` donne accès aux scopes spécialisés via `scope_aliases`.
+Les tokens sont enregistrés dans `api_tokens`. Le token brut n’est pas stocké ; seul `token_hash` est conservé, calculé avec `hash('sha256', $token)`. Les scopes reconnus sont `headless:read`, `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. L’alias `headless:read` donne accès aux scopes spécialisés via `scope_aliases`; `content:read` couvre aussi `routes:read` pour préserver la compatibilité des clients headless existants.
 
 Sur Apache/FastCGI, l’en-tête `Authorization` doit être transmis au runtime PHP. Les `.htaccess` livrés propagent cet en-tête vers `HTTP_AUTHORIZATION`. Si un appel avec `Authorization: Bearer <token-invalide>` renvoie `Bearer token manquant.`, le serveur n’a pas transmis l’en-tête ; s’il renvoie `Bearer token invalide ou inactif.`, le CMS reçoit bien l’en-tête et valide ensuite le token.
 

@@ -4307,6 +4307,10 @@
               "label": "Lecture contenus"
             },
             {
+              "value": "routes:read",
+              "label": "Lecture routes"
+            },
+            {
               "value": "media:read",
               "label": "Lecture médias"
             },

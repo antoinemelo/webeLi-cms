@@ -5,7 +5,7 @@
   "description": "Retourne les routes actives/canoniques publiées, avec filtre optionnel par type de contenu.",
   "method": "GET",
   "source": "routes + public_content_snapshots",
-  "security": "Public read endpoint; may be protected by bearer scope content:read; active/canonical routes only.",
+  "security": "Public read endpoint; may be protected by bearer scope routes:read or content:read; active/canonical routes only.",
   "path": "/api/v1/routes",
   "query_params": {
     "site": {

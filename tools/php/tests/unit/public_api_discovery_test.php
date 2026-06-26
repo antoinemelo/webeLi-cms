@@ -68,6 +68,16 @@ foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/ap
     $public = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, $path) === 1);
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }
+$scopeAliases = $config['public_api_auth']['scope_aliases'] ?? [];
+$h->assertSame(['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'], $scopeAliases['headless:read'] ?? null, 'headless:read covers all public read scopes');
+$h->assertSame(['routes:read'], $scopeAliases['content:read'] ?? null, 'content:read preserves route-read compatibility');
+$endpointScopes = $config['public_api_auth']['endpoint_scopes'] ?? [];
+$h->assertTrue(in_array('routes:read', $endpointScopes, true), 'route endpoints keep a routes:read scope');
+$h->assertTrue(in_array('content:read', $endpointScopes, true), 'content endpoints keep a content:read scope');
+$h->assertTrue(in_array('media:read', $endpointScopes, true), 'media endpoints keep a media:read scope');
+$h->assertTrue(in_array('search:read', $endpointScopes, true), 'search endpoints keep a search:read scope');
+$h->assertTrue(in_array('menus:read', $endpointScopes, true), 'menus endpoints keep a menus:read scope');
+$h->assertTrue(in_array('taxonomies:read', $endpointScopes, true), 'taxonomies endpoints keep a taxonomies:read scope');
 
 $htaccess = (string) file_get_contents(base_path('.htaccess'));
 $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');

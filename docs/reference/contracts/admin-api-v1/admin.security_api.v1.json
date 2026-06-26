@@ -181,6 +181,7 @@
       },
       "available_scopes": [
         "headless:read",
+        "routes:read",
         "content:read",
         "media:read",
         "search:read",
