@@ -11,6 +11,7 @@ def configure(p):
     p.add_argument('--interactive-prepare',action='store_true',help='Lance d0_prepare_release.py, puis poursuit automatiquement avec le préflight et le packaging.')
     p.add_argument('--build-admin',action='store_true'); p.add_argument('--run-essential-validators',action='store_true'); p.add_argument('--package',action='store_true'); p.add_argument('--verify-archive',action='store_true'); p.add_argument('--deploy',choices=['ftp','sftp'])
     p.add_argument('--archive',help='Archive ZIP à vérifier avec --verify-archive en mode vérification autonome.')
+    p.add_argument('--skip-composer',action='store_true',help="N'exécute pas composer install dans la chaîne CI release.")
     p.add_argument('--skip-preflight',action='store_true'); p.add_argument('--exclude-databases',action='store_true'); p.add_argument('--include-vendor',action='store_true'); p.add_argument('--no-zip',action='store_true'); p.add_argument('--clean-stage',action='store_true')
 def run(ctx,args):
     ctx.require_native_database_dir()
@@ -29,7 +30,7 @@ def run(ctx,args):
     # jusqu'à la fin de la release.
     if chain_flags or args.verify_archive:
         a=[]
-        for attr,flag in [('build_admin','--build-admin'),('run_essential_validators','--run-essential-validators'),('package','--package'),('verify_archive','--verify-archive'),('include_vendor','--include-vendor')]:
+        for attr,flag in [('build_admin','--build-admin'),('run_essential_validators','--run-essential-validators'),('package','--package'),('verify_archive','--verify-archive'),('include_vendor','--include-vendor'),('skip_composer','--skip-composer')]:
             if getattr(args,attr): a.append(flag)
         if args.deploy:a += ['--deploy',args.deploy]
         if ctx.dry_run:a.append('--plan-only')

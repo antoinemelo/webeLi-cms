@@ -10,15 +10,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.python.cms.runtime import resolve_php_binary
+
 ROOT = Path(__file__).resolve().parents[3]
 CORE_DB = ROOT / "storage" / "database" / "core.sqlite"
 
 
 def php_binary() -> str | None:
-    configured = os.environ.get("CMS_PHP_BINARY", "").strip()
-    if configured:
-        return configured
-    return shutil.which("php")
+    try:
+        return resolve_php_binary()
+    except (FileNotFoundError, PermissionError):
+        return None
 
 
 def php_supports_pdo_sqlite(binary: str) -> bool:

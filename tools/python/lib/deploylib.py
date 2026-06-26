@@ -14,6 +14,8 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Iterable
 
+from tools.python.cms.runtime import resolve_php_binary
+
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_PROTECTED_PREFIXES = ("vendor/", "backend/vendor/")
 DEFAULT_RELEASE_MARKER_DIR = "storage/deployments"
@@ -294,7 +296,5 @@ def write_local_deployment_markers(root: Path, release_manifest: dict | None, de
 
 def run_php_console(root: Path, command: str, *args: str, capture: bool = True, timeout: int = 600) -> subprocess.CompletedProcess:
     console = root / "backend" / "bin" / "console"
-    php = os.environ.get("CMS_PHP_BINARY") or shutil.which("php")
-    if not php:
-        raise FileNotFoundError("Dépendance externe introuvable: php; définir CMS_PHP_BINARY")
+    php = resolve_php_binary()
     return subprocess.run([php, str(console), command, *args], cwd=str(root), text=True, capture_output=capture, timeout=timeout, start_new_session=(os.name == "posix"))

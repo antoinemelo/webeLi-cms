@@ -83,6 +83,52 @@ python load_test.py \
   --stop-on-429-rate 5
 ```
 
+Autres exemples :
+
+Prouver que le public SSR tient 25 VU sans 500.
+```bash
+python load_test.py \
+  --base-url https://webe.li/mod/ \
+  --mode public \
+  --users 25 \
+  --ramp 1,5,10,15,20,25 \
+  --duration 60 \
+  --think-min 0.5 \
+  --think-max 1.5 \
+  --max-error-rate 0.5 \
+  --max-p95 800 \
+  --yes
+```
+
+Qualifier public + admin lecture.
+```bash
+python load_test.py \
+  --base-url https://perf-test.example.test/mod/ \
+  --mode both \
+  --users 50 \
+  --ramp 1,5,10,20,35,50 \
+  --duration 120 \
+  --credentials-file perf-admin-users.csv \
+  --think-min 0.5 \
+  --think-max 2.0 \
+  --max-error-rate 0.5 \
+  --max-p95 1000 \
+  --yes
+```
+
+Vérifier qu’il n’y a pas de fuite mémoire, croissance anormale des logs, ralentissement progressif ou verrou SQLite.
+```bash
+python load_test.py \
+  --base-url https://perf-test.example.test/mod/ \
+  --mode public \
+  --users 20 \
+  --ramp 20 \
+  --duration 7200 \
+  --think-min 1.0 \
+  --think-max 3.0 \
+  --yes
+```
+
 Cette méthode permet d’identifier le premier palier auquel la protection de débit ou la capacité du service commence à refuser des requêtes.
 
 Une réponse HTTP 429 indique une limitation volontaire du trafic. Elle ne démontre pas, à elle seule, une saturation de PHP, de SQLite ou du CMS.

@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sqlite3
 import subprocess
 import sys
@@ -25,6 +24,7 @@ BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
+from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.processes import cms_subprocess_env
 CORE_DB = BASE / "storage" / "database" / "core.sqlite"
 IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
@@ -1451,11 +1451,15 @@ def rebuild_public_projections(required: bool = True) -> int:
         print(f"ERREUR: {exc}", file=sys.stderr)
         return 1
 
-    configured_php = cms_subprocess_env().get("CMS_PHP_BINARY")
-    php = configured_php if configured_php else shutil.which("php")
-    if php is None or not Path(php).exists() or not CONSOLE.exists():
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
         message = (
-            "PHP CLI ou backend/bin/console introuvable: les projections ne sont pas reconstruites. "
+            f"{php_error or 'backend/bin/console introuvable'}: les projections ne sont pas reconstruites. "
             "Installez PHP CLI ou relancez avec --skip-projections si vous voulez seulement injecter les donnees."
         )
         if required:

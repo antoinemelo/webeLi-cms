@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 
+from tools.python.cms.runtime import resolve_php_binary
 from tools.python.validation.checks import ROOT
 from tools.python.validation.model import ValidationReport
 
@@ -15,15 +15,17 @@ def validate(mode: str = "slow") -> ValidationReport:
     report = ValidationReport(VALIDATOR_ID, DOMAIN, mode)
     console = ROOT / "backend" / "bin" / "console"
     report.checked(2)
-    if shutil.which("php") is None:
-        report.add("EXP-201", "PHP indisponible pour qualifier l’export statique")
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        report.add("EXP-201", str(exc))
         return report
     if not console.is_file():
         report.add("EXP-202", "Console backend absente", path="backend/bin/console")
         return report
     try:
         result = subprocess.run(
-            ["php", str(console), "static:export", "--dry-run"],
+            [php, str(console), "static:export", "--dry-run"],
             cwd=ROOT, text=True, capture_output=True, timeout=120,
         )
     except subprocess.TimeoutExpired:

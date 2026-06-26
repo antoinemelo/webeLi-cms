@@ -101,6 +101,7 @@
         "docs/reference/contracts/admin-api-v1/README.md",
         "docs/reference/contracts/headless-v1/README.md",
         "docs/reference/demo-data-policy.md",
+        "docs/reference/editorial-e2e-flow.md",
         "docs/reference/generated/cli-commands.md",
         "docs/user-guide/publication/review-publish.md",
         "docs/user-guide/publication/unpublish-archive-delete-restore.md",
@@ -371,9 +372,19 @@
         "tools/python/commands/release.py",
         "tools/python/commands/smoke.py",
         "tools/python/commands/test.py",
+        "tools/python/lib/deploylib.py",
+        "tools/python/operations/database/b0_db_seed.py",
+        "tools/python/operations/database/b1_rebuild_projections.py",
+        "tools/python/operations/database/b3_rebuild_search.py",
+        "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/operations/deployment/d1_preflight_local.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/integration/test_php_functional_suites.py",
         "tools/python/tests/test_command_runtime_reliability.py",
+        "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
-        "tools/python/validation/operations/manifests.py"
+        "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/qualification/static_export_dry_run.py"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -628,10 +639,9 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/load-testing.md",
-        "tools/python/generators/generate_tool_manifest.py",
         "tools/python/tool-manifest.json",
-        "tools/tests/README_LOAD-TEST.md",
-        "tools/tests/load_test.py"
+        "tools/tests/README_TEST-LOAD.md",
+        "tools/tests/test_load.py"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -1539,9 +1549,9 @@
         "docs/evaluation/machine-readable/release-contents.json",
         "ops/deployment-notes.md",
         "tools/python/README.md",
+        "tools/python/commands/release.py",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/operations/deployment/d11_ci_release.py",
-        "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
@@ -1954,6 +1964,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2097,6 +2108,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
         "docs/operations/static-export.md",
         "tools/python/tool-manifest.json"
       ],
@@ -2831,6 +2843,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/demo-data-policy.md",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
@@ -2929,18 +2942,29 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
-      "path": "tools/tests/load_test.py",
+      "path": "tools/tests/test_load.py",
       "category": "load-test",
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "TREE.txt",
-        "docs/development/testing-validation/load-testing.md",
-        "tools/python/generators/generate_tool_manifest.py",
-        "tools/python/tool-manifest.json",
-        "tools/tests/README_LOAD-TEST.md"
+        "tools/tests/README_TEST-PERF.md",
+        "tools/tests/test_perf.py"
       ],
-      "replacement": "python3 tools/tests/load_test.py --help",
+      "replacement": "python3 tools/tests/test_load.py --help",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/tests/test_perf.py",
+      "category": "load-test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/tests/README_TEST-PERF.md"
+      ],
+      "replacement": "python3 tools/tests/test_perf.py --help",
       "status": "active",
       "destructive": false,
       "archived_at": null,
@@ -2951,7 +2975,10 @@
       "category": "internal",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": null,
       "status": "active",
       "destructive": false,

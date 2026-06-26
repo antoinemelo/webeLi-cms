@@ -18,6 +18,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.python.lib.processes import cms_subprocess_env
+from tools.python.cms.runtime import resolve_php_binary
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 CONSOLE = ROOT / "backend" / "bin" / "console"
@@ -33,7 +34,12 @@ def main() -> int:
     if not CONSOLE.exists():
         print(f"ERREUR: console introuvable: {CONSOLE}", file=sys.stderr)
         return 2
-    code = run(["php", str(CONSOLE), "projections:rebuild"])
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        print(f"ERREUR: {exc}", file=sys.stderr)
+        return 2
+    code = run([php, str(CONSOLE), "projections:rebuild"])
     if code != 0:
         return code
     if CLEANUP.exists():

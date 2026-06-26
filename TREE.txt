@@ -1149,8 +1149,11 @@ tools/python/validation/shared/dependency_boundaries.py
 tools/python/validators/__init__.py
 tools/python/validators/registry.py
 tools/python/validators/runner.py
-tools/tests/README_LOAD-TEST.md
+tools/tests/README_TEST-LOAD.md
+tools/tests/README_TEST-PERF.md
 tools/tests/iam_tests.sqlite
-tools/tests/load_test.py
+tools/tests/test_load.py
+tools/tests/test_perf.py
+tools/tests/token.csv
 tools/tests/users.csv
 tools/verify-runtime.py

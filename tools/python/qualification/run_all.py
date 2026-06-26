@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from tools.python.cms.runtime import resolve_php_binary
+
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
 
@@ -171,10 +173,25 @@ def steps() -> tuple[Step, ...]:
 
 
 def _environment_check() -> tuple[int, str, str]:
-    commands = {"python": [sys.executable, "--version"], "php": ["php", "-v"], "node": ["node", "--version"], "npm": ["npm", "--version"]}
+    try:
+        php = resolve_php_binary()
+        php_error = ""
+    except (FileNotFoundError, PermissionError) as exc:
+        php = ""
+        php_error = str(exc)
+    commands = {
+        "python": [sys.executable, "--version"],
+        "php": [php, "-v"] if php else [],
+        "node": ["node", "--version"],
+        "npm": ["npm", "--version"],
+    }
     lines: list[str] = []
     missing: list[str] = []
     for name, command in commands.items():
+        if not command:
+            missing.append(name)
+            lines.append(f"{name}: {php_error}")
+            continue
         executable = command[0]
         if executable != sys.executable and shutil.which(executable) is None:
             missing.append(name)
@@ -295,14 +312,18 @@ def _frontend_dependencies_check() -> tuple[int, str, str]:
 
 
 def _php_lint() -> tuple[int, str, str]:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        return 2, "", str(exc)
     files = sorted((ROOT / "backend").rglob("*.php")) + sorted((ROOT / "tools/php").rglob("*.php"))
     outputs: list[str] = []
     for path in files:
-        proc = subprocess.run(["php", "-l", str(path)], cwd=ROOT, text=True, capture_output=True, timeout=20)
+        proc = subprocess.run([php, "-l", str(path)], cwd=ROOT, text=True, capture_output=True, timeout=20)
         if proc.returncode != 0:
             return proc.returncode, "\n".join(outputs), proc.stderr or proc.stdout
         outputs.append(path.relative_to(ROOT).as_posix())
-    return 0, f"{len(files)} fichiers PHP valides", ""
+    return 0, f"PHP utilisé: {php}\n{len(files)} fichiers PHP valides", ""
 
 
 def _verify_latest_archive() -> tuple[int, str, str]:
@@ -317,6 +338,12 @@ def _verify_latest_archive() -> tuple[int, str, str]:
 def _missing_requirements(step: Step) -> list[str]:
     missing: list[str] = []
     for executable in step.executables:
+        if executable == "php":
+            try:
+                resolve_php_binary()
+            except (FileNotFoundError, PermissionError) as exc:
+                missing.append(str(exc))
+            continue
         if shutil.which(executable) is None:
             missing.append(f"exécutable {executable}")
     for relative in step.files:

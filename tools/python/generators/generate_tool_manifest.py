@@ -38,7 +38,7 @@ def category(rel: str) -> str:
 
 def replacement_for(cat: str, name: str) -> str | None:
     if cat == "cli": return None
-    if cat == "load-test": return "python3 tools/tests/load_test.py --help"
+    if cat == "load-test": return f"python3 tools/tests/{name} --help"
     if cat == "validator": return "python3 tools/cms.py validate"
     if cat == "test": return "python3 tools/cms.py test"
     if cat == "generator": return "python3 tools/cms.py docs"

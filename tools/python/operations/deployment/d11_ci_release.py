@@ -18,6 +18,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.release_metadata import load_release_metadata
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
@@ -59,7 +60,10 @@ def bool_env(name: str, default: bool = False) -> bool:
 
 def run(command: list[str], *, cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
     print("\n>>> " + " ".join(shlex.quote(part) for part in command), flush=True)
-    completed = subprocess.run(command, cwd=str(cwd), env=env)
+    try:
+        completed = subprocess.run(command, cwd=str(cwd), env=env)
+    except FileNotFoundError as exc:
+        raise CiError(f"Exécutable introuvable: {command[0]} ({exc})") from exc
     if completed.returncode != 0:
         raise CiError(f"Commande en échec ({completed.returncode}): {' '.join(command)}")
 
@@ -74,17 +78,24 @@ def capture(command: list[str], *, cwd: Path = ROOT) -> str:
 
 
 def print_versions() -> None:
+    try:
+        php_command = [resolve_php_binary(), "-v"]
+    except (FileNotFoundError, PermissionError) as exc:
+        php_command = []
+        php_error = str(exc)
+    else:
+        php_error = ""
     print("Versions CI détectées")
     for label, command in {
         "python": [sys.executable, "--version"],
-        "php": ["php", "-v"],
+        "php": php_command,
         "composer": ["composer", "--version"],
         "node": ["node", "--version"],
         "npm": ["npm", "--version"],
         "rsync": ["rsync", "--version"],
         "ssh": ["ssh", "-V"],
     }.items():
-        print(f"- {label}: {capture(command)}")
+        print(f"- {label}: {capture(command) if command else php_error}")
 
 
 def install_php_dependencies() -> None:
@@ -266,7 +277,9 @@ def main() -> int:
                 deploy_sftp()
             return 0
 
-        if not args.skip_composer:
+        if args.skip_composer:
+            print("Composer install skipped (--skip-composer).")
+        else:
             install_php_dependencies()
         if not args.skip_db_init:
             run_from_scratch_database_chain()
