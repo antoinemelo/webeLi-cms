@@ -55,7 +55,7 @@ from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 import requests
 
 
-PROGRAM_VERSION = "1.3.0"
+PROGRAM_VERSION = "1.4.0"
 USER_AGENT = f"webeLi-perf-compare/{PROGRAM_VERSION} (+authorized-performance-benchmark)"
 DEFAULT_REMOTE_URL = "https://webe.li/mod/"
 DEFAULT_LOCAL_URL = "http://127.0.0.1:8080/mod/"
@@ -83,11 +83,11 @@ API_ROUTES = [
 ]
 
 ADMIN_ROUTES = [
-    {"area": "admin", "name": "login-page", "method": "GET", "path": "admin/login", "requires_auth": False},
-    {"area": "admin", "name": "admin-app", "method": "GET", "path": "admin/app", "requires_auth": True},
-    {"area": "admin", "name": "admin-context", "method": "GET", "path": "admin/api/context", "requires_auth": True},
-    {"area": "admin", "name": "admin-entries", "method": "GET", "path": "admin/api/entries", "requires_auth": True},
-    {"area": "admin", "name": "admin-media", "method": "GET", "path": "admin/api/media", "requires_auth": True},
+    {"area": "admin", "name": "login-page", "method": "GET", "path": "admin/login", "requires_auth": False, "auth_policy": "anonymous"},
+    {"area": "admin", "name": "admin-app", "method": "GET", "path": "admin/app", "requires_auth": True, "auth_policy": "admin-session"},
+    {"area": "admin", "name": "admin-context", "method": "GET", "path": "admin/api/context", "requires_auth": True, "auth_policy": "admin-session"},
+    {"area": "admin", "name": "admin-entries", "method": "GET", "path": "admin/api/entries", "requires_auth": True, "auth_policy": "admin-session"},
+    {"area": "admin", "name": "admin-media", "method": "GET", "path": "admin/api/media", "requires_auth": True, "auth_policy": "admin-session"},
 ]
 
 DATASET_TABLES = {
@@ -358,9 +358,21 @@ class EvidenceSession:
             if morsel.value:
                 self.cookies[key] = morsel.value
 
-    def request(self, method: str, url: str, *, timeout: float, allow_redirects: bool = True, bearer: bool = False, **kwargs: Any) -> requests.Response:
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        timeout: float,
+        allow_redirects: bool = True,
+        bearer: bool = False,
+        api: bool = False,
+        **kwargs: Any,
+    ) -> requests.Response:
         headers = dict(self.headers)
         headers.update(kwargs.pop("headers", {}) or {})
+        if api:
+            headers["Accept"] = "application/json"
         cookie_header = self._cookie_header()
         if cookie_header:
             headers["Cookie"] = cookie_header
@@ -405,6 +417,7 @@ def measure_once(
             timeout=timeout,
             allow_redirects=True,
             bearer=bearer_required,
+            api=route.area == "api",
             stream=True,
         )
         ttfb_ms = (time.perf_counter() - started) * 1000
@@ -722,7 +735,7 @@ def collect_bearer_preflight(target: TargetConfig, token: str | None, path: str,
     url = urljoin(target.base_url, path)
     started_at = utc_now()
     try:
-        response = session.request("GET", url, timeout=timeout, allow_redirects=True, bearer=True)
+        response = session.request("GET", url, timeout=timeout, allow_redirects=True, bearer=True, api=True)
         http_status = response.status_code
         if 200 <= http_status < 400:
             status = "ok"
@@ -744,9 +757,11 @@ def collect_bearer_preflight(target: TargetConfig, token: str | None, path: str,
             "path": path,
             "requested_url": url,
             "final_url": response.url,
+            "redirect_count": len(response.history),
             "checked_at_utc": started_at,
             "http_status": http_status,
             "content_type": response.headers.get("Content-Type"),
+            "www_authenticate": response.headers.get("WWW-Authenticate"),
             "request_trace_header": response.headers.get("X-Request-ID") or response.headers.get("X-Correlation-ID") or response.headers.get("Traceparent") or response.headers.get("CF-Ray"),
         }
     except requests.RequestException as exc:
@@ -1142,7 +1157,12 @@ def area_scope_status(area: str, comparisons: list[dict[str, Any]], required_rou
     if "INCONCLUSIVE" in statuses:
         return {"status": "non_concluante", "label": "non concluante", "routes": len(rows), "reason": "au moins une route est non comparable ou non authentifiée"}
     if "WARN" in statuses:
-        return {"status": "partiellement_demontree", "label": "partiellement démontrée", "routes": len(rows), "reason": "au moins une route est en WARN"}
+        return {
+            "status": "demontree_avec_avertissements",
+            "label": "démontrée avec avertissements",
+            "routes": len(rows),
+            "reason": "toutes les routes répondent, mais au moins une dépasse un seuil ou mérite une surveillance",
+        }
     if len(rows) < required_routes:
         return {
             "status": "partiellement_demontree",
@@ -1170,9 +1190,9 @@ def dataset_scope_status(dataset_profile: dict[str, Any], tested_statuses: list[
         elif "non_concluante" in tested_statuses:
             status = "non_concluante"
             label = "mesurée, lecture non concluante"
-        elif "partiellement_demontree" in tested_statuses:
-            status = "partiellement_demontree"
-            label = "partiellement démontrée sur base volumineuse"
+        elif "partiellement_demontree" in tested_statuses or "demontree_avec_avertissements" in tested_statuses:
+            status = "demontree_avec_avertissements"
+            label = "démontrée avec avertissements sur base volumineuse"
         else:
             status = "entierement_demontree"
             label = "démontrée pour les lectures testées sur base volumineuse"
@@ -1242,7 +1262,7 @@ def build_scope_verdict(
         overall = "FAIL"
     elif "non_concluante" in tested_statuses:
         overall = "INCONCLUSIVE"
-    elif "partiellement_demontree" in tested_statuses:
+    elif "partiellement_demontree" in tested_statuses or "demontree_avec_avertissements" in tested_statuses:
         overall = "WARN"
     else:
         overall = "PASS"
@@ -1257,6 +1277,47 @@ def build_scope_verdict(
         ],
     }
 
+
+
+
+def format_ms(value: float | int | None) -> str:
+    if value is None:
+        return "n/a"
+    try:
+        return f"{float(value):.3f} ms"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def route_warning_summary(comparisons: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [row for row in comparisons if row.get("status") == "WARN"]
+
+
+def top_routes_by_metric(comparisons: list[dict[str, Any]], metric: str, limit: int = 8) -> list[dict[str, Any]]:
+    return sorted(comparisons, key=lambda row: float(row.get(metric) or 0.0), reverse=True)[:limit]
+
+
+def bearer_preflight_rows(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    preflights = metadata.get("bearer_preflight") or {}
+    token_status = metadata.get("target_token_status") or {}
+    rows: list[dict[str, Any]] = []
+    for target_name in sorted(preflights):
+        item = preflights.get(target_name) or {}
+        token_item = token_status.get(target_name) or {}
+        rows.append({
+            "target": target_name,
+            "available": token_item.get("available"),
+            "fingerprint": token_item.get("fingerprint"),
+            "status": item.get("status"),
+            "ok": item.get("ok"),
+            "http_status": item.get("http_status"),
+            "requested_url": item.get("requested_url"),
+            "final_url": item.get("final_url"),
+            "redirect_count": item.get("redirect_count"),
+            "content_type": item.get("content_type"),
+            "trace": item.get("request_trace_header"),
+        })
+    return rows
 
 def write_outputs(
     output_dir: Path,
@@ -1320,6 +1381,25 @@ def write_outputs(
         item = scope_verdict.get("areas", {}).get(key, {})
         lines.append(f"- {label} : **{item.get('label', 'non évaluée')}** — {item.get('reason', '')}")
 
+    preflight_lines = bearer_preflight_rows(metadata)
+    if preflight_lines:
+        lines.extend([
+            "",
+            "## Préflight Bearer",
+            "",
+            "| Cible | Token | Empreinte | Statut | HTTP | Redirections | URL finale | Trace |",
+            "|---|---|---|---|---:|---:|---|---|",
+        ])
+        for item in preflight_lines:
+            token_text = "oui" if item.get("available") else "non"
+            http_text = "n/a" if item.get("http_status") is None else str(item.get("http_status"))
+            redirect_text = "n/a" if item.get("redirect_count") is None else str(item.get("redirect_count"))
+            lines.append(
+                f"| {item.get('target')} | {token_text} | {item.get('fingerprint') or 'n/a'} | "
+                f"{item.get('status') or 'n/a'} | {http_text} | {redirect_text} | "
+                f"`{item.get('final_url') or item.get('requested_url') or 'n/a'}` | {item.get('trace') or ''} |"
+            )
+
     if dataset_profile.get("status") == "measured":
         counts = dataset_profile.get("counts", {})
         lines.extend([
@@ -1352,6 +1432,31 @@ def write_outputs(
             f"| {row['area']} | {row['route_name']} | {row.get('auth_policy', '')} | {row['status']} | "
             f"{row['local_p95_ms']} ms | {row['remote_p95_ms']} ms | {ratio_text} | "
             f"{row['local_success_rate_pct']} % | {row['remote_success_rate_pct']} % | {remarks} |"
+        )
+
+    warning_rows = route_warning_summary(comparisons)
+    if warning_rows:
+        lines.extend([
+            "",
+            "## Analyse automatique des points à surveiller",
+            "",
+            "Les routes ci-dessous répondent correctement, mais dépassent au moins un seuil défini pour ce run.",
+            "",
+            "| Zone | Route | Statut | Local p95 | Distant p95 | Motif |",
+            "|---|---|---|---:|---:|---|",
+        ])
+        for row in warning_rows:
+            lines.append(
+                f"| {row['area']} | {row['route_name']} | {row['status']} | "
+                f"{format_ms(row.get('local_p95_ms'))} | {format_ms(row.get('remote_p95_ms'))} | "
+                f"{'; '.join(row.get('reasons') or [])} |"
+            )
+
+    lines.extend(["", "## Routes locales les plus lentes", ""])
+    for row in top_routes_by_metric(comparisons, "local_p95_ms", 8):
+        lines.append(
+            f"- {row['area']} / {row['route_name']} : p95 local {row['local_p95_ms']} ms, "
+            f"p95 distant {row['remote_p95_ms']} ms, statut {row['status']}."
         )
 
     non_blocking_observations = [
