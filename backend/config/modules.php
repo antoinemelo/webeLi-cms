@@ -13,6 +13,7 @@ return [
         'navigation',
         'workflow',
         'forms',
+        'business',
         // Shell applicatif activé pour publier l'entrée de navigation dans Modules.
         // L'IA elle-même reste désactivée par défaut dans ai.sqlite (ai.enabled = false).
         'ai-assistant',
@@ -23,6 +24,7 @@ return [
     // Il n'est pas nécessaire de modifier le routeur Vue pour chaque module.
     'providers' => [
         App\Modules\Forms\FormsModuleProvider::class,
+        App\Modules\Business\BusinessModuleProvider::class,
         App\Modules\AiAssistant\AiAssistantModuleProvider::class,
         // App\Modules\Example\ExampleModuleProvider::class,
     ],
@@ -33,6 +35,7 @@ return [
     // installation automatique.
     'system_manifest_paths' => [
         base_path('backend/src/Modules/Forms/module.json'),
+        base_path('backend/src/Modules/Business/module.json'),
         base_path('backend/src/Modules/AiAssistant/module.json'),
     ],
 

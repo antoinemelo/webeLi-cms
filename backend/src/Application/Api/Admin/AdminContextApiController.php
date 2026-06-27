@@ -78,6 +78,15 @@ final class AdminContextApiController
             'security.cors.read',
             'security.cors.manage',
             'users.email_2fa.manage',
+            'business.crm.read',
+            'business.crm.manage',
+            'business.memo.read',
+            'business.memo.manage',
+            'business.memo.share',
+            'business.mailing.read',
+            'business.mailing.manage',
+            'business.messaging.send',
+            'business.messaging.admin',
         ];
 
         return Response::success([

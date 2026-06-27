@@ -105,7 +105,7 @@ final class AdminApiRequestGuard
         }
 
         return $this->request->method === 'POST'
-            && in_array($this->request->path, ['/admin/api/media', '/admin/api/imports-exports/imports/inspect'], true)
+            && in_array($this->request->path, ['/admin/api/media', '/admin/api/imports-exports/imports/inspect', '/admin/api/business/contacts/import.csv'], true)
             && str_contains($this->request->contentType(), 'multipart/form-data');
     }
 

@@ -106,6 +106,21 @@ use App\Modules\AiAssistant\Services\AiSettingsService;
 use App\Modules\AiAssistant\Services\AiSuggestionService;
 use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
+use App\Modules\Business\Repositories\BusinessCompanyRepository;
+use App\Modules\Business\Repositories\BusinessConsentRepository;
+use App\Modules\Business\Repositories\BusinessContactRepository;
+use App\Modules\Business\Repositories\BusinessMemoRepository;
+use App\Modules\Business\Repositories\BusinessMessagingRepository;
+use App\Modules\Business\Repositories\BusinessMailingRepository;
+use App\Modules\Business\Repositories\BusinessTagRepository;
+use App\Modules\Business\Services\BusinessConsentService;
+use App\Modules\Business\Services\BusinessCsvService;
+use App\Modules\Business\Services\BusinessCrmService;
+use App\Modules\Business\Services\BusinessDatabaseConnection;
+use App\Modules\Business\Services\BusinessMemoSharingService;
+use App\Modules\Business\Services\BusinessMessagingOutboxService;
+use App\Modules\Business\Services\BusinessMessagingProviderManager;
+use App\Modules\Business\Services\BusinessMailingService;
 
 final class ServiceFactory
 {
@@ -509,6 +524,82 @@ final class ServiceFactory
     {
         $path = (string) ($this->config['databases']['ai']['path'] ?? base_path('storage/database/ai.sqlite'));
         return $this->once('ai_database_connection', fn() => new AiDatabaseConnection($path));
+    }
+
+    public function businessDatabaseConnection(): BusinessDatabaseConnection
+    {
+        $path = (string) ($this->config['databases']['business']['path'] ?? base_path('storage/database/business.sqlite'));
+        return $this->once('business_database_connection', fn() => new BusinessDatabaseConnection($path));
+    }
+
+    public function businessCompanies(): BusinessCompanyRepository
+    {
+        return $this->once('business_companies', fn() => new BusinessCompanyRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessContacts(): BusinessContactRepository
+    {
+        return $this->once('business_contacts', fn() => new BusinessContactRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessTags(): BusinessTagRepository
+    {
+        return $this->once('business_tags', fn() => new BusinessTagRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMemos(): BusinessMemoRepository
+    {
+        return $this->once('business_memos', fn() => new BusinessMemoRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessConsents(): BusinessConsentRepository
+    {
+        return $this->once('business_consents', fn() => new BusinessConsentRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMessages(): BusinessMessagingRepository
+    {
+        return $this->once('business_messages', fn() => new BusinessMessagingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMailingRepository(): BusinessMailingRepository
+    {
+        return $this->once('business_mailing_repository', fn() => new BusinessMailingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCrm(): BusinessCrmService
+    {
+        return $this->once('business_crm', fn() => new BusinessCrmService($this->businessCompanies(), $this->businessContacts(), $this->businessTags()));
+    }
+
+    public function businessCsv(): BusinessCsvService
+    {
+        return $this->once('business_csv', fn() => new BusinessCsvService($this->businessCompanies(), $this->businessContacts(), $this->businessTags(), $this->businessConsents()));
+    }
+
+    public function businessMemoSharing(): BusinessMemoSharingService
+    {
+        return $this->once('business_memo_sharing', fn() => new BusinessMemoSharingService($this->businessMemos()));
+    }
+
+    public function businessConsentService(): BusinessConsentService
+    {
+        return $this->once('business_consent_service', fn() => new BusinessConsentService($this->businessConsents()));
+    }
+
+    public function businessMessagingOutbox(): BusinessMessagingOutboxService
+    {
+        return $this->once('business_messaging_outbox', fn() => new BusinessMessagingOutboxService($this->businessConsents(), $this->businessMessages()));
+    }
+
+    public function businessMessagingProviders(): BusinessMessagingProviderManager
+    {
+        return $this->once('business_messaging_providers', fn() => new BusinessMessagingProviderManager($this->businessMessages(), $this->mailer(), $this->logger));
+    }
+
+    public function businessMailing(): BusinessMailingService
+    {
+        return $this->once('business_mailing', fn() => new BusinessMailingService($this->businessMailingRepository(), $this->businessMessages()));
     }
 
     public function aiSettings(): AiSettingsService

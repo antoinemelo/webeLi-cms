@@ -8,8 +8,8 @@ VALIDATOR_ID = 'DB_INVENTORY'
 DOMAIN = 'database'
 MODES = ("fast", "full")
 
-EXPECTED_KEYS = {"core", "iam", "forms", "cookies", "ai"}
-EXPECTED_NAMES = {"core.sqlite", "iam.sqlite", "forms.sqlite", "cookies.sqlite", "ai.sqlite"}
+EXPECTED_KEYS = {"core", "iam", "forms", "cookies", "ai", "business"}
+EXPECTED_NAMES = {"core.sqlite", "iam.sqlite", "forms.sqlite", "cookies.sqlite", "ai.sqlite", "business.sqlite"}
 
 
 def validate(mode: str = "fast") -> ValidationReport:

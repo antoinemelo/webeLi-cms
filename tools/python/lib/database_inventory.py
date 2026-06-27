@@ -97,6 +97,16 @@ NATIVE_SQLITE_DATABASES: tuple[DatabaseSpec, ...] = (
         module_key="ai-assistant",
         description="Assistant IA natif: fournisseurs, modèles, prompts, tâches, suggestions et usages.",
     ),
+    DatabaseSpec(
+        key="business",
+        name="business.sqlite",
+        path="storage/database/business.sqlite",
+        kind="system_module",
+        schema_path="database/modules/business.sql",
+        migration_scope="business",
+        module_key="business",
+        description="Business CRM: entreprises, contacts, mémos, consentements, mailing simple et outbox messaging.",
+    ),
 )
 
 

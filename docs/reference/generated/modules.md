@@ -19,6 +19,7 @@ generated: true
 | Module | Type | Version | Activé par défaut | Base(s) | Manifeste |
 |---|---|---|---:|---|---|
 | `ai-assistant` | `system` | `0.1.0` | oui | `ai` | `backend/src/Modules/AiAssistant/module.json` |
+| `business` | `system` | `0.1.0` | oui | `business` | `backend/src/Modules/Business/module.json` |
 | `forms` | `system` | `1.0.0` | oui | `forms` | `backend/src/Modules/Forms/module.json` |
 | `client-notes` | `client` | `0.1.0` | non | `client_notes` | `examples/modules/client-notes/module.json` |
 

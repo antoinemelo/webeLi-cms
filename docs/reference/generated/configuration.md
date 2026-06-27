@@ -56,6 +56,12 @@ generated: true
 | `APP_TIMEZONE` | `backend/config/app.php` |
 | `APP_TWIG_CACHE` | `backend/config/app.php` |
 | `APP_WORKER_MAX_ATTEMPTS` | `backend/config/app.php` |
+| `BUSINESS_TELEGRAM_BOT_TOKEN` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_TELEGRAM_ENABLED` | `backend/src/Modules/Business/Messaging/TelegramBotProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_ACCESS_TOKEN` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_API_VERSION` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_ENABLED` | `backend/src/Modules/Business/Messaging/WhatsAppCloudApiProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_PHONE_NUMBER_ID` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `CMS_TOTP_KEY` | `backend/src/Repository/AuthRepository.php` |
 | `DEC_CMS_AUDIT_INTERNAL` | `tools/python/operations/deployment/d_deploy.py` |
 | `FTP_PASSIVE` | `tools/python/operations/deployment/d11_ci_release.py` |

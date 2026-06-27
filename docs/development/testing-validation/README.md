@@ -42,4 +42,5 @@ Les qualifications lentes couvrent notamment l’intégrité des bases actives, 
 
 ## Tests spécialisés
 
+- [Tests du module Business CRM](business-crm.md) : schema, migrations, permissions, memos, mailing, messaging et CSV sans API externe.
 - [Tests de charge traçables](load-testing.md) : campagnes HTTP manuelles sous `tools/tests/`, hors suites automatisées `tools/cms.py test`.

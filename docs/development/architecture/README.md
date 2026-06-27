@@ -46,6 +46,8 @@ Une requête entre par les routes PHP, reçoit un contexte de site et de langue,
 ## Documents spécialisés
 
 - [Métadonnées d’affichage des articles](article-display-metadata.md)
+- [Architecture du module Business CRM](business-module.md)
+- [Plan d'architecture du module Business CRM](business-module-plan.md)
 - [Formulaires comme module système](forms-as-system-module.md)
 - [Gouvernance des modules](module-admin-governance.md)
 - [Blueprints de modules](module-blueprints.md)

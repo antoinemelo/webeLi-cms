@@ -57,6 +57,13 @@ generated: true
 | `audit.read` |
 | `blueprints.manage` |
 | `blueprints.read` |
+| `business.crm.manage` |
+| `business.crm.read` |
+| `business.mailing.manage` |
+| `business.mailing.read` |
+| `business.memo.manage` |
+| `business.memo.read` |
+| `business.messaging.admin` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "key": "business",
+  "name": "Business CRM",
+  "version": "0.1.0",
+  "type": "system",
+  "provider_class": "App\\Modules\\Business\\BusinessModuleProvider",
+  "provider_file": "backend/src/Modules/Business/BusinessModuleProvider.php",
+  "enabled_by_default": true,
+  "databases": [
+    {
+      "key": "business",
+      "path": "storage/database/business.sqlite",
+      "schema": "database/modules/business.sql",
+      "migrations": "database/migrations/business"
+    }
+  ],
+  "protected_on_core_update": false
+}

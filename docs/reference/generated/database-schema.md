@@ -33,6 +33,29 @@ generated: true
 | `ai_usage_events` | id, site_id, user_id, provider_key, model_key, task_type, input_tokens, output_tokens, total_tokens, duration_ms, estimated_cost, currency, status, details_json, created_at |
 | `schema_migrations` | id, migration, migrated_at |
 
+## `business.sqlite`
+
+| Table | Colonnes |
+|---|---|
+| `business_companies` | id, site_id, name, normalized_name, company_kind, status, email, phone, website_url, address_json, notes, is_system, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_contacts` | id, site_id, company_id, iam_user_id, first_name, last_name, display_name, normalized_name, status, preferred_language, email, phone, mobile, job_title, notes, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_tag_links` | id, tag_id, target_type, company_id, contact_id, created_by_iam_user_id, created_at |
+| `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_consents` | id, contact_id, channel, consent_status, source, evidence, granted_at, revoked_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `crm_contact_channels` | id, contact_id, channel, channel_value, normalized_value, provider_ref, is_primary, is_verified, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_mailing_list_members` | id, list_id, contact_id, status, subscribed_at, unsubscribed_at, unsubscribe_token_hash, created_by_iam_user_id, updated_by_iam_user_id, updated_at |
+| `crm_mailing_lists` | id, site_id, list_key, name, description, channel, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_mailing_recipients` | id, mailing_id, contact_id, channel_id, status, unsubscribe_token_hash, queued_at, sent_at, failed_at, skipped_reason, message_outbox_id, created_at, updated_at |
+| `crm_mailings` | id, site_id, list_id, mailing_key, name, channel, status, subject, body_text, body_html, template_key, scheduled_at, sent_at, cancelled_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `crm_memo_comments` | id, memo_id, author_iam_user_id, body, created_at, updated_at, archived_at |
+| `crm_memo_shares` | id, memo_id, share_type, shared_with_iam_user_id, public_token_hash, public_label, expires_at, revoked_at, created_by_iam_user_id, created_at, last_accessed_at, access_count |
+| `crm_memos` | id, site_id, company_id, contact_id, author_iam_user_id, title, body, visibility, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_message_delivery_events` | id, outbox_id, event_type, provider_message_id, event_payload_json, error_message, created_at |
+| `crm_message_outbox` | id, site_id, provider_id, template_id, mailing_id, contact_id, channel, recipient_value, subject, body_text, body_html, payload_json, status, attempts, max_attempts, next_attempt_at, locked_at, sent_at, failed_at, last_error, created_by_iam_user_id, created_at, updated_at |
+| `crm_message_templates` | id, site_id, template_key, channel, name, subject, body_text, body_html, provider_template_ref, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_messaging_providers` | id, site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `schema_migrations` | id, migration, migrated_at |
+
 ## `cookies.sqlite`
 
 | Table | Colonnes |

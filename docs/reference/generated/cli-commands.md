@@ -215,7 +215,7 @@ options:
 
 ```text
 usage: tools/cms.py migrate [-h]
-                            [--all | --database {core,iam,forms,cookies,ai} | --module {ai-assistant,forms}]
+                            [--all | --database {core,iam,forms,cookies,ai,business} | --module {ai-assistant,business,forms}]
                             [--plan | --apply] [--backup]
                             [--no-backup-i-understand-the-risk] [--yes]
 
@@ -223,9 +223,9 @@ options:
   -h, --help            show this help message and exit
   --all                 Traite toutes les bases SQLite migratables connues
                         (défaut).
-  --database {core,iam,forms,cookies,ai}
+  --database {core,iam,forms,cookies,ai,business}
                         Traite une seule base par clé ou scope.
-  --module {ai-assistant,forms}
+  --module {ai-assistant,business,forms}
                         Traite les bases déclarées par un module.
   --plan                Affiche les migrations disponibles et manquantes sans
                         les appliquer.

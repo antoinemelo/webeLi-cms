@@ -47,6 +47,7 @@ Si vous ne savez pas par où commencer, utilisez [Choisir son parcours documenta
 - [Formulaires, recherche, imports, exports et IA](forms-cookies/forms-search-import-export-ai.md)
 - [Consentement cookies](forms-cookies/cookie-consent.md)
 - [Assistant IA](ai-assistant/use.md)
+- [Business CRM](business/README.md)
 
 ## Compte et dépannage
 

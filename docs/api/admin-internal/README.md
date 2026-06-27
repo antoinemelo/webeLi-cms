@@ -23,6 +23,7 @@ Chaque appel exige une session valide, le contexte de site et de langue lorsque 
 ## Références
 
 - [Contrats JSON de l’API administrative](../../reference/contracts/admin-api-v1/README.md)
+- [Business CRM API interne](business-crm.md)
 - [Authentification, contexte et portées](../../public-api/authentication.md)
 - [Politique de compatibilité](../README.md)
 

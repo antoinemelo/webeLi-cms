@@ -23,6 +23,7 @@ generated: true
 - `forms.sqlite`
 - `cookies.sqlite`
 - `ai.sqlite`
+- `business.sqlite`
 
 ## Fichiers de garde conservés
 

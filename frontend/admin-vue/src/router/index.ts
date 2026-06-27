@@ -13,6 +13,7 @@ const DocsView = () => import('@/views/assets/DocsView.vue');
 const FormsView = () => import('@/views/forms/FormsView.vue');
 const ModulesView = () => import('@/views/modules/ModulesView.vue');
 const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
+const BusinessCrmView = () => import('@/views/modules/BusinessCrmView.vue');
 const MenusView = () => import('@/views/content/MenusView.vue');
 const TaxonomiesView = () => import('@/views/content/TaxonomiesView.vue');
 const BlueprintsView = () => import('@/views/system/BlueprintsView.vue');
@@ -72,6 +73,7 @@ export const router = createRouter({
     { path: '/forms', name: 'forms', component: FormsView },
     { path: '/modules', name: 'modules', component: ModulesView },
     { path: '/modules/ai-assistant/config', name: 'ai-assistant-config', component: AiAssistantConfigView },
+    { path: '/business/crm', name: 'business-crm', component: BusinessCrmView },
     { path: '/modules/:moduleKey', name: 'module-detail', component: ModulesView, props: true },
     { path: '/menus', name: 'menus', component: MenusView },
     { path: '/taxonomies', name: 'taxonomies', component: TaxonomiesView },

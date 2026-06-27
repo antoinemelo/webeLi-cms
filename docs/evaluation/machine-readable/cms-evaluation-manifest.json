@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "da4b0aa34f1e719bb44f18a0a4c7b11a97c1ae6e",
+  "commit": "e05e2613a95a6c6fc9c887e9a1b51199f85ae99e",
   "confidence": "high",
   "databases": [
     "core",
@@ -35,6 +35,7 @@
     "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",
     "docs/evaluation/audit-evidence-troubleshooting.md",
+    "docs/evaluation/business-crm-review.md",
     "docs/evaluation/evidence-index.md",
     "docs/evaluation/feature-matrix.md",
     "docs/evaluation/latest-release-audit.md",
@@ -51,9 +52,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-06-26",
+  "generated_at": "2026-06-27",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-06-26",
+  "last_verified": "2026-06-27",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],

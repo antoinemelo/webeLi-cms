@@ -13,6 +13,7 @@ MODES = ("fast", "full")
 ROOT = Path(__file__).resolve().parents[4]
 SYSTEM_MANIFESTS = (
     "backend/src/Modules/Forms/module.json",
+    "backend/src/Modules/Business/module.json",
     "backend/src/Modules/AiAssistant/module.json",
 )
 REQUIRED_FIELDS = ("key", "version", "type", "provider_class", "provider_file")

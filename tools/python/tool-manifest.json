@@ -57,6 +57,7 @@
         "docs/administration/security/tokens-cors-webhooks.md",
         "docs/administration/users-roles-permissions/sessions-and-2fa.md",
         "docs/development/architecture/README.md",
+        "docs/development/architecture/business-module-plan.md",
         "docs/development/backoffice/visual-editor.md",
         "docs/development/command-reliability.md",
         "docs/development/contributing-documentation.md",
@@ -165,6 +166,7 @@
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
+        "tools/python/tests/test_business_module_smoke.py",
         "tools/python/tests/test_cli_rationalization.py",
         "tools/python/tests/test_cms_cli.py",
         "tools/python/tests/test_migrate_plan_readonly.py",
@@ -639,9 +641,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/load-testing.md",
-        "tools/python/tool-manifest.json",
-        "tools/tests/README_TEST-LOAD.md",
-        "tools/tests/test_load.py"
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -882,6 +882,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/architecture/business-module-plan.md",
         "docs/development/python-tooling/cli.md",
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
@@ -1862,6 +1863,18 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_business_module_smoke.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_characterization_baseline.py",
       "category": "test",
       "public": false,
@@ -2383,6 +2396,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/architecture/business-module-plan.md",
         "docs/development/python-tooling/cli.md",
         "docs/evaluation/machine-readable/validators.json",
         "docs/operations/existing-database-update.md",
@@ -2545,6 +2559,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/administration/modules/manage-modules.md",
+        "docs/development/architecture/business-module-plan.md",
         "docs/evaluation/machine-readable/features.json",
         "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
@@ -2587,6 +2602,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/architecture/business-module-plan.md",
         "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
@@ -2607,6 +2623,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/administration/modules/manage-modules.md",
+        "docs/development/architecture/business-module-plan.md",
         "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
@@ -2947,6 +2964,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_TEST-LOAD.md",
         "tools/tests/README_TEST-PERF.md",
         "tools/tests/test_perf.py"
       ],
@@ -2962,7 +2982,11 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "tools/tests/README_TEST-PERF.md"
+        "TREE.txt",
+        "tools/python/tool-manifest.json",
+        "tools/tests/README_TEST-LOAD.md",
+        "tools/tests/README_TEST-PERF.md",
+        "tools/tests/test_load.py"
       ],
       "replacement": "python3 tools/tests/test_perf.py --help",
       "status": "active",

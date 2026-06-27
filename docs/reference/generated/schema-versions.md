@@ -18,6 +18,7 @@ generated: true
 
 | Source | Version |
 |---|---|
+| `database/migrations/business/0001_init.sql` | `0001_init` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
 | `database/migrations/core/072_action_runs.sql` | `072_action_runs` |
@@ -30,3 +31,4 @@ generated: true
 | `database/migrations/iam/0005_ai_assistant_permissions.sql` | `0005_ai_assistant_permissions` |
 | `database/migrations/iam/0006_imports_exports_permissions.sql` | `0006_imports_exports_permissions` |
 | `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |
+| `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |

@@ -11,6 +11,9 @@ use App\Application\Api\Admin\AdminContextApiController;
 use App\Application\Api\Admin\BlockBlueprintApiController;
 use App\Application\Api\Admin\CapabilityApiController;
 use App\Application\Api\Admin\BlueprintApiController;
+use App\Application\Api\Admin\BusinessCrmApiController;
+use App\Application\Api\Admin\BusinessMessagingApiController;
+use App\Application\Api\Admin\BusinessMailingApiController;
 use App\Application\Api\Admin\ContentEntryApiController;
 use App\Application\Api\Admin\ContentRevisionApiController;
 use App\Application\Api\Admin\ConfigurationApiController;
@@ -42,6 +45,8 @@ use App\Application\PublicApi\PublicCookieConsentApiHandler;
 use App\Application\Configuration\ConfigurationRepository;
 use App\Application\Configuration\MultisiteRepository;
 use App\Application\Frontend\HomeController;
+use App\Application\Frontend\BusinessMemoShareController;
+use App\Application\Frontend\BusinessUnsubscribeController;
 use App\Application\Frontend\PublicApiDocsController;
 use App\Application\Frontend\RouteResolutionController;
 use App\Security\AdminApiRequestGuard;
@@ -318,6 +323,40 @@ final class App
                 $services->aiBudget(),
                 $services->aiActionRegistry(),
             ),
+            BusinessCrmApiController::class => new BusinessCrmApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessCrm(),
+                $services->businessCompanies(),
+                $services->businessContacts(),
+                $services->businessTags(),
+                $services->businessMemos(),
+                $services->businessConsents(),
+                $services->businessConsentService(),
+                $services->businessMemoSharing(),
+                $services->businessCsv(),
+            ),
+            BusinessMessagingApiController::class => new BusinessMessagingApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessMessages(),
+                $services->businessMessagingOutbox(),
+                $services->businessMessagingProviders(),
+                $services->businessContacts(),
+            ),
+            BusinessMailingApiController::class => new BusinessMailingApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessMailingRepository(),
+                $services->businessMailing(),
+                $services->businessContacts(),
+            ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),
             BlockBlueprintApiController::class => new BlockBlueprintApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->blueprints()),
@@ -365,6 +404,8 @@ final class App
             SecurityAdminApiController::class => new SecurityAdminApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->auth(), $services->authorization()),
             IamAdminApiController::class => new IamAdminApiController($this->request, $services->auth(), $services->authorization(), $services->iamAdmin()),
             PublicApiDocsController::class => new PublicApiDocsController(),
+            BusinessMemoShareController::class => new BusinessMemoShareController($services->businessMemos(), $services->logger()),
+            BusinessUnsubscribeController::class => new BusinessUnsubscribeController($services->businessMailingRepository(), $services->logger()),
             HomeController::class,
             RouteResolutionController::class => new $class(
                 $this->config,
