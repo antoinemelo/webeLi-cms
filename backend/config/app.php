@@ -83,10 +83,10 @@ return [
             '#^/api/v1/media$#',
         ],
         'protected_paths' => [
-            '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media)(?:/|$)#',
+            '#^/api/v1/(?:route|content|content-by-path|routes|languages|menus|taxonomies|search|media|catalog|pos/catalog)(?:/|$)#',
         ],
         'scope_aliases' => [
-            'headless:read' => ['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'],
+            'headless:read' => ['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read', 'catalog:read'],
             'content:read' => ['routes:read'],
         ],
         'endpoint_scopes' => [
@@ -96,6 +96,8 @@ return [
             '#^/api/v1/menus(?:/|$)#' => 'menus:read',
             '#^/api/v1/taxonomies(?:/|$)#' => 'taxonomies:read',
             '#^/api/v1/media(?:/|$)#' => 'media:read',
+            '#^/api/v1/catalog(?:/|$)#' => 'catalog:read',
+            '#^/api/v1/pos/catalog(?:/|$)#' => 'pos.catalog.read',
         ],
     ],
 

@@ -11,7 +11,7 @@ class CmsCliTest(unittest.TestCase):
 
     def test_help_for_all_commands(self):
         self.assertEqual(self.run_cli('--help').returncode,0)
-        for command in ('init','rebuild','validate','qualify','test','export','backup','release'):
+        for command in ('init','rebuild','validate','qualify','test','export','backup','release','business'):
             result=self.run_cli(command,'--help')
             self.assertEqual(result.returncode,0,(command,result.stderr))
 

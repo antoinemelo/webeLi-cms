@@ -5,8 +5,9 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import { useAdminContextStore } from '@/stores/adminContext';
+import BusinessCatalogView from './BusinessCatalogView.vue';
 
-type BusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging';
+type BusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging' | 'products' | 'offers';
 type IdValue = number | string | null | undefined;
 type Company = Record<string, unknown> & { id: number; name: string; status?: string; email?: string | null; phone?: string | null; website_url?: string | null; notes?: string | null; is_system?: boolean };
 type Contact = Record<string, unknown> & { id: number; company_id?: number; company_name?: string; display_name: string; status?: string; email?: string | null; phone?: string | null; mobile?: string | null; iam_user_id?: number | null };
@@ -21,8 +22,14 @@ type Campaign = Record<string, unknown> & { id: number; name: string; list_id?: 
 type MessageRow = Record<string, unknown> & { id: number; channel?: string; recipient_value?: string; subject?: string | null; status?: string; last_error?: string | null; created_at?: string };
 type MessagingProvider = Record<string, unknown> & { key?: string; provider_key?: string; channel?: string; enabled?: boolean; errors?: string[] };
 
+const props = withDefaults(defineProps<{
+  initialTab?: BusinessTab;
+}>(), {
+  initialTab: 'companies',
+});
+
 const context = useAdminContextStore();
-const activeTab = ref<BusinessTab>('companies');
+const activeTab = ref<BusinessTab>(props.initialTab);
 const loading = ref(false);
 const busy = ref('');
 const error = ref('');
@@ -31,6 +38,7 @@ const oneTimeShareUrl = ref('');
 const contactImportFile = ref<File | null>(null);
 const contactImportInput = ref<HTMLInputElement | null>(null);
 const contactImportReport = ref<Record<string, unknown> | null>(null);
+const catalogRefreshKey = ref(0);
 
 const canCrmRead = computed(() => context.can('business.crm.read'));
 const canCrmManage = computed(() => context.can('business.crm.manage'));
@@ -40,6 +48,7 @@ const canMemoShare = computed(() => context.can('business.memo.share'));
 const canMailingRead = computed(() => context.can('business.mailing.read'));
 const canMailingManage = computed(() => context.can('business.mailing.manage'));
 const canMessagingAdmin = computed(() => context.can('business.messaging.admin'));
+const canCatalogRead = computed(() => context.can('business.catalog.read'));
 
 const tabs: Array<{ key: BusinessTab; label: string; permission: () => boolean }> = [
   { key: 'companies', label: 'Entreprises', permission: () => canCrmRead.value },
@@ -47,6 +56,8 @@ const tabs: Array<{ key: BusinessTab; label: string; permission: () => boolean }
   { key: 'memos', label: 'Mémos', permission: () => canMemoRead.value },
   { key: 'mailing', label: 'Mailing', permission: () => canMailingRead.value },
   { key: 'messaging', label: 'Messaging', permission: () => canMessagingAdmin.value },
+  { key: 'products', label: 'Produits', permission: () => canCatalogRead.value },
+  { key: 'offers', label: 'Offres', permission: () => canCatalogRead.value },
 ];
 
 const crmStatuses = ['prospect', 'client', 'supplier', 'former_client', 'other'];
@@ -263,6 +274,7 @@ async function loadCurrentTab(): Promise<void> {
   if (activeTab.value === 'memos') await loadMemos();
   if (activeTab.value === 'mailing') await loadMailing();
   if (activeTab.value === 'messaging') await loadMessaging();
+  if (activeTab.value === 'products' || activeTab.value === 'offers') catalogRefreshKey.value++;
 }
 
 function editCompany(company: Company): void {
@@ -723,6 +735,9 @@ async function sendTestMessage(): Promise<void> {
   }
 }
 
+watch(() => props.initialTab, (tab) => {
+  if (tab && activeTab.value !== tab) activeTab.value = tab;
+});
 watch(activeTab, () => { void loadCurrentTab(); });
 watch(() => context.siteId, () => {
   void Promise.all([loadCompanies(), loadContacts(), loadMemos(), loadMailing(), loadMessaging()]);
@@ -735,7 +750,7 @@ onMounted(async () => {
 
 <template>
   <section class="page-stack business-crm">
-    <PageHeader title="Business / CRM" intro="CRM léger : entreprises, contacts, mémos, mailing simple et outbox messaging.">
+    <PageHeader title="Business" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging.">
       <template #actions>
         <button class="btn ghost" type="button" :disabled="loading" @click="loadCurrentTab">Rafraîchir</button>
       </template>
@@ -743,8 +758,8 @@ onMounted(async () => {
 
     <ApiFeedback :error="error" :success="success" />
 
-    <nav class="business-tabs" aria-label="Sections Business CRM">
-      <button v-for="tab in tabs" :key="tab.key" type="button" :class="{ active: activeTab === tab.key, locked: !tab.permission() }" @click="activeTab = tab.key">
+    <nav class="editor-tabs" aria-label="Sections Business">
+      <button v-for="tab in tabs" :key="tab.key" type="button" :class="['editor-tab', { active: activeTab === tab.key }]" :disabled="!tab.permission()" @click="activeTab = tab.key">
         {{ tab.label }}
       </button>
     </nav>
@@ -1123,6 +1138,14 @@ onMounted(async () => {
         </div>
       </template>
     </section>
+
+    <section v-if="activeTab === 'products'" class="business-catalog-tab">
+      <BusinessCatalogView :key="`products-${catalogRefreshKey}`" embedded fixed-tab="products" />
+    </section>
+
+    <section v-if="activeTab === 'offers'" class="business-catalog-tab">
+      <BusinessCatalogView :key="`offers-${catalogRefreshKey}`" embedded fixed-tab="offers" />
+    </section>
   </section>
 </template>
 
@@ -1133,29 +1156,8 @@ onMounted(async () => {
   --business-surface: #fff;
 }
 
-.business-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .4rem;
-  border-bottom: 1px solid var(--business-border);
-}
-
-.business-tabs button {
-  border: 0;
-  border-bottom: 3px solid transparent;
-  background: transparent;
-  color: #344054;
-  padding: .7rem .85rem;
-  font-weight: 700;
-}
-
-.business-tabs button.active {
-  border-color: #14532d;
-  color: #14532d;
-}
-
-.business-tabs button.locked {
-  color: #98a2b3;
+.business-catalog-tab {
+  min-width: 0;
 }
 
 .business-grid {

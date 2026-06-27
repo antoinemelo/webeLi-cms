@@ -833,6 +833,762 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-admin-api-business-catalog-brands-backend-routes-api-php-c34b8518ee",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-brands-backend-routes-api-php-6c1e3b2409",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-brands-id-backend-routes-api-php-93edfa150e",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/brands/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-brands-id-backend-routes-api-php-f948911b74",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/brands/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-brands-id-backend-routes-api-php-052216047c",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/brands/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-categories-backend-routes-api-php-430e964f27",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-categories-backend-routes-api-php-e1047c9ae2",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-categories-id-backend-routes-api-php-dbca1cef97",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/categories/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-categories-id-backend-routes-api-php-6c0db7536a",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/categories/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-categories-id-backend-routes-api-php-a03ee5fcfe",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/categories/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-discounts-backend-routes-api-php-9590e55add",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/discounts",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-discounts-backend-routes-api-php-81aa6cdb61",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/discounts",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-discounts-id-backend-routes-api-php-c607c360e8",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/discounts/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-discounts-id-backend-routes-api-php-ac24b9f13e",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/discounts/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-discounts-id-backend-routes-api-php-792e17d5b0",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/discounts/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-export-csv-backend-routes-api-php-7e9630f7ab",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/export.csv",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-import-apply-backend-routes-api-php-7a044a8080",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/import/apply",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-import-preview-backend-routes-api-php-ca8b411687",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/import/preview",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-option-values-id-backend-routes-api-php-4eb76f1252",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/option-values/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-option-values-id-backend-routes-api-php-c3f5bc37ce",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/option-values/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-options-backend-routes-api-php-95e6f7689f",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/options",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-options-backend-routes-api-php-1b4df81748",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/options",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-options-id-backend-routes-api-php-a5610ad40d",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/options/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-options-id-backend-routes-api-php-ba5b04d936",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/options/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-options-id-values-backend-routes-api-php-7a0cfe3b45",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/options/{id}/values",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-products-backend-routes-api-php-601385f0d7",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-products-backend-routes-api-php-5a2f100de8",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-products-id-backend-routes-api-php-d9bca1a35c",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/products/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-products-id-backend-routes-api-php-868cce9411",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/products/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-products-id-backend-routes-api-php-43024e1e4d",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/products/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-put-admin-api-business-catalog-products-id-base-prices-backend-routes-api-php-2a9935152c",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PUT",
+    "path": "/admin/api/business/catalog/products/{id}/base-prices",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-products-id-prices-backend-routes-api-php-0c1242b0cd",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/products/{id}/prices",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-products-id-variants-backend-routes-api-php-5f29cf7687",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/products/{id}/variants",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-products-id-variants-backend-routes-api-php-78f0a6f056",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/products/{id}/variants",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-stock-movements-backend-routes-api-php-01fa9b1a5c",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/stock-movements",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-catalog-variants-id-backend-routes-api-php-88cd520cd6",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/catalog/variants/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-variants-id-backend-routes-api-php-fade234aba",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/variants/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-catalog-variants-id-backend-routes-api-php-cfc786614a",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/catalog/variants/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-variants-id-computed-prices-backend-routes-api-php-eb2d4d8342",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/variants/{id}/computed-prices",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-put-admin-api-business-catalog-variants-id-price-adjustments-backend-routes-api-php-35d1574eb0",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PUT",
+    "path": "/admin/api/business/catalog/variants/{id}/price-adjustments",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-catalog-variants-id-stock-backend-routes-api-php-f9fbf474e4",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/catalog/variants/{id}/stock",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-catalog-variants-id-stock-movements-backend-routes-api-php-df82c9215e",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/catalog/variants/{id}/stock-movements",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-get-admin-api-business-companies-backend-routes-api-php-c000ccad1f",
     "last_verified": "2026-06-27",
     "limitations": [
@@ -4793,6 +5549,96 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-api-v1-catalog-brands-backend-routes-api-php-fd0bcb02d8",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-catalog-categories-backend-routes-api-php-9f3013f390",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-catalog-products-backend-routes-api-php-f79cb52dbe",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-catalog-products-slug-backend-routes-api-php-f4c767d199",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/products/{slug}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-catalog-variants-id-backend-routes-api-php-d9c5f0e35b",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/variants/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-get-api-v1-content-backend-routes-api-php-cb254965a8",
     "last_verified": "2026-06-27",
     "limitations": [
@@ -5106,6 +5952,96 @@
     ],
     "method": "GET",
     "path": "/api/v1/openapi.yaml",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-pos-catalog-bootstrap-backend-routes-api-php-ec544fb213",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/bootstrap",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-pos-catalog-brands-backend-routes-api-php-5073d10f3f",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-pos-catalog-categories-backend-routes-api-php-a63effd590",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-pos-catalog-products-backend-routes-api-php-e27ec729ff",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-api-v1-pos-catalog-variants-backend-routes-api-php-f597499ecb",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/variants",
     "source": [
       "backend/routes/api.php"
     ],

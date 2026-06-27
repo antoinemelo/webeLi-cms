@@ -1,0 +1,159 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../TestHarness.php';
+require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
+
+use App\Application\PublicApi\PublicCatalogApiHandler;
+use App\Core\Database;
+use App\Core\Request;
+use App\Modules\Business\Catalog\CatalogPricingService;
+use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
+use App\Modules\Business\Repositories\CatalogBrandRepository;
+use App\Modules\Business\Repositories\CatalogCategoryRepository;
+use App\Modules\Business\Repositories\CatalogDiscountRepository;
+use App\Modules\Business\Repositories\CatalogOptionRepository;
+use App\Modules\Business\Repositories\CatalogProductRepository;
+use App\Modules\Business\Repositories\CatalogVariantRepository;
+use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Repository\SiteRepository;
+
+$h = new TestHarness();
+[$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
+$catalogSchema = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql');
+if ($catalogSchema === false) {
+    throw new RuntimeException('Unable to read business catalog schema.');
+}
+$businessDb->pdo()->exec($catalogSchema);
+$coreDir = sys_get_temp_dir() . '/amcms-business-public-catalog-core-' . bin2hex(random_bytes(6));
+mkdir($coreDir, 0775, true);
+
+try {
+    $core = new Database($coreDir . '/core.sqlite', 1000);
+    $core->run("CREATE TABLE sites(id INTEGER PRIMARY KEY, site_key TEXT NOT NULL, name TEXT NOT NULL, default_language_code TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1)");
+    $core->run("CREATE TABLE site_domains(id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, host TEXT NOT NULL, base_path TEXT NOT NULL DEFAULT '', scheme TEXT NOT NULL DEFAULT 'https', is_primary INTEGER NOT NULL DEFAULT 1, is_active INTEGER NOT NULL DEFAULT 1, enforce_https INTEGER NOT NULL DEFAULT 0)");
+    $core->run("CREATE TABLE languages(code TEXT PRIMARY KEY, name TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0, is_active INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0)");
+    $core->run("CREATE TABLE site_languages(site_id INTEGER NOT NULL, language_code TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0, is_active INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0, fallback_language_code TEXT, url_prefix TEXT, hreflang_code TEXT, is_rtl INTEGER NOT NULL DEFAULT 0)");
+    $core->run("INSERT INTO sites(id, site_key, name, default_language_code, is_active) VALUES(1, 'main', 'Main', 'fr', 1)");
+    $core->run("INSERT INTO site_domains(id, site_id, host, base_path, scheme, is_primary, is_active) VALUES(1, 1, 'example.test', '', 'https', 1, 1)");
+    $core->run("INSERT INTO languages(code, name, is_default, is_active, sort_order) VALUES('fr', 'Français', 1, 1, 1)");
+    $core->run("INSERT INTO site_languages(site_id, language_code, is_default, is_active, sort_order) VALUES(1, 'fr', 1, 1, 1)");
+
+    $brands = new CatalogBrandRepository($businessDb);
+    $categories = new CatalogCategoryRepository($businessDb);
+    $products = new CatalogProductRepository($businessDb);
+    $variants = new CatalogVariantRepository($businessDb);
+    $options = new CatalogOptionRepository($businessDb);
+    $discounts = new CatalogDiscountRepository($businessDb);
+
+    $brand = $brands->create(1, ['name' => 'Public Brand', 'slug' => 'public-brand', 'is_public' => true], 1);
+    $otherBrand = $brands->create(1, ['name' => 'Other Brand', 'slug' => 'other-brand', 'is_public' => true], 1);
+    $privateBrand = $brands->create(1, ['name' => 'Private Brand', 'slug' => 'private-brand', 'is_public' => false], 1);
+    $category = $categories->create(1, ['name' => 'Public Category', 'slug' => 'public-category', 'is_public' => true], 1);
+    $otherCategory = $categories->create(1, ['name' => 'Other Category', 'slug' => 'other-category', 'is_public' => true], 1);
+
+    $size = $options->create(1, ['code' => 'size', 'name' => 'Size'], 1);
+    $options->addValue(1, (int) $size['id'], ['code' => 'm', 'label' => 'M', 'value' => 'm'], 1);
+
+    $product = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'name' => 'Public Product',
+        'slug' => 'public-product',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce'],
+        'base_purchase_price' => 30,
+        'base_sale_price' => 100,
+        'currency' => 'CHF',
+        'track_stock' => true,
+    ], 1);
+    $products->replaceOptionLinks(1, (int) $product['id'], [(int) $size['id']]);
+    $variant = $variants->create(1, (int) $product['id'], [
+        'sku' => 'PUBLIC-M',
+        'name' => 'Public M',
+        'status' => 'active',
+        'stock_quantity' => 3,
+        'option_values' => ['size' => 'm'],
+        'sale_adjustment_type' => 'amount_delta',
+        'sale_adjustment_value' => 20,
+    ], 1);
+    $products->update(1, (int) $product['id'], ['status' => 'active'], 1);
+    $discounts->create(1, [
+        'name' => 'Offre spéciale',
+        'type' => 'percent',
+        'value' => 10,
+        'scope' => 'product',
+        'scope_id' => $product['id'],
+        'channel' => 'ecommerce',
+        'status' => 'active',
+    ], 1);
+
+    $hidden = $products->create(1, ['name' => 'Hidden Product', 'slug' => 'hidden-product', 'status' => 'active', 'channels' => ['ecommerce'], 'base_sale_price' => 50], 1);
+    $products->create(1, ['name' => 'Internal Product', 'slug' => 'internal-product', 'status' => 'active', 'channels' => ['public'], 'base_sale_price' => 60], 1);
+    $archived = $products->create(1, ['name' => 'Archived Product', 'slug' => 'archived-product', 'status' => 'active', 'channels' => ['public', 'ecommerce'], 'base_sale_price' => 70], 1);
+    $products->archive(1, (int) $archived['id'], 1);
+    $privateProduct = $products->create(1, ['brand_id' => $privateBrand['id'], 'name' => 'Private Brand Product', 'slug' => 'private-brand-product', 'status' => 'active', 'channels' => ['public', 'ecommerce'], 'base_sale_price' => 80], 1);
+
+    $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
+    $handlerFor = static function (array $query = [], string $path = '/api/v1/catalog/products') use ($sites, $businessDb): PublicCatalogApiHandler {
+        $request = new Request('GET', $path, $query, [], ['HTTP_HOST' => 'example.test'], [], []);
+        return new PublicCatalogApiHandler($request, $sites, new PublicCatalogRepository($businessDb), new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb)));
+    };
+
+    $list = $handlerFor()->products();
+    $h->assertSame(200, $list->status(), 'public catalog products endpoint responds');
+    $body = $list->body();
+    $h->assertTrue(str_contains($body, 'Public Product'), 'active public ecommerce product is present');
+    $h->assertTrue(!str_contains($body, 'Hidden Product'), 'non public product is absent');
+    $h->assertTrue(!str_contains($body, 'Internal Product'), 'non ecommerce product is absent');
+    $h->assertTrue(!str_contains($body, 'Archived Product'), 'archived product is absent');
+    $h->assertTrue(!str_contains($body, 'purchase'), 'public product payload does not expose purchase price');
+    $h->assertTrue(!str_contains($body, 'margin'), 'public product payload does not expose margin');
+    $h->assertTrue(!str_contains($body, 'stock_quantity'), 'public product payload does not expose exact stock quantity');
+
+    $decoded = json_decode($body, true);
+    $publicItem = null;
+    foreach (($decoded['data']['items'] ?? []) as $item) {
+        if (($item['slug'] ?? '') === 'public-product') {
+            $publicItem = $item;
+            break;
+        }
+    }
+    $pricing = $publicItem['variants'][0]['pricing'] ?? [];
+    $h->assertSame('120.00', $pricing['regular_sale_price'] ?? null, 'public regular sale price includes variant adjustment');
+    $h->assertSame('108.00', $pricing['final_sale_price'] ?? null, 'public final sale price includes active discount');
+    $h->assertSame('Offre spéciale', $pricing['discount']['label'] ?? null, 'public discount label is exposed');
+
+    $show = $handlerFor([], '/api/v1/catalog/products/public-product')->product('public-product');
+    $h->assertSame(200, $show->status(), 'public product show works');
+    $h->assertTrue(str_contains($show->body(), 'public.catalog.products.show.v1'), 'public product show contract is returned');
+
+    $variantResponse = $handlerFor([], '/api/v1/catalog/variants/' . $variant['id'])->variant((int) $variant['id']);
+    $h->assertSame(200, $variantResponse->status(), 'public active variant show works');
+    $h->assertTrue(!str_contains($variantResponse->body(), 'purchase'), 'public variant payload does not expose purchase price');
+
+    $brandFiltered = $handlerFor(['brand' => 'public-brand'])->products();
+    $h->assertTrue(str_contains($brandFiltered->body(), 'Public Product'), 'public products are filterable by brand');
+    $otherBrandFiltered = $handlerFor(['brand' => 'other-brand'])->products();
+    $h->assertTrue(!str_contains($otherBrandFiltered->body(), 'Public Product'), 'brand filter excludes other products');
+    $categoryFiltered = $handlerFor(['category' => 'public-category'])->products();
+    $h->assertTrue(str_contains($categoryFiltered->body(), 'Public Product'), 'public products are filterable by category');
+    $otherCategoryFiltered = $handlerFor(['category' => 'other-category'])->products();
+    $h->assertTrue(!str_contains($otherCategoryFiltered->body(), 'Public Product'), 'category filter excludes other products');
+
+    $h->assertSame(200, $handlerFor([], '/api/v1/catalog/brands')->brands()->status(), 'public brands endpoint responds');
+    $h->assertSame(200, $handlerFor([], '/api/v1/catalog/categories')->categories()->status(), 'public categories endpoint responds');
+    $h->assertSame(404, $handlerFor([], '/api/v1/catalog/products/hidden-product')->product('hidden-product')->status(), 'non public product show is refused');
+    $h->assertSame(404, $handlerFor([], '/api/v1/catalog/products/archived-product')->product('archived-product')->status(), 'archived product show is refused');
+    $h->assertSame(0, count(json_decode($handlerFor(['brand' => 'private-brand'])->products()->body(), true)['data']['items'] ?? []), 'private brands are not filterable in public catalog');
+
+    unset($hidden, $otherBrand, $otherCategory, $privateProduct);
+} finally {
+    $businessDb = null;
+    $core = null;
+    gc_collect_cycles();
+    test_remove_tree($businessDir);
+    test_remove_tree($coreDir);
+}
+
+exit($h->finish('UNIT business Catalog public API'));

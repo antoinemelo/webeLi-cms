@@ -187,6 +187,8 @@
         "search:read",
         "menus:read",
         "taxonomies:read",
+        "catalog:read",
+        "pos.catalog.read",
         "*"
       ],
       "available_webhook_events": [

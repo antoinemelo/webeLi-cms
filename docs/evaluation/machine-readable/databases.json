@@ -69,6 +69,82 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/business/0002_catalog_pricing.sql"
+    ],
+    "id": "database-source-database-migrations-business-0002-catalog-pricing-sql-387290f419",
+    "kind": "migration",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0002_catalog_pricing.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_catalog_offers",
+      "business_catalog_products",
+      "business_catalog_variant_price_adjustments",
+      "business_catalog_variants"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0003_catalog_schema.sql"
+    ],
+    "id": "database-source-database-migrations-business-0003-catalog-schema-sql-27ab578bb3",
+    "kind": "migration",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0003_catalog_schema.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_catalog_discounts",
+      "business_product_base_prices",
+      "business_product_brands",
+      "business_product_categories",
+      "business_product_media",
+      "business_product_option_links",
+      "business_product_option_values",
+      "business_product_options",
+      "business_product_tag_links",
+      "business_product_tags",
+      "business_product_variant_option_values",
+      "business_product_variant_price_adjustments",
+      "business_product_variants",
+      "business_products",
+      "business_stock_movements",
+      "business_tax_classes"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0004_catalog_demo_seed.sql"
+    ],
+    "id": "database-source-database-migrations-business-0004-catalog-demo-seed-sql-72bfb65862",
+    "kind": "migration",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0004_catalog_demo_seed.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/core/070_module_resource_blueprints.sql"
     ],
     "id": "database-source-database-migrations-core-070-module-resource-blueprints-sql-ab642eecfc",
@@ -393,10 +469,30 @@
     ],
     "status": "supported",
     "tables": [
+      "business_catalog_discounts",
+      "business_catalog_offers",
+      "business_catalog_products",
+      "business_catalog_variant_price_adjustments",
+      "business_catalog_variants",
       "business_companies",
       "business_contacts",
+      "business_product_base_prices",
+      "business_product_brands",
+      "business_product_categories",
+      "business_product_media",
+      "business_product_option_links",
+      "business_product_option_values",
+      "business_product_options",
+      "business_product_tag_links",
+      "business_product_tags",
+      "business_product_variant_option_values",
+      "business_product_variant_price_adjustments",
+      "business_product_variants",
+      "business_products",
+      "business_stock_movements",
       "business_tag_links",
       "business_tags",
+      "business_tax_classes",
       "crm_consents",
       "crm_contact_channels",
       "crm_mailing_list_members",

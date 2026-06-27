@@ -58,13 +58,15 @@ Les scopes attendus sont ciblés par famille d’usage :
 
 | Scope | Usage |
 |---|---|
-| `headless:read` | Alias de compatibilité qui donne accès aux lectures `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. |
+| `headless:read` | Alias de compatibilité qui donne accès aux lectures `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read` et `catalog:read`. |
 | `routes:read` | Routes publiques, langues et résolution de route. |
 | `content:read` | Contenus publiés et, par compatibilité, routes/langues nécessaires à la lecture headless. |
 | `media:read` | Médias publics prêts et validés. |
 | `search:read` | Recherche publique. |
 | `menus:read` | Menus publics actifs. |
 | `taxonomies:read` | Taxonomies et termes publics actifs. |
+| `catalog:read` | Catalogue public e-commerce, sans prix d'achat ni marge. |
+| `pos.catalog.read` | Catalogue POS protégé, limité aux produits actifs POS. Non inclus dans `headless:read`. |
 
 Les endpoints protégés attendent ces scopes :
 
@@ -76,6 +78,8 @@ Les endpoints protégés attendent ces scopes :
 | `GET /api/v1/search` | `search:read` |
 | `GET /api/v1/menus`, `/menus/{key}` | `menus:read` |
 | `GET /api/v1/taxonomies`, `/taxonomies/{taxonomy}` | `taxonomies:read` |
+| `GET /api/v1/catalog/*` | `catalog:read` ou `headless:read` |
+| `GET /api/v1/pos/catalog/*` | `pos.catalog.read` |
 
 Un token doit être traité comme un secret applicatif. Il ne doit pas être exposé dans un dépôt Git public ni injecté dans un bundle front-end public lorsque la sécurité attend une confidentialité stricte. Pour un site statique public, utilisez seulement un token prévu pour cet usage ou un proxy serveur.
 

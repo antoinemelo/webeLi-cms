@@ -55,6 +55,13 @@ final class BusinessModuleProvider implements ModuleProvider
             ['key' => 'business.mailing.manage', 'name' => 'Gerer le mailing Business', 'description' => 'Gerer listes, campagnes simples, destinataires et desabonnements.'],
             ['key' => 'business.messaging.send', 'name' => 'Envoyer des messages Business', 'description' => 'Planifier ou declencher un envoi apres controle du consentement.'],
             ['key' => 'business.messaging.admin', 'name' => 'Administrer le messaging Business', 'description' => 'Configurer providers, templates et outbox messaging sans stocker de secret en clair.'],
+            ['key' => 'business.catalog.read', 'name' => 'Lire le catalogue Business', 'description' => 'Consulter marques, categories, produits, variantes, options, prix publics et reductions catalogue.'],
+            ['key' => 'business.catalog.write', 'name' => 'Gerer le catalogue Business', 'description' => 'Creer, modifier et archiver marques, categories, produits, options et variantes.'],
+            ['key' => 'business.catalog.prices.read', 'name' => 'Lire les prix catalogue', 'description' => 'Consulter les prix de vente et prix calcules du catalogue.'],
+            ['key' => 'business.catalog.prices.write', 'name' => 'Gerer les prix catalogue', 'description' => 'Modifier prix de base et ajustements de variantes.'],
+            ['key' => 'business.catalog.purchase_prices.read', 'name' => 'Lire les prix achat catalogue', 'description' => 'Consulter les prix d achat et marges catalogue proteges.'],
+            ['key' => 'business.catalog.discounts.write', 'name' => 'Gerer les reductions catalogue', 'description' => 'Creer, modifier et archiver les reductions et offres catalogue.'],
+            ['key' => 'business.catalog.stock.write', 'name' => 'Gerer le stock catalogue', 'description' => 'Modifier les mouvements de stock simples du catalogue.'],
         ];
     }
 
@@ -80,16 +87,24 @@ final class BusinessModuleProvider implements ModuleProvider
     /** @return list<array<string,mixed>> */
     public function adminNavigation(): array
     {
-        return [[
-            'key' => 'business.crm',
-            'label' => 'Business / CRM',
-            'navLabel' => 'Business',
-            'route' => '/business/crm',
-            'permission' => 'business.crm.read',
-            'section' => 'Modules',
-            'hint' => 'Entreprises, contacts, memos, consentements, mailing simple et outbox messaging.',
-            'sort_order' => 140,
-        ]];
+        return [
+            [
+                'key' => 'business.crm',
+                'label' => 'Business',
+                'navLabel' => 'Business',
+                'route' => '/business',
+                'anyPermission' => [
+                    'business.crm.read',
+                    'business.memo.read',
+                    'business.mailing.read',
+                    'business.messaging.admin',
+                    'business.catalog.read',
+                ],
+                'section' => 'Modules',
+                'hint' => 'CRM, produits, offres, mailing simple et outbox messaging.',
+                'sort_order' => 140,
+            ],
+        ];
     }
 
     /** @return list<array{0:string,1:string,2:string}> */
@@ -164,6 +179,48 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->contract('admin.business.mailing.campaigns.preview_recipients.v1', 'POST', '/admin/api/business/mailing/campaigns/{id}/preview-recipients', 'business.mailing.read'),
             $this->contract('admin.business.mailing.campaigns.enqueue.v1', 'POST', '/admin/api/business/mailing/campaigns/{id}/enqueue', 'business.mailing.manage'),
             $this->contract('admin.business.mailing.campaigns.cancel.v1', 'POST', '/admin/api/business/mailing/campaigns/{id}/cancel', 'business.mailing.manage'),
+            $this->contract('admin.business.catalog.export.v1', 'GET', '/admin/api/business/catalog/export.csv', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.import.preview.v1', 'POST', '/admin/api/business/catalog/import/preview', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.import.apply.v1', 'POST', '/admin/api/business/catalog/import/apply', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.brands.index.v1', 'GET', '/admin/api/business/catalog/brands', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.brands.store.v1', 'POST', '/admin/api/business/catalog/brands', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.brands.show.v1', 'GET', '/admin/api/business/catalog/brands/{id}', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.brands.update.v1', 'PATCH', '/admin/api/business/catalog/brands/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.brands.delete.v1', 'DELETE', '/admin/api/business/catalog/brands/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.categories.index.v1', 'GET', '/admin/api/business/catalog/categories', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.categories.store.v1', 'POST', '/admin/api/business/catalog/categories', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.categories.show.v1', 'GET', '/admin/api/business/catalog/categories/{id}', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.categories.update.v1', 'PATCH', '/admin/api/business/catalog/categories/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.categories.delete.v1', 'DELETE', '/admin/api/business/catalog/categories/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.products.index.v1', 'GET', '/admin/api/business/catalog/products', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.products.store.v1', 'POST', '/admin/api/business/catalog/products', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.products.show.v1', 'GET', '/admin/api/business/catalog/products/{id}', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.products.update.v1', 'PATCH', '/admin/api/business/catalog/products/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.products.delete.v1', 'DELETE', '/admin/api/business/catalog/products/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.variants.index.v1', 'GET', '/admin/api/business/catalog/products/{id}/variants', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.variants.store.v1', 'POST', '/admin/api/business/catalog/products/{id}/variants', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.variants.show.v1', 'GET', '/admin/api/business/catalog/variants/{id}', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.variants.update.v1', 'PATCH', '/admin/api/business/catalog/variants/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.variants.delete.v1', 'DELETE', '/admin/api/business/catalog/variants/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.variants.stock.v1', 'GET', '/admin/api/business/catalog/variants/{id}/stock', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.stock_movements.store.v1', 'POST', '/admin/api/business/catalog/variants/{id}/stock-movements', 'business.catalog.stock.write'),
+            $this->contract('admin.business.catalog.stock_movements.index.v1', 'GET', '/admin/api/business/catalog/stock-movements', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.options.index.v1', 'GET', '/admin/api/business/catalog/options', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.options.store.v1', 'POST', '/admin/api/business/catalog/options', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.options.update.v1', 'PATCH', '/admin/api/business/catalog/options/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.options.delete.v1', 'DELETE', '/admin/api/business/catalog/options/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.option_values.store.v1', 'POST', '/admin/api/business/catalog/options/{id}/values', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.option_values.update.v1', 'PATCH', '/admin/api/business/catalog/option-values/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.option_values.delete.v1', 'DELETE', '/admin/api/business/catalog/option-values/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.prices.index.v1', 'GET', '/admin/api/business/catalog/products/{id}/prices', 'business.catalog.prices.read'),
+            $this->contract('admin.business.catalog.prices.update.v1', 'PUT', '/admin/api/business/catalog/products/{id}/base-prices', 'business.catalog.prices.write'),
+            $this->contract('admin.business.catalog.variants.prices.v1', 'PUT', '/admin/api/business/catalog/variants/{id}/price-adjustments', 'business.catalog.prices.write'),
+            $this->contract('admin.business.catalog.variants.computed_prices.v1', 'GET', '/admin/api/business/catalog/variants/{id}/computed-prices', 'business.catalog.prices.read'),
+            $this->contract('admin.business.catalog.discounts.index.v1', 'GET', '/admin/api/business/catalog/discounts', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.discounts.store.v1', 'POST', '/admin/api/business/catalog/discounts', 'business.catalog.discounts.write'),
+            $this->contract('admin.business.catalog.discounts.show.v1', 'GET', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.discounts.update.v1', 'PATCH', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.discounts.write'),
+            $this->contract('admin.business.catalog.discounts.delete.v1', 'DELETE', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.discounts.write'),
         ];
     }
 

@@ -16,6 +16,7 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("validate", subparsers.choices)
         self.assertIn("docs", subparsers.choices)
         self.assertIn("test", subparsers.choices)
+        self.assertIn("business", subparsers.choices)
 
     def test_global_options_are_normalized_after_subcommand(self) -> None:
         normalized = cli._normalize_global_options(["smoke", "--json", "--root", "/tmp/cms"])

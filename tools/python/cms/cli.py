@@ -8,10 +8,10 @@ from pathlib import Path
 
 from .evidence import CommandEvidence
 from .runtime import Context
-from tools.python.commands import audit, backup, docs, e2e, export, init, instance, migrate, qualify, release, smoke, test, validate
+from tools.python.commands import audit, backup, business, docs, e2e, export, init, instance, migrate, qualify, release, smoke, test, validate
 from tools.python.lib.release_metadata import load_release_metadata
 
-COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'e2e': e2e.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'instance': instance.run, 'release': release.run, 'smoke': smoke.run, 'docs': docs.run}
+COMMANDS = {'init': init.run, 'rebuild': init.rebuild, 'validate': validate.run, 'qualify': qualify.run, 'audit': audit.run, 'test': test.run, 'e2e': e2e.run, 'export': export.run, 'backup': backup.run, 'migrate': migrate.run, 'instance': instance.run, 'release': release.run, 'smoke': smoke.run, 'docs': docs.run, 'business': business.run}
 
 
 def parser() -> argparse.ArgumentParser:
@@ -37,6 +37,7 @@ def parser() -> argparse.ArgumentParser:
     release.configure(sub.add_parser('release', help='Préparer et vérifier une release.'))
     smoke.configure(sub.add_parser('smoke', help='Smoke test structurel non destructif d’une archive release installée.'))
     docs.configure(sub.add_parser('docs', help='Générer ou vérifier la documentation de référence.'))
+    business.configure(sub.add_parser('business', help='Commandes ciblées du module Business.'))
     return p
 
 

@@ -23,6 +23,96 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "api-endpoint-get-api-v1-catalog-brands-backend-routes-api-php-fd0bcb02d8",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-catalog-categories-backend-routes-api-php-9f3013f390",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-catalog-products-backend-routes-api-php-f79cb52dbe",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-catalog-products-slug-backend-routes-api-php-f4c767d199",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/products/{slug}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-catalog-variants-id-backend-routes-api-php-d9c5f0e35b",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/catalog/variants/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "api-endpoint-get-api-v1-content-backend-routes-api-php-cb254965a8",
     "last_verified": "2026-06-27",
     "limitations": [
@@ -336,6 +426,96 @@
     ],
     "method": "GET",
     "path": "/api/v1/openapi.yaml",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-pos-catalog-bootstrap-backend-routes-api-php-ec544fb213",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/bootstrap",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-pos-catalog-brands-backend-routes-api-php-5073d10f3f",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/brands",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-pos-catalog-categories-backend-routes-api-php-a63effd590",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/categories",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-pos-catalog-products-backend-routes-api-php-e27ec729ff",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/products",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "public",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "api-endpoint-get-api-v1-pos-catalog-variants-backend-routes-api-php-f597499ecb",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/api/v1/pos/catalog/variants",
     "source": [
       "backend/routes/api.php"
     ],

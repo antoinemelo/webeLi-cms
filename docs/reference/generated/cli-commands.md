@@ -22,13 +22,13 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs}
+                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs,business}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs}
+  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs,business}
     init                Créer les structures SQLite sans données métier.
     rebuild             Développement/test: reconstruire les bases et appliquer
                         les seeds natifs.
@@ -47,6 +47,7 @@ positional arguments:
     smoke               Smoke test structurel non destructif d’une archive
                         release installée.
     docs                Générer ou vérifier la documentation de référence.
+    business            Commandes ciblées du module Business.
 
 options:
   -h, --help            show this help message and exit

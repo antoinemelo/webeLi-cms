@@ -11,6 +11,7 @@ use App\Application\Api\Admin\AdminContextApiController;
 use App\Application\Api\Admin\BlockBlueprintApiController;
 use App\Application\Api\Admin\CapabilityApiController;
 use App\Application\Api\Admin\BlueprintApiController;
+use App\Application\Api\Admin\BusinessCatalogApiController;
 use App\Application\Api\Admin\BusinessCrmApiController;
 use App\Application\Api\Admin\BusinessMessagingApiController;
 use App\Application\Api\Admin\BusinessMailingApiController;
@@ -42,6 +43,8 @@ use App\Application\PublicApi\PublicSearchApiHandler;
 use App\Application\PublicApi\PublicTaxonomyApiHandler;
 use App\Application\PublicApi\PublicFormApiHandler;
 use App\Application\PublicApi\PublicCookieConsentApiHandler;
+use App\Application\PublicApi\PublicCatalogApiHandler;
+use App\Application\PublicApi\PosCatalogApiHandler;
 use App\Application\Configuration\ConfigurationRepository;
 use App\Application\Configuration\MultisiteRepository;
 use App\Application\Frontend\HomeController;
@@ -304,6 +307,8 @@ final class App
                 new PublicSearchApiHandler($this->request, $services->publicSearch(), $services->sites()),
                 new PublicFormApiHandler($this->request, $services->forms(), $services->sites()),
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
+                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing()),
+                new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing()),
             ),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
             AdminContextApiController::class => new AdminContextApiController($this->config, $this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleNavigation(), $services->moduleContracts()),
@@ -337,6 +342,24 @@ final class App
                 $services->businessConsentService(),
                 $services->businessMemoSharing(),
                 $services->businessCsv(),
+            ),
+            BusinessCatalogApiController::class => new BusinessCatalogApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessCatalogBrands(),
+                $services->businessCatalogCategories(),
+                $services->businessCatalogProducts(),
+                $services->businessCatalogVariants(),
+                $services->businessCatalogOptions(),
+                $services->businessCatalogDiscounts(),
+                $services->businessCatalogProductsService(),
+                $services->businessCatalogVariantsService(),
+                $services->businessCatalogDiscountsService(),
+                $services->businessCatalogStockService(),
+                $services->businessCatalogCsv(),
+                $services->businessCatalogPricing(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,

@@ -673,6 +673,12 @@ final class DocsApiController
                 'audience_label' => 'Tous',
                 'sort_order' => 30,
             ],
+            'business' => [
+                'label' => 'Piloter le module Business',
+                'description' => 'Guides CRM, catalogue, produits, offres et intégrations Business.',
+                'audience_label' => 'Tous',
+                'sort_order' => 35,
+            ],
             'installation' => [
                 'label' => 'Installer une release',
                 'description' => 'Préparer, installer ou vérifier une release distribuable.',

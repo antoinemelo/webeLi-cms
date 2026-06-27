@@ -57,6 +57,13 @@ generated: true
 | `audit.read` |
 | `blueprints.manage` |
 | `blueprints.read` |
+| `business.catalog.discounts.write` |
+| `business.catalog.prices.read` |
+| `business.catalog.prices.write` |
+| `business.catalog.purchase_prices.read` |
+| `business.catalog.read` |
+| `business.catalog.stock.write` |
+| `business.catalog.write` |
 | `business.crm.manage` |
 | `business.crm.read` |
 | `business.mailing.manage` |
@@ -94,6 +101,7 @@ generated: true
 | `menu.read` |
 | `modules.manage` |
 | `modules.read` |
+| `pos.catalog.read` |
 | `profile.read` |
 | `profile.update` |
 | `roles.manage` |

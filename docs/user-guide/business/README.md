@@ -1,5 +1,5 @@
 ---
-title: Business CRM
+title: Business
 audience:
   - administrator
   - superadministrator
@@ -10,6 +10,8 @@ source_of_truth: manual
 source_paths:
   - backend/src/Modules/Business/BusinessModuleProvider.php
   - frontend/admin-vue/src/views/modules/BusinessCrmView.vue
+  - frontend/admin-vue/src/views/modules/BusinessCatalogView.vue
+  - backend/src/Application/Api/Admin/BusinessCatalogApiController.php
   - backend/routes/api.php
   - backend/routes/web.php
 owners:
@@ -17,23 +19,26 @@ owners:
 document_type: guide
 generated: false
 ---
-# Business CRM
+# Business
 
-Le module Business ajoute un CRM leger au back-office : entreprises, contacts, memos, consentements, mailing simple et outbox messaging. Il ne remplace pas un ERP et ne contient ni pipeline commercial, ni taches, ni rappels, ni comptabilite.
+Le module Business regroupe le CRM leger et le catalogue commercial du back-office : entreprises, contacts, memos, consentements, mailing simple, outbox messaging, produits, variantes, prix, stock et offres. Il ne remplace pas un ERP et ne contient ni pipeline commercial, ni taches, ni rappels, ni comptabilite.
 
 ## Parcours
 
 - [Entreprises et contacts](crm.md) : creer une entreprise, rattacher des contacts, utiliser l'entreprise systeme `Individus`.
 - [Memos et partages](memos.md) : ecrire un memo, le rattacher a une entreprise ou un contact, partager en interne ou par lien public revocable.
 - [Mailing et consentements](mailing.md) : preparer une liste, verifier les destinataires eligibles et respecter les opt-in.
+- [Catalogue Business](../../business/catalogue.md) : creer marques, categories, produits, variantes, prix, reductions simples et stock.
+- [API Catalogue Business](../../business/catalogue-api.md) : comprendre les endpoints admin, publics et POS, les permissions et les regles de prix.
 
 ## Droits
 
-L'entree **Business / CRM** est visible avec `business.crm.read`. Les actions d'ecriture, de partage, de mailing et de messaging exigent des permissions supplementaires cote serveur.
+L'entree **Business** est visible avec une permission de lecture CRM ou catalogue. Les actions d'ecriture, de partage, de mailing, de messaging, de prix, de stock et d'offres exigent des permissions supplementaires cote serveur.
 
 ## Limites v1
 
 - pas de taches, rappels ou pipeline commercial ;
+- pas de PIM enterprise ni de promotions complexes ;
 - pas de paie, comptabilite, commande ou facture ;
 - pas d'envoi marketing sans consentement compatible ;
 - WhatsApp et Telegram restent des providers configurables, desactives sans configuration officielle.

@@ -44,7 +44,7 @@ async function getJson(path) {
 
 L’en-tête `Authorization` est nécessaire lorsque l’authentification publique par token est activée. Lorsque cette protection est désactivée côté installation, les endpoints de lecture peuvent répondre sans token.
 
-Les scopes de lecture reconnus sont `headless:read`, `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read` et `taxonomies:read`. L’alias `headless:read` couvre les scopes spécialisés de lecture ; `content:read` couvre aussi `routes:read` par compatibilité.
+Les scopes de lecture reconnus sont `headless:read`, `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read`, `catalog:read` et `pos.catalog.read`. L’alias `headless:read` couvre les scopes spécialisés de lecture publique ; `content:read` couvre aussi `routes:read` par compatibilité. Le catalogue POS exige explicitement `pos.catalog.read`.
 
 ## Paramètres de contexte
 

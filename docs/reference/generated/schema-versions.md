@@ -19,6 +19,9 @@ generated: true
 | Source | Version |
 |---|---|
 | `database/migrations/business/0001_init.sql` | `0001_init` |
+| `database/migrations/business/0002_catalog_pricing.sql` | `0002_catalog_pricing` |
+| `database/migrations/business/0003_catalog_schema.sql` | `0003_catalog_schema` |
+| `database/migrations/business/0004_catalog_demo_seed.sql` | `0004_catalog_demo_seed` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
 | `database/migrations/core/072_action_runs.sql` | `072_action_runs` |

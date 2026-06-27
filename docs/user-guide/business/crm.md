@@ -31,7 +31,7 @@ Centraliser des entreprises et contacts par site, avec un statut CRM simple et u
 
 ## Entreprises
 
-1. Ouvrez **Modules > Business / CRM**.
+1. Ouvrez **Modules > Business**.
 2. Dans l'onglet entreprises, creez une fiche avec un nom, puis ajoutez email, telephone, site web, adresse ou notes si necessaire.
 3. Choisissez un statut : `prospect`, `client`, `supplier`, `former_client` ou `other`.
 4. Archivez une fiche lorsqu'elle ne doit plus apparaitre dans les listes actives.

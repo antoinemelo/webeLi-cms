@@ -23,6 +23,13 @@ generated: true
 | `DELETE` | `/admin/api/ai/providers/{key}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/usage` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/blueprints/{key}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/option-values/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/options/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/products/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/catalog/variants/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/mailing/lists/{id}/members/{contactId}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/memos/{id}/public-share` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/memos/{id}/shares/{shareId}` | API administrative | `backend/routes/api.php` |
@@ -73,6 +80,22 @@ generated: true
 | `GET` | `/admin/api/blueprints/{key}/design` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/blueprints/{key}/editor-schema` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/blueprints/{key}/versions` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/brands` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/categories` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/discounts` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/export.csv` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/products` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/products/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/products/{id}/prices` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/products/{id}/variants` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/stock-movements` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/variants/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/variants/{id}/computed-prices` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/variants/{id}/stock` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/companies` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/companies/export.csv` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/companies/{id}` | API administrative | `backend/routes/api.php` |
@@ -160,6 +183,11 @@ generated: true
 | `GET` | `/admin/login` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/reset-password` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/api/v1` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/catalog/brands` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/catalog/categories` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/catalog/products` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/catalog/products/{slug}` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/catalog/variants/{id}` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content-by-path` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/content/{type}` | API publique | `backend/routes/api.php` |
@@ -176,6 +204,11 @@ generated: true
 | `GET` | `/api/v1/modules/{module}/{resource}/schema` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/openapi.json` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/openapi.yaml` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/pos/catalog/bootstrap` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/pos/catalog/brands` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/pos/catalog/categories` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/pos/catalog/products` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/pos/catalog/variants` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/route` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/routes` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/search` | API publique | `backend/routes/api.php` |
@@ -187,6 +220,13 @@ generated: true
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/{path:.+}` | HTML/runtime | `backend/routes/web.php` |
+| `PATCH` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/option-values/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/options/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/products/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/catalog/variants/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/companies/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}/consents/{channel}` | API administrative | `backend/routes/api.php` |
@@ -232,6 +272,16 @@ generated: true
 | `POST` | `/admin/api/blueprints` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/blueprints/{key}/activate` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/blueprints/{key}/versions` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/brands` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/categories` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/discounts` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/import/apply` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/import/preview` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/options/{id}/values` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/products` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/products/{id}/variants` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/variants/{id}/stock-movements` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/companies` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/companies/{id}/archive` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/contacts` | API administrative | `backend/routes/api.php` |
@@ -312,5 +362,7 @@ generated: true
 | `POST` | `/api/v1/forms/{key}/submit` | API publique | `backend/routes/api.php` |
 | `POST` | `/business/unsubscribe/{token:[A-Za-z0-9]{32,128}}` | HTML/runtime | `backend/routes/web.php` |
 | `PUT` | `/admin/api/blueprints/{key}/design` | API administrative | `backend/routes/api.php` |
+| `PUT` | `/admin/api/business/catalog/products/{id}/base-prices` | API administrative | `backend/routes/api.php` |
+| `PUT` | `/admin/api/business/catalog/variants/{id}/price-adjustments` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/fieldsets/{key}` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/menus/{key}/items` | API administrative | `backend/routes/api.php` |

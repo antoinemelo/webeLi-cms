@@ -37,10 +37,30 @@ generated: true
 
 | Table | Colonnes |
 |---|---|
+| `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_offers` | id, site_id, name, offer_type, offer_value, scope_type, product_id, variant_id, category_id, brand_id, channel, starts_at, ends_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_products` | id, site_id, name, slug, product_type, status, currency, base_purchase_price, base_sale_price, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, created_at, updated_at |
+| `business_catalog_variants` | id, product_id, sku, barcode, status, stock_quantity, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_companies` | id, site_id, name, normalized_name, company_kind, status, email, phone, website_url, address_json, notes, is_system, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_contacts` | id, site_id, company_id, iam_user_id, first_name, last_name, display_name, normalized_name, status, preferred_language, email, phone, mobile, job_title, notes, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_base_prices` | id, product_id, price_kind, currency, amount, tax_included, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `business_product_brands` | id, site_id, name, slug, description, website_url, logo_media_id, is_public, status, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_categories` | id, site_id, parent_id, name, slug, description, is_public, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_media` | id, product_id, variant_id, media_id, role, alt_text, sort_order, created_by_iam_user_id, created_at, archived_at |
+| `business_product_option_links` | product_id, option_id, is_required, sort_order, created_at |
+| `business_product_option_values` | id, option_id, code, label, value, color_hex, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_options` | id, site_id, code, name, type, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_tag_links` | tag_id, product_id, created_by_iam_user_id, created_at |
+| `business_product_tags` | id, site_id, name, slug, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_variant_option_values` | variant_id, option_id, option_value_id, created_at |
+| `business_product_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, currency, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `business_product_variants` | id, product_id, status, sku, barcode, name, track_stock, stock_quantity, stock_reserved, allow_backorder, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_stock_movements` | id, variant_id, movement_type, quantity, reason, reference_type, reference_id, created_by_iam_user_id, created_at |
 | `business_tag_links` | id, tag_id, target_type, company_id, contact_id, created_by_iam_user_id, created_at |
 | `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_tax_classes` | id, site_id, code, name, rate, country, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_consents` | id, contact_id, channel, consent_status, source, evidence, granted_at, revoked_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `crm_contact_channels` | id, contact_id, channel, channel_value, normalized_value, provider_ref, is_primary, is_verified, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_mailing_list_members` | id, list_id, contact_id, status, subscribed_at, unsubscribed_at, unsubscribe_token_hash, created_by_iam_user_id, updated_by_iam_user_id, updated_at |

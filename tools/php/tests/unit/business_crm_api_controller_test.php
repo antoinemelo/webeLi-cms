@@ -24,7 +24,7 @@ use App\Repository\SiteRepository;
 use App\Security\Authorization;
 
 $h = new TestHarness();
-[$businessDir, $businessPath] = test_temp_db(__DIR__ . '/../../../../database/modules/business.sql');
+[$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
 [$iamDir, $iamPath] = test_temp_db(__DIR__ . '/../../../../database/iam.sql');
 $coreDir = sys_get_temp_dir() . '/amcms-business-api-core-' . bin2hex(random_bytes(6));
 mkdir($coreDir, 0775, true);
@@ -47,7 +47,7 @@ try {
     $iam->run("INSERT INTO iam_role_permissions(role_id,permission_id) VALUES(1,1),(1,2),(1,3),(1,4),(1,5)");
     $iam->run("INSERT INTO iam_user_site_roles(user_id,site_id,role_id) VALUES(1,1,1),(2,1,2)");
 
-    $business = new Database($businessPath, 1000);
+    $business = $businessDb;
     $companies = new BusinessCompanyRepository($business);
     $contacts = new BusinessContactRepository($business);
     $tags = new BusinessTagRepository($business);
@@ -128,6 +128,9 @@ try {
     $h->assertSame(404, $public->show(str_repeat('a', 40))->status(), 'fake public memo token is refused');
 } finally {
     $_SESSION = [];
+    $businessDb = null;
+    $business = null;
+    gc_collect_cycles();
     test_remove_tree($businessDir);
     test_remove_tree($iamDir);
     test_remove_tree($coreDir);

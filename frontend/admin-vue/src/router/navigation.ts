@@ -67,7 +67,7 @@ export const assetLinks: SectionLink[] = [
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
-  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage'], children: moduleWorkbenchLinks },
+  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read'], children: moduleWorkbenchLinks },
   { key: 'assets', label: 'Actifs', route: '/media', children: assetLinks }
 ];
 

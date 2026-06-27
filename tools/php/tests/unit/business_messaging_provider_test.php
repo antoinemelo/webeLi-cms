@@ -4,7 +4,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
-use App\Core\Database;
 use App\Core\Logger;
 use App\Mail\MailerInterface;
 use App\Modules\Business\Messaging\TelegramBotProvider;
@@ -30,10 +29,9 @@ final class BusinessMessagingTestMailer implements MailerInterface
 }
 
 $h = new TestHarness();
-[$dir, $dbPath] = test_temp_db(__DIR__ . '/../../../../database/modules/business.sql');
+[$dir, $dbPath, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
 
 try {
-    $db = new Database($dbPath, 1000);
     $companies = new BusinessCompanyRepository($db);
     $contacts = new BusinessContactRepository($db);
     $consents = new BusinessConsentRepository($db);
@@ -92,6 +90,8 @@ try {
     $sent = $manager->sendOutboxMessage(1, (int) $prepared['id']);
     $h->assertSame('sent', $sent['message']['status'] ?? null, 'consented contact message can be sent through provider manager');
 } finally {
+    $db = null;
+    gc_collect_cycles();
     test_remove_tree($dir);
 }
 

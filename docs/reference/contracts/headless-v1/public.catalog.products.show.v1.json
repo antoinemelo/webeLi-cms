@@ -1,0 +1,33 @@
+{
+  "contract": "public.catalog.products.show.v1",
+  "kind": "schema",
+  "summary": "Lire un produit public e-commerce par slug.",
+  "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics et prix de vente publics.",
+  "method": "GET",
+  "path": "/api/v1/catalog/products/{slug}",
+  "source": "business_products + business_product_variants",
+  "security": "Public read endpoint; may be protected by bearer scope catalog:read or headless:read.",
+  "query_params": {
+    "lang": {"type": "string", "required": false}
+  },
+  "path_params": {
+    "slug": {"type": "string", "required": true}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {"type": "object", "required": ["product"], "properties": {"product": {"type": "object", "additionalProperties": true}}},
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      }
+    }
+  },
+  "errors": [
+    {"status": 404, "description": "Produit public introuvable."}
+  ],
+  "examples": {
+    "response": {"data": {"product": {"id": 1, "name": "T-shirt", "slug": "t-shirt", "variants": []}}, "meta": {"contract": "public.catalog.products.show.v1"}}
+  }
+}

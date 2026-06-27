@@ -84,6 +84,31 @@ function test_temp_db(string $schemaFile): array
     return [$dir, $path];
 }
 
+/**
+ * Build a temporary SQLite database through the CMS Database wrapper from the
+ * start. This avoids journal-mode waits when large module schemas are loaded.
+ *
+ * @return array{0:string,1:string,2:object}
+ */
+function test_temp_cms_db(string $schemaFile): array
+{
+    $dir = sys_get_temp_dir() . '/amcms-test-' . bin2hex(random_bytes(6));
+    if (!mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException('Unable to create temporary test directory.');
+    }
+
+    $schema = file_get_contents($schemaFile);
+    if ($schema === false) {
+        throw new RuntimeException('Unable to read schema: ' . $schemaFile);
+    }
+
+    $path = $dir . '/test.sqlite';
+    $database = new \App\Core\Database($path);
+    $database->pdo()->exec($schema);
+
+    return [$dir, $path, $database];
+}
+
 function test_remove_tree(string $path): void
 {
     if (!is_dir($path)) {

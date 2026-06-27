@@ -128,13 +128,13 @@ abstract class BusinessRepositoryBase
     /** @return array<string,mixed> */
     protected function castRow(array $row): array
     {
-        foreach (['id', 'site_id', 'company_id', 'contact_id', 'author_iam_user_id', 'created_by_iam_user_id', 'updated_by_iam_user_id', 'iam_user_id'] as $key) {
+        foreach (['id', 'site_id', 'parent_id', 'brand_id', 'category_id', 'product_id', 'variant_id', 'option_id', 'option_value_id', 'media_id', 'company_id', 'contact_id', 'author_iam_user_id', 'created_by_iam_user_id', 'updated_by_iam_user_id', 'iam_user_id'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (int) $row[$key];
             }
         }
-        foreach (['is_system', 'is_primary', 'is_verified', 'is_enabled', 'is_default'] as $key) {
-            if (array_key_exists($key, $row)) {
+        foreach (['is_system', 'is_primary', 'is_verified', 'is_enabled', 'is_default', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'track_stock', 'allow_backorder', 'tax_included'] as $key) {
+            if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (bool) $row[$key];
             }
         }

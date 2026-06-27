@@ -7,6 +7,14 @@ $tests = [
     'unit/editorial_status_test.php',
     'unit/iam_login_modes_test.php',
     'unit/totp_service_test.php',
+    'unit/business_catalog_definitions_test.php',
+    'unit/business_catalog_schema_test.php',
+    'unit/business_catalog_backend_services_test.php',
+    'unit/business_catalog_api_controller_test.php',
+    'unit/business_catalog_csv_service_test.php',
+    'unit/business_catalog_public_api_test.php',
+    'unit/business_pos_catalog_api_test.php',
+    'unit/business_catalog_pricing_service_test.php',
     'unit/business_crm_service_test.php',
     'unit/business_csv_service_test.php',
     'unit/business_crm_api_controller_test.php',
@@ -26,11 +34,16 @@ $tests = [
     'integration/public_cookie_endpoints_http_test.php',
 ];
 
+$testTimeouts = [
+    'unit/business_catalog_api_controller_test.php' => 30,
+    'unit/business_pos_catalog_api_test.php' => 30,
+];
+
 /**
  * Execute one PHP test with progressive output and a hard per-test timeout.
  * This prevents the outer Python suite from waiting silently for 60 seconds.
  */
-function runTest(string $relativePath, int $timeoutSeconds = 15): int
+function runTest(string $relativePath, int $timeoutSeconds = 20): int
 {
     $absolutePath = __DIR__ . '/' . $relativePath;
     $command = [PHP_BINARY, $absolutePath];
@@ -106,7 +119,7 @@ function runTest(string $relativePath, int $timeoutSeconds = 15): int
 
 $failed = 0;
 foreach ($tests as $test) {
-    if (runTest($test) !== 0) {
+    if (runTest($test, $testTimeouts[$test] ?? 20) !== 0) {
         $failed++;
     }
 }

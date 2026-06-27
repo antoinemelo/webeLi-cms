@@ -1,0 +1,39 @@
+{
+  "contract": "pos.catalog.variants.index.v1",
+  "kind": "schema",
+  "summary": "Lister ou rechercher les variantes POS.",
+  "description": "Retourne les variantes actives rattachées à des produits actifs POS. Le filtre barcode permet une recherche exacte pour scan POS.",
+  "method": "GET",
+  "path": "/api/v1/pos/catalog/variants",
+  "source": "business_product_variants + business_products + business_product_base_prices + business_catalog_discounts",
+  "security": "Protected by bearer scope pos.catalog.read.",
+  "query_params": {
+    "lang": {"type": "string", "required": false},
+    "barcode": {"type": "string", "required": false},
+    "product_id": {"type": "integer", "required": false},
+    "q": {"type": "string", "required": false},
+    "updated_since": {"type": "string", "required": false},
+    "limit": {"type": "integer", "required": false, "minimum": 1, "maximum": 1000, "default": 250},
+    "offset": {"type": "integer", "required": false, "minimum": 0, "default": 0}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["items", "pagination"],
+          "properties": {
+            "items": {"type": "array", "items": {"type": "object", "required": ["variant_id", "product_id", "sku", "pricing"], "additionalProperties": true}},
+            "pagination": {"$ref": "#/components/schemas/Pagination"}
+          }
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      }
+    }
+  },
+  "errors": [{"status": 401, "code": "AUTH_REQUIRED"}, {"status": 403, "code": "AUTHZ_FORBIDDEN"}],
+  "examples": {"response": {"data": {"items": [{"variant_id": 10, "product_id": 1, "sku": "DEMO-GOURDE", "barcode": "7612345678901", "pricing": {"regular_sale_price": "120.00", "final_sale_price": "108.00", "currency": "CHF", "discount": {"label": "Remise POS", "type": "percent", "value": "10.00"}}}], "pagination": {"total": 1, "limit": 250, "offset": 0, "has_more": false}}, "meta": {"contract": "pos.catalog.variants.index.v1"}}}
+}

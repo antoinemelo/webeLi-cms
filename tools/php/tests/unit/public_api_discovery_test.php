@@ -12,7 +12,7 @@ $h = new TestHarness();
 $routes = require base_path('backend/routes/api.php');
 $router = new Router();
 
-foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/forms/contact'] as $path) {
+foreach (['/api/v1', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/api/v1/cookies/config', '/api/v1/forms/contact', '/api/v1/catalog/brands', '/api/v1/catalog/categories', '/api/v1/catalog/products', '/api/v1/catalog/products/demo', '/api/v1/catalog/variants/1', '/api/v1/pos/catalog/bootstrap', '/api/v1/pos/catalog/products', '/api/v1/pos/catalog/variants', '/api/v1/pos/catalog/brands', '/api/v1/pos/catalog/categories'] as $path) {
     $h->assertTrue($router->match('GET', $path, $routes) !== null, 'public API route is registered: ' . $path);
 }
 $h->assertTrue($router->match('POST', '/api/v1/forms/contact/submit', $routes) !== null, 'public API route is registered: /api/v1/forms/contact/submit');
@@ -69,7 +69,7 @@ foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/ap
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }
 $scopeAliases = $config['public_api_auth']['scope_aliases'] ?? [];
-$h->assertSame(['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'], $scopeAliases['headless:read'] ?? null, 'headless:read covers all public read scopes');
+$h->assertSame(['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read', 'catalog:read'], $scopeAliases['headless:read'] ?? null, 'headless:read covers all public read scopes');
 $h->assertSame(['routes:read'], $scopeAliases['content:read'] ?? null, 'content:read preserves route-read compatibility');
 $endpointScopes = $config['public_api_auth']['endpoint_scopes'] ?? [];
 $h->assertTrue(in_array('routes:read', $endpointScopes, true), 'route endpoints keep a routes:read scope');
@@ -78,6 +78,9 @@ $h->assertTrue(in_array('media:read', $endpointScopes, true), 'media endpoints k
 $h->assertTrue(in_array('search:read', $endpointScopes, true), 'search endpoints keep a search:read scope');
 $h->assertTrue(in_array('menus:read', $endpointScopes, true), 'menus endpoints keep a menus:read scope');
 $h->assertTrue(in_array('taxonomies:read', $endpointScopes, true), 'taxonomies endpoints keep a taxonomies:read scope');
+$h->assertTrue(in_array('catalog:read', $endpointScopes, true), 'catalog endpoints keep a catalog:read scope');
+$h->assertTrue(in_array('pos.catalog.read', $endpointScopes, true), 'POS catalog endpoints keep a dedicated pos.catalog.read scope');
+$h->assertTrue(!in_array('pos.catalog.read', $scopeAliases['headless:read'] ?? [], true), 'POS catalog scope is not granted by the public headless alias');
 
 $htaccess = (string) file_get_contents(base_path('.htaccess'));
 $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');

@@ -4,7 +4,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
-use App\Core\Database;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
 use App\Modules\Business\Repositories\BusinessConsentRepository;
 use App\Modules\Business\Repositories\BusinessContactRepository;
@@ -12,10 +11,9 @@ use App\Modules\Business\Repositories\BusinessTagRepository;
 use App\Modules\Business\Services\BusinessCsvService;
 
 $h = new TestHarness();
-[$dir, $path] = test_temp_db(__DIR__ . '/../../../../database/modules/business.sql');
+[$dir, $path, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
 
 try {
-    $db = new Database($path, 1000);
     $companies = new BusinessCompanyRepository($db);
     $contacts = new BusinessContactRepository($db);
     $tags = new BusinessTagRepository($db);
@@ -65,6 +63,8 @@ try {
     $h->assertSame(1, $conflict['skipped'], 'existing contact is skipped without explicit update option');
     $h->assertSame('business.import_contact_exists', $conflict['errors'][0]['message'] ?? null, 'existing contact conflict is explicit');
 } finally {
+    $db = null;
+    gc_collect_cycles();
     test_remove_tree($dir);
 }
 

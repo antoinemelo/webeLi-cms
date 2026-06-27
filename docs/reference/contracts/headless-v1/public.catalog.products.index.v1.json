@@ -1,0 +1,56 @@
+{
+  "contract": "public.catalog.products.index.v1",
+  "kind": "schema",
+  "summary": "Lister les produits publics e-commerce.",
+  "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Les prix d'achat, marges, fournisseurs, notes internes et stocks exacts ne sont jamais exposés.",
+  "method": "GET",
+  "path": "/api/v1/catalog/products",
+  "source": "business_products + business_product_variants + business_product_base_prices + business_catalog_discounts",
+  "security": "Public read endpoint; may be protected by bearer scope catalog:read or headless:read.",
+  "query_params": {
+    "lang": {"type": "string", "required": false},
+    "q": {"type": "string", "required": false},
+    "brand": {"type": "string", "required": false},
+    "brand_id": {"type": "integer", "required": false},
+    "category": {"type": "string", "required": false},
+    "category_id": {"type": "integer", "required": false},
+    "limit": {"type": "integer", "required": false, "minimum": 1, "maximum": 100, "default": 24},
+    "offset": {"type": "integer", "required": false, "minimum": 0, "default": 0}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["items", "pagination"],
+          "properties": {
+            "items": {"type": "array", "items": {"type": "object", "required": ["id", "name", "slug", "variants"], "additionalProperties": true}},
+            "pagination": {"$ref": "#/components/schemas/Pagination"}
+          }
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      }
+    }
+  },
+  "errors": [],
+  "examples": {
+    "response": {
+      "data": {
+        "items": [{
+          "id": 1,
+          "name": "T-shirt",
+          "slug": "t-shirt",
+          "variants": [{
+            "id": 10,
+            "pricing": {"regular_sale_price": "38.50", "final_sale_price": "36.58", "currency": "CHF", "discount": {"label": "Offre spéciale", "type": "percent", "value": "5.00"}}
+          }]
+        }],
+        "pagination": {"total": 1, "limit": 24, "offset": 0, "has_more": false}
+      },
+      "meta": {"contract": "public.catalog.products.index.v1"}
+    }
+  }
+}

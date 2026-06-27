@@ -107,12 +107,23 @@ use App\Modules\AiAssistant\Services\AiSuggestionService;
 use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
+use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\BusinessConsentRepository;
 use App\Modules\Business\Repositories\BusinessContactRepository;
 use App\Modules\Business\Repositories\BusinessMemoRepository;
 use App\Modules\Business\Repositories\BusinessMessagingRepository;
 use App\Modules\Business\Repositories\BusinessMailingRepository;
 use App\Modules\Business\Repositories\BusinessTagRepository;
+use App\Modules\Business\Repositories\CatalogBrandRepository;
+use App\Modules\Business\Repositories\CatalogCategoryRepository;
+use App\Modules\Business\Repositories\CatalogDiscountRepository;
+use App\Modules\Business\Repositories\CatalogOptionRepository;
+use App\Modules\Business\Repositories\CatalogProductRepository;
+use App\Modules\Business\Repositories\CatalogStockRepository;
+use App\Modules\Business\Repositories\CatalogVariantRepository;
+use App\Modules\Business\Repositories\PosCatalogRepository;
+use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Services\BusinessConsentService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessCrmService;
@@ -121,6 +132,11 @@ use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
 use App\Modules\Business\Services\BusinessMailingService;
+use App\Modules\Business\Services\CatalogCsvService;
+use App\Modules\Business\Services\CatalogDiscountService;
+use App\Modules\Business\Services\CatalogProductService;
+use App\Modules\Business\Services\CatalogStockService;
+use App\Modules\Business\Services\CatalogVariantService;
 
 final class ServiceFactory
 {
@@ -600,6 +616,94 @@ final class ServiceFactory
     public function businessMailing(): BusinessMailingService
     {
         return $this->once('business_mailing', fn() => new BusinessMailingService($this->businessMailingRepository(), $this->businessMessages()));
+    }
+
+    public function businessCatalogBrands(): CatalogBrandRepository
+    {
+        return $this->once('business_catalog_brands', fn() => new CatalogBrandRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogCategories(): CatalogCategoryRepository
+    {
+        return $this->once('business_catalog_categories', fn() => new CatalogCategoryRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogProducts(): CatalogProductRepository
+    {
+        return $this->once('business_catalog_products', fn() => new CatalogProductRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogVariants(): CatalogVariantRepository
+    {
+        return $this->once('business_catalog_variants', fn() => new CatalogVariantRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogOptions(): CatalogOptionRepository
+    {
+        return $this->once('business_catalog_options', fn() => new CatalogOptionRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogDiscounts(): CatalogDiscountRepository
+    {
+        return $this->once('business_catalog_discounts', fn() => new CatalogDiscountRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogStockRepository(): CatalogStockRepository
+    {
+        return $this->once('business_catalog_stock_repository', fn() => new CatalogStockRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogPricingRepository(): BusinessCatalogPricingRepository
+    {
+        return $this->once('business_catalog_pricing_repository', fn() => new BusinessCatalogPricingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPublicCatalog(): PublicCatalogRepository
+    {
+        return $this->once('business_public_catalog', fn() => new PublicCatalogRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPosCatalog(): PosCatalogRepository
+    {
+        return $this->once('business_pos_catalog', fn() => new PosCatalogRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogProductsService(): CatalogProductService
+    {
+        return $this->once('business_catalog_products_service', fn() => new CatalogProductService($this->businessCatalogProducts()));
+    }
+
+    public function businessCatalogVariantsService(): CatalogVariantService
+    {
+        return $this->once('business_catalog_variants_service', fn() => new CatalogVariantService($this->businessCatalogVariants()));
+    }
+
+    public function businessCatalogDiscountsService(): CatalogDiscountService
+    {
+        return $this->once('business_catalog_discounts_service', fn() => new CatalogDiscountService($this->businessCatalogDiscounts()));
+    }
+
+    public function businessCatalogStockService(): CatalogStockService
+    {
+        return $this->once('business_catalog_stock_service', fn() => new CatalogStockService($this->businessCatalogStockRepository()));
+    }
+
+    public function businessCatalogCsv(): CatalogCsvService
+    {
+        return $this->once('business_catalog_csv', fn() => new CatalogCsvService(
+            $this->businessDatabaseConnection()->database(),
+            $this->businessCatalogBrands(),
+            $this->businessCatalogCategories(),
+            $this->businessCatalogProducts(),
+            $this->businessCatalogVariants(),
+            $this->businessCatalogOptions(),
+            $this->businessCatalogPricing()
+        ));
+    }
+
+    public function businessCatalogPricing(): CatalogPricingService
+    {
+        return $this->once('business_catalog_pricing', fn() => new CatalogPricingService($this->businessCatalogPricingRepository()));
     }
 
     public function aiSettings(): AiSettingsService

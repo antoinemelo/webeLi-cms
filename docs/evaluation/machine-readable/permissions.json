@@ -1058,6 +1058,150 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-discounts-write-840584b0e3",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.discounts.write",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-prices-read-10ed85df41",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.prices.read",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-prices-write-45c7375a0f",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.prices.write",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-purchase-prices-read-a0f9bb2a87",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.purchase_prices.read",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "id": "permission-business-catalog-read-920dcbabbd",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.read",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-stock-write-aca1e1dce5",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.stock.write",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "id": "permission-business-catalog-write-42a5ce7a22",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.catalog.write",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
@@ -1089,6 +1233,7 @@
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-crm-read-8aabb8e3ea",
@@ -1103,6 +1248,7 @@
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
@@ -2852,6 +2998,24 @@
       "database/seeds/native_blueprints.json",
       "frontend/admin-vue/src/components/layout/AdminShell.vue",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/config/app.php",
+      "backend/src/Application/Api/Admin/SecurityAdminApiController.php"
+    ],
+    "id": "permission-pos-catalog-read-3e87e051d0",
+    "last_verified": "2026-06-27",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "pos.catalog.read",
+    "source": [
+      "backend/config/app.php",
+      "backend/src/Application/Api/Admin/SecurityAdminApiController.php"
     ],
     "status": "supported"
   },
