@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "501889029aac3f8602e70bd997bf11c1bf48b8a4",
+  "commit": "855e82f12ccd1b75e3657ffce0d75322900e67f1",
   "confidence": "high",
   "databases": [
     "core",
