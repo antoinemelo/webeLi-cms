@@ -105,6 +105,8 @@ generated: true
 | `pos.catalog.read` |
 | `profile.read` |
 | `profile.update` |
+| `relation.delete` |
+| `relations.restore` |
 | `roles.manage` |
 | `roles.read` |
 | `security.cors.manage` |

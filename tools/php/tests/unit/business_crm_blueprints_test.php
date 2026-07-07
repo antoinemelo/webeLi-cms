@@ -151,6 +151,7 @@ $expectedAdminEndpoints = [
     'GET /admin/api/business/relations/{type}/{id}',
     'PATCH /admin/api/business/relations/{type}/{id}',
     'POST /admin/api/business/relations/{type}/{id}/archive',
+    'POST /admin/api/business/relations/{type}/{id}/restore',
     'DELETE /admin/api/business/relations/{type}/{id}',
     'GET /admin/api/business/companies',
     'POST /admin/api/business/companies',

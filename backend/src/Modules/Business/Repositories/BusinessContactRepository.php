@@ -161,6 +161,58 @@ final class BusinessContactRepository extends BusinessRepositoryBase
         return true;
     }
 
+    public function restore(int $siteId, int $id, ?int $actorId = null): bool
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $current = $this->find($siteId, $id, true);
+        if ($current === null) {
+            return false;
+        }
+        $company = $this->database()->one(
+            'SELECT id FROM business_companies WHERE site_id = :site_id AND id = :company_id AND archived_at IS NULL LIMIT 1',
+            ['site_id' => $siteId, 'company_id' => (int) ($current['company_id'] ?? 0)]
+        );
+        if ($company === null) {
+            throw new \InvalidArgumentException('business.contact_company_archived');
+        }
+        $iamUserId = isset($current['iam_user_id']) && $current['iam_user_id'] !== null ? (int) $current['iam_user_id'] : null;
+        if ($iamUserId !== null && $this->activeByIamUser($siteId, $iamUserId, $id) !== null) {
+            throw new \InvalidArgumentException('business.contact_iam_user_already_linked');
+        }
+        $this->database()->run(
+            'UPDATE business_contacts SET archived_at = NULL, updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site_id AND id = :id',
+            ['site_id' => $siteId, 'id' => $id, 'actor' => $actorId]
+        );
+        return $this->find($siteId, $id) !== null;
+    }
+
+    public function deleteArchived(int $siteId, int $id): bool
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $current = $this->find($siteId, $id, true);
+        if ($current === null) {
+            return false;
+        }
+        if (($current['archived_at'] ?? null) === null) {
+            throw new \InvalidArgumentException('business.contact_must_be_archived_before_delete');
+        }
+
+        $this->database()->transaction(function () use ($siteId, $id): void {
+            $this->database()->run(
+                "DELETE FROM business_activity_log
+                 WHERE site_id = :site_id
+                   AND ((entity_type = 'business_contact' AND entity_id = :id) OR related_contact_id = :id)",
+                ['site_id' => $siteId, 'id' => $id]
+            );
+            $this->database()->run(
+                'DELETE FROM business_contacts WHERE site_id = :site_id AND id = :id AND archived_at IS NOT NULL',
+                ['site_id' => $siteId, 'id' => $id]
+            );
+        });
+
+        return $this->find($siteId, $id, true) === null;
+    }
+
     private function displayName(array $payload): string
     {
         $explicit = $this->nullableText($payload['display_name'] ?? null, 'display_name', 255);

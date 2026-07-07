@@ -64,6 +64,7 @@ return [
     ['POST', '/admin/api/business/relations/{type}/{id}/messages', 'App\Application\Api\Admin\BusinessMessagingApiController@sendRelationMessage'],
     ['PATCH', '/admin/api/business/relations/{type}/{id}', 'App\Application\Api\Admin\BusinessCrmApiController@updateRelation'],
     ['POST', '/admin/api/business/relations/{type}/{id}/archive', 'App\Application\Api\Admin\BusinessCrmApiController@archiveRelation'],
+    ['POST', '/admin/api/business/relations/{type}/{id}/restore', 'App\Application\Api\Admin\BusinessCrmApiController@restoreRelation'],
     ['DELETE', '/admin/api/business/relations/{type}/{id}', 'App\Application\Api\Admin\BusinessCrmApiController@deleteRelation'],
     ['GET', '/admin/api/business/relations/{type}/{id}', 'App\Application\Api\Admin\BusinessCrmApiController@showRelation'],
     ['GET', '/admin/api/business/iam/available-users', 'App\Application\Api\Admin\BusinessCrmApiController@availableIamUsers'],

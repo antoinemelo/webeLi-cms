@@ -3173,6 +3173,24 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-post-admin-api-business-relations-type-id-restore-backend-routes-api-php-747aa9c9df",
+    "last_verified": "2026-07-07",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/relations/{type}/{id}/restore",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-post-admin-api-business-relations-type-id-summary-backend-routes-api-php-2deb3ceb99",
     "last_verified": "2026-07-07",
     "limitations": [

@@ -120,6 +120,74 @@ final class BusinessCompanyRepository extends BusinessRepositoryBase
         return true;
     }
 
+    public function restore(int $siteId, int $id, ?int $actorId = null): bool
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $current = $this->find($siteId, $id, true);
+        if ($current === null) {
+            return false;
+        }
+        if ((int) ($current['is_system'] ?? 0) === 1 || ($current['company_kind'] ?? '') === 'system_individuals') {
+            throw new \InvalidArgumentException('business.company_system_restore_forbidden');
+        }
+        $this->database()->run(
+            'UPDATE business_companies SET archived_at = NULL, updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site_id AND id = :id AND is_system = 0',
+            ['site_id' => $siteId, 'id' => $id, 'actor' => $actorId]
+        );
+        return $this->find($siteId, $id) !== null;
+    }
+
+    public function deleteArchived(int $siteId, int $id): bool
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $current = $this->find($siteId, $id, true);
+        if ($current === null) {
+            return false;
+        }
+        if ((int) ($current['is_system'] ?? 0) === 1 || ($current['company_kind'] ?? '') === 'system_individuals') {
+            throw new \InvalidArgumentException('business.company_system_delete_forbidden');
+        }
+        if (($current['archived_at'] ?? null) === null) {
+            throw new \InvalidArgumentException('business.company_must_be_archived_before_delete');
+        }
+
+        $activeContacts = $this->database()->one(
+            'SELECT COUNT(*) AS count FROM business_contacts WHERE site_id = :site_id AND company_id = :id AND archived_at IS NULL',
+            ['site_id' => $siteId, 'id' => $id]
+        );
+        if ((int) ($activeContacts['count'] ?? 0) > 0) {
+            throw new \InvalidArgumentException('business.company_has_active_contacts');
+        }
+
+        $this->database()->transaction(function () use ($siteId, $id): void {
+            $this->database()->run(
+                "DELETE FROM business_activity_log
+                 WHERE site_id = :site_id
+                   AND (
+                     (entity_type = 'business_company' AND entity_id = :id)
+                     OR related_company_id = :id
+                     OR related_contact_id IN (
+                       SELECT id FROM business_contacts WHERE site_id = :site_id AND company_id = :id
+                     )
+                     OR (entity_type = 'business_contact' AND entity_id IN (
+                       SELECT id FROM business_contacts WHERE site_id = :site_id AND company_id = :id
+                     ))
+                   )",
+                ['site_id' => $siteId, 'id' => $id]
+            );
+            $this->database()->run(
+                'DELETE FROM business_contacts WHERE site_id = :site_id AND company_id = :id AND archived_at IS NOT NULL',
+                ['site_id' => $siteId, 'id' => $id]
+            );
+            $this->database()->run(
+                'DELETE FROM business_companies WHERE site_id = :site_id AND id = :id AND archived_at IS NOT NULL AND is_system = 0',
+                ['site_id' => $siteId, 'id' => $id]
+            );
+        });
+
+        return $this->find($siteId, $id, true) === null;
+    }
+
     public function ensureSystemIndividualsCompany(int $siteId, ?int $actorId = null): array
     {
         $siteId = $this->requireSiteId($siteId);

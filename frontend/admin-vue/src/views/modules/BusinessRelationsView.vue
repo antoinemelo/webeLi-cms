@@ -27,6 +27,7 @@ type Relation = {
   linked_contacts_count?: number;
   last_activity_at?: string | null;
   last_memo_excerpt?: string | null;
+  archived_at?: string | null;
 };
 type SearchItem = Record<string, unknown> & {
   group?: string;
@@ -54,14 +55,18 @@ const emit = defineEmits<{
   'open-memos-global': [];
   'open-comments': [];
   'open-messages-list': [];
-  'edit-company': [relation: Relation];
-  'edit-contact': [relation: Relation];
+  'edit-company': [relation: Relation, mode?: 'view' | 'edit'];
+  'edit-contact': [relation: Relation, mode?: 'view' | 'edit'];
   'new-memo': [relation: Relation];
   'new-message': [relation: Relation, channel?: string];
   'open-memos': [relation: Relation];
   'open-consent': [relation: Relation];
   'archive-company': [relation: Relation];
   'archive-contact': [relation: Relation];
+  'restore-company': [relation: Relation];
+  'restore-contact': [relation: Relation];
+  'delete-company': [relation: Relation];
+  'delete-contact': [relation: Relation];
 }>();
 
 const loading = ref(false);
@@ -71,6 +76,7 @@ const searchError = ref('');
 const relations = ref<Relation[]>([]);
 const pagination = ref({ total: 0, limit: 100, offset: 0 });
 const filters = reactive({ q: '', type: '', status: '', sort: 'activity_desc', has_memos: false, has_shared_memos: false, has_email: false, has_phone: false, missing_email_consent: false, linked_iam: false, archived: 'active' });
+const appliedAdvancedFilters = reactive({ type: '', status: '', sort: 'activity_desc', archived: 'active' });
 type RelationColumnKey = 'company' | 'phone' | 'status' | 'indicators' | 'activity';
 const relationColumns: Array<{ key: RelationColumnKey; label: string }> = [
   { key: 'company', label: 'Entreprise' },
@@ -82,6 +88,7 @@ const relationColumns: Array<{ key: RelationColumnKey; label: string }> = [
 const visibleColumns = reactive<Record<RelationColumnKey, boolean>>({ company: true, phone: true, status: true, indicators: true, activity: true });
 const searchResults = reactive<SearchResults>({ relations: [], memos: [], messages: [], future_documents: [] });
 const searchInput = ref<{ focus: () => void } | null>(null);
+const filtersMenu = ref<HTMLDetailsElement | null>(null);
 let searchTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 type QuickFilterKey = 'all' | 'contact' | 'company' | 'prospect' | 'client' | 'supplier' | 'former_client' | 'has_email' | 'has_phone' | 'missing_email_consent';
@@ -104,6 +111,20 @@ const searchGroups = computed(() => [
   { key: 'messages', label: 'Messages', items: searchResults.messages },
   { key: 'future_documents', label: 'Documents', items: searchResults.future_documents },
 ]);
+
+const typeLabels: Record<string, string> = { contact: 'Personnes', company: 'Organisations' };
+const statusLabels: Record<string, string> = { prospect: 'Prospects', client: 'Clients', supplier: 'Fournisseurs', former_client: 'Anciens', other: 'Autres' };
+const sortLabels: Record<string, string> = { activity_desc: 'Activité récente', name_asc: 'Nom A-Z', created_desc: 'Date création', status_asc: 'Statut' };
+const archivedLabels: Record<string, string> = { active: 'Actifs', archived: 'Archivés', all: 'Actifs et archivés' };
+type AdvancedFilterKey = 'type' | 'status' | 'sort' | 'archived';
+const activeFilterChips = computed<Array<{ key: AdvancedFilterKey; label: string }>>(() => {
+  const chips: Array<{ key: AdvancedFilterKey; label: string }> = [];
+  if (appliedAdvancedFilters.type) chips.push({ key: 'type', label: `Type · ${typeLabels[appliedAdvancedFilters.type] || appliedAdvancedFilters.type}` });
+  if (appliedAdvancedFilters.status) chips.push({ key: 'status', label: `Statut · ${statusLabels[appliedAdvancedFilters.status] || statusLabel(appliedAdvancedFilters.status)}` });
+  if (appliedAdvancedFilters.sort !== 'activity_desc') chips.push({ key: 'sort', label: `Tri · ${sortLabels[appliedAdvancedFilters.sort] || appliedAdvancedFilters.sort}` });
+  if (appliedAdvancedFilters.archived !== 'active') chips.push({ key: 'archived', label: `Archivage · ${archivedLabels[appliedAdvancedFilters.archived] || appliedAdvancedFilters.archived}` });
+  return chips;
+});
 
 function statusLabel(value: unknown): string {
   return String(value || 'other').replace(/_/g, ' ');
@@ -178,11 +199,31 @@ function quickFilterActive(key: QuickFilterKey): boolean {
 
 function applyQuickFilter(key: QuickFilterKey): void {
   resetQuickFilters();
+  Object.assign(appliedAdvancedFilters, { type: '', status: '', sort: 'activity_desc', archived: 'active' });
   if (key === 'contact' || key === 'company') filters.type = key;
   else if (key === 'has_email') filters.has_email = true;
   else if (key === 'has_phone') filters.has_phone = true;
   else if (key === 'missing_email_consent') filters.missing_email_consent = true;
   else if (key !== 'all') filters.status = key;
+  void loadRelations();
+}
+
+function applyFilters(): void {
+  Object.assign(appliedAdvancedFilters, {
+    type: filters.type,
+    status: filters.status,
+    sort: filters.sort,
+    archived: filters.archived,
+  });
+  if (filtersMenu.value) filtersMenu.value.open = false;
+  void loadRelations();
+}
+
+function removeFilterChip(key: AdvancedFilterKey): void {
+  if (key === 'type') filters.type = appliedAdvancedFilters.type = '';
+  else if (key === 'status') filters.status = appliedAdvancedFilters.status = '';
+  else if (key === 'sort') filters.sort = appliedAdvancedFilters.sort = 'activity_desc';
+  else if (key === 'archived') filters.archived = appliedAdvancedFilters.archived = 'active';
   void loadRelations();
 }
 
@@ -249,8 +290,8 @@ async function loadRelations(): Promise<void> {
   }
 }
 
-function edit(relation: Relation): void {
-  relation.type === 'company' ? emit('edit-company', relation) : emit('edit-contact', relation);
+function edit(relation: Relation, mode: 'view' | 'edit' = 'view'): void {
+  relation.type === 'company' ? emit('edit-company', relation, mode) : emit('edit-contact', relation, mode);
 }
 
 function openSearchItem(item: SearchItem): void {
@@ -282,6 +323,14 @@ function archive(relation: Relation): void {
   relation.type === 'company' ? emit('archive-company', relation) : emit('archive-contact', relation);
 }
 
+function deleteRelation(relation: Relation): void {
+  relation.type === 'company' ? emit('delete-company', relation) : emit('delete-contact', relation);
+}
+
+function restoreRelation(relation: Relation): void {
+  relation.type === 'company' ? emit('restore-company', relation) : emit('restore-contact', relation);
+}
+
 defineExpose({ reload: loadRelations });
 function onKeyboardShortcut(event: KeyboardEvent): void {
   const target = event.target as HTMLElement | null;
@@ -292,6 +341,18 @@ function onKeyboardShortcut(event: KeyboardEvent): void {
   }
 }
 
+function closeOpenMenus(): void {
+  document.querySelectorAll<HTMLDetailsElement>('.relations-menu[open]').forEach((menu) => {
+    menu.open = false;
+  });
+}
+
+function onDocumentPointerDown(event: PointerEvent): void {
+  const target = event.target as HTMLElement | null;
+  if (target?.closest('.relations-menu')) return;
+  closeOpenMenus();
+}
+
 watch(() => filters.q, () => {
   if (searchTimer !== null) window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(() => { void runGlobalSearch(); }, 220);
@@ -299,10 +360,12 @@ watch(() => filters.q, () => {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeyboardShortcut);
+  document.addEventListener('pointerdown', onDocumentPointerDown);
   void loadRelations();
 });
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyboardShortcut);
+  document.removeEventListener('pointerdown', onDocumentPointerDown);
   if (searchTimer !== null) window.clearTimeout(searchTimer);
 });
 </script>
@@ -315,7 +378,7 @@ onBeforeUnmount(() => {
       </template>
     </BusinessPageHeader>
 
-    <form class="relations-toolbar" @submit.prevent="loadRelations">
+    <form class="relations-toolbar" @submit.prevent="applyFilters">
       <BusinessQuickSearch
         ref="searchInput"
         v-model="filters.q"
@@ -327,7 +390,7 @@ onBeforeUnmount(() => {
         @create="emit('new-relation')"
       />
       <div class="relations-toolbar-buttons">
-        <details class="relations-menu relations-menu--filters">
+        <details ref="filtersMenu" class="relations-menu relations-menu--filters">
           <summary class="relations-icon-summary" aria-label="Filtres relations" title="Filtres">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           </summary>
@@ -386,7 +449,6 @@ onBeforeUnmount(() => {
         <details class="relations-menu relations-menu--actions">
           <summary aria-label="Actions relations" title="Actions">...</summary>
           <div class="relations-menu-panel">
-            <button type="button" @click="emit('new-relation')">Nouveau contact</button>
             <button type="button" @click="emit('open-import')">Importer</button>
             <button type="button" @click="emit('open-export')">Exporter</button>
             <button type="button" @click="emit('open-memos-global')">Liste mémos</button>
@@ -408,6 +470,20 @@ onBeforeUnmount(() => {
         {{ filter.label }}
       </button>
     </nav>
+
+    <div v-if="activeFilterChips.length" class="relations-active-filters" aria-label="Filtres actifs">
+      <button
+        v-for="chip in activeFilterChips"
+        :key="chip.key"
+        type="button"
+        class="relations-filter-chip"
+        :aria-label="`Retirer le filtre ${chip.label}`"
+        @click="removeFilterChip(chip.key)"
+      >
+        <span aria-hidden="true">×</span>
+        <strong>{{ chip.label }}</strong>
+      </button>
+    </div>
 
     <EmptyState v-if="error" :title="error" />
     <EmptyState v-else-if="loading" title="Chargement des relations..." />
@@ -435,10 +511,6 @@ onBeforeUnmount(() => {
               </span>
               <button class="business-link relation-name" type="button" @click="edit(relation)">{{ relation.display_name }}</button>
             </div>
-            <span class="relation-meta-line">
-              <span v-if="relation.type === 'contact'">{{ companyLabel(relation) }}</span>
-              <span v-else>Organisation</span>
-            </span>
           </td>
           <td v-if="columnVisible('company')">{{ companyLabel(relation) }}</td>
           <td v-if="columnVisible('phone')">
@@ -472,20 +544,25 @@ onBeforeUnmount(() => {
           <td>
             <div class="relations-actions">
               <button class="btn ghost small" type="button" :aria-label="`Voir ${relation.display_name}`" @click="edit(relation)">Voir</button>
-              <button class="btn ghost small" type="button" :aria-label="`Ajouter un mémo pour ${relation.display_name}`" @click="emit('new-memo', relation)">Mémo</button>
+              <button v-if="!relation.archived_at" class="btn ghost small" type="button" :aria-label="`Ajouter un mémo pour ${relation.display_name}`" @click="emit('new-memo', relation)">Mémo</button>
               <details class="relations-menu">
                 <summary class="relations-row-menu-summary" :aria-label="`Actions pour ${relation.display_name}`">
                   <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>
                 </summary>
                 <div class="relations-menu-panel">
-                  <button type="button" :aria-label="`Éditer ${relation.display_name}`" @click="edit(relation)">Éditer</button>
-                  <button type="button" :aria-label="`Voir tous les mémos de ${relation.display_name}`" @click="emit('open-memos', relation)">Liste mémos</button>
-                  <button type="button" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="emit('new-message', relation)">Nouveau message</button>
-                  <button type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="emit('new-message', relation, 'email')">Email</button>
-                  <button type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="emit('new-message', relation, 'whatsapp')">WhatsApp</button>
-                  <button type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
-                  <button type="button" :aria-label="`Archiver ${relation.display_name}`" @click="archive(relation)">Archiver</button>
-                  <button type="button" disabled title="Suppression protegee : archiver la relation tant que des dependances existent.">Effacer</button>
+                  <template v-if="relation.archived_at">
+                    <button type="button" :aria-label="`Rétablir ${relation.display_name}`" @click="restoreRelation(relation)">Rétablir</button>
+                    <button type="button" :aria-label="`Effacer définitivement ${relation.display_name}`" title="Effacer définitivement la relation archivée." @click="deleteRelation(relation)">Effacer</button>
+                  </template>
+                  <template v-else>
+                    <button type="button" :aria-label="`Éditer ${relation.display_name}`" @click="edit(relation, 'edit')">Éditer</button>
+                    <button type="button" :aria-label="`Voir tous les mémos de ${relation.display_name}`" @click="emit('open-memos', relation)">Liste mémos</button>
+                    <button type="button" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="emit('new-message', relation)">Nouveau message</button>
+                    <button type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="emit('new-message', relation, 'email')">Email</button>
+                    <button type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="emit('new-message', relation, 'whatsapp')">WhatsApp</button>
+                    <button type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
+                    <button type="button" :aria-label="`Archiver ${relation.display_name}`" @click="archive(relation)">Archiver</button>
+                  </template>
                 </div>
               </details>
             </div>
@@ -509,6 +586,8 @@ onBeforeUnmount(() => {
         @whatsapp="emit('new-message', relation, 'whatsapp')"
         @consent="emit('open-consent', relation)"
         @archive="archive(relation)"
+        @restore="restoreRelation(relation)"
+        @delete="deleteRelation(relation)"
         @open-memos="emit('open-memos', relation)"
       />
     </div>
@@ -567,6 +646,51 @@ onBeforeUnmount(() => {
   background: #eff6ff;
   color: #1d4ed8;
   font-weight: 700;
+}
+
+.relations-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  margin-top: -.25rem;
+}
+
+.relations-filter-chip {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.85rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: .22rem .6rem .22rem .38rem;
+  cursor: pointer;
+}
+
+.relations-filter-chip span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: .9rem;
+  line-height: 1;
+}
+
+.relations-filter-chip strong {
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.relations-filter-chip:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
 }
 
 .relations-panel :where(button, summary, input, select):focus-visible {
@@ -631,6 +755,10 @@ onBeforeUnmount(() => {
   gap: .1rem;
 }
 
+.relations-table td.relation-basic {
+  border-bottom: 0;
+}
+
 .relation-title-line,
 .relations-contact-lines span {
   display: inline-flex;
@@ -640,22 +768,18 @@ onBeforeUnmount(() => {
 }
 
 .relation-title-line {
-  align-items: flex-start;
+  align-items: center;
 }
 
 .relation-type-icon {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 1rem;
+  height: 1rem;
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid #dbe3ef;
-  border-radius: 999px;
-  background: #f8fafc;
   color: #0f766e;
 }
 
-.relation-type-icon svg,
 .relations-contact-lines svg,
 .relations-row-menu-summary svg {
   width: 1rem;
@@ -663,11 +787,29 @@ onBeforeUnmount(() => {
   fill: currentColor;
 }
 
+.relation-type-icon svg {
+  width: .82rem;
+  height: .82rem;
+  fill: currentColor;
+}
+
 .relation-name {
+  border: 0;
+  background: transparent;
+  color: #0f172a;
   font-weight: 700;
   line-height: 1.2;
   min-width: 0;
   overflow-wrap: anywhere;
+  padding: 0;
+  text-align: left;
+}
+
+.relation-name:hover,
+.relation-name:focus-visible {
+  color: #0f172a;
+  text-decoration: underline;
+  text-underline-offset: .16em;
 }
 
 .relation-meta-line {

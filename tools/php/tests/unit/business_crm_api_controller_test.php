@@ -198,10 +198,20 @@ try {
     $updateRelationPayload = json_decode($updateRelationResponse->body(), true);
     $h->assertSame('client', $updateRelationPayload['data']['relation']['status'] ?? null, 'business relation aggregate update returns fresh relation');
     $deleteRelationResponse = $controllerFor(1, 'DELETE', '/admin/api/business/relations/company/' . $aggregateCompanyId)->deleteRelation('company', $aggregateCompanyId);
-    $h->assertSame(200, $deleteRelationResponse->status(), 'business relation aggregate delete endpoint is protected archive');
+    $h->assertSame(200, $deleteRelationResponse->status(), 'business relation aggregate delete endpoint archives active relation first');
     $deleteRelationPayload = json_decode($deleteRelationResponse->body(), true);
-    $h->assertSame(false, $deleteRelationPayload['data']['deleted'] ?? null, 'business relation aggregate delete does not physically delete');
-    $h->assertSame(true, $deleteRelationPayload['data']['archived'] ?? null, 'business relation aggregate delete archives relation');
+    $h->assertSame(false, $deleteRelationPayload['data']['deleted'] ?? null, 'business relation aggregate delete does not physically delete an active relation');
+    $h->assertSame(true, $deleteRelationPayload['data']['archived'] ?? null, 'business relation aggregate delete archives active relation');
+    $restoreRelationResponse = $controllerFor(1, 'POST', '/admin/api/business/relations/company/' . $aggregateCompanyId . '/restore')->restoreRelation('company', $aggregateCompanyId);
+    $h->assertSame(200, $restoreRelationResponse->status(), 'business relation aggregate restore endpoint restores archived relation');
+    $restoreRelationPayload = json_decode($restoreRelationResponse->body(), true);
+    $h->assertSame(true, $restoreRelationPayload['data']['restored'] ?? null, 'business relation aggregate restore returns restored flag');
+    $deleteRestoredRelationResponse = $controllerFor(1, 'DELETE', '/admin/api/business/relations/company/' . $aggregateCompanyId)->deleteRelation('company', $aggregateCompanyId);
+    $h->assertSame(200, $deleteRestoredRelationResponse->status(), 'business relation aggregate delete re-archives restored relation');
+    $deleteArchivedRelationResponse = $controllerFor(1, 'DELETE', '/admin/api/business/relations/company/' . $aggregateCompanyId)->deleteRelation('company', $aggregateCompanyId);
+    $h->assertSame(200, $deleteArchivedRelationResponse->status(), 'business relation aggregate delete removes archived relation');
+    $deleteArchivedRelationPayload = json_decode($deleteArchivedRelationResponse->body(), true);
+    $h->assertSame(true, $deleteArchivedRelationPayload['data']['deleted'] ?? null, 'business relation aggregate delete physically deletes an archived relation');
 
     $globalSearch = $controllerFor(1, 'GET', '/admin/api/business/search', ['q' => 'Ada'])->search();
     $h->assertSame(200, $globalSearch->status(), 'business global search endpoint is readable');

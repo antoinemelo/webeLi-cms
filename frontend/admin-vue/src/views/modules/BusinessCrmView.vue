@@ -21,16 +21,16 @@ import SendMessageDrawer from './business/SendMessageDrawer.vue';
 type BusinessTab = 'dashboard' | 'relations' | 'messages' | 'products' | 'offers' | 'settings';
 type LegacyBusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging';
 type RelationsPanel = 'main' | 'memos';
-type BusinessModal = '' | 'relation' | 'memo' | 'import' | 'export' | 'message' | 'consent' | 'archive';
+type BusinessModal = '' | 'relation' | 'memo' | 'import' | 'export' | 'message' | 'consent' | 'archive' | 'delete';
 type RelationModalMode = 'create' | 'view' | 'edit';
 type RelationMemoFilter = { type: 'contact' | 'company'; id: number; display_name: string };
 type IdValue = number | string | null | undefined;
 type Company = Record<string, unknown> & { id: number; name: string; status?: string; email?: string | null; phone?: string | null; website_url?: string | null; notes?: string | null; is_system?: boolean };
 type Contact = Record<string, unknown> & { id: number; company_id?: number; company_name?: string; display_name: string; status?: string; email?: string | null; phone?: string | null; mobile?: string | null; iam_user_id?: number | null };
-type BusinessRelation = Record<string, unknown> & { type: 'contact' | 'company'; id: number; display_name: string; primary_email?: string | null; phone?: string | null; mobile?: string | null; status?: string; memo_count?: number; shared_memo_count?: number; linked_contacts_count?: number; last_activity_at?: string | null; last_memo_excerpt?: string | null; company?: { id?: number; name?: string; is_system_individuals?: boolean } | null };
+type BusinessRelation = Record<string, unknown> & { type: 'contact' | 'company'; id: number; display_name: string; primary_email?: string | null; phone?: string | null; mobile?: string | null; status?: string; memo_count?: number; shared_memo_count?: number; linked_contacts_count?: number; last_activity_at?: string | null; last_memo_excerpt?: string | null; archived_at?: string | null; company?: { id?: number; name?: string; is_system_individuals?: boolean } | null };
 type Memo = Record<string, unknown> & { id: number; company_id?: number | null; contact_id?: number | null; title: string; body?: string; visibility?: string; created_at?: string };
 type MemoShare = Record<string, unknown> & { id: number; share_type?: string; public_label?: string | null; shared_with_iam_user_id?: number | null; expires_at?: string | null; revoked_at?: string | null };
-type MemoComment = Record<string, unknown> & { id: number; body: string; created_at?: string };
+type MemoComment = Record<string, unknown> & { id: number; author_iam_user_id?: number | null; body: string; created_at?: string };
 type Consent = Record<string, unknown> & { channel: string; consent_status?: string };
 type ChannelRow = Record<string, unknown> & { channel: string; channel_value?: string; is_primary?: boolean; is_verified?: boolean };
 type MailingList = Record<string, unknown> & { id: number; name: string; list_key?: string; channel?: string; status?: string; description?: string };
@@ -109,7 +109,6 @@ const canMessagesAccess = computed(() => canMailingRead.value || canMessagingAdm
 const tabs: Array<{ key: BusinessTab; label: string; permission: () => boolean }> = [
   { key: 'dashboard', label: 'Tableau de bord', permission: () => canCrmRead.value },
   { key: 'relations', label: 'Relations', permission: () => canCrmRead.value || canMemoRead.value },
-  { key: 'messages', label: 'Messages', permission: () => canMessagesAccess.value },
   { key: 'products', label: 'Produits', permission: () => canCatalogRead.value },
   { key: 'offers', label: 'Offres', permission: () => canCatalogRead.value },
   { key: 'settings', label: 'Réglages', permission: () => canMessagingAdmin.value },
@@ -714,7 +713,7 @@ async function loadRelations(): Promise<void> {
 }
 
 async function loadCurrentTab(): Promise<void> {
-  if (activeTab.value === 'dashboard') await loadDashboard();
+  if (activeTab.value === 'dashboard') await Promise.all([loadDashboard(), loadMailing(), loadMessaging()]);
   if (activeTab.value === 'relations') await loadRelations();
   if (activeTab.value === 'messages') await Promise.all([loadMailing(), loadMessaging()]);
   if (activeTab.value === 'settings') await loadMessaging();
@@ -999,26 +998,26 @@ async function loadIamUserOptions(): Promise<void> {
   }
 }
 
-async function editRelationCompany(relation: BusinessRelation): Promise<void> {
+async function editRelationCompany(relation: BusinessRelation, mode: 'view' | 'edit' = 'view'): Promise<void> {
   try {
     const response = await adminApi.get<{ company: Company }>(`/business/companies/${relation.id}`);
     editCompany(response.data.company);
     await Promise.all([loadRelationDetail('company', relation.id), loadLinkedRelationContacts(relation.id), loadRelationActivity('company', relation.id), loadIamUserOptions()]);
     relationDraftType.value = 'company';
-    relationModalMode.value = 'view';
+    relationModalMode.value = mode;
     activeModal.value = 'relation';
   } catch (err) {
     setError(err, 'Ouverture entreprise impossible.');
   }
 }
 
-async function editRelationContact(relation: BusinessRelation): Promise<void> {
+async function editRelationContact(relation: BusinessRelation, mode: 'view' | 'edit' = 'view'): Promise<void> {
   try {
     const response = await adminApi.get<{ contact: Contact }>(`/business/contacts/${relation.id}`);
     editContact(response.data.contact);
     await Promise.all([loadRelationDetail('contact', relation.id), loadRelationActivity('contact', relation.id), loadContactConsents(response.data.contact.id), loadIamUserOptions()]);
     relationDraftType.value = 'contact';
-    relationModalMode.value = 'view';
+    relationModalMode.value = mode;
     activeModal.value = 'relation';
   } catch (err) {
     setError(err, 'Ouverture contact impossible.');
@@ -1152,6 +1151,37 @@ async function archiveRelationContact(relation: BusinessRelation): Promise<void>
   activeModal.value = 'archive';
 }
 
+async function deleteRelationCompany(relation: BusinessRelation): Promise<void> {
+  archiveRelation.value = relation;
+  activeModal.value = 'delete';
+}
+
+async function deleteRelationContact(relation: BusinessRelation): Promise<void> {
+  archiveRelation.value = relation;
+  activeModal.value = 'delete';
+}
+
+async function restoreRelationCompany(relation: BusinessRelation): Promise<void> {
+  await restoreRelation(relation);
+}
+
+async function restoreRelationContact(relation: BusinessRelation): Promise<void> {
+  await restoreRelation(relation);
+}
+
+async function restoreRelation(relation: BusinessRelation): Promise<void> {
+  busy.value = `relation.restore.${relation.type}.${relation.id}`;
+  try {
+    await adminApi.post(`/business/relations/${relation.type}/${relation.id}/restore`, {});
+    await reloadRelationsView();
+    setNotice('Relation retablie.');
+  } catch (err) {
+    setError(err, 'Retablissement impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
 async function confirmArchiveRelation(): Promise<void> {
   const relation = archiveRelation.value;
   if (!relation) return;
@@ -1162,6 +1192,22 @@ async function confirmArchiveRelation(): Promise<void> {
   }
   await reloadRelationsView();
   closeModal();
+}
+
+async function confirmDeleteRelation(): Promise<void> {
+  const relation = archiveRelation.value;
+  if (!relation) return;
+  busy.value = 'relation.delete';
+  try {
+    await adminApi.delete(`/business/relations/${relation.type}/${relation.id}`);
+    await reloadRelationsView();
+    setNotice('Relation supprimee definitivement.');
+    closeModal();
+  } catch (err) {
+    setError(err, 'Suppression definitive impossible.');
+  } finally {
+    busy.value = '';
+  }
 }
 
 function editCompany(company: Company): void {
@@ -1325,7 +1371,7 @@ async function saveConsent(channel: string): Promise<void> {
       is_primary: true,
       is_verified: payload.is_verified,
     });
-    await loadContactConsents(contactForm.id);
+    await Promise.all([loadContactConsents(contactForm.id), reloadRelationsView()]);
     setNotice(`Consentement ${channel} enregistré.`);
   } catch (err) {
     setError(err, 'Enregistrement consentement impossible.');
@@ -1334,7 +1380,7 @@ async function saveConsent(channel: string): Promise<void> {
   }
 }
 
-function editMemo(memo: Memo): void {
+function selectMemo(memo: Memo): void {
   Object.assign(memoForm, {
     id: memo.id,
     company_id: valueText(memo.company_id),
@@ -1349,8 +1395,12 @@ function editMemo(memo: Memo): void {
   });
   oneTimeShareUrl.value = '';
   Object.assign(memoCommentEdit, { id: 0, body: '' });
+  void Promise.all([loadMemoComments(memo.id), canMemoShare.value ? loadMemoShares(memo.id) : Promise.resolve(), loadIamUserOptions()]);
+}
+
+function editMemo(memo: Memo): void {
+  selectMemo(memo);
   activeModal.value = 'memo';
-  void Promise.all([loadMemoComments(memo.id), canMemoShare.value ? loadMemoShares(memo.id) : Promise.resolve()]);
 }
 
 async function saveMemo(): Promise<Memo | null> {
@@ -1810,6 +1860,12 @@ onBeforeUnmount(() => {
         </article>
       </div>
 
+      <div v-if="canMessagesAccess" class="business-dashboard-communication business-message-stats" aria-label="Résumé communication">
+        <article><strong>{{ mailingLists.length }}</strong><span>Listes</span></article>
+        <article><strong>{{ campaigns.length }}</strong><span>Campagnes</span></article>
+        <article><strong>{{ outbox.length }}</strong><span>Messages</span></article>
+      </div>
+
       <div v-if="dashboard?.alerts?.length" class="business-dashboard-alerts">
         <article v-for="alert in dashboard.alerts" :key="`${alert.code}-${alert.channel || alert.count || ''}`">
           <StatusBadge :status="alert.level || 'info'" />
@@ -1878,6 +1934,10 @@ onBeforeUnmount(() => {
         @open-consent="openRelationConsent"
         @archive-company="archiveRelationCompany"
         @archive-contact="archiveRelationContact"
+        @restore-company="restoreRelationCompany"
+        @restore-contact="restoreRelationContact"
+        @delete-company="deleteRelationCompany"
+        @delete-contact="deleteRelationContact"
       />
     </section>
 
@@ -2176,6 +2236,14 @@ onBeforeUnmount(() => {
               <button class="btn primary small" type="button" @click="confirmArchiveRelation">Archiver</button>
             </div>
           </template>
+
+          <template v-else-if="activeModal === 'delete'">
+            <p>Effacer definitivement {{ archiveRelation?.display_name || 'cette relation' }} ? Cette action est disponible uniquement apres archivage.</p>
+            <div class="business-actions">
+              <button class="btn ghost small" type="button" @click="closeModal()">Annuler</button>
+              <button class="btn danger small" type="button" :disabled="busy === 'relation.delete'" @click="confirmDeleteRelation">Effacer</button>
+            </div>
+          </template>
           </div>
         </section>
       </div>
@@ -2201,51 +2269,30 @@ onBeforeUnmount(() => {
         <table v-else class="business-table">
           <thead><tr><th>Titre</th><th>Cible</th><th>Visibilité</th><th>Date</th><th></th></tr></thead>
           <tbody>
-            <tr v-for="memo in memos" :key="memo.id" :class="{ selected: memo.id === memoForm.id }">
-              <td><button class="business-link" type="button" @click="editMemo(memo)">{{ memo.title }}</button></td>
+            <tr
+              v-for="memo in memos"
+              :key="memo.id"
+              class="business-table-row--selectable"
+              :class="{ selected: memo.id === memoForm.id }"
+              tabindex="0"
+              @click="selectMemo(memo)"
+              @keydown.enter.prevent="selectMemo(memo)"
+              @keydown.space.prevent="selectMemo(memo)"
+            >
+              <td><button class="business-link" type="button" @click.stop="editMemo(memo)">{{ memo.title }}</button></td>
               <td>{{ memo.contact_id ? contactName(memo.contact_id) : companyName(memo.company_id) }}</td>
               <td><StatusBadge :status="memo.visibility" /></td>
               <td>{{ memo.created_at || '—' }}</td>
-              <td class="text-end"><button v-if="canMemoManage" class="btn ghost small" type="button" :disabled="busy === `memo.archive.${memo.id}`" @click="archiveMemo(memo)">Archiver</button></td>
+              <td class="text-end"><button v-if="canMemoManage" class="btn ghost small" type="button" :disabled="busy === `memo.archive.${memo.id}`" @click.stop="archiveMemo(memo)">Archiver</button></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <form class="business-panel" @submit.prevent="saveMemo">
-        <header class="business-panel-head">
-          <div><p class="eyebrow">{{ memoForm.id ? `#${memoForm.id}` : 'Nouveau' }}</p><h2>Mémo</h2></div>
-          <button v-if="canMemoManage" class="btn primary small" type="submit" :disabled="busy === 'memo.save'">Enregistrer</button>
-        </header>
-        <div class="business-form">
-          <label class="business-span">Titre<input v-model="memoForm.title" type="text" :disabled="!canMemoManage" required></label>
-          <label>Entreprise<select v-model="memoForm.company_id" :disabled="!canMemoManage"><option value="">—</option><option v-for="company in companies" :key="company.id" :value="company.id">{{ company.name }}</option></select></label>
-          <label>Contact<select v-model="memoForm.contact_id" :disabled="!canMemoManage"><option value="">—</option><option v-for="contact in contacts" :key="contact.id" :value="contact.id">{{ contact.display_name }}</option></select></label>
-          <label>Visibilité<select v-model="memoForm.visibility" :disabled="!canMemoManage"><option v-for="visibility in memoVisibilities" :key="visibility" :value="visibility">{{ statusLabel(visibility) }}</option></select></label>
-          <label class="business-span">Texte<textarea v-model="memoForm.body" rows="8" :disabled="!canMemoManage"></textarea></label>
-        </div>
-        <div class="business-actions"><button class="btn ghost small" type="button" @click="resetMemoForm">Nouveau mémo</button></div>
-      </form>
-
-      <div class="business-panel">
-        <header class="business-panel-head"><div><p class="eyebrow">Commentaires</p><h2>{{ selectedMemo?.title || 'Mémo' }}</h2></div></header>
-        <div v-if="!memoForm.id" class="business-empty">Ouvrez un mémo pour voir les commentaires.</div>
-        <template v-else>
-          <div class="business-list">
-            <p v-if="!memoComments.length" class="business-empty">Aucun commentaire.</p>
-            <article v-for="comment in memoComments" :key="comment.id" class="business-list-row"><strong>#{{ comment.id }}</strong><span>{{ comment.body }}</span><small>{{ comment.created_at }}</small></article>
-          </div>
-          <form v-if="canMemoManage" class="business-inline-form" @submit.prevent="addMemoComment">
-            <input v-model="memoForm.comment" type="text" placeholder="Ajouter un commentaire">
-            <button class="btn small" type="submit" :disabled="busy === 'memo.comment'">Ajouter</button>
-          </form>
-        </template>
-      </div>
-
       <div class="business-panel">
         <header class="business-panel-head"><div><p class="eyebrow">Partage</p><h2>Interne et lien public</h2></div></header>
         <div v-if="!canMemoShare" class="business-empty">Permission partage mémo requise.</div>
-        <div v-else-if="!memoForm.id" class="business-empty">Ouvrez un mémo pour gérer les partages.</div>
+        <div v-else-if="!memoForm.id" class="business-empty">Sélectionnez un mémo pour gérer les partages.</div>
         <template v-else>
           <form class="business-inline-form" @submit.prevent="shareMemoInternally">
             <input v-model="memoForm.share_iam_user_ids" type="text" placeholder="IDs utilisateurs IAM séparés par virgule">
@@ -2282,21 +2329,28 @@ onBeforeUnmount(() => {
           </div>
         </template>
       </div>
+
+      <div class="business-panel">
+        <header class="business-panel-head"><div><p class="eyebrow">Commentaires</p><h2>{{ selectedMemo?.title || 'Mémo' }}</h2></div></header>
+        <div v-if="!memoForm.id" class="business-empty">Sélectionnez un mémo pour voir les commentaires.</div>
+        <template v-else>
+          <div class="business-list">
+            <p v-if="!memoComments.length" class="business-empty">Aucun commentaire.</p>
+            <article v-for="comment in memoComments" :key="comment.id" class="business-list-row">
+              <strong>{{ iamUserLabel(comment.author_iam_user_id) }}</strong>
+              <span>{{ comment.body }}</span>
+              <small>{{ comment.created_at }}</small>
+            </article>
+          </div>
+          <form v-if="canMemoManage" class="business-inline-form" @submit.prevent="addMemoComment">
+            <input v-model="memoForm.comment" type="text" placeholder="Ajouter un commentaire">
+            <button class="btn small" type="submit" :disabled="busy === 'memo.comment'">Ajouter</button>
+          </form>
+        </template>
+      </div>
     </section>
 
     <section v-if="activeTab === 'messages'" class="business-messages">
-      <div class="business-messages-hero">
-        <div>
-          <p class="eyebrow">Communication</p>
-          <h2>Messages, listes et campagnes</h2>
-        </div>
-        <div class="business-message-stats" aria-label="Résumé messages">
-          <article><strong>{{ mailingLists.length }}</strong><span>listes</span></article>
-          <article><strong>{{ campaigns.length }}</strong><span>campagnes</span></article>
-          <article><strong>{{ outbox.length }}</strong><span>messages</span></article>
-        </div>
-      </div>
-
       <template v-if="canMailingRead">
         <section class="business-message-section">
           <header class="business-section-head">
@@ -2515,7 +2569,8 @@ onBeforeUnmount(() => {
 .business-dashboard-actions,
 .business-dashboard-alerts,
 .business-dashboard-results,
-.business-dashboard-counters {
+.business-dashboard-counters,
+.business-dashboard-communication {
   border: 1px solid var(--business-border);
   border-radius: 8px;
   background: var(--business-surface);
@@ -2709,7 +2764,6 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
-.business-messages-hero,
 .business-message-section {
   border: 1px solid var(--business-border);
   border-radius: 8px;
@@ -2717,14 +2771,6 @@ onBeforeUnmount(() => {
   padding: 1rem;
 }
 
-.business-messages-hero {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-}
-
-.business-messages-hero h2,
 .business-section-head h2,
 .business-message-card h3 {
   margin: 0;
@@ -2919,6 +2965,18 @@ onBeforeUnmount(() => {
 
 .business-table tr.selected,
 .business-list-button.selected {
+  background: #ecfdf3;
+}
+
+.business-table-row--selectable {
+  cursor: pointer;
+}
+
+.business-table-row--selectable:hover {
+  background: #f8fafc;
+}
+
+.business-table-row--selectable.selected:hover {
   background: #ecfdf3;
 }
 
@@ -3311,7 +3369,6 @@ onBeforeUnmount(() => {
     flex-direction: column;
   }
 
-  .business-messages-hero,
   .business-section-head,
   .business-message-card__main {
     align-items: flex-start;
@@ -3458,7 +3515,6 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .business-messages-hero,
   .business-message-section {
     padding: .85rem;
   }

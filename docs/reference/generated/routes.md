@@ -346,6 +346,7 @@ generated: true
 | `POST` | `/admin/api/business/relations/{type}/{id}/archive` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/relations/{type}/{id}/restore` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |

@@ -64,9 +64,29 @@ final class BusinessCrmService
         return $this->companies->archive($siteId, $companyId, $actorId);
     }
 
+    public function restoreCompany(int $siteId, int $companyId, ?int $actorId = null): bool
+    {
+        return $this->companies->restore($siteId, $companyId, $actorId);
+    }
+
+    public function deleteArchivedCompany(int $siteId, int $companyId): bool
+    {
+        return $this->companies->deleteArchived($siteId, $companyId);
+    }
+
     public function archiveContact(int $siteId, int $contactId, ?int $actorId = null): bool
     {
         return $this->contacts->archive($siteId, $contactId, $actorId);
+    }
+
+    public function restoreContact(int $siteId, int $contactId, ?int $actorId = null): bool
+    {
+        return $this->contacts->restore($siteId, $contactId, $actorId);
+    }
+
+    public function deleteArchivedContact(int $siteId, int $contactId): bool
+    {
+        return $this->contacts->deleteArchived($siteId, $contactId);
     }
 
     public function tagCompany(int $siteId, int $companyId, array $tagPayload, ?int $actorId = null): array

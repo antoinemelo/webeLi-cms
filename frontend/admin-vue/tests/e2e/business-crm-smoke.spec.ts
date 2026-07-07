@@ -179,8 +179,9 @@ test.describe('business CRM UX smoke', () => {
 
     const menu = page.locator('details.relations-menu--actions > summary[aria-label="Actions relations"]');
     await expect(menu).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nouvelle relation' })).toBeVisible();
     await menu.click();
-    await expect(page.getByRole('button', { name: 'Nouveau contact' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nouveau contact' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Liste mémos' })).toBeVisible();
     await menu.click();
 
@@ -213,9 +214,10 @@ test.describe('business CRM UX smoke', () => {
     await openRelationRowMenu(freshContactRow);
     await relationRowMenuButton(freshContactRow, 'Éditer').click();
     await expect(relationModal.getByRole('heading', { name: 'Fiche relation' })).toBeVisible();
-    await expect(relationModal.getByText(contactEmail, { exact: true })).toBeVisible();
+    await expect(relationModal.getByLabel('Email')).toHaveValue(contactEmail);
+    await closeBusinessModal(page);
 
-    await relationModal.getByRole('button', { name: 'Ajouter mémo' }).click();
+    await freshContactRow.getByRole('button', { name: `Ajouter un mémo pour ${contactName}` }).click();
     await expect(relationModal.getByRole('heading', { name: 'Nouveau mémo' })).toBeVisible();
     await expect(relationModal.getByLabel('Contact')).toHaveValue(String(contactId));
     await closeBusinessModal(page, true);

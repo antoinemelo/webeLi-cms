@@ -84,6 +84,7 @@ final class BusinessCrmApiController
                 ['key' => 'relations.activity', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/activity', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.memos', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/memos', 'permission' => 'business.memo.read'],
                 ['key' => 'relations.summary', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/summary', 'permission' => 'business.crm.read'],
+                ['key' => 'relations.restore', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/restore', 'permission' => 'business.crm.manage'],
             ],
             'permissions' => [
                 'business.crm.read',
@@ -249,14 +250,70 @@ final class BusinessCrmApiController
         }
     }
 
+    public function restoreRelation(string $type, string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        try {
+            $relationType = $this->relationType($type);
+            $relationId = $this->id($id);
+            $relation = $this->relations->find((int) $site['id'], $relationType, $relationId, true);
+            if ($relation === null) {
+                return $this->notFound('Relation introuvable.', $id);
+            }
+            if (($relation['archived_at'] ?? null) === null) {
+                return Response::success(['restored' => false, 'id' => $relationId, 'type' => $relationType, 'message' => 'Relation deja active.'], 'admin.business.relations.restore.v1', $this->meta($site, $languageCode));
+            }
+            if ($relationType === 'company') {
+                $restored = $this->crm->restoreCompany((int) $site['id'], $relationId, $this->actorId());
+                $this->recordActivity((int) $site['id'], 'business.company.restored', 'Entreprise rétablie.', 'business_company', $relationId, $relationId, null);
+            } else {
+                $restored = $this->crm->restoreContact((int) $site['id'], $relationId, $this->actorId());
+                $this->recordActivity((int) $site['id'], 'business.contact.restored', 'Contact rétabli.', 'business_contact', $relationId, isset($relation['company']['id']) ? (int) $relation['company']['id'] : null, $relationId);
+            }
+            if (!$restored) {
+                return $this->notFound('Relation introuvable.', $id);
+            }
+            return Response::success(['restored' => true, 'id' => $relationId, 'type' => $relationType, 'message' => 'Relation rétablie.'], 'admin.business.relations.restore.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
     public function deleteRelation(string $type, string|int $id): Response
     {
-        $response = $this->archiveRelation($type, $id);
-        if ($response->status() !== 200) {
-            return $response;
-        }
         [$site, $languageCode] = $this->authorize('business.crm.manage');
-        return Response::success(['deleted' => false, 'archived' => true, 'id' => $this->id($id), 'type' => $this->relationType($type), 'message' => 'Suppression protégée : la relation a été archivée.'], 'admin.business.relations.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $relationType = $this->relationType($type);
+            $relationId = $this->id($id);
+            $relation = $this->relations->find((int) $site['id'], $relationType, $relationId);
+            if ($relation !== null) {
+                if ($relationType === 'company') {
+                    $this->crm->archiveCompany((int) $site['id'], $relationId, $this->actorId());
+                    $this->recordActivity((int) $site['id'], 'business.company.archived', 'Entreprise archivée.', 'business_company', $relationId, $relationId, null);
+                } else {
+                    $this->crm->archiveContact((int) $site['id'], $relationId, $this->actorId());
+                    $this->recordActivity((int) $site['id'], 'business.contact.archived', 'Contact archivé.', 'business_contact', $relationId, null, $relationId);
+                }
+                return Response::success(['deleted' => false, 'archived' => true, 'id' => $relationId, 'type' => $relationType, 'message' => 'Suppression protégée : la relation a été archivée.'], 'admin.business.relations.delete.v1', $this->meta($site, $languageCode));
+            }
+            $archivedRelation = $this->relations->find((int) $site['id'], $relationType, $relationId, true);
+            if ($archivedRelation === null) {
+                return $this->notFound('Relation introuvable.', $id);
+            }
+            if ($relationType === 'company') {
+                $deleted = $this->crm->deleteArchivedCompany((int) $site['id'], $relationId);
+                $this->recordActivity((int) $site['id'], 'business.company.deleted', 'Entreprise supprimée définitivement.', 'business_company', $relationId, $relationId, null);
+            } else {
+                $deleted = $this->crm->deleteArchivedContact((int) $site['id'], $relationId);
+                $this->recordActivity((int) $site['id'], 'business.contact.deleted', 'Contact supprimé définitivement.', 'business_contact', $relationId, null, $relationId);
+            }
+            if (!$deleted) {
+                return $this->notFound('Relation introuvable.', $id);
+            }
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $relationId, 'type' => $relationType, 'message' => 'Relation supprimée définitivement.'], 'admin.business.relations.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
     }
 
     public function relationMemos(string $type, string|int $id): Response
@@ -434,12 +491,27 @@ final class BusinessCrmApiController
 
     public function deleteCompany(string|int $id): Response
     {
-        $response = $this->archiveCompany($id);
-        if ($response->status() !== 200) {
-            return $response;
-        }
         [$site, $languageCode] = $this->authorize('business.crm.manage');
-        return Response::success(['deleted' => false, 'archived' => true, 'id' => $this->id($id), 'message' => 'Suppression protégée : l’entreprise a été archivée.'], 'admin.business.companies.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $companyId = $this->id($id);
+            $company = $this->companies->find((int) $site['id'], $companyId);
+            if ($company !== null) {
+                $this->crm->archiveCompany((int) $site['id'], $companyId, $this->actorId());
+                $this->recordActivity((int) $site['id'], 'business.company.archived', 'Entreprise archivée.', 'business_company', $companyId, $companyId, null);
+                return Response::success(['deleted' => false, 'archived' => true, 'id' => $companyId, 'message' => 'Suppression protégée : l’entreprise a été archivée.'], 'admin.business.companies.delete.v1', $this->meta($site, $languageCode));
+            }
+            if ($this->companies->find((int) $site['id'], $companyId, true) === null) {
+                return $this->notFound('Entreprise introuvable.', $id);
+            }
+            $deleted = $this->crm->deleteArchivedCompany((int) $site['id'], $companyId);
+            if (!$deleted) {
+                return $this->notFound('Entreprise introuvable.', $id);
+            }
+            $this->recordActivity((int) $site['id'], 'business.company.deleted', 'Entreprise supprimée définitivement.', 'business_company', $companyId, $companyId, null);
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $companyId, 'message' => 'Entreprise supprimée définitivement.'], 'admin.business.companies.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
     }
 
     public function contacts(): Response
@@ -550,12 +622,27 @@ final class BusinessCrmApiController
 
     public function deleteContact(string|int $id): Response
     {
-        $response = $this->archiveContact($id);
-        if ($response->status() !== 200) {
-            return $response;
-        }
         [$site, $languageCode] = $this->authorize('business.crm.manage');
-        return Response::success(['deleted' => false, 'archived' => true, 'id' => $this->id($id), 'message' => 'Suppression protégée : le contact a été archivé.'], 'admin.business.contacts.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $contactId = $this->id($id);
+            $contact = $this->contacts->find((int) $site['id'], $contactId);
+            if ($contact !== null) {
+                $this->crm->archiveContact((int) $site['id'], $contactId, $this->actorId());
+                $this->recordActivity((int) $site['id'], 'business.contact.archived', 'Contact archivé.', 'business_contact', $contactId, null, $contactId);
+                return Response::success(['deleted' => false, 'archived' => true, 'id' => $contactId, 'message' => 'Suppression protégée : le contact a été archivé.'], 'admin.business.contacts.delete.v1', $this->meta($site, $languageCode));
+            }
+            if ($this->contacts->find((int) $site['id'], $contactId, true) === null) {
+                return $this->notFound('Contact introuvable.', $id);
+            }
+            $deleted = $this->crm->deleteArchivedContact((int) $site['id'], $contactId);
+            if (!$deleted) {
+                return $this->notFound('Contact introuvable.', $id);
+            }
+            $this->recordActivity((int) $site['id'], 'business.contact.deleted', 'Contact supprimé définitivement.', 'business_contact', $contactId, null, $contactId);
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $contactId, 'message' => 'Contact supprimé définitivement.'], 'admin.business.contacts.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
     }
 
     public function tags(): Response

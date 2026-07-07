@@ -3080,6 +3080,38 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "id": "permission-relation-delete-ad8d5c7208",
+    "last_verified": "2026-07-07",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "relation.delete",
+    "source": [
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
+    ],
+    "id": "permission-relations-restore-e222698fdf",
+    "last_verified": "2026-07-07",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "relations.restore",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php",
       "backend/src/Application/Api/Admin/IamAdminApiController.php",

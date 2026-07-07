@@ -19,6 +19,7 @@ type Relation = {
   shared_memo_count?: number;
   linked_contacts_count?: number;
   last_activity_at?: string | null;
+  archived_at?: string | null;
 };
 
 defineProps<{
@@ -36,6 +37,8 @@ defineEmits<{
   whatsapp: [];
   consent: [];
   archive: [];
+  restore: [];
+  delete: [];
   openMemos: [];
 }>();
 </script>
@@ -69,12 +72,18 @@ defineEmits<{
 
     <div class="relation-card-actions">
       <button class="btn ghost small" type="button" :aria-label="`Voir ${relation.display_name}`" @click="$emit('view')">Voir</button>
-      <button class="btn ghost small" type="button" :aria-label="`Ajouter un mémo pour ${relation.display_name}`" @click="$emit('memo')">Mémo</button>
-      <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="$emit('message')">Message</button>
-      <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="$emit('email')">Email</button>
-      <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="$emit('whatsapp')">WhatsApp</button>
-      <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
-      <button class="btn ghost small" type="button" :aria-label="`Archiver ${relation.display_name}`" @click="$emit('archive')">Archiver</button>
+      <template v-if="relation.archived_at">
+        <button class="btn ghost small" type="button" :aria-label="`Rétablir ${relation.display_name}`" @click="$emit('restore')">Rétablir</button>
+        <button class="btn ghost small" type="button" :aria-label="`Effacer définitivement ${relation.display_name}`" @click="$emit('delete')">Effacer</button>
+      </template>
+      <template v-else>
+        <button class="btn ghost small" type="button" :aria-label="`Ajouter un mémo pour ${relation.display_name}`" @click="$emit('memo')">Mémo</button>
+        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="$emit('message')">Message</button>
+        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="$emit('email')">Email</button>
+        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="$emit('whatsapp')">WhatsApp</button>
+        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
+        <button class="btn ghost small" type="button" :aria-label="`Archiver ${relation.display_name}`" @click="$emit('archive')">Archiver</button>
+      </template>
     </div>
   </article>
 </template>

@@ -20,9 +20,9 @@ final class BusinessRelationReadRepository
         return $this->relations->list($siteId, $filters, $limit, $offset);
     }
 
-    public function find(int $siteId, string $type, int $id): ?array
+    public function find(int $siteId, string $type, int $id, bool $includeArchived = false): ?array
     {
-        return $this->relations->find($siteId, $type, $id);
+        return $this->relations->find($siteId, $type, $id, $includeArchived);
     }
 
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int} */

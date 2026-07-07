@@ -47,15 +47,16 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
         ];
     }
 
-    public function find(int $siteId, string $type, int $id): ?array
+    public function find(int $siteId, string $type, int $id, bool $includeArchived = false): ?array
     {
         $type = $this->type($type);
         if ($type === '') {
             throw new InvalidArgumentException('business.relation_type_invalid');
         }
+        $filters = $includeArchived ? ['archived' => 'all'] : [];
         $items = $type === 'contact'
-            ? $this->contacts($this->requireSiteId($siteId), '', '', $id)
-            : $this->companies($this->requireSiteId($siteId), '', '', $id);
+            ? $this->contacts($this->requireSiteId($siteId), '', '', $id, $filters)
+            : $this->companies($this->requireSiteId($siteId), '', '', $id, $filters);
         return $items[0] ?? null;
     }
 
