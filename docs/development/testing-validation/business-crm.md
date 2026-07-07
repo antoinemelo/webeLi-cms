@@ -1,5 +1,5 @@
 ---
-title: Tests du module Business CRM
+title: Tests du module Opérations CRM
 audience:
   - developer
   - evaluator
@@ -19,7 +19,7 @@ owners:
 document_type: guide
 generated: false
 ---
-# Tests du module Business CRM
+# Tests du module Opérations CRM
 
 ## Commandes
 

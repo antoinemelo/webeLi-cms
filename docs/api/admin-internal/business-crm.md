@@ -1,5 +1,5 @@
 ---
-title: API interne Business CRM
+title: API interne Opérations CRM
 audience:
   - developer
   - administrator
@@ -19,7 +19,7 @@ owners:
 document_type: reference
 generated: false
 ---
-# API interne Business CRM
+# API interne Opérations CRM
 
 Cette surface alimente le back-office. Elle exige une session admin, le contexte de site lorsque necessaire, les protections CSRF des ecritures admin et la permission indiquee par endpoint.
 

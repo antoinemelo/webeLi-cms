@@ -11,6 +11,7 @@ use App\Core\ApiException;
 use App\Core\Database;
 use App\Core\Logger;
 use App\Core\Request;
+use App\Core\Router;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
 use App\Modules\Business\Repositories\BusinessActivityRepository;
 use App\Modules\Business\Repositories\BusinessConsentRepository;
@@ -329,6 +330,10 @@ try {
     $publicSharePayload = json_decode($publicShareResponse->body(), true);
     $token = (string) ($publicSharePayload['data']['public_token'] ?? '');
     $h->assertTrue(strlen($token) >= 32, 'public token is returned once');
+    $publicPath = (string) ($publicSharePayload['data']['public_path'] ?? '');
+    $h->assertSame(url_path('/business/memos/share/' . $token), $publicPath, 'public memo share path is returned as an app-aware public web path');
+    $matchedPublicRoute = (new Router())->match('GET', '/business/memos/share/' . $token, require __DIR__ . '/../../../../backend/routes/web.php');
+    $h->assertSame('App\\Application\\Frontend\\BusinessMemoShareController@show', $matchedPublicRoute['handler'] ?? null, 'public memo share web route resolves before the public catch-all');
     $shares = $memos->sharesForMemo(1, (int) $memo['id']);
     $h->assertTrue(($shares[0]['public_token_hash'] ?? '') !== $token, 'public token is not stored in clear');
     $normalMemoListing = $controllerFor(1, 'GET', '/admin/api/business/memos', ['company_id' => (string) $companyId])->memos();

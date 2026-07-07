@@ -956,7 +956,7 @@ final class BusinessCrmApiController
                 isset($payload['expires_at']) ? (string) $payload['expires_at'] : null,
             );
             $share = $this->safeShare($result['share']);
-            $publicPath = '/business/memos/share/' . $result['token'];
+            $publicPath = url_path('/business/memos/share/' . $result['token']);
             $this->audit('business.memo_share.public_created', 'crm_memo', $this->id($id), ['share_id' => (int) ($share['id'] ?? 0), 'expires_at' => $share['expires_at'] ?? null, 'site_id' => (int) $site['id']]);
             return Response::success([
                 'share' => $share,

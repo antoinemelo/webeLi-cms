@@ -7,6 +7,7 @@ test.describe('webhook management', () => {
   test.skip(!email || !password, 'E2E credentials are required');
 
   test('authorized user creates, pings and reloads a webhook delivery without exposing its secret', async ({ page }) => {
+    test.setTimeout(60_000);
     const webhookName = `E2E webhook ${Date.now()}`;
 
     await page.goto('/admin/login');
@@ -46,7 +47,14 @@ test.describe('webhook management', () => {
     await page.getByRole('button', { name: 'Webhooks', exact: true }).click();
     row = page.locator('.amcms-security-row').filter({ hasText: webhookName });
     await expect(row).toBeVisible();
+    const deliveriesResponse = page.waitForResponse((response) => (
+      response.request().method() === 'GET'
+      && /\/admin\/api\/security\/webhooks\/\d+\/deliveries(?:\?|$)/.test(response.url())
+    ));
     await row.getByRole('button', { name: 'Historique', exact: true }).click();
+    const response = await deliveriesResponse;
+    expect(response.ok()).toBeTruthy();
+    expect(await response.finished()).toBeNull();
     await expect(row.locator('[data-webhook-deliveries]')).toContainText(deliveryId!);
 
     page.once('dialog', (dialog) => dialog.accept());

@@ -1,5 +1,5 @@
 ---
-title: Memos et partages Business CRM
+title: Memos et partages Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -18,7 +18,7 @@ owners:
 document_type: procedure
 generated: false
 ---
-# Memos et partages Business CRM
+# Memos et partages Opérations CRM
 
 ## Resultat attendu
 

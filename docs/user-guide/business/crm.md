@@ -1,5 +1,5 @@
 ---
-title: Entreprises et contacts Business CRM
+title: Entreprises et contacts Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -20,7 +20,7 @@ owners:
 document_type: procedure
 generated: false
 ---
-# Entreprises et contacts Business CRM
+# Entreprises et contacts Opérations CRM
 
 ## Resultat attendu
 
@@ -33,7 +33,7 @@ Centraliser les relations CRM par site, qu'il s'agisse de personnes ou d'organis
 
 ## Relations unifiees
 
-1. Ouvrez **Modules > Business**, puis l'onglet **Relations**.
+1. Ouvrez **Modules > Opérations**, puis l'onglet **Relations**.
 2. Utilisez la liste **Relations** pour rechercher indifferemment une personne, une organisation, un email ou un telephone.
 3. Filtrez par type ou statut : personnes, organisations, prospects, clients, fournisseurs, anciens ou autres.
 4. Les indicateurs affichent uniquement les donnees utiles : memos, memos partages et contacts lies pour une organisation.

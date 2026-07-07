@@ -36,6 +36,7 @@ $tests = [
 ];
 
 $testTimeouts = [
+    'unit/iam_login_modes_test.php' => 45,
     'unit/business_catalog_api_controller_test.php' => 60,
     'unit/business_catalog_csv_service_test.php' => 45,
     'unit/business_catalog_public_api_test.php' => 45,

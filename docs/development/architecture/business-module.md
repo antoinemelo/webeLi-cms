@@ -1,5 +1,5 @@
 ---
-title: Architecture du module Business CRM
+title: Architecture du module Opérations CRM
 audience:
   - developer
   - administrator
@@ -22,7 +22,7 @@ owners:
 document_type: architecture
 generated: false
 ---
-# Architecture du module Business CRM
+# Architecture du module Opérations CRM
 
 ## Perimetre
 
@@ -62,7 +62,7 @@ Un message direct ou mailing doit passer par un canal et un consentement compati
 
 ## Routes
 
-La surface admin reelle est documentee dans [Business CRM API interne](../../api/admin-internal/business-crm.md). Les routes publiques sont limitees a :
+La surface admin reelle est documentee dans [API interne Opérations CRM](../../api/admin-internal/business-crm.md). Les routes publiques sont limitees a :
 
 - `GET /business/memos/share/{token}` ;
 - `GET /business/unsubscribe/{token}` ;

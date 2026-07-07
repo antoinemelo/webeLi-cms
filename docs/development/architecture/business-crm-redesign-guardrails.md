@@ -1,5 +1,5 @@
 ---
-title: Garde-fous de refonte Business CRM
+title: Garde-fous de refonte Opérations CRM
 audience:
   - developer
   - administrator
@@ -22,9 +22,9 @@ owners:
 document_type: architecture
 generated: false
 ---
-# Garde-fous de refonte Business CRM
+# Garde-fous de refonte Opérations CRM
 
-Cette note fixe les contraintes de refonte CRM avant les changements UX et API. Elle complete l'architecture du module Business sans remplacer le CMS, sans introduire de stack lourde et sans exposer le CRM comme API publique.
+Cette note fixe les contraintes de refonte CRM avant les changements UX et API. Elle complete l'architecture du module Opérations sans remplacer le CMS, sans introduire de stack lourde et sans exposer le CRM comme API publique.
 
 ## Etat observe
 
@@ -38,7 +38,7 @@ Le CRM fait partie du module systeme `business` :
 - endpoints admin privés déclarés par `BusinessModuleProvider::adminRoutes()` sous `/admin/api/business/...` ;
 - aucune route headless CRM generale.
 
-Le module Business contient aussi le catalogue. Les prompts de refonte CRM ne doivent pas casser les onglets Produits et Offres ni les permissions catalogue.
+Le module Opérations contient aussi le catalogue. Les prompts de refonte CRM ne doivent pas casser les onglets Produits et Offres ni les permissions catalogue.
 
 ## Decisions produit
 
@@ -86,7 +86,7 @@ Ces routes doivent rester des routes admin authentifiees, protegees par permissi
 Les endpoints CRM privés sont déclarés dans le provider du module Business afin que le back-office Vue, les contrats admin, les tests et la documentation machine-readable disposent d'une source vérifiable. La formulation attendue est :
 
 ```text
-Business CRM
+Opérations CRM
 1 base métier business.sqlite
 permissions CRM
 blueprints admin CRM

@@ -182,7 +182,7 @@ test.describe('business CRM UX smoke', () => {
     await expect(page.getByRole('button', { name: 'Nouvelle relation' })).toBeVisible();
     await menu.click();
     await expect(page.getByRole('button', { name: 'Nouveau contact' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Liste mémos' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mémos' })).toBeVisible();
     await menu.click();
 
     await page.getByPlaceholder(/Recherche globale/i).fill(`E2E ${stamp}`);
@@ -195,7 +195,7 @@ test.describe('business CRM UX smoke', () => {
 
     await expect(contactRow.locator('.relations-indicators')).toContainText('M 1');
     await openRelationRowMenu(contactRow);
-    await relationRowMenuButton(contactRow, 'Liste mémos').click();
+    await relationRowMenuButton(contactRow, 'Mémos').click();
     await expect(page.getByText('Retour aux relations')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mémos' })).toBeVisible();
     await page.getByRole('button', { name: 'Retour aux relations' }).click();

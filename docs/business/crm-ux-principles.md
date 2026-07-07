@@ -1,5 +1,5 @@
 ---
-title: Principes UX Business CRM
+title: Principes UX Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -16,9 +16,9 @@ owners:
 document_type: guide
 generated: false
 ---
-# Principes UX Business CRM
+# Principes UX Opérations CRM
 
-Ces principes guident la refonte des composants CRM du module Business. Ils doivent aider l'utilisateur a comprendre une relation rapidement, agir sans changer de contexte et conserver une interface legere compatible avec l'architecture DEC / webeLi.
+Ces principes guident la refonte des composants CRM du module Opérations. Ils doivent aider l'utilisateur a comprendre une relation rapidement, agir sans changer de contexte et conserver une interface legere compatible avec l'architecture DEC / webeLi.
 
 ## Questions prioritaires
 
@@ -49,8 +49,8 @@ Eviter les termes techniques comme `company_id`, `contact_id`, `crm_memos`, `out
 
 ## Navigation
 
-- Garder **Business** comme entree principale du menu.
-- Dans Business, privilegier **Relations** comme premier onglet CRM.
+- Garder **Opérations** comme entree principale du menu.
+- Dans Opérations, privilegier **Relations** comme premier onglet CRM.
 - Conserver **Mailing**, **Messaging**, **Produits** et **Offres** quand les permissions correspondantes existent.
 - Retirer progressivement **Memos** comme onglet CRM principal ; les memos doivent vivre dans la fiche relation, la timeline ou une fenetre secondaire.
 - Ne pas ajouter de navigation separee pour Personnes et Organisations si la liste Relations peut filtrer par type.
@@ -122,7 +122,7 @@ Les actions frequentes doivent etre disponibles depuis la liste et la fiche :
 
 Les actions destructrices ou sensibles doivent rester secondaires et confirmees.
 
-Email, WhatsApp et Telegram doivent passer par les providers Business. Les composants Vue ne doivent pas appeler directement un service externe.
+Email, WhatsApp et Telegram doivent passer par les providers Opérations. Les composants Vue ne doivent pas appeler directement un service externe.
 
 ## Modals et drawers
 

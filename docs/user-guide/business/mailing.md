@@ -1,5 +1,5 @@
 ---
-title: Mailing et consentements Business CRM
+title: Mailing et consentements Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -20,7 +20,7 @@ owners:
 document_type: procedure
 generated: false
 ---
-# Mailing et consentements Business CRM
+# Mailing et consentements Opérations CRM
 
 ## Resultat attendu
 

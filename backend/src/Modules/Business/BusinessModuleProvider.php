@@ -7,7 +7,7 @@ namespace App\Modules\Business;
 use App\Module\ModuleProvider;
 
 /**
- * Module systeme Business.
+ * Module systeme Operations.
  *
  * Le provider declare la base business.sqlite, les permissions, la navigation,
  * les contrats admin et les blueprints metier. Les blueprints CRM restent une
@@ -18,7 +18,7 @@ final class BusinessModuleProvider implements ModuleProvider
 {
     public function key(): string { return 'business'; }
 
-    public function name(): string { return 'Business CRM'; }
+    public function name(): string { return 'Opérations'; }
 
     public function version(): string { return '0.1.0'; }
 
@@ -46,17 +46,17 @@ final class BusinessModuleProvider implements ModuleProvider
     public function permissions(): array
     {
         return [
-            ['key' => 'business.crm.read', 'name' => 'Lire le CRM Business', 'description' => 'Lire les entreprises, contacts, tags, consentements et donnees CRM autorisees.'],
-            ['key' => 'business.crm.manage', 'name' => 'Gerer le CRM Business', 'description' => 'Creer, modifier et archiver entreprises, contacts, tags et consentements.'],
+            ['key' => 'business.crm.read', 'name' => 'Lire le CRM Opérations', 'description' => 'Lire les entreprises, contacts, tags, consentements et donnees CRM autorisees.'],
+            ['key' => 'business.crm.manage', 'name' => 'Gerer le CRM Opérations', 'description' => 'Creer, modifier et archiver entreprises, contacts, tags et consentements.'],
             ['key' => 'business.memo.read', 'name' => 'Lire les memos CRM', 'description' => 'Consulter les memos CRM accessibles et leurs partages internes.'],
             ['key' => 'business.memo.manage', 'name' => 'Gerer les memos CRM', 'description' => 'Creer, modifier, commenter et archiver les memos CRM.'],
             ['key' => 'business.memo.share', 'name' => 'Partager les memos CRM', 'description' => 'Creer ou revoquer des partages internes et liens publics de memos.'],
-            ['key' => 'business.mailing.read', 'name' => 'Lire le mailing Business', 'description' => 'Consulter listes, campagnes et historiques de diffusion.'],
-            ['key' => 'business.mailing.manage', 'name' => 'Gerer le mailing Business', 'description' => 'Gerer listes, campagnes simples, destinataires et desabonnements.'],
-            ['key' => 'business.messaging.send', 'name' => 'Envoyer des messages Business', 'description' => 'Planifier ou declencher un envoi apres controle du consentement.'],
-            ['key' => 'business.messaging.admin', 'name' => 'Administrer le messaging Business', 'description' => 'Configurer providers, templates et outbox messaging sans stocker de secret en clair.'],
-            ['key' => 'business.catalog.read', 'name' => 'Lire le catalogue Business', 'description' => 'Consulter marques, categories, produits, variantes, options, prix publics et reductions catalogue.'],
-            ['key' => 'business.catalog.write', 'name' => 'Gerer le catalogue Business', 'description' => 'Creer, modifier et archiver marques, categories, produits, options et variantes.'],
+            ['key' => 'business.mailing.read', 'name' => 'Lire le mailing Opérations', 'description' => 'Consulter listes, campagnes et historiques de diffusion.'],
+            ['key' => 'business.mailing.manage', 'name' => 'Gerer le mailing Opérations', 'description' => 'Gerer listes, campagnes simples, destinataires et desabonnements.'],
+            ['key' => 'business.messaging.send', 'name' => 'Envoyer des messages Opérations', 'description' => 'Planifier ou declencher un envoi apres controle du consentement.'],
+            ['key' => 'business.messaging.admin', 'name' => 'Administrer le messaging Opérations', 'description' => 'Configurer providers, templates et outbox messaging sans stocker de secret en clair.'],
+            ['key' => 'business.catalog.read', 'name' => 'Lire le catalogue Opérations', 'description' => 'Consulter marques, categories, produits, variantes, options, prix publics et reductions catalogue.'],
+            ['key' => 'business.catalog.write', 'name' => 'Gerer le catalogue Opérations', 'description' => 'Creer, modifier et archiver marques, categories, produits, options et variantes.'],
             ['key' => 'business.catalog.prices.read', 'name' => 'Lire les prix catalogue', 'description' => 'Consulter les prix de vente et prix calcules du catalogue.'],
             ['key' => 'business.catalog.prices.write', 'name' => 'Gerer les prix catalogue', 'description' => 'Modifier prix de base et ajustements de variantes.'],
             ['key' => 'business.catalog.purchase_prices.read', 'name' => 'Lire les prix achat catalogue', 'description' => 'Consulter les prix d achat et marges catalogue proteges.'],
@@ -84,7 +84,7 @@ final class BusinessModuleProvider implements ModuleProvider
         return [
             $this->crmBlueprint(
                 'relation',
-                'Relation Business',
+                'Relation Opérations',
                 'Agrégat de lecture pour la vue Relations regroupant entreprises et individus.',
                 'business_relations_aggregate',
                 $this->relationFields(),
@@ -208,7 +208,7 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->crmBlueprint(
                 'message',
                 'Message sortant CRM',
-                'Outbox des messages CRM envoyés via email, WhatsApp ou Telegram derrière les providers Business.',
+                'Outbox des messages CRM envoyés via email, WhatsApp ou Telegram derrière les providers Opérations.',
                 'crm_message_outbox',
                 [
                     $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true]),
@@ -251,7 +251,7 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->crmBlueprint(
                 'mailing_list',
                 'Liste de diffusion',
-                'Liste de diffusion simple utilisée par le mailing Business.',
+                'Liste de diffusion simple utilisée par le mailing Opérations.',
                 'crm_mailing_lists',
                 [
                     $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true]),
@@ -298,8 +298,8 @@ final class BusinessModuleProvider implements ModuleProvider
         return [
             [
                 'key' => 'business.crm',
-                'label' => 'Business',
-                'navLabel' => 'Business',
+                'label' => 'Opérations',
+                'navLabel' => 'Opérations',
                 'route' => '/business',
                 'anyPermission' => [
                     'business.crm.read',

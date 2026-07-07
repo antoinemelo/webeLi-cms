@@ -1,5 +1,5 @@
 ---
-title: Configurer le module Business CRM
+title: Configurer le module Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -18,7 +18,7 @@ owners:
 document_type: guide
 generated: false
 ---
-# Configurer le module Business CRM
+# Configurer le module Opérations CRM
 
 ## Base et module
 

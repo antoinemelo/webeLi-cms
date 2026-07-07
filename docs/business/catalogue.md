@@ -1,5 +1,5 @@
 ---
-title: Catalogue Business
+title: Catalogue Opérations
 audience:
   - administrator
   - superadministrator
@@ -17,13 +17,13 @@ owners:
 document_type: guide
 generated: false
 ---
-# Catalogue Business
+# Catalogue Opérations
 
-Le catalogue Business permet de préparer un petit catalogue produits, services ou bons cadeaux depuis le back-office. Il couvre les marques, catégories, produits, variantes, prix, réductions simples, stock et import/export CSV.
+Le catalogue Opérations permet de préparer un petit catalogue produits, services ou bons cadeaux depuis le back-office. Il couvre les marques, catégories, produits, variantes, prix, réductions simples, stock et import/export CSV.
 
 ## Accès
 
-Ouvrez **Modules > Business**, puis utilisez les onglets **Produits** et **Offres**.
+Ouvrez **Modules > Opérations**, puis utilisez les onglets **Produits** et **Offres**.
 
 Les permissions principales sont :
 

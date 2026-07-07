@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "key": "business",
-  "name": "Business CRM",
+  "name": "Opérations",
   "version": "0.1.0",
   "type": "system",
   "provider_class": "App\\Modules\\Business\\BusinessModuleProvider",

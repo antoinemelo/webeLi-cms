@@ -1,5 +1,5 @@
 ---
-title: Audit UX Business CRM
+title: Audit UX Opérations CRM
 audience:
   - administrator
   - superadministrator
@@ -18,13 +18,13 @@ owners:
 document_type: audit
 generated: false
 ---
-# Audit UX Business CRM
+# Audit UX Opérations CRM
 
-Cet audit compare le CRM Business actuel avec les captures de reference fournies pour identifier les patterns utiles a reprendre dans DEC / webeLi, sans copier de marque, de charte graphique, de code ou de composants proprietaires.
+Cet audit compare le CRM Opérations actuel avec les captures de reference fournies pour identifier les patterns utiles a reprendre dans DEC / webeLi, sans copier de marque, de charte graphique, de code ou de composants proprietaires.
 
 ## Synthese
 
-Le CRM Business actuel est fonctionnel mais encore organise comme une administration de tables : onglets separes, formulaires pleine page, peu d'actions contextuelles et absence de fiche relation unifiee. La refonte doit transformer l'entree **Business** en interface de travail orientee relation.
+Le CRM Opérations actuel est fonctionnel mais encore organise comme une administration de tables : onglets separes, formulaires pleine page, peu d'actions contextuelles et absence de fiche relation unifiee. La refonte doit transformer l'entree **Opérations** en interface de travail orientee relation.
 
 Priorite de redesign :
 
@@ -113,7 +113,7 @@ Patterns a ne pas reprendre :
 - Fusionner les listes entreprises et contacts dans une experience unique, sans fusion SQL brutale.
 - Retirer l'onglet **Memos** comme entree principale CRM.
 - Ajouter drawers/modals pour nouvelle relation, edition relation, nouveau memo et message direct.
-- Conserver les onglets **Produits** et **Offres** du catalogue dans Business.
+- Conserver les onglets **Produits** et **Offres** du catalogue dans Opérations.
 
 ### P1 : densite liste, recherche, filtres, compteurs
 
@@ -175,7 +175,7 @@ Ne pas ajouter d'endpoint headless public CRM.
 
 ## Validation manuelle attendue
 
-- Ouvrir **Modules > Business**.
+- Ouvrir **Modules > Opérations**.
 - Trouver une relation en moins de 10 secondes.
 - Creer un contact sans perdre la liste.
 - Ajouter un memo depuis une relation.

@@ -240,8 +240,8 @@ generated: true
 | `GET` | `/api/v1/search` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies/{taxonomy}` | API publique | `backend/routes/api.php` |
-| `GET` | `/business/memos/share/{token:[A-Za-z0-9]{32,128}}` | HTML/runtime | `backend/routes/web.php` |
-| `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]{32,128}}` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/business/memos/share/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
@@ -408,7 +408,7 @@ generated: true
 | `POST` | `/admin/reset-password` | API administrative | `backend/routes/admin.php` |
 | `POST` | `/api/v1/cookies/consent` | API publique | `backend/routes/api.php` |
 | `POST` | `/api/v1/forms/{key}/submit` | API publique | `backend/routes/api.php` |
-| `POST` | `/business/unsubscribe/{token:[A-Za-z0-9]{32,128}}` | HTML/runtime | `backend/routes/web.php` |
+| `POST` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `PUT` | `/admin/api/blueprints/{key}/design` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/products/{id}/base-prices` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/variants/{id}/price-adjustments` | API administrative | `backend/routes/api.php` |

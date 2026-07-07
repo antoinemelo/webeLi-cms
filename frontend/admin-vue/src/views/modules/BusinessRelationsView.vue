@@ -451,9 +451,9 @@ onBeforeUnmount(() => {
           <div class="relations-menu-panel">
             <button type="button" @click="emit('open-import')">Importer</button>
             <button type="button" @click="emit('open-export')">Exporter</button>
-            <button type="button" @click="emit('open-memos-global')">Liste mémos</button>
-            <button type="button" @click="emit('open-comments')">Liste commentaires</button>
-            <button type="button" @click="emit('open-messages-list')">Liste messages</button>
+            <button type="button" @click="emit('open-memos-global')">Mémos</button>
+            <button type="button" @click="emit('open-comments')">Commentaires</button>
+            <button type="button" @click="emit('open-messages-list')">Messages</button>
           </div>
         </details>
       </div>
@@ -556,7 +556,7 @@ onBeforeUnmount(() => {
                   </template>
                   <template v-else>
                     <button type="button" :aria-label="`Éditer ${relation.display_name}`" @click="edit(relation, 'edit')">Éditer</button>
-                    <button type="button" :aria-label="`Voir tous les mémos de ${relation.display_name}`" @click="emit('open-memos', relation)">Liste mémos</button>
+                    <button type="button" :aria-label="`Voir tous les mémos de ${relation.display_name}`" @click="emit('open-memos', relation)">Mémos</button>
                     <button type="button" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="emit('new-message', relation)">Nouveau message</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="emit('new-message', relation, 'email')">Email</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="emit('new-message', relation, 'whatsapp')">WhatsApp</button>

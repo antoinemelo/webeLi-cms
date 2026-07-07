@@ -6,7 +6,7 @@
         "backend/"
       ],
       "id": "component-php-runtime-c18b0079b7",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "php-runtime",
       "responsibility": "HTTP runtime, routing, services and SSR",
@@ -21,7 +21,7 @@
         "frontend/theme-default/"
       ],
       "id": "component-twig-rendering-775e55e790",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "twig-rendering",
       "responsibility": "Public server-side templates",
@@ -36,7 +36,7 @@
         "frontend/admin-vue/src/"
       ],
       "id": "component-vue-typescript-backoffice-f89acfce44",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "vue-typescript-backoffice",
       "responsibility": "Administrative SPA source",
@@ -51,7 +51,7 @@
         "admin-app/"
       ],
       "id": "component-compiled-admin-assets-f04e214f92",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "compiled-admin-assets",
       "responsibility": "Deployable administrative assets",
@@ -66,7 +66,7 @@
         "database/"
       ],
       "id": "component-sqlite-schemas-3bfe510de5",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "sqlite-schemas",
       "responsibility": "Persistent schemas and seeds",
@@ -81,7 +81,7 @@
         "tools/python/"
       ],
       "id": "component-python-tooling-2407edaa5a",
-      "last_verified": "2026-07-07",
+      "last_verified": "2026-07-08",
       "limitations": [],
       "name": "python-tooling",
       "responsibility": "Local operations, validation and release",
@@ -99,7 +99,7 @@
     "tools/python/"
   ],
   "id": "architecture-current",
-  "last_verified": "2026-07-07",
+  "last_verified": "2026-07-08",
   "limitations": [
     "Static inventory does not measure runtime performance or operational resilience."
   ],

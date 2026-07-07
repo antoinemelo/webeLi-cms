@@ -158,7 +158,7 @@ const memoForm = reactive({ id: 0, company_id: '', contact_id: '', title: '', bo
 const consentForm = reactive<Record<string, { value: string; consent_status: string; evidence: string; is_verified: boolean }>>({});
 const mailingListForm = reactive({ id: 0, name: '', list_key: '', channel: 'email', description: '', status: 'active', member_contact_id: '' });
 const campaignForm = reactive({ id: 0, list_id: '', name: '', channel: 'email', subject: '', body_text: '', scheduled_at: '' });
-const messageTestForm = reactive({ channel: 'email', provider_key: 'email', recipient_value: 'runtime@example.test', subject: 'Test Business messaging', body_text: 'Message de test Business.', confirm_external_test: false });
+const messageTestForm = reactive({ channel: 'email', provider_key: 'email', recipient_value: 'runtime@example.test', subject: 'Test messaging Opérations', body_text: 'Message de test Opérations.', confirm_external_test: false });
 
 const selectedCompany = computed(() => companies.value.find((company) => company.id === companyForm.id) || null);
 const selectedContact = computed(() => contacts.value.find((contact) => contact.id === contactForm.id) || null);
@@ -306,7 +306,7 @@ function setNotice(message: string): void {
   error.value = '';
 }
 
-function setError(err: unknown, fallback = 'Action Business impossible.'): void {
+function setError(err: unknown, fallback = 'Action Opérations impossible.'): void {
   error.value = apiErrorMessage(err, fallback);
   success.value = '';
 }
@@ -414,6 +414,9 @@ function activityDetail(item: BusinessActivity): string {
 function publicUrl(path: string): string {
   const basePath = (window.__AMCMS_ADMIN__?.siteBasePath || window.__AMCMS_ADMIN__?.basePath || '').replace(/\/+$/g, '');
   const normalizedPath = `/${String(path || '').replace(/^\/+/g, '')}`;
+  if (basePath && (normalizedPath === basePath || normalizedPath.startsWith(`${basePath}/`))) {
+    return new URL(normalizedPath, window.location.origin).toString();
+  }
   return new URL(`${basePath}${normalizedPath}`, window.location.origin).toString();
 }
 
@@ -676,7 +679,7 @@ async function loadDashboard(): Promise<void> {
       alerts: response.data.alerts || [],
     };
   } catch (err) {
-    setError(err, 'Dashboard Business indisponible.');
+    setError(err, 'Dashboard Opérations indisponible.');
   } finally {
     loading.value = false;
   }
@@ -697,7 +700,7 @@ async function runDashboardSearch(): Promise<void> {
       ...(response.data.messages || []),
     ];
   } catch (err) {
-    setError(err, 'Recherche Business indisponible.');
+    setError(err, 'Recherche Opérations indisponible.');
   } finally {
     busy.value = '';
   }
@@ -1799,7 +1802,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-stack business-crm">
-    <PageHeader title="Business" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging.">
+    <PageHeader title="Opérations" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging.">
       <template #actions>
         <button class="btn ghost" type="button" :disabled="loading" @click="loadCurrentTab">Rafraîchir</button>
       </template>
@@ -1807,7 +1810,7 @@ onBeforeUnmount(() => {
 
     <ApiFeedback :error="error" :success="success" />
 
-    <nav class="editor-tabs business-tabs" aria-label="Sections Business">
+    <nav class="editor-tabs business-tabs" aria-label="Sections Opérations">
       <button v-for="tab in tabs" :key="tab.key" type="button" :class="['editor-tab', { active: activeTab === tab.key }]" :disabled="!tab.permission()" @click="activeTab = tab.key">
         {{ tab.label }}
       </button>
@@ -1825,7 +1828,7 @@ onBeforeUnmount(() => {
         <form class="business-dashboard-search" @submit.prevent="runDashboardSearch">
           <div class="business-dashboard-search-control">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            <input v-model="dashboardSearch.q" type="search" aria-label="Recherche rapide Business" placeholder="Recherche rapide relation, mémo ou message">
+            <input v-model="dashboardSearch.q" type="search" aria-label="Recherche rapide Opérations" placeholder="Recherche rapide relation, mémo ou message">
           </div>
           <button class="btn small" type="submit" :disabled="busy === 'dashboard.search'">Rechercher</button>
         </form>
@@ -1947,7 +1950,7 @@ onBeforeUnmount(() => {
         <section ref="modalPanel" class="business-modal" role="dialog" aria-modal="true" aria-labelledby="business-modal-title" tabindex="-1" @keydown.escape.stop.prevent="closeModal()">
           <header class="business-modal-head">
             <div>
-              <p class="eyebrow">Business CRM</p>
+              <p class="eyebrow">Opérations CRM</p>
               <h2 v-if="activeModal === 'relation'" id="business-modal-title">Fiche relation</h2>
               <h2 v-else-if="activeModal === 'memo'" id="business-modal-title">{{ memoForm.id ? 'Éditer mémo' : 'Nouveau mémo' }}</h2>
               <h2 v-else-if="activeModal === 'import'" id="business-modal-title">Importer des contacts</h2>
