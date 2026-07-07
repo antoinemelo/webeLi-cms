@@ -23,6 +23,10 @@ final class BusinessMemoRepository extends BusinessRepositoryBase
             $where[] = 'company_id = :company_id';
             $params['company_id'] = (int) $filters['company_id'];
         }
+        if (isset($filters['company_relation_id'])) {
+            $where[] = '(company_id = :company_relation_id OR contact_id IN (SELECT id FROM business_contacts WHERE site_id = :site_id AND company_id = :company_relation_id AND archived_at IS NULL))';
+            $params['company_relation_id'] = (int) $filters['company_relation_id'];
+        }
         if (isset($filters['contact_id'])) {
             $where[] = 'contact_id = :contact_id';
             $params['contact_id'] = (int) $filters['contact_id'];
@@ -164,12 +168,39 @@ final class BusinessMemoRepository extends BusinessRepositoryBase
                 'memo_id' => $memoId,
                 'hash' => $tokenHash,
                 'label' => $this->nullableText($label, 'public_label', 180),
-                'expires_at' => $this->nullableText($expiresAt, 'expires_at', 64),
+                'expires_at' => $this->memoShareExpiration($expiresAt),
                 'actor' => $actorId,
             ]
         );
         $row = $this->database()->one('SELECT * FROM crm_memo_shares WHERE id = :id', ['id' => $this->database()->lastInsertId()]);
         return $row ? $this->castRow($row) : [];
+    }
+
+    public function updatePublicShare(int $siteId, int $memoId, int $shareId, ?string $label, ?string $expiresAt, int $actorId): ?array
+    {
+        $this->assertMemo($siteId, $memoId);
+        if ($actorId < 1) {
+            throw new InvalidArgumentException('business.memo_share_actor_required');
+        }
+        $this->database()->run(
+            "UPDATE crm_memo_shares
+             SET public_label = :label,
+                 expires_at = :expires_at
+             WHERE id = :share_id
+               AND memo_id = :memo_id
+               AND share_type = 'public_link'",
+            [
+                'share_id' => $shareId,
+                'memo_id' => $memoId,
+                'label' => $this->nullableText($label, 'public_label', 180),
+                'expires_at' => $this->memoShareExpiration($expiresAt),
+            ]
+        );
+        $row = $this->database()->one(
+            "SELECT * FROM crm_memo_shares WHERE id = :share_id AND memo_id = :memo_id AND share_type = 'public_link' LIMIT 1",
+            ['share_id' => $shareId, 'memo_id' => $memoId]
+        );
+        return $row ? $this->castRow($row) : null;
     }
 
     public function revokeShare(int $siteId, int $shareId, int $actorId): bool
@@ -263,11 +294,44 @@ final class BusinessMemoRepository extends BusinessRepositoryBase
         return $row ? $this->castRow($row) : [];
     }
 
+    public function updateComment(int $siteId, int $memoId, int $commentId, string $body): ?array
+    {
+        $this->assertMemo($siteId, $memoId);
+        $this->database()->run(
+            'UPDATE crm_memo_comments SET body = :body, updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id AND memo_id = :memo_id AND archived_at IS NULL',
+            [
+                'id' => $commentId,
+                'memo_id' => $memoId,
+                'body' => $this->text($body, 'comment_body', 10000),
+            ]
+        );
+        $row = $this->database()->one('SELECT * FROM crm_memo_comments WHERE id = :id AND memo_id = :memo_id AND archived_at IS NULL LIMIT 1', ['id' => $commentId, 'memo_id' => $memoId]);
+        return $row ? $this->castRow($row) : null;
+    }
+
     private function assertMemo(int $siteId, int $memoId): void
     {
         if ($this->find($siteId, $memoId) === null) {
             throw new InvalidArgumentException('business.memo_not_found');
         }
+    }
+
+    private function memoShareExpiration(?string $value): ?string
+    {
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+        $text = str_replace('T', ' ', $text);
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $text)) {
+            $text .= ':00';
+        }
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d H:i:s', $text);
+        if (!$date || $date->format('Y-m-d H:i:s') !== $text) {
+            throw new InvalidArgumentException('business.memo_share_expires_at_invalid');
+        }
+        return $text;
     }
 
     private function assertTargetsBelongToSite(int $siteId, ?int $companyId, ?int $contactId): void

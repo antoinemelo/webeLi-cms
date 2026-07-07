@@ -118,14 +118,14 @@ final class App
                     return $this->secureResponse($corsResponse);
                 }
 
-                $rateLimitResponse = (new PublicApiRateLimitGuard($this->request, $services->auth()->database(), $this->config))->enforce();
-                if ($rateLimitResponse !== null) {
-                    return $this->secureResponse($rateLimitResponse);
-                }
-
                 $tokenAuthResponse = (new PublicApiTokenGuard($this->request, $services->auth()->database(), $this->config))->enforce();
                 if ($tokenAuthResponse !== null) {
                     return $this->secureResponse($tokenAuthResponse);
+                }
+
+                $rateLimitResponse = (new PublicApiRateLimitGuard($this->request, $services->auth()->database(), $this->config))->enforce();
+                if ($rateLimitResponse !== null) {
+                    return $this->secureResponse($rateLimitResponse);
                 }
             }
 
@@ -333,15 +333,21 @@ final class App
                 $services->sites(),
                 $services->auth(),
                 $services->authorization(),
+                $services->businessActivity(),
                 $services->businessCrm(),
                 $services->businessCompanies(),
                 $services->businessContacts(),
+                $services->businessDashboard(),
+                $services->businessRelationRead(),
+                $services->businessSearch(),
                 $services->businessTags(),
                 $services->businessMemos(),
                 $services->businessConsents(),
                 $services->businessConsentService(),
                 $services->businessMemoSharing(),
                 $services->businessCsv(),
+                $services->businessRelationSummary(),
+                $services->iamAdmin(),
             ),
             BusinessCatalogApiController::class => new BusinessCatalogApiController(
                 $this->request,
@@ -370,6 +376,7 @@ final class App
                 $services->businessMessagingOutbox(),
                 $services->businessMessagingProviders(),
                 $services->businessContacts(),
+                $services->businessActivity(),
             ),
             BusinessMailingApiController::class => new BusinessMailingApiController(
                 $this->request,

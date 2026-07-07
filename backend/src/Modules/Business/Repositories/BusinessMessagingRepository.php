@@ -42,6 +42,87 @@ final class BusinessMessagingRepository extends BusinessRepositoryBase
         return $row ? $this->providerRow($row) : null;
     }
 
+    public function findProvider(int $siteId, int $id): ?array
+    {
+        $row = $this->database()->one(
+            'SELECT * FROM crm_messaging_providers WHERE site_id = :site_id AND id = :id LIMIT 1',
+            ['site_id' => $this->requireSiteId($siteId), 'id' => $id]
+        );
+        return $row ? $this->providerRow($row) : null;
+    }
+
+    public function saveProvider(int $siteId, array $payload, ?int $actorId = null): array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $id = max(0, (int) ($payload['id'] ?? 0));
+        $current = $id > 0 ? $this->findProvider($siteId, $id) : null;
+        if ($id > 0 && $current === null) {
+            throw new InvalidArgumentException('business.messaging_provider_not_found');
+        }
+        $providerKey = $this->key($payload['provider_key'] ?? $current['provider_key'] ?? '', 'provider_key');
+        $channel = $this->channel($payload['channel'] ?? $current['channel'] ?? '');
+        $providerType = $this->providerType($payload['provider_type'] ?? $current['provider_type'] ?? 'null');
+        $name = $this->text($payload['name'] ?? $current['name'] ?? $providerKey, 'provider_name', 120);
+        $configJson = $this->json($payload['config'] ?? $payload['config_json'] ?? $current['config'] ?? []);
+        $secretRef = $this->secretRef($payload['secret_ref'] ?? $current['secret_ref'] ?? null);
+        $isEnabled = $this->boolInt($payload['is_enabled'] ?? $current['is_enabled'] ?? false);
+        $isDefault = $this->boolInt($payload['is_default'] ?? $current['is_default'] ?? false);
+        if ($isDefault === 1) {
+            $this->database()->run(
+                'UPDATE crm_messaging_providers SET is_default = 0, updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site_id AND channel = :channel',
+                ['site_id' => $siteId, 'channel' => $channel, 'actor' => $actorId]
+            );
+        }
+        if ($id > 0) {
+            $this->database()->run(
+                'UPDATE crm_messaging_providers
+                 SET provider_key = :provider_key, name = :name, channel = :channel, provider_type = :provider_type, config_json = :config_json,
+                     secret_ref = :secret_ref, is_enabled = :is_enabled, is_default = :is_default, updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
+                 WHERE site_id = :site_id AND id = :id',
+                [
+                    'site_id' => $siteId,
+                    'id' => $id,
+                    'provider_key' => $providerKey,
+                    'name' => $name,
+                    'channel' => $channel,
+                    'provider_type' => $providerType,
+                    'config_json' => $configJson,
+                    'secret_ref' => $secretRef,
+                    'is_enabled' => $isEnabled,
+                    'is_default' => $isDefault,
+                    'actor' => $actorId,
+                ]
+            );
+            return $this->findProvider($siteId, $id) ?? [];
+        }
+        $this->database()->run(
+            'INSERT INTO crm_messaging_providers(site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id)
+             VALUES(:site_id, :provider_key, :name, :channel, :provider_type, :config_json, :secret_ref, :is_enabled, :is_default, :actor, :actor)',
+            [
+                'site_id' => $siteId,
+                'provider_key' => $providerKey,
+                'name' => $name,
+                'channel' => $channel,
+                'provider_type' => $providerType,
+                'config_json' => $configJson,
+                'secret_ref' => $secretRef,
+                'is_enabled' => $isEnabled,
+                'is_default' => $isDefault,
+                'actor' => $actorId,
+            ]
+        );
+        return $this->findProvider($siteId, $this->database()->lastInsertId()) ?? [];
+    }
+
+    public function deleteProvider(int $siteId, int $id): bool
+    {
+        $this->database()->run(
+            'DELETE FROM crm_messaging_providers WHERE site_id = :site_id AND id = :id',
+            ['site_id' => $this->requireSiteId($siteId), 'id' => $id]
+        );
+        return true;
+    }
+
     public function createOutbox(int $siteId, array $payload, ?int $actorId = null): array
     {
         $siteId = $this->requireSiteId($siteId);
@@ -153,22 +234,75 @@ final class BusinessMessagingRepository extends BusinessRepositoryBase
         return array_map(fn(array $row): array => $this->castRow($row), $rows);
     }
 
-    /** @return array{items:list<array<string,mixed>>,limit:int,offset:int} */
-    public function listOutbox(int $siteId, string $status = '', int $limit = 50, int $offset = 0): array
+    /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int} */
+    public function listOutbox(int $siteId, string $status = '', int $limit = 50, int $offset = 0, array $filters = []): array
     {
         $siteId = $this->requireSiteId($siteId);
         $limit = $this->limit($limit);
         $offset = $this->offset($offset);
-        $where = ['site_id = :site_id'];
+        $where = ['mo.site_id = :site_id'];
         $params = ['site_id' => $siteId];
         if (trim($status) !== '') {
-            $where[] = 'status = :status';
+            $where[] = 'mo.status = :status';
             $params['status'] = $status;
         }
+        $channel = trim((string) ($filters['channel'] ?? ''));
+        if ($channel !== '') {
+            $where[] = 'mo.channel = :channel';
+            $params['channel'] = $this->channel($channel);
+        }
+        $query = trim((string) ($filters['q'] ?? ''));
+        if ($query !== '') {
+            $where[] = '(mo.recipient_value LIKE :q OR mo.subject LIKE :q OR mo.body_text LIKE :q OR c.display_name LIKE :q OR co.name LIKE :q)';
+            $params['q'] = '%' . $query . '%';
+        }
         $rows = $this->database()->all(
-            'SELECT * FROM crm_message_outbox WHERE ' . implode(' AND ', $where) . ' ORDER BY created_at DESC, id DESC LIMIT ' . $limit . ' OFFSET ' . $offset,
+            'SELECT mo.*, c.display_name AS contact_name, co.name AS company_name,
+                    (SELECT COUNT(*) FROM crm_message_delivery_events e WHERE e.outbox_id = mo.id) AS event_count
+             FROM crm_message_outbox mo
+             LEFT JOIN business_contacts c ON c.id = mo.contact_id AND c.site_id = mo.site_id
+             LEFT JOIN business_companies co ON co.id = c.company_id AND co.site_id = mo.site_id
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY mo.created_at DESC, mo.id DESC
+             LIMIT ' . $limit . ' OFFSET ' . $offset,
             $params
         );
+        return ['items' => array_map(fn(array $row): array => $this->castRow($row), $rows), 'limit' => $limit, 'offset' => $offset];
+    }
+
+    /** @return array{items:list<array<string,mixed>>,limit:int,offset:int} */
+    public function relationMessages(int $siteId, string $type, int $id, int $limit = 50, int $offset = 0): array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $limit = $this->limit($limit);
+        $offset = $this->offset($offset);
+        $type = trim($type);
+        if (!in_array($type, ['contact', 'company'], true)) {
+            throw new InvalidArgumentException('business.relation_type_invalid');
+        }
+        if ($id < 1) {
+            throw new InvalidArgumentException('business.relation_id_invalid');
+        }
+
+        $where = ['mo.site_id = :site_id'];
+        $params = ['site_id' => $siteId, 'id' => $id];
+        if ($type === 'contact') {
+            $where[] = 'mo.contact_id = :id';
+        } else {
+            $where[] = 'c.company_id = :id';
+        }
+
+        $rows = $this->database()->all(
+            'SELECT mo.*, c.display_name AS contact_name,
+                    (SELECT COUNT(*) FROM crm_message_delivery_events e WHERE e.outbox_id = mo.id) AS event_count
+             FROM crm_message_outbox mo
+             LEFT JOIN business_contacts c ON c.id = mo.contact_id AND c.site_id = mo.site_id
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY mo.created_at DESC, mo.id DESC
+             LIMIT ' . $limit . ' OFFSET ' . $offset,
+            $params
+        );
+
         return ['items' => array_map(fn(array $row): array => $this->castRow($row), $rows), 'limit' => $limit, 'offset' => $offset];
     }
 
@@ -190,6 +324,27 @@ final class BusinessMessagingRepository extends BusinessRepositoryBase
             throw new InvalidArgumentException('business.' . $field . '_invalid');
         }
         return substr($key, 0, 80);
+    }
+
+    private function providerType(mixed $value): string
+    {
+        $type = trim((string) ($value ?: 'null'));
+        if (!in_array($type, ['null', 'smtp', 'webhook', 'whatsapp_cloud', 'telegram_bot', 'custom'], true)) {
+            throw new InvalidArgumentException('business.messaging_provider_type_invalid');
+        }
+        return $type;
+    }
+
+    private function secretRef(mixed $value): ?string
+    {
+        $secretRef = $this->nullableText($value, 'secret_ref', 120);
+        if ($secretRef === null) {
+            return null;
+        }
+        if (!preg_match('/^env:[A-Z0-9_]+$/', $secretRef)) {
+            throw new InvalidArgumentException('business.messaging_secret_ref_invalid');
+        }
+        return $secretRef;
     }
 
     /** @param array<string,mixed> $row @return array<string,mixed> */

@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "855e82f12ccd1b75e3657ffce0d75322900e67f1",
+  "commit": "44ac3af7268b9b8a7549e553b533712a34ca338e",
   "confidence": "high",
   "databases": [
     "core",
@@ -52,9 +52,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-06-27",
+  "generated_at": "2026-07-07",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-06-27",
+  "last_verified": "2026-07-07",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],

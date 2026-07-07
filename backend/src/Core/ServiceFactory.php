@@ -108,11 +108,16 @@ use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
+use App\Modules\Business\Repositories\BusinessActivityRepository;
 use App\Modules\Business\Repositories\BusinessConsentRepository;
 use App\Modules\Business\Repositories\BusinessContactRepository;
+use App\Modules\Business\Repositories\BusinessDashboardRepository;
 use App\Modules\Business\Repositories\BusinessMemoRepository;
 use App\Modules\Business\Repositories\BusinessMessagingRepository;
 use App\Modules\Business\Repositories\BusinessMailingRepository;
+use App\Modules\Business\Repositories\BusinessRelationRepository;
+use App\Modules\Business\Repositories\BusinessRelationReadRepository;
+use App\Modules\Business\Repositories\BusinessSearchRepository;
 use App\Modules\Business\Repositories\BusinessTagRepository;
 use App\Modules\Business\Repositories\CatalogBrandRepository;
 use App\Modules\Business\Repositories\CatalogCategoryRepository;
@@ -129,6 +134,7 @@ use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessDatabaseConnection;
 use App\Modules\Business\Services\BusinessMemoSharingService;
+use App\Modules\Business\Services\BusinessRelationSummaryService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
 use App\Modules\Business\Services\BusinessMailingService;
@@ -553,9 +559,34 @@ final class ServiceFactory
         return $this->once('business_companies', fn() => new BusinessCompanyRepository($this->businessDatabaseConnection()->database()));
     }
 
+    public function businessActivity(): BusinessActivityRepository
+    {
+        return $this->once('business_activity', fn() => new BusinessActivityRepository($this->businessDatabaseConnection()->database()));
+    }
+
     public function businessContacts(): BusinessContactRepository
     {
         return $this->once('business_contacts', fn() => new BusinessContactRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessDashboard(): BusinessDashboardRepository
+    {
+        return $this->once('business_dashboard', fn() => new BusinessDashboardRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessRelations(): BusinessRelationRepository
+    {
+        return $this->once('business_relations', fn() => new BusinessRelationRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessRelationRead(): BusinessRelationReadRepository
+    {
+        return $this->once('business_relation_read', fn() => new BusinessRelationReadRepository($this->businessRelations(), $this->businessMemos()));
+    }
+
+    public function businessSearch(): BusinessSearchRepository
+    {
+        return $this->once('business_search', fn() => new BusinessSearchRepository($this->businessDatabaseConnection()->database()));
     }
 
     public function businessTags(): BusinessTagRepository
@@ -596,6 +627,11 @@ final class ServiceFactory
     public function businessMemoSharing(): BusinessMemoSharingService
     {
         return $this->once('business_memo_sharing', fn() => new BusinessMemoSharingService($this->businessMemos()));
+    }
+
+    public function businessRelationSummary(): BusinessRelationSummaryService
+    {
+        return $this->once('business_relation_summary', fn() => new BusinessRelationSummaryService($this->businessRelationRead(), $this->businessActivity()));
     }
 
     public function businessConsentService(): BusinessConsentService

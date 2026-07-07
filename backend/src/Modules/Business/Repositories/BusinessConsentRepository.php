@@ -8,6 +8,34 @@ use InvalidArgumentException;
 
 final class BusinessConsentRepository extends BusinessRepositoryBase
 {
+    /** @return array{items:list<array<string,mixed>>,limit:int,offset:int} */
+    public function list(int $siteId, int $limit = 50, int $offset = 0, string $channel = '', string $status = ''): array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $limit = $this->limit($limit);
+        $offset = $this->offset($offset);
+        $where = ['c.site_id = :site_id'];
+        $params = ['site_id' => $siteId];
+        if (trim($channel) !== '') {
+            $where[] = 'co.channel = :channel';
+            $params['channel'] = $this->channel($channel);
+        }
+        if (trim($status) !== '') {
+            $where[] = 'co.consent_status = :status';
+            $params['status'] = $this->status($status);
+        }
+        $rows = $this->database()->all(
+            'SELECT co.*, c.display_name AS contact_name, c.email AS contact_email, c.company_id
+             FROM crm_consents co
+             JOIN business_contacts c ON c.id = co.contact_id
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY co.updated_at DESC, co.created_at DESC, co.id DESC
+             LIMIT ' . $limit . ' OFFSET ' . $offset,
+            $params
+        );
+        return ['items' => array_map(fn(array $row): array => $this->castRow($row), $rows), 'limit' => $limit, 'offset' => $offset];
+    }
+
     /** @return list<array<string,mixed>> */
     public function channels(int $contactId, bool $includeArchived = false): array
     {
@@ -68,9 +96,7 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
             throw new InvalidArgumentException('business.contact_id_invalid');
         }
         $channel = $this->channel($channel);
-        if (!in_array($status, ['unknown', 'opt_in', 'opt_out'], true)) {
-            throw new InvalidArgumentException('business.consent_status_invalid');
-        }
+        $status = $this->status($status);
         if (!in_array($source, ['manual', 'form', 'import', 'unsubscribe', 'api'], true)) {
             throw new InvalidArgumentException('business.consent_source_invalid');
         }
@@ -94,6 +120,28 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
         return $this->consentForContact($contactId, $channel) ?? [];
     }
 
+    public function find(int $siteId, int $id): ?array
+    {
+        $row = $this->database()->one(
+            'SELECT co.*, c.site_id, c.display_name AS contact_name, c.email AS contact_email, c.company_id
+             FROM crm_consents co
+             JOIN business_contacts c ON c.id = co.contact_id
+             WHERE c.site_id = :site_id AND co.id = :id
+             LIMIT 1',
+            ['site_id' => $this->requireSiteId($siteId), 'id' => $id]
+        );
+        return $row ? $this->castRow($row) : null;
+    }
+
+    public function updateById(int $siteId, int $id, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null): ?array
+    {
+        $current = $this->find($siteId, $id);
+        if ($current === null) {
+            return null;
+        }
+        return $this->upsertConsent((int) $current['contact_id'], (string) $current['channel'], $status, $source, $evidence, $actorId);
+    }
+
     public function consentForContact(int $contactId, string $channel): ?array
     {
         $row = $this->database()->one(
@@ -114,5 +162,19 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
     {
         $rows = $this->database()->all('SELECT * FROM crm_consents WHERE contact_id = :contact_id ORDER BY channel', ['contact_id' => $contactId]);
         return array_map(fn(array $row): array => $this->castRow($row), $rows);
+    }
+
+    private function status(string $status): string
+    {
+        $status = strtolower(trim($status));
+        $status = match ($status) {
+            'opted_in' => 'opt_in',
+            'opted_out' => 'opt_out',
+            default => $status,
+        };
+        if (!in_array($status, ['unknown', 'opt_in', 'opt_out'], true)) {
+            throw new InvalidArgumentException('business.consent_status_invalid');
+        }
+        return $status;
     }
 }

@@ -50,6 +50,7 @@ Une requête entre par les routes PHP, reçoit un contexte de site et de langue,
 - [Backend Business Catalogue](business-catalog-backend.md)
 - [Migrations Business Catalogue](business-catalog-migrations.md)
 - [Modele prix et variantes Business Catalogue](business-catalog-pricing.md)
+- [Garde-fous de refonte Business CRM](business-crm-redesign-guardrails.md)
 - [Architecture du module Business CRM](business-module.md)
 - [Plan d'architecture du module Business CRM](business-module-plan.md)
 - [Formulaires comme module système](forms-as-system-module.md)

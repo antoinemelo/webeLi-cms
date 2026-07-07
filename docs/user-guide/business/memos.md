@@ -32,7 +32,7 @@ Ajouter des notes CRM rattachees a une entreprise, a un contact, ou aux deux, pu
 
 ## Creer un memo
 
-1. Ouvrez une entreprise ou un contact dans **Business**.
+1. Ouvrez **Business > Relations**, puis choisissez une relation ou ouvrez la liste secondaire des memos depuis le menu `...`.
 2. Creez un memo avec un titre et un contenu.
 3. Verifiez qu'au moins une cible est renseignee : entreprise, contact, ou les deux.
 

@@ -63,6 +63,11 @@ Variables lues par les providers runtime :
 
 Ne stockez pas de token externe dans le code, les seeds ou la documentation. Si un provider est persiste en base, `secret_ref` doit pointer vers une reference d'environnement, pas vers une valeur secrete.
 
+
+### Email sans compte provider configure
+
+Pour le canal `email`, si aucun compte/provider n'est configure en base et qu'aucun provider explicite n'est impose, le module utilise le mailer PHP natif declare par la configuration applicative (`App\Mail\PhpMailMailer`). Cela permet un envoi simple via `mail()` ou un transport de log selon `config/app.php`, sans obliger une petite installation a creer un provider SMTP dedie. Les providers externes restent necessaires pour WhatsApp et Telegram.
+
 ## Logs et erreurs
 
 L'outbox conserve l'etat du message, les tentatives et la derniere erreur. Les evenements de livraison journalisent les transitions `queued`, `sent`, `failed` ou `skipped`. Le provider log-only journalise un hash du destinataire plutot que la valeur brute.

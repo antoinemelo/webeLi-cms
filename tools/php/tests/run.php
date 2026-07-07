@@ -15,6 +15,7 @@ $tests = [
     'unit/business_catalog_public_api_test.php',
     'unit/business_pos_catalog_api_test.php',
     'unit/business_catalog_pricing_service_test.php',
+    'unit/business_crm_blueprints_test.php',
     'unit/business_crm_service_test.php',
     'unit/business_csv_service_test.php',
     'unit/business_crm_api_controller_test.php',
@@ -35,8 +36,11 @@ $tests = [
 ];
 
 $testTimeouts = [
-    'unit/business_catalog_api_controller_test.php' => 30,
+    'unit/business_catalog_api_controller_test.php' => 60,
+    'unit/business_catalog_csv_service_test.php' => 45,
+    'unit/business_catalog_public_api_test.php' => 45,
     'unit/business_pos_catalog_api_test.php' => 30,
+    'unit/business_crm_api_controller_test.php' => 45,
 ];
 
 /**

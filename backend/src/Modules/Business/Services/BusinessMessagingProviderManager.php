@@ -94,14 +94,31 @@ final class BusinessMessagingProviderManager
     /** @return array{0:MessagingProvider,1:array<string,mixed>} */
     private function resolveProvider(int $siteId, string $channel, ?string $providerKey): array
     {
-        $configured = $providerKey !== null && trim($providerKey) !== ''
+        $providerKey = $providerKey !== null ? trim($providerKey) : null;
+        $configured = $providerKey !== null && $providerKey !== ''
             ? $this->messages->providerByKey($siteId, $providerKey)
             : $this->messages->defaultProvider($siteId, $channel);
         if ($configured !== null) {
             $provider = $this->providerForType((string) ($configured['provider_type'] ?? 'null'), $channel);
             return [$provider, (array) ($configured['config'] ?? [])];
         }
+        $runtime = $this->runtimeProviderForKey($providerKey, $channel);
+        if ($runtime !== null) {
+            return $runtime;
+        }
         return [$this->providers['log_only:' . $channel] ?? new LogOnlyMessagingProvider($channel, $this->logger), []];
+    }
+
+    /** @return array{0:MessagingProvider,1:array<string,mixed>}|null */
+    private function runtimeProviderForKey(?string $providerKey, string $channel): ?array
+    {
+        return match ($providerKey) {
+            'log_only' => [$this->providers['log_only:' . $channel] ?? new LogOnlyMessagingProvider($channel, $this->logger), []],
+            'email' => $channel === 'email' ? [$this->providers['email'], []] : null,
+            'whatsapp_cloud' => $channel === 'whatsapp' ? [$this->providers['whatsapp_cloud'], $this->whatsappEnvConfig()] : null,
+            'telegram_bot' => $channel === 'telegram' ? [$this->providers['telegram_bot'], $this->telegramEnvConfig()] : null,
+            default => null,
+        };
     }
 
     private function providerForType(string $type, string $channel): MessagingProvider

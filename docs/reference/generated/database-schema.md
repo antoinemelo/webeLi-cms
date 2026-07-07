@@ -37,6 +37,7 @@ generated: true
 
 | Table | Colonnes |
 |---|---|
+| `business_activity_log` | id, site_id, actor_iam_user_id, entity_type, entity_id, related_company_id, related_contact_id, action, summary, metadata_json, created_at |
 | `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_offers` | id, site_id, name, offer_type, offer_value, scope_type, product_id, variant_id, category_id, brand_id, channel, starts_at, ends_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_products` | id, site_id, name, slug, product_type, status, currency, base_purchase_price, base_sale_price, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |

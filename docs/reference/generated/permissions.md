@@ -97,6 +97,7 @@ generated: true
 | `media.delete` |
 | `media.read` |
 | `media.update` |
+| `memo.comment.update` |
 | `menu.manage` |
 | `menu.read` |
 | `modules.manage` |
