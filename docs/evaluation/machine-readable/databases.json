@@ -607,6 +607,59 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/modules/sale.sql"
+    ],
+    "id": "database-source-database-modules-sale-sql-086ec9a918",
+    "kind": "schema",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/modules/sale.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_cart_adjustments",
+      "sale_cart_lines",
+      "sale_carts",
+      "sale_cash_movements",
+      "sale_cash_sessions",
+      "sale_catalog_variant_refs",
+      "sale_channel_catalog_scopes",
+      "sale_channels",
+      "sale_coupons",
+      "sale_customer_refs",
+      "sale_events",
+      "sale_idempotency_keys",
+      "sale_inventory_items",
+      "sale_order_adjustments",
+      "sale_order_lines",
+      "sale_order_status_history",
+      "sale_order_tax_lines",
+      "sale_orders",
+      "sale_outbox",
+      "sale_payment_allocations",
+      "sale_payment_intents",
+      "sale_payment_methods",
+      "sale_payment_transactions",
+      "sale_pos_devices",
+      "sale_pos_registers",
+      "sale_promotions",
+      "sale_receipts",
+      "sale_refunds",
+      "sale_return_lines",
+      "sale_returns",
+      "sale_settings",
+      "sale_stock_locations",
+      "sale_stock_movements",
+      "sale_stock_reservations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/schema/core.sql"
     ],
     "id": "database-source-database-schema-core-sql-0024fcad5d",

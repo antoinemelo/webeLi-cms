@@ -25,6 +25,7 @@ final class CatalogVisibilityService
             $payload['purchase_adjustment_type'],
             $payload['purchase_adjustment_value'],
             $payload['regular_purchase_price'],
+            $payload['unit_purchase_price_minor'],
             $payload['gross_margin_amount'],
             $payload['gross_margin_percent']
         );

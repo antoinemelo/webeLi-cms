@@ -3080,6 +3080,22 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/modules/sale.sql"
+    ],
+    "id": "permission-refund-create-be7d3ab33d",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "refund.create",
+    "source": [
+      "database/modules/sale.sql"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-relation-delete-ad8d5c7208",
@@ -3160,6 +3176,254 @@
       "database/seeds/default/iam_default_seed.sql",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-cash-manage-3067ce4d2e",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.cash.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-manage-f299f7db39",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.manage",
+    "source": [
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-orders-manage-10f6a15210",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.orders.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-orders-read-438f3d0656",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.orders.read",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-payments-manage-2eb7b71a1d",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.payments.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-payments-read-444856a7d6",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.payments.read",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-pos-manage-f1c7e57a21",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.pos.manage",
+    "source": [
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-pos-use-3a2d83cc8d",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.pos.use",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-read-446df8bd43",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.read",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-refunds-manage-e91d908a1d",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.refunds.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-reports-read-131ac9024f",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.reports.read",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-settings-manage-f529be0105",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.settings.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-stock-manage-360f179425",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.stock.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-stock-read-b9942c6392",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.stock.read",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "status": "supported"
   },

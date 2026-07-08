@@ -21,6 +21,7 @@ generated: true
 | `ai-assistant` | `system` | `0.1.0` | oui | `ai` | `backend/src/Modules/AiAssistant/module.json` |
 | `business` | `system` | `0.1.0` | oui | `business` | `backend/src/Modules/Business/module.json` |
 | `forms` | `system` | `1.0.0` | oui | `forms` | `backend/src/Modules/Forms/module.json` |
+| `sale` | `system` | `0.1.0` | oui | `sale` | `backend/src/Modules/Sale/module.json` |
 | `client-notes` | `client` | `0.1.0` | non | `client_notes` | `examples/modules/client-notes/module.json` |
 
 Les exemples sous `examples/modules/` documentent le contrat mais ne sont pas chargés automatiquement. Les modules clients actifs doivent être copiés ou développés sous `local/modules/` puis déclarés dans `ops/modules.local.json`.

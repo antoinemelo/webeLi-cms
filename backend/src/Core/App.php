@@ -33,6 +33,7 @@ use App\Application\Api\Admin\ProfileApiController;
 use App\Application\Api\Admin\SeoAuditApiController;
 use App\Application\Api\Admin\ImportsExportsApiController;
 use App\Application\Api\Admin\SecurityAdminApiController;
+use App\Application\Api\Admin\SaleAdminApiController;
 use App\Application\Api\Admin\TaxonomyApiController;
 use App\Application\Api\Admin\VisualEditingApiController;
 use App\Application\Api\PublicHeadlessController;
@@ -45,6 +46,7 @@ use App\Application\PublicApi\PublicFormApiHandler;
 use App\Application\PublicApi\PublicCookieConsentApiHandler;
 use App\Application\PublicApi\PublicCatalogApiHandler;
 use App\Application\PublicApi\PosCatalogApiHandler;
+use App\Application\PublicApi\PublicSaleApiHandler;
 use App\Application\Configuration\ConfigurationRepository;
 use App\Application\Configuration\MultisiteRepository;
 use App\Application\Frontend\HomeController;
@@ -186,6 +188,7 @@ final class App
             return array_merge(
                 require base_path('backend/routes/api.php'),
                 $this->shouldLoadModuleRoutes('api') ? $services->moduleRoutes()->routes('api') : [],
+                $this->shouldLoadModuleRoutes('api') ? $services->moduleRoutes()->routes('headless') : [],
             );
         }
 
@@ -309,6 +312,7 @@ final class App
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
                 new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout()),
             ),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
             AdminContextApiController::class => new AdminContextApiController($this->config, $this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleNavigation(), $services->moduleContracts()),
@@ -386,6 +390,23 @@ final class App
                 $services->businessMailingRepository(),
                 $services->businessMailing(),
                 $services->businessContacts(),
+            ),
+            SaleAdminApiController::class => new SaleAdminApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->saleDatabaseConnection(),
+                $services->saleChannels(),
+                $services->saleCarts(),
+                $services->saleOrders(),
+                $services->salePayments(),
+                $services->saleInventoryRepository(),
+                $services->saleCatalogSnapshots(),
+                $services->saleCartService(),
+                $services->saleCheckout(),
+                $services->salePaymentService(),
+                $services->saleOrderService(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),

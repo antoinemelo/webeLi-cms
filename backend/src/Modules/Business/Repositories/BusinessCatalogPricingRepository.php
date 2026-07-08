@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Business\Repositories;
 
+use App\Core\Database;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
 class BusinessCatalogPricingRepository extends BusinessRepositoryBase
 {
+    public function rawDatabase(): Database
+    {
+        return $this->database();
+    }
+
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function createProduct(int $siteId, array $payload): array
     {

@@ -78,7 +78,17 @@ function test_temp_db(string $schemaFile): array
     $bootstrap = new PDO('sqlite:' . $path, null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     ]);
-    $bootstrap->exec($schema);
+    $bootstrap->exec('PRAGMA synchronous = OFF; PRAGMA temp_store = MEMORY;');
+    $bootstrap->beginTransaction();
+    try {
+        $bootstrap->exec($schema);
+        $bootstrap->commit();
+    } catch (Throwable $e) {
+        if ($bootstrap->inTransaction()) {
+            $bootstrap->rollBack();
+        }
+        throw $e;
+    }
     $bootstrap = null;
 
     return [$dir, $path];
@@ -104,7 +114,18 @@ function test_temp_cms_db(string $schemaFile): array
 
     $path = $dir . '/test.sqlite';
     $database = new \App\Core\Database($path);
-    $database->pdo()->exec($schema);
+    $pdo = $database->pdo();
+    $pdo->exec('PRAGMA synchronous = OFF; PRAGMA temp_store = MEMORY;');
+    $pdo->beginTransaction();
+    try {
+        $pdo->exec($schema);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 
     return [$dir, $path, $database];
 }

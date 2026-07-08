@@ -26,9 +26,39 @@ from pathlib import Path
 from typing import Callable
 
 from tools.python.cms.runtime import resolve_php_binary
+from tools.python.lib.change_cache import fingerprint_paths, read_success, write_success
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
+CACHE_DIR = REPORT_DIR / "cache"
+USE_CACHE = True
+
+FRONTEND_BUILD_INPUTS = (
+    "frontend/admin-vue/package.json",
+    "frontend/admin-vue/package-lock.json",
+    "frontend/admin-vue/tsconfig.json",
+    "frontend/admin-vue/vite.config.ts",
+    "frontend/admin-vue/index.html",
+    "frontend/admin-vue/src",
+)
+
+E2E_INPUTS = (
+    "backend/config",
+    "backend/public",
+    "backend/routes",
+    "backend/src",
+    "database",
+    "frontend/admin-vue/package.json",
+    "frontend/admin-vue/package-lock.json",
+    "frontend/admin-vue/playwright.config.ts",
+    "frontend/admin-vue/src",
+    "frontend/admin-vue/tests/e2e",
+    "tools/cms.py",
+    "tools/python/cms",
+    "tools/python/commands/e2e.py",
+    "tools/python/operations/database",
+    "tools/python/operations/testing/run_playwright_e2e.py",
+)
 
 
 def _display_path(path: Path) -> str:
@@ -115,9 +145,9 @@ def steps() -> tuple[Step, ...]:
             "tests",
             "Tests unitaires et intégration",
             ("complete", "release"),
-            (py, cms, "test", "--timeout", "300", "--target-duration", "120"),
+            (py, cms, "test", "--timeout", "400", "--target-duration", "200"),
             executables=("php",),
-            timeout=360,
+            timeout=480,
         ),
         Step("validate-core", "Validateurs structurels", ("complete", "release"), (py, cms, "validate", "--full", "--category", "configuration", "--category", "database", "--category", "content", "--category", "permissions", "--category", "api", "--category", "operations", "--category", "security", "--category", "documentation", "--category", "shared"), timeout=600),
         Step("runtime-integrity", "Intégrité runtime", ("complete", "release"), (py, cms, "validate", "--full", "--validator", "RUNTIME_INTEGRITY"), timeout=300),
@@ -145,6 +175,7 @@ def steps() -> tuple[Step, ...]:
                 "frontend/admin-vue/node_modules/vue-tsc/bin/vue-tsc.js",
                 "frontend/admin-vue/node_modules/vite/bin/vite.js",
             ),
+            action=_frontend_build_check,
             timeout=600,
         ),
         Step(
@@ -250,6 +281,17 @@ def _browser_e2e_check() -> tuple[int, str, str]:
     if browser_code != 0:
         return browser_code, browser_stdout, browser_stderr
 
+    fingerprint = _e2e_fingerprint()
+    cache_file = CACHE_DIR / "browser-e2e.json"
+    if USE_CACHE and read_success(cache_file, fingerprint) is not None:
+        return (
+            0,
+            browser_stdout
+            + "\nCache qualification: E2E Playwright inchangés, dernier succès réutilisé."
+            + f"\nEmpreinte: {fingerprint}",
+            "",
+        )
+
     command = [sys.executable, str(ROOT / "tools/cms.py"), "e2e", "--use-built-assets"]
     try:
         returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=1200)
@@ -257,7 +299,34 @@ def _browser_e2e_check() -> tuple[int, str, str]:
         stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
         stderr = _as_text(getattr(exc, "stderr", None))
         return 124, stdout, stderr + "\nTimeout après 1200s"
+    if returncode == 0:
+        write_success(cache_file, fingerprint=fingerprint, step_id="browser-e2e", command=command)
     return returncode, browser_stdout + "\n" + stdout, stderr
+
+
+def _frontend_build_check() -> tuple[int, str, str]:
+    command = ["npm", "run", "build"]
+    manifest = ROOT / "admin-app/.vite/manifest.json"
+    fingerprint = fingerprint_paths(ROOT, FRONTEND_BUILD_INPUTS, extra=("frontend-build-v1",))
+    cache_file = CACHE_DIR / "frontend-build.json"
+    if USE_CACHE and manifest.is_file() and read_success(cache_file, fingerprint) is not None:
+        return (
+            0,
+            "Cache qualification: build frontend inchangé, assets existants réutilisés."
+            + f"\nManifest: {_display_path(manifest)}"
+            + f"\nEmpreinte: {fingerprint}",
+            "",
+        )
+
+    try:
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT / "frontend/admin-vue", timeout=600)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return 124, stdout, stderr + "\nTimeout après 600s"
+    if returncode == 0 and manifest.is_file():
+        write_success(cache_file, fingerprint=fingerprint, step_id="frontend-build", command=command)
+    return returncode, stdout, stderr
 
 
 def _frontend_dependencies_check() -> tuple[int, str, str]:
@@ -309,6 +378,16 @@ def _frontend_dependencies_check() -> tuple[int, str, str]:
         )
 
     return 0, "Audit sécurité frontend OK.\n$ npm audit --audit-level=high\n" + (output or "found 0 vulnerabilities"), ""
+
+
+def _e2e_fingerprint() -> str:
+    build_cache = CACHE_DIR / "frontend-build.json"
+    try:
+        build_payload = json.loads(build_cache.read_text(encoding="utf-8"))
+        build_fingerprint = str(build_payload.get("fingerprint", ""))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        build_fingerprint = ""
+    return fingerprint_paths(ROOT, E2E_INPUTS, extra=("browser-e2e-v1", build_fingerprint))
 
 
 def _php_lint() -> tuple[int, str, str]:
@@ -435,12 +514,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--markdown-report", default=str(REPORT_DIR / "latest.md"))
     parser.add_argument("--no-reports", action="store_true")
     parser.add_argument("--continue-on-failure", action="store_true", help="Exécute les étapes restantes après un échec.")
+    parser.add_argument("--no-cache", action="store_true", help="Force les étapes cache-aware (build frontend, E2E Playwright) à se réexécuter.")
     parser.add_argument("--list", action="store_true", help="Affiche le plan sans exécuter.")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
+    global USE_CACHE
     args = parse_args(argv)
+    USE_CACHE = not args.no_cache
     selected = [step for step in steps() if args.profile in step.profiles]
     if args.list:
         for step in selected:

@@ -68,6 +68,8 @@ foreach (['/api/v1/health', '/api/v1/openapi.json', '/api/v1/openapi.yaml', '/ap
     $public = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, $path) === 1);
     $h->assertTrue($public !== [], 'public endpoint does not require a Bearer token: ' . $path);
 }
+$salePublic = array_filter($publicPatterns, static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/cart') === 1);
+$h->assertTrue($salePublic !== [], 'optional sale ecommerce cart endpoints do not require a Bearer token once module routes are enabled');
 $scopeAliases = $config['public_api_auth']['scope_aliases'] ?? [];
 $h->assertSame(['routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read', 'catalog:read'], $scopeAliases['headless:read'] ?? null, 'headless:read covers all public read scopes');
 $h->assertSame(['routes:read'], $scopeAliases['content:read'] ?? null, 'content:read preserves route-read compatibility');
@@ -81,6 +83,9 @@ $h->assertTrue(in_array('taxonomies:read', $endpointScopes, true), 'taxonomies e
 $h->assertTrue(in_array('catalog:read', $endpointScopes, true), 'catalog endpoints keep a catalog:read scope');
 $h->assertTrue(in_array('pos.catalog.read', $endpointScopes, true), 'POS catalog endpoints keep a dedicated pos.catalog.read scope');
 $h->assertTrue(!in_array('pos.catalog.read', $scopeAliases['headless:read'] ?? [], true), 'POS catalog scope is not granted by the public headless alias');
+$rateLimitRules = $config['public_api_rate_limit']['endpoints'] ?? [];
+$saleRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/cart') === 1);
+$h->assertTrue($saleRateLimited !== [], 'optional sale ecommerce endpoints have a dedicated public rate-limit group');
 
 $htaccess = (string) file_get_contents(base_path('.htaccess'));
 $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');

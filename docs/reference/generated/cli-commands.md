@@ -116,7 +116,7 @@ options:
 usage: tools/cms.py qualify [-h] [--profile {quick,complete,release}]
                             [--json-report JSON_REPORT]
                             [--markdown-report MARKDOWN_REPORT] [--no-reports]
-                            [--continue-on-failure] [--list]
+                            [--continue-on-failure] [--no-cache] [--list]
 
 options:
   -h, --help            show this help message and exit
@@ -125,6 +125,8 @@ options:
   --markdown-report MARKDOWN_REPORT
   --no-reports
   --continue-on-failure
+  --no-cache            Force le build frontend et les E2E Playwright même si
+                        leurs fichiers sont inchangés.
   --list
 ```
 
@@ -166,10 +168,10 @@ options:
   --e2e                 Exécute aussi les scénarios Playwright (serveur et
                         identifiants E2E requis).
   --timeout TIMEOUT     Durée maximale de la suite Python en secondes (défaut :
-                        300).
+                        400).
   --target-duration TARGET_DURATION
                         Durée cible en secondes ; son dépassement produit un
-                        avertissement (défaut : 120).
+                        avertissement (défaut : 200).
 ```
 
 ## `tools/cms.py smoke`
@@ -216,7 +218,7 @@ options:
 
 ```text
 usage: tools/cms.py migrate [-h]
-                            [--all | --database {core,iam,forms,cookies,ai,business} | --module {ai-assistant,business,forms}]
+                            [--all | --database {core,iam,forms,cookies,ai,business,sale} | --module {ai-assistant,business,forms,sale}]
                             [--plan | --apply] [--backup]
                             [--no-backup-i-understand-the-risk] [--yes]
 
@@ -224,9 +226,9 @@ options:
   -h, --help            show this help message and exit
   --all                 Traite toutes les bases SQLite migratables connues
                         (défaut).
-  --database {core,iam,forms,cookies,ai,business}
+  --database {core,iam,forms,cookies,ai,business,sale}
                         Traite une seule base par clé ou scope.
-  --module {ai-assistant,business,forms}
+  --module {ai-assistant,business,forms,sale}
                         Traite les bases déclarées par un module.
   --plan                Affiche les migrations disponibles et manquantes sans
                         les appliquer.

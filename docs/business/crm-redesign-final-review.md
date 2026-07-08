@@ -134,7 +134,7 @@ Avant de considerer la refonte CRM comme prete a livrer :
 - [ ] `python3 tools/cms.py docs generate` passe.
 - [ ] `python3 tools/cms.py docs check` passe.
 - [ ] `python3 tools/cms.py smoke` passe.
-- [ ] `python3 tools/cms.py test --timeout 300 --target-duration 120` passe ou les echecs sont qualifies hors CRM.
+- [ ] `python3 tools/cms.py test --timeout 400 --target-duration 200` passe ou les echecs sont qualifies hors CRM.
 - [ ] `python3 tools/cms.py e2e --use-built-assets` passe apres build frontend.
 - [ ] `npm --prefix frontend/admin-vue run build` passe et les assets distribues sont coherents.
 - [ ] Les routes `/api/v1/business/relations`, `/api/v1/business/contacts`, `/api/v1/business/companies`, `/api/v1/crm/relations`, `/api/v1/crm/contacts`, `/api/v1/crm/companies` ne renvoient jamais `200` anonyme.

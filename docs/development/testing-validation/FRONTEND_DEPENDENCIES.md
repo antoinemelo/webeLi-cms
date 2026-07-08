@@ -4,7 +4,7 @@ audience:
   - developer
   - administrator
 status: current
-last_verified: 2026-06-25
+last_verified: 2026-07-08
 source_of_truth: frontend/admin-vue/package-lock.json
 owners:
   - core-team
@@ -20,7 +20,9 @@ Depuis le correctif P0-06D, la qualification **ne lance jamais `npm ci` automati
 1. que `package-lock.json` ne contient pas d’URL de registre interne ou non distribuable ;
 2. que `npm audit --audit-level=high` retourne 0.
 
-Le build frontend est exécuté ensuite par l’étape `frontend-build`. Si `node_modules` est absent, incomplet ou corrompu, le build échoue explicitement et indique que l’installation locale doit être recréée.
+Le build frontend est contrôlé ensuite par l’étape `frontend-build`. Si `node_modules` est absent, incomplet ou corrompu, le build échoue explicitement et indique que l’installation locale doit être recréée.
+
+Quand les sources frontend, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts` et `index.html` n’ont pas changé depuis un build réussi, la qualification peut réutiliser le cache local `storage/qualification/cache/frontend-build.json` et les assets existants sous `admin-app/`. Ce cache ne saute pas `npm audit`; il évite seulement une recompilation inutile. Utiliser `python3 tools/cms.py qualify --profile complete --no-cache` pour forcer la recompilation.
 
 ## Remise en état locale
 

@@ -1,0 +1,1 @@
+import{I as e,T as t,b as n,it as r,ot as i}from"./_plugin-vue_export-helper-B1rVNpHZ.js";var a=t({__name:`StatusBadge`,props:{status:{}},setup(t){return(a,o)=>(e(),n(`span`,{class:r([`badge`,t.status||`draft`])},i(t.status||`draft`),3))}});export{a as t};

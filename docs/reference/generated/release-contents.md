@@ -24,6 +24,7 @@ generated: true
 - `cookies.sqlite`
 - `ai.sqlite`
 - `business.sqlite`
+- `sale.sqlite`
 
 ## Fichiers de garde conservés
 

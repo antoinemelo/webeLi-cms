@@ -58,9 +58,13 @@
         "docs/administration/modules/manage-modules.md",
         "docs/administration/security/tokens-cors-webhooks.md",
         "docs/administration/users-roles-permissions/sessions-and-2fa.md",
+        "docs/business/crm-redesign-final-review.md",
         "docs/development/architecture/README.md",
         "docs/development/architecture/business-catalog-migrations.md",
+        "docs/development/architecture/business-crm-redesign-guardrails.md",
         "docs/development/architecture/business-module-plan.md",
+        "docs/development/architecture/sale-module-guardrails.md",
+        "docs/development/architecture/sale-module.md",
         "docs/development/backoffice/visual-editor.md",
         "docs/development/command-reliability.md",
         "docs/development/contributing-documentation.md",
@@ -177,6 +181,7 @@
         "tools/python/tests/test_migrate_plan_readonly.py",
         "tools/python/tests/test_module_foundation.py",
         "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tests/test_sale_module_smoke.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/configuration/repository_layout.py",
@@ -457,7 +462,10 @@
       "category": "command",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
       "destructive": false,
@@ -895,6 +903,20 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/lib/change_cache.py",
+      "category": "library",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/qualification/run_all.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/lib/database_inventory.py",
       "category": "library",
       "public": false,
@@ -918,6 +940,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
         "tools/python/tests/test_module_foundation.py",
+        "tools/python/tests/test_sale_module_smoke.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/database/inventory.py",
         "tools/python/validation/operations/manifests.py",
@@ -2135,6 +2158,20 @@
       "called_by": [
         "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_sale_module_smoke.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",

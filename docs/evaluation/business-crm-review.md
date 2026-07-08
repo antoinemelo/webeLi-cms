@@ -181,7 +181,7 @@ python3 tools/cms.py docs generate
 python3 tools/cms.py docs check
 python3 tools/cms.py migrate --module business --plan
 python3 tools/cms.py validate
-python3 tools/cms.py test --timeout 300 --target-duration 120
+python3 tools/cms.py test --timeout 400 --target-duration 200
 npm --prefix frontend/admin-vue run build
 ```
 

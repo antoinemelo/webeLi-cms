@@ -14,6 +14,8 @@ const FormsView = () => import('@/views/forms/FormsView.vue');
 const ModulesView = () => import('@/views/modules/ModulesView.vue');
 const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
 const BusinessCrmView = () => import('@/views/modules/BusinessCrmView.vue');
+const SaleView = () => import('@/views/modules/SaleView.vue');
+const SalePosView = () => import('@/views/modules/SalePosView.vue');
 const MenusView = () => import('@/views/content/MenusView.vue');
 const TaxonomiesView = () => import('@/views/content/TaxonomiesView.vue');
 const BlueprintsView = () => import('@/views/system/BlueprintsView.vue');
@@ -81,6 +83,10 @@ export const router = createRouter({
     { path: '/business/mailing', name: 'business-mailing-compat', component: BusinessCrmView, props: { initialTab: 'messages' } },
     { path: '/business/messaging', name: 'business-messaging-compat', component: BusinessCrmView, props: { initialTab: 'messages' } },
     { path: '/business/catalog', name: 'business-catalog-compat', component: BusinessCrmView, props: { initialTab: 'products' } },
+    { path: '/sale', name: 'sale', component: SaleView },
+    { path: '/sale/orders', name: 'sale-orders', component: SaleView },
+    { path: '/sale/pos', name: 'sale-pos', component: SalePosView },
+    { path: '/sale/settings', name: 'sale-settings', component: SaleView },
     { path: '/modules/:moduleKey', name: 'module-detail', component: ModulesView, props: true },
     { path: '/menus', name: 'menus', component: MenusView },
     { path: '/taxonomies', name: 'taxonomies', component: TaxonomiesView },

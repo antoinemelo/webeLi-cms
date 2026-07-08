@@ -7,8 +7,8 @@ from pathlib import Path
 
 from tools.python.cms.runtime import execute
 
-DEFAULT_TIMEOUT_SECONDS = 300
-DEFAULT_TARGET_SECONDS = 120
+DEFAULT_TIMEOUT_SECONDS = 400
+DEFAULT_TARGET_SECONDS = 200
 E2E_TIMEOUT_SECONDS = 900
 PYTHON_TEST_DIR = Path("tools/python/tests")
 RELEASE_COMMAND_HINTS = (

@@ -1,0 +1,123 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/../TestHarness.php';
+require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
+
+use App\Modules\Business\Catalog\CatalogPricingService;
+use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
+use App\Modules\Business\Repositories\PosCatalogRepository;
+use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Sale\Exceptions\SalePaymentException;
+use App\Modules\Sale\Exceptions\SaleValidationException;
+use App\Modules\Sale\Pricing\SalePricingService;
+use App\Modules\Sale\Repositories\SaleCartRepository;
+use App\Modules\Sale\Repositories\SaleChannelRepository;
+use App\Modules\Sale\Repositories\SaleEventRepository;
+use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
+use App\Modules\Sale\Repositories\SaleInventoryRepository;
+use App\Modules\Sale\Repositories\SaleOrderRepository;
+use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Services\SaleCartService;
+use App\Modules\Sale\Services\SaleCatalogSnapshotService;
+use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SaleDatabaseConnection;
+use App\Modules\Sale\Services\SaleEventService;
+use App\Modules\Sale\Services\SaleIdempotencyService;
+use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SalePaymentService;
+
+$h = new TestHarness();
+[$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/business.sql');
+[$saleDir, $salePath, $saleDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/sale.sql');
+
+try {
+    $pricingRepository = new BusinessCatalogPricingRepository($businessDb);
+    $sellables = new BusinessCatalogSellableReadService(
+        $pricingRepository,
+        new CatalogPricingService($pricingRepository),
+        new PosCatalogRepository($businessDb)
+    );
+    $saleConnection = new SaleDatabaseConnection($salePath);
+    $channels = new SaleChannelRepository($saleConnection);
+    $carts = new SaleCartRepository($saleConnection);
+    $orders = new SaleOrderRepository($saleConnection);
+    $payments = new SalePaymentRepository($saleConnection);
+    $inventory = new SaleInventoryService(new SaleInventoryRepository($saleConnection));
+    $events = new SaleEventService(new SaleEventRepository($saleConnection));
+    $idempotency = new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection));
+    $cartService = new SaleCartService(
+        $carts,
+        $channels,
+        new SaleCatalogSnapshotService($saleConnection, $sellables),
+        new SalePricingService(),
+        $inventory,
+        $events,
+        $idempotency
+    );
+    $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
+    $paymentService = new SalePaymentService($payments, $orders, $events);
+
+    $channel = $saleDb->one("SELECT id FROM sale_channels WHERE site_id = 1 AND code = 'admin-manual' LIMIT 1");
+    $variant = $businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
+    $cart = $cartService->createCart(1, (int) $channel['id'], ['iam_user_id' => 1]);
+    $h->assertSame('active', $cart['status'], 'cart workflow creates active cart');
+
+    $added = $cartService->addLine((int) $cart['id'], (int) $variant['id'], 2, ['idempotency_key' => 'cart-line-demo']);
+    $h->assertSame(2, (int) $added['line']['quantity'], 'cart line quantity is stored');
+    $h->assertSame(5800, (int) $added['cart']['grand_total_minor'], 'cart total uses stable sellable snapshot');
+    $h->assertSame('DEMO-GOURDE-BLEU', $added['line']['sku'], 'cart line keeps SKU snapshot');
+
+    $replayed = $cartService->addLine((int) $cart['id'], (int) $variant['id'], 2, ['idempotency_key' => 'cart-line-demo']);
+    $linesAfterReplay = $saleDb->one('SELECT quantity FROM sale_cart_lines WHERE cart_id = ?', [(int) $cart['id']]);
+    $h->assertSame(2, (int) $linesAfterReplay['quantity'], 'idempotent cart add does not duplicate quantity');
+    $h->assertSame((int) $added['line']['id'], (int) $replayed['line']['id'], 'idempotent cart add replays response');
+
+    $reservation = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = "active"', [(int) $cart['id']]);
+    $h->assertSame(2, (int) $reservation['quantity'], 'tracked variant reserves stock');
+    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
+    $h->assertSame(23, (int) $inventoryItem['available_quantity'], 'reservation decreases available stock');
+
+    $order = $checkout->placeOrder((int) $cart['id'], ['idempotency_key' => 'checkout-demo', 'source' => 'admin']);
+    $h->assertSame('placed', $order['status'], 'checkout creates placed order');
+    $h->assertSame(5800, (int) $order['grand_total_minor'], 'order copies cart total');
+    $h->assertSame('converted', $carts->requireCart((int) $cart['id'])['status'], 'checkout converts cart');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_order_lines WHERE order_id = ?', [(int) $order['id']])['count'] ?? 0), 'checkout copies order lines');
+    $h->assertSame('consumed', (string) ($saleDb->one('SELECT status FROM sale_stock_reservations WHERE id = ?', [(int) $reservation['id']])['status'] ?? ''), 'checkout consumes stock reservation');
+    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
+    $h->assertSame(23, (int) $inventoryItem['on_hand_quantity'], 'checkout decreases on-hand stock through movement');
+    $h->assertSame(0, (int) $inventoryItem['reserved_quantity'], 'checkout clears reserved stock');
+
+    $h->expectException(
+        fn() => $checkout->placeOrder((int) $cart['id']),
+        SaleValidationException::class,
+        'cart cannot be converted twice'
+    );
+
+    $payment = $paymentService->recordManualPayment((int) $order['id'], 2000, 1);
+    $h->assertSame('partially_paid', $payment['order']['payment_status'], 'partial payment updates status');
+    $payment = $paymentService->recordManualPayment((int) $order['id'], 3800, 1);
+    $h->assertSame('paid', $payment['order']['payment_status'], 'full payment updates status');
+    $h->expectException(
+        fn() => $paymentService->recordManualPayment((int) $order['id'], 1, 1),
+        SalePaymentException::class,
+        'payment cannot exceed order total'
+    );
+
+    $eventTypes = array_map(
+        static fn(array $row): string => (string) $row['event_type'],
+        $saleDb->all('SELECT event_type FROM sale_events ORDER BY id ASC')
+    );
+    $h->assertTrue(in_array('sale.cart.created', $eventTypes, true), 'cart creation event emitted');
+    $h->assertTrue(in_array('sale.cart.line_added', $eventTypes, true), 'cart line event emitted');
+    $h->assertTrue(in_array('sale.order.placed', $eventTypes, true), 'order placed event emitted');
+    $h->assertTrue(in_array('sale.payment.recorded', $eventTypes, true), 'payment event emitted');
+} finally {
+    $businessDb = null;
+    $saleDb = null;
+    gc_collect_cycles();
+    test_remove_tree($businessDir);
+    test_remove_tree($saleDir);
+}
+
+exit($h->finish('UNIT sale domain workflows'));

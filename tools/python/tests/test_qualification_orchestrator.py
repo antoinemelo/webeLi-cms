@@ -3,7 +3,17 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from tools.python.qualification.run_all import ROOT, Result, _display_path, _exit_code, steps
+from tools.python.commands import qualify
+from tools.python.qualification.run_all import (
+    E2E_INPUTS,
+    FRONTEND_BUILD_INPUTS,
+    ROOT,
+    Result,
+    _display_path,
+    _exit_code,
+    parse_args,
+    steps,
+)
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
@@ -76,6 +86,25 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual((), e2e.env_vars)
         self.assertIn("e2e", e2e.command)
         self.assertIn("--use-built-assets", e2e.command)
+
+    def test_qualification_cache_is_explicit_and_forceable(self):
+        args = parse_args(["--profile", "release", "--no-cache"])
+        self.assertTrue(args.no_cache)
+        self.assertIn("frontend/admin-vue/src", FRONTEND_BUILD_INPUTS)
+        self.assertIn("frontend/admin-vue/tests/e2e", E2E_INPUTS)
+        self.assertIn("backend/src", E2E_INPUTS)
+
+        class Parser:
+            def __init__(self) -> None:
+                self.options: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+            def add_argument(self, *args: object, **kwargs: object) -> None:
+                self.options.append((args, kwargs))
+
+        parser = Parser()
+        qualify.configure(parser)  # type: ignore[arg-type]
+        option_names = {name for args, _kwargs in parser.options for name in args}
+        self.assertIn("--no-cache", option_names)
 
 
 if __name__ == "__main__":

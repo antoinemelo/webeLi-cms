@@ -32,6 +32,7 @@ class ModuleFoundationTest(unittest.TestCase):
     def test_system_modules_remain_discoverable_for_migrations(self) -> None:
         self.assertIn("forms", module_keys(root=ROOT))
         self.assertIn("ai-assistant", module_keys(root=ROOT))
+        self.assertIn("sale", module_keys(root=ROOT))
 
     def test_deployment_protects_local_modules_and_local_config(self) -> None:
         self.assertTrue(deploy.is_protected("local/modules/client-x/module.json"))

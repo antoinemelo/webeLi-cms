@@ -25,8 +25,8 @@ from pathlib import Path
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
-from tools.python.lib.database_inventory import native_database_specs
-DATABASE_SPECS = native_database_specs()
+from tools.python.lib.database_inventory import database_specs
+DATABASE_SPECS = database_specs(root=BASE)
 DATABASES = {spec.key: spec.absolute_path(BASE) for spec in DATABASE_SPECS}
 SCHEMAS = {spec.key: spec.absolute_schema_path(BASE) for spec in DATABASE_SPECS}
 CORE_DB = DATABASES["core"]
@@ -245,7 +245,7 @@ def main() -> int:
 
     if args.with_reference_seed:
         apply_reference_seeds()
-        print("Reference/minimal seeds applied: core, iam, cookies, ai. Forms remains empty.", flush=True)
+        print("Reference/minimal seeds applied: core, iam, cookies, ai. Module databases without reference seeds remain empty.", flush=True)
         return 0
 
     if args.structures_only:

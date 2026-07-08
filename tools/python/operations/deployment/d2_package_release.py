@@ -23,7 +23,7 @@ from tools.python.lib.deploylib import (
     write_json,
 )
 from tools.python.lib.release_metadata import load_release_metadata
-from tools.python.lib.database_inventory import native_database_names
+from tools.python.lib.database_inventory import database_names
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 DIST_DIR = ROOT / "storage" / "exports"
@@ -234,7 +234,7 @@ FORBIDDEN_STAGE_SUFFIXES = (
     ".sqlite-journal",
 )
 
-REQUIRED_SQLITE_DATABASES = native_database_names(release=True)
+REQUIRED_SQLITE_DATABASES = database_names(root=ROOT, release=True)
 RELEASE_VERIFIED_COMMANDS = [
     "python3 tools/cms.py smoke",
     "python3 tools/cms.py validate",

@@ -80,6 +80,7 @@ return [
             '#^/api/v1/cookies/consent$#',
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
+            '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
             '#^/api/v1/media$#',
         ],
         'protected_paths' => [
@@ -122,6 +123,11 @@ return [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX', 240),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_MEDIA_WINDOW', 60),
                 'group' => '/api/v1/media',
+            ],
+            '#^/api/v1/sale/channels/[a-z0-9_-]+(?:/|$)#' => [
+                'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SALE_MAX', 120),
+                'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SALE_WINDOW', 60),
+                'group' => '/api/v1/sale',
             ],
         ],
     ],

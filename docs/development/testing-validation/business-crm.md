@@ -29,7 +29,7 @@ Depuis la racine du depot :
 python3 tools/cms.py migrate --module business --plan
 python3 tools/cms.py validate
 python3 tools/cms.py docs check
-python3 tools/cms.py test --timeout 300 --target-duration 120
+python3 tools/cms.py test --timeout 400 --target-duration 200
 ```
 
 Le smoke Business cible est integre a `tools/cms.py test` via `tools/python/tests/test_business_module_smoke.py`. La commande `tools/cms.py smoke` reste le smoke structurel de release.

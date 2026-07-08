@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.python.lib.release_metadata import load_release_metadata
-from tools.python.lib.database_inventory import native_database_paths
+from tools.python.lib.database_inventory import database_paths
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REQUIRED_FILES = [
@@ -47,7 +47,7 @@ REQUIRED_FILES = [
     "docs/api/README.md",
     "docs/reference/README.md",
 ]
-REQUIRED_DATABASES = list(native_database_paths(release=True))
+REQUIRED_DATABASES = list(database_paths(root=ROOT, release=True))
 FORBIDDEN_PREFIXES = [
     "storage/exports/",
     "storage/qualification/",

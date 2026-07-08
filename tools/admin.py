@@ -9,8 +9,8 @@ Ce menu est une interface interactive au-dessus du point d'entrée canonique
 
 Profils disponibles :
     quick     contrôles rapides pour le développement courant ;
-    complete  qualification technique approfondie sans reconstruction des bases ;
-    release   validation finale locale ; les mineures/majeures ajoutent un audit reproductible obligatoire.
+    complete  qualification technique approfondie cache-aware, sans reconstruction des bases ;
+    release   validation finale locale stricte ; les mineures/majeures ajoutent un audit reproductible obligatoire.
 
 Les opérations de sauvegarde, migration incrémentale, mise à jour d’instance, export, préparation de release
 et déploiement restent disponibles séparément pour les interventions
@@ -67,7 +67,7 @@ ACTIONS: tuple[Action, ...] = (
         "5",
         "Préparer la release",
         ("release", "--interactive-prepare"),
-        "Prépare patch, mineure ou majeure. Les mineures/majeures exigent un audit reproductible et lient la release à ses preuves; les patchs conservent la qualification standard.",
+        "Prépare patch, mineure ou majeure. Les patchs conservent une qualification locale cache-aware; les mineures/majeures exigent un audit reproductible et lient la release à ses preuves.",
     ),
     Action(
         "6",
@@ -96,19 +96,19 @@ QUALIFICATION_ACTIONS: dict[str, Action] = {
         "2a",
         "Qualification rapide",
         ("qualify", "--profile", "quick"),
-        "Vérifications essentielles pour le travail courant, sans contrôles lourds.",
+        "Vérifications essentielles pour le travail courant, sans contrôles lourds ni cache build/E2E.",
     ),
     "b": Action(
         "2b",
         "Qualification complète",
         ("qualify", "--profile", "complete"),
-        "Qualification technique approfondie du projet, sans reconstruction des bases ni création de release.",
+        "Qualification technique approfondie du projet, cache-aware pour le build frontend, sans reconstruction des bases ni création de release.",
     ),
     "c": Action(
         "2c",
         "Qualification de release",
-        ("qualify", "--profile", "release"),
-        "Validation finale avant livraison : préflight, package, archive, installation neuve et tests navigateur.",
+        ("qualify", "--profile", "release", "--no-cache"),
+        "Validation finale stricte avant livraison : force build/E2E, préflight, package, archive, installation neuve et tests navigateur.",
     ),
 }
 
@@ -143,8 +143,9 @@ def print_intro() -> None:
     print()
     print("• Avant création ou déploiement d'une release")
     print("  5 — préparation complète")
-    print("      patch : qualification standard")
+    print("      patch : qualification locale cache-aware")
     print("      mineure/majeure : audit reproductible obligatoire + preuves")
+    print("  2c — qualification release stricte seule, avec --no-cache")
     print()
     print("• Mise à jour d’une base existante avec contenu")
     print("  10 — plan non mutatif, migration incrémentale, backup et validation")
@@ -183,17 +184,18 @@ def print_qualification_menu() -> None:
     print("-" * 78)
     print(" a. Rapide")
     print("    Vérifications essentielles pour le travail courant.")
-    print("    Retour rapide, sans contrôles lourds.")
+    print("    Retour rapide, sans contrôles lourds ni cache build/E2E.")
     print()
     print(" b. Complet")
     print("    Qualification technique approfondie du projet local.")
     print("    Inclut tests, validateurs complets, build, documentation,")
     print("    sauvegarde/restauration et export à blanc.")
+    print("    Utilise le cache local pour le build frontend si les sources sont inchangées.")
     print("    Ne reconstruit jamais les bases et ne crée pas de release.")
     print()
     print(" c. Release")
     print("    Validation finale avant livraison ou déploiement.")
-    print("    Ajoute préflight, package, vérification d'archive,")
+    print("    Force les étapes cache-aware avec --no-cache, puis ajoute préflight, package, vérification d'archive,")
     print("    installation neuve et tests navigateur Playwright.")
     print("    Ne reconstruit jamais les bases.")
     print()

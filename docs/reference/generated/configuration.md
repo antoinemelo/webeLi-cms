@@ -46,6 +46,8 @@ generated: true
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_WINDOW` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_SALE_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_SALE_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_BASE_URL` | `backend/config/app.php` |

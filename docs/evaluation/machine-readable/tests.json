@@ -268,7 +268,7 @@
   {
     "command": "python3 tools/cms.py test",
     "confidence": "high",
-    "discovered_test_functions": 5,
+    "discovered_test_functions": 6,
     "evidence": [
       "tools/python/tests/test_qualification_orchestrator.py"
     ],
@@ -338,6 +338,25 @@
     "name": "test_runtime_bootstrap_and_audit_evidence",
     "source": [
       "tools/python/tests/test_runtime_bootstrap_and_audit_evidence.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
+    "discovered_test_functions": 5,
+    "evidence": [
+      "tools/python/tests/test_sale_module_smoke.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-sale-module-smoke-py-b3daad31bc",
+    "last_verified": "2026-07-08",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_sale_module_smoke",
+    "source": [
+      "tools/python/tests/test_sale_module_smoke.py"
     ],
     "status": "unverified"
   },

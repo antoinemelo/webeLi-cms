@@ -21,6 +21,10 @@ $tests = [
     'unit/business_crm_api_controller_test.php',
     'unit/business_messaging_provider_test.php',
     'unit/business_mailing_service_test.php',
+    'unit/sale_snapshot_services_test.php',
+    'unit/sale_domain_workflows_test.php',
+    'unit/sale_admin_api_controller_test.php',
+    'unit/sale_public_api_handler_test.php',
     'unit/docs_access_test.php',
     'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',
@@ -42,6 +46,8 @@ $testTimeouts = [
     'unit/business_catalog_public_api_test.php' => 45,
     'unit/business_pos_catalog_api_test.php' => 30,
     'unit/business_crm_api_controller_test.php' => 45,
+    'unit/sale_admin_api_controller_test.php' => 45,
+    'unit/sale_public_api_handler_test.php' => 45,
 ];
 
 /**
