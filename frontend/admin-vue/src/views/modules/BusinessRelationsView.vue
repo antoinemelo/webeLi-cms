@@ -47,6 +47,9 @@ type SearchResults = {
   messages: SearchItem[];
   future_documents: SearchItem[];
 };
+type RelationColumnKey = 'company' | 'phone' | 'status' | 'indicators' | 'activity';
+type RelationSortKey = RelationColumnKey | 'info';
+type RelationPageSize = 10 | 25 | 50 | 100 | 'all';
 
 const emit = defineEmits<{
   'new-relation': [];
@@ -74,10 +77,13 @@ const searchLoading = ref(false);
 const error = ref('');
 const searchError = ref('');
 const relations = ref<Relation[]>([]);
-const pagination = ref({ total: 0, limit: 100, offset: 0 });
+const pagination = ref({ total: 0, limit: 25, offset: 0 });
 const filters = reactive({ q: '', type: '', status: '', sort: 'activity_desc', has_memos: false, has_shared_memos: false, has_email: false, has_phone: false, missing_email_consent: false, linked_iam: false, archived: 'active' });
 const appliedAdvancedFilters = reactive({ type: '', status: '', sort: 'activity_desc', archived: 'active' });
-type RelationColumnKey = 'company' | 'phone' | 'status' | 'indicators' | 'activity';
+const relationSort = reactive<{ key: RelationSortKey; direction: 'asc' | 'desc' }>({ key: 'info', direction: 'asc' });
+const relationPage = ref(1);
+const relationPageSize = ref<RelationPageSize>(25);
+const relationPageSizeOptions: RelationPageSize[] = [10, 25, 50, 100, 'all'];
 const relationColumns: Array<{ key: RelationColumnKey; label: string }> = [
   { key: 'company', label: 'Entreprise' },
   { key: 'phone', label: 'Contact' },
@@ -111,6 +117,20 @@ const searchGroups = computed(() => [
   { key: 'messages', label: 'Messages', items: searchResults.messages },
   { key: 'future_documents', label: 'Documents', items: searchResults.future_documents },
 ]);
+const sortedRelations = computed(() => {
+  const rows = [...relations.value];
+  rows.sort((a, b) => compareRelationValue(a, b, relationSort.key) * (relationSort.direction === 'asc' ? 1 : -1));
+  return rows;
+});
+const relationTotal = computed(() => Number(pagination.value.total || relations.value.length));
+const relationNumericPageLimit = computed(() => relationPageSize.value === 'all' ? Math.max(1, relationTotal.value || relations.value.length || 1) : relationPageSize.value);
+const relationPageCount = computed(() => relationPageSize.value === 'all' ? 1 : Math.max(1, Math.ceil(relationTotal.value / relationNumericPageLimit.value)));
+const relationPaginationLabel = computed(() => {
+  if (relationTotal.value < 1) return '0 relation';
+  const start = Number(pagination.value.offset || 0) + 1;
+  const end = Math.min(start + relations.value.length - 1, relationTotal.value);
+  return `${start}-${end} / ${relationTotal.value}`;
+});
 
 const typeLabels: Record<string, string> = { contact: 'Personnes', company: 'Organisations' };
 const statusLabels: Record<string, string> = { prospect: 'Prospects', client: 'Clients', supplier: 'Fournisseurs', former_client: 'Anciens', other: 'Autres' };
@@ -179,6 +199,66 @@ function emailConsentLabel(relation: Relation): string {
   return 'Consentement email absent';
 }
 
+function numberValue(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sortText(value: unknown): string {
+  return String(value ?? '').toLocaleLowerCase('fr');
+}
+
+function relationSortValue(relation: Relation, key: RelationSortKey): string | number {
+  if (key === 'company') return sortText(companyLabel(relation));
+  if (key === 'phone') return sortText([relation.primary_email, relation.website_url, relation.phone, relation.mobile].filter(Boolean).join(' '));
+  if (key === 'status') return sortText(relation.status || '');
+  if (key === 'indicators') return numberValue(relation.memo_count) + numberValue(relation.shared_memo_count) + numberValue(relation.linked_contacts_count);
+  if (key === 'activity') return sortText(relation.last_activity_at || '');
+  return sortText(relation.display_name);
+}
+
+function compareRelationValue(a: Relation, b: Relation, key: RelationSortKey): number {
+  const left = relationSortValue(a, key);
+  const right = relationSortValue(b, key);
+  if (typeof left === 'number' && typeof right === 'number') return left - right || Number(a.id || 0) - Number(b.id || 0);
+  return String(left).localeCompare(String(right), 'fr', { numeric: true, sensitivity: 'base' }) || Number(a.id || 0) - Number(b.id || 0);
+}
+
+function setRelationSort(key: RelationSortKey): void {
+  if (relationSort.key === key) relationSort.direction = relationSort.direction === 'asc' ? 'desc' : 'asc';
+  else {
+    relationSort.key = key;
+    relationSort.direction = key === 'activity' || key === 'indicators' ? 'desc' : 'asc';
+  }
+}
+
+function relationSortLabel(key: RelationSortKey): string {
+  if (relationSort.key !== key) return 'Trier';
+  return relationSort.direction === 'asc' ? 'Tri croissant' : 'Tri décroissant';
+}
+
+function relationPageSizeLabel(size: RelationPageSize): string {
+  return size === 'all' ? 'Tous' : String(size);
+}
+
+function setRelationPageSize(size: RelationPageSize): void {
+  relationPageSize.value = size;
+  relationPage.value = 1;
+  void loadRelations();
+}
+
+function onRelationPageSizeChange(event: Event): void {
+  const value = String((event.target as HTMLSelectElement | null)?.value ?? '25');
+  setRelationPageSize(value === 'all' ? 'all' : (Number(value) as RelationPageSize));
+}
+
+function setRelationPage(page: number): void {
+  const next = Math.max(1, Math.min(relationPageCount.value, page));
+  if (next === relationPage.value) return;
+  relationPage.value = next;
+  void loadRelations();
+}
+
 function resetQuickFilters(): void {
   filters.type = '';
   filters.status = '';
@@ -198,6 +278,7 @@ function quickFilterActive(key: QuickFilterKey): boolean {
 }
 
 function applyQuickFilter(key: QuickFilterKey): void {
+  relationPage.value = 1;
   resetQuickFilters();
   Object.assign(appliedAdvancedFilters, { type: '', status: '', sort: 'activity_desc', archived: 'active' });
   if (key === 'contact' || key === 'company') filters.type = key;
@@ -209,6 +290,7 @@ function applyQuickFilter(key: QuickFilterKey): void {
 }
 
 function applyFilters(): void {
+  relationPage.value = 1;
   Object.assign(appliedAdvancedFilters, {
     type: filters.type,
     status: filters.status,
@@ -220,6 +302,7 @@ function applyFilters(): void {
 }
 
 function removeFilterChip(key: AdvancedFilterKey): void {
+  relationPage.value = 1;
   if (key === 'type') filters.type = appliedAdvancedFilters.type = '';
   else if (key === 'status') filters.status = appliedAdvancedFilters.status = '';
   else if (key === 'sort') filters.sort = appliedAdvancedFilters.sort = 'activity_desc';
@@ -227,8 +310,10 @@ function removeFilterChip(key: AdvancedFilterKey): void {
   void loadRelations();
 }
 
-function query(): Record<string, string | boolean> {
-  const params: Record<string, string | boolean> = { q: filters.q, sort: filters.sort };
+function query(): Record<string, string | number | boolean> {
+  const limit = relationPageSize.value === 'all' ? 'all' : relationPageSize.value;
+  const offset = relationPageSize.value === 'all' ? 0 : (relationPage.value - 1) * relationNumericPageLimit.value;
+  const params: Record<string, string | number | boolean> = { q: filters.q, sort: filters.sort, limit, offset };
   if (filters.type) params.type = filters.type;
   if (filters.status) params.status = filters.status;
   if (filters.has_memos) params.has_memos = true;
@@ -280,9 +365,10 @@ async function loadRelations(): Promise<void> {
     const hiddenCount = received.length - relations.value.length;
     pagination.value = {
       total: Math.max(0, Number(response.data.pagination?.total || relations.value.length) - hiddenCount),
-      limit: Number(response.data.pagination?.limit || 100),
+      limit: Number(response.data.pagination?.limit || relationNumericPageLimit.value),
       offset: Number(response.data.pagination?.offset || 0),
     };
+    if (relationPage.value > relationPageCount.value) relationPage.value = relationPageCount.value;
   } catch (err) {
     error.value = apiErrorMessage(err, 'Chargement des relations impossible.');
   } finally {
@@ -396,14 +482,14 @@ onBeforeUnmount(() => {
           </summary>
           <div class="relations-menu-panel relations-filter-panel">
             <strong>Filtres</strong>
-            <label>Type
+            <label>
               <select v-model="filters.type" aria-label="Type relation">
                 <option value="">Tous types</option>
                 <option value="contact">Personnes</option>
                 <option value="company">Organisations</option>
               </select>
             </label>
-            <label>Statut
+            <label>
               <select v-model="filters.status" aria-label="Statut relation">
                 <option value="">Tous statuts</option>
                 <option value="prospect">Prospects</option>
@@ -413,7 +499,7 @@ onBeforeUnmount(() => {
                 <option value="other">Autres</option>
               </select>
             </label>
-            <label>Tri
+            <label>
               <select v-model="filters.sort" aria-label="Tri relation">
                 <option value="activity_desc">Activité récente</option>
                 <option value="name_asc">Nom A-Z</option>
@@ -427,8 +513,8 @@ onBeforeUnmount(() => {
             <label><input v-model="filters.has_phone" type="checkbox"> Avec téléphone</label>
             <label><input v-model="filters.missing_email_consent" type="checkbox"> Sans consentement email</label>
             <label><input v-model="filters.linked_iam" type="checkbox"> Lié à IAM</label>
-            <label>Archivage
-              <select v-model="filters.archived">
+            <label>
+              <select v-model="filters.archived" aria-label="Archivage relation">
                 <option value="active">Actifs</option>
                 <option value="archived">Archivés</option>
                 <option value="all">Actifs et archivés</option>
@@ -492,17 +578,17 @@ onBeforeUnmount(() => {
     <table v-else class="relations-table">
       <thead>
         <tr>
-          <th class="col-info">Infos</th>
-          <th v-if="columnVisible('company')" class="col-company">Entreprise</th>
-          <th v-if="columnVisible('phone')" class="col-phone">Contact</th>
-          <th v-if="columnVisible('status')" class="col-status">Statut</th>
-          <th v-if="columnVisible('indicators')" class="col-indicators">Indicateurs</th>
-          <th v-if="columnVisible('activity')" class="col-activity">Activité</th>
+          <th class="col-info"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('info')" @click="setRelationSort('info')">Infos<span :class="{ active: relationSort.key === 'info' }">{{ relationSort.key === 'info' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+          <th v-if="columnVisible('company')" class="col-company"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('company')" @click="setRelationSort('company')">Entreprise<span :class="{ active: relationSort.key === 'company' }">{{ relationSort.key === 'company' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+          <th v-if="columnVisible('phone')" class="col-phone"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('phone')" @click="setRelationSort('phone')">Contact<span :class="{ active: relationSort.key === 'phone' }">{{ relationSort.key === 'phone' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+          <th v-if="columnVisible('status')" class="col-status"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('status')" @click="setRelationSort('status')">Statut<span :class="{ active: relationSort.key === 'status' }">{{ relationSort.key === 'status' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+          <th v-if="columnVisible('indicators')" class="col-indicators"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('indicators')" @click="setRelationSort('indicators')">Indicateurs<span :class="{ active: relationSort.key === 'indicators' }">{{ relationSort.key === 'indicators' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+          <th v-if="columnVisible('activity')" class="col-activity"><button class="relations-sort-button" type="button" :aria-label="relationSortLabel('activity')" @click="setRelationSort('activity')">Activité<span :class="{ active: relationSort.key === 'activity' }">{{ relationSort.key === 'activity' && relationSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
           <th class="col-actions">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="relation in relations" :key="`${relation.type}-${relation.id}`">
+        <tr v-for="relation in sortedRelations" :key="`${relation.type}-${relation.id}`">
           <td class="relation-basic">
             <div class="relation-title-line">
               <span class="relation-type-icon" :title="relationKind(relation)" aria-hidden="true">
@@ -571,9 +657,24 @@ onBeforeUnmount(() => {
       </tbody>
     </table>
 
+    <div v-if="!error && !loading && relations.length" class="relations-pagination" aria-label="Pagination relations">
+      <label>
+        Lignes
+        <select class="select" :value="relationPageSize" @change="onRelationPageSizeChange">
+          <option v-for="size in relationPageSizeOptions" :key="String(size)" :value="size">{{ relationPageSizeLabel(size) }}</option>
+        </select>
+      </label>
+      <span>{{ relationPaginationLabel }}</span>
+      <div class="relations-pagination-actions">
+        <button class="btn ghost btn-sm" type="button" :disabled="relationPage <= 1 || loading || relationPageSize === 'all'" @click="setRelationPage(relationPage - 1)">Précédent</button>
+        <strong>Page {{ relationPage }} / {{ relationPageCount }}</strong>
+        <button class="btn ghost btn-sm" type="button" :disabled="relationPage >= relationPageCount || loading || relationPageSize === 'all'" @click="setRelationPage(relationPage + 1)">Suivant</button>
+      </div>
+    </div>
+
     <div v-if="!error && !loading && relations.length" class="relations-cards" aria-label="Relations en cartes compactes">
       <RelationCard
-        v-for="relation in relations"
+        v-for="relation in sortedRelations"
         :key="`card-${relation.type}-${relation.id}`"
         :relation="relation"
         :company-label="companyLabel(relation)"
@@ -736,6 +837,71 @@ onBeforeUnmount(() => {
   font-size: .78rem;
   text-transform: uppercase;
   background: #f8fafc;
+}
+
+.relations-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  font: inherit;
+  gap: .32rem;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+}
+
+.relations-sort-button span {
+  align-items: center;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  color: #98a2b3;
+  display: inline-flex;
+  font-size: .68rem;
+  height: 1.05rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.05rem;
+}
+
+.relations-sort-button span.active {
+  border-color: #0f172a;
+  color: #0f172a;
+}
+
+.relations-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  justify-content: space-between;
+  padding: .75rem .1rem 0;
+}
+
+.relations-pagination label,
+.relations-pagination-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: .5rem;
+}
+
+.relations-pagination label {
+  color: #667085;
+  font-size: .84rem;
+  font-weight: 700;
+}
+
+.relations-pagination .select {
+  min-width: 5.5rem;
+}
+
+.relations-pagination > span,
+.relations-pagination-actions strong {
+  color: #475467;
+  font-size: .84rem;
+  white-space: nowrap;
 }
 
 .relations-table .col-info { width: 28%; }

@@ -15,6 +15,7 @@ $definitions = BusinessCatalogDefinitions::all();
 $h->assertTrue(in_array('physical', $definitions['product_types'], true), 'physical product type is declared');
 $h->assertTrue(in_array('service', $definitions['product_types'], true), 'service product type is declared');
 $h->assertTrue(in_array('gift_card', $definitions['product_types'], true), 'gift card product type is declared');
+$h->assertTrue(in_array('bundle', $definitions['product_types'], true), 'bundle product type is declared');
 $h->assertTrue(in_array('ecommerce', $definitions['channels'], true), 'ecommerce channel is declared');
 $h->assertTrue(in_array('pos', $definitions['channels'], true), 'pos channel is declared');
 $h->assertTrue(in_array('purchase', $definitions['price_kinds'], true), 'purchase price kind is declared');
@@ -30,7 +31,7 @@ $h->assertSame(['public', 'ecommerce', 'pos', 'internal'], $product['channels'],
 
 $option = $validator->option($demo['options'][0]);
 $optionValue = $validator->optionValue($demo['options'][0]['values'][0]);
-$h->assertSame('formule', $option['option_key'], 'option key is normalized');
+$h->assertSame('model', $option['option_key'], 'option key is normalized');
 $h->assertSame('classic', $optionValue['value_key'], 'option value key is normalized');
 
 $variant = $validator->variant($demo['variants'][1]);

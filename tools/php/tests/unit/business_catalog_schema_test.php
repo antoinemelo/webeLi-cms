@@ -6,11 +6,16 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 $h = new TestHarness();
 $schemaPath = __DIR__ . '/../../../../database/modules/business.sql';
+$crmSchemaPath = __DIR__ . '/../../../../database/migrations/business/0001_init.sql';
 $migrationPath = __DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql';
 $demoSeedPath = __DIR__ . '/../../../../database/migrations/business/0004_catalog_demo_seed.sql';
-[$dir, $dbPath, $db] = test_temp_cms_db($migrationPath);
+[$dir, $dbPath, $db] = test_temp_cms_db($crmSchemaPath);
 
 try {
+    $catalogSchema = file_get_contents($migrationPath);
+    $h->assertTrue($catalogSchema !== false, 'catalog schema migration is readable');
+    $db->pdo()->exec((string) $catalogSchema);
+
     $demoSeed = file_get_contents($demoSeedPath);
     $h->assertTrue($demoSeed !== false, 'catalog demo seed migration is readable');
     $h->assertTrue(!str_contains(strtoupper((string) $demoSeed), 'DROP TABLE'), 'catalog demo seed does not drop tables');
@@ -29,8 +34,10 @@ try {
         'business_product_base_prices',
         'business_product_variant_price_adjustments',
         'business_catalog_discounts',
+        'business_product_bundles',
+        'business_bundle_components',
         'business_stock_movements',
-        'business_product_media',
+        'business_product_assets',
         'business_product_tags',
         'business_product_tag_links',
     ];
@@ -60,6 +67,10 @@ try {
         'idx_business_product_variants_barcode',
         'idx_business_catalog_discounts_scope',
         'idx_business_catalog_discounts_site_channel',
+        'idx_business_product_bundles_product_active',
+        'idx_business_product_bundles_variant_active',
+        'idx_business_bundle_components_bundle',
+        'idx_business_bundle_components_product',
         'idx_business_stock_movements_variant',
     ];
     foreach ($requiredIndexes as $index) {
@@ -126,6 +137,23 @@ try {
     $h->assertSame('product', (string) ($discount['scope_type'] ?? ''), 'demo discount targets product');
     $h->assertSame('pos', (string) ($discount['channel'] ?? ''), 'demo discount targets POS channel');
 
+    $db->run("INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled) VALUES(1, 'bundle', 'draft', 'public', 'BUNDLE-DEMO', 'Bundle demo', 'bundle-demo', 0, 0, 1, 1, 1)");
+    $bundleProduct = $db->one("SELECT id, type FROM business_products WHERE slug = 'bundle-demo'");
+    $h->assertSame('bundle', (string) ($bundleProduct['type'] ?? ''), 'bundle product type can identify a distinct sellable bundle');
+    $bundleProductId = (int) ($bundleProduct['id'] ?? 0);
+    $componentProductId = (int) ($db->one("SELECT id FROM business_products WHERE slug = 'bon-cadeau-demo'")['id'] ?? 0);
+    $componentVariantId = (int) ($db->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GIFT-100'")['id'] ?? 0);
+    $db->run('INSERT INTO business_product_bundles(site_id, bundle_product_id, pricing_mode, stock_mode, is_active) VALUES(1, ?, "fixed", "components", 1)', [$bundleProductId]);
+    $bundleId = (int) $db->lastInsertId();
+    $db->run('INSERT INTO business_bundle_components(bundle_id, component_product_id, component_variant_id, quantity, is_required) VALUES(?, ?, ?, 2, 1)', [$bundleId, $componentProductId, $componentVariantId]);
+    $bundleComponent = $db->one('SELECT quantity FROM business_bundle_components WHERE bundle_id = ?', [$bundleId]);
+    $h->assertSame(2.0, (float) ($bundleComponent['quantity'] ?? 0), 'bundle component stores positive quantity');
+    $h->expectException(
+        fn() => $db->run('INSERT INTO business_bundle_components(bundle_id, component_product_id, quantity) VALUES(?, ?, 0)', [$bundleId, $componentProductId]),
+        PDOException::class,
+        'bundle component quantity must be positive'
+    );
+
     $point06Brand = $db->one('SELECT name FROM business_product_brands WHERE site_id = 1 AND slug = ?', ['nouvelle-marque']);
     $h->assertSame('NOUVELLE MARQUE', (string) ($point06Brand['name'] ?? ''), 'point 06 demo brand exists');
     $point06Categories = $db->all('SELECT slug FROM business_product_categories WHERE site_id = 1 AND slug IN (?, ?) ORDER BY slug', ['services', 'marchandises']);
@@ -134,6 +162,8 @@ try {
     $h->assertSame(['gift_card', 'physical', 'service'], array_map(static fn(array $row): string => (string) $row['type'], $point06Products), 'point 06 demo merchandise, service and gift card exist');
     $point06Options = $db->all('SELECT code FROM business_product_options WHERE site_id = 1 AND code IN (?, ?, ?) ORDER BY code', ['model', 'size', 'color']);
     $h->assertSame(['color', 'model', 'size'], array_map(static fn(array $row): string => (string) $row['code'], $point06Options), 'point 06 demo options exist');
+    $allOptionCodes = $db->all('SELECT code FROM business_product_options WHERE site_id = 1 ORDER BY code');
+    $h->assertSame(['color', 'model', 'size'], array_map(static fn(array $row): string => (string) $row['code'], $allOptionCodes), 'catalog demo exposes one canonical option set');
     $point06Variants = $db->all('SELECT sku FROM business_product_variants WHERE sku LIKE ? ORDER BY sku', ['TSHIRT-DEMO-%']);
     $h->assertSame(['TSHIRT-DEMO-CLASSIC-L-BLUE', 'TSHIRT-DEMO-CLASSIC-M-BLUE', 'TSHIRT-DEMO-PREMIUM-M-BLACK'], array_map(static fn(array $row): string => (string) $row['sku'], $point06Variants), 'point 06 demo variants exist');
     $point06Adjustments = $db->all(

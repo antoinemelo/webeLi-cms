@@ -164,6 +164,9 @@ final class BusinessCatalogValidator
             return null;
         }
         $amount = $this->money($value, $field, true, true);
+        if ($amount < 0) {
+            throw new InvalidArgumentException('business.catalog.' . $field . '_positive_required');
+        }
         if ($type === 'percent_delta' && ($amount < -100 || $amount > 1000)) {
             throw new InvalidArgumentException('business.catalog.' . $field . '_percent_invalid');
         }

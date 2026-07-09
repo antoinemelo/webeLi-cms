@@ -125,6 +125,9 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
             throw new \InvalidArgumentException('business.catalog.price_adjustment_invalid');
         }
         $amount = round((float) $value, 2);
+        if ($amount < 0) {
+            throw new \InvalidArgumentException('business.catalog.price_adjustment_positive_required');
+        }
         if ($type === 'percent_delta' && ($amount < -100 || $amount > 1000)) {
             throw new \InvalidArgumentException('business.catalog.price_adjustment_percent_invalid');
         }

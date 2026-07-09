@@ -6,7 +6,7 @@ namespace App\Modules\Business\Catalog;
 
 final class BusinessCatalogDefinitions
 {
-    public const PRODUCT_TYPES = ['physical', 'service', 'gift_card'];
+    public const PRODUCT_TYPES = ['physical', 'service', 'gift_card', 'bundle'];
     public const PRODUCT_STATUSES = ['draft', 'active', 'archived'];
     public const VARIANT_STATUSES = ['draft', 'active', 'archived'];
     public const CHANNELS = ['public', 'ecommerce', 'pos', 'internal'];

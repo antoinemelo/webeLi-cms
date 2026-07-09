@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Business\Repositories;
 
+use App\Modules\Business\Services\BusinessProductAssetService;
+
 final class PublicCatalogRepository extends BusinessRepositoryBase
 {
     /** @return list<array<string,mixed>> */
@@ -171,19 +173,24 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     /** @return list<array<string,mixed>> */
     public function productMedia(int $productId, ?int $variantId = null): array
     {
-        $params = [$productId];
-        $variantClause = 'variant_id IS NULL';
-        if ($variantId !== null) {
-            $variantClause = '(variant_id IS NULL OR variant_id = ?)';
-            $params[] = $variantId;
-        }
-        return array_map(fn(array $row): array => $this->castRow($row), $this->database()->all(
-            'SELECT media_id, variant_id, role, alt_text, sort_order
-             FROM business_product_media
-             WHERE product_id = ? AND ' . $variantClause . '
-             ORDER BY sort_order ASC, media_id ASC',
-            $params
-        ));
+        return (new BusinessProductAssetService($this->database()))->listAssetsForProduct($productId, [
+            'variant_id' => $variantId,
+            'include_product_assets' => true,
+            'channel' => 'ecommerce',
+            'public_only' => true,
+        ]);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function productAttributes(int $productId, string $languageCode): array
+    {
+        return $this->attributeValues('product', $productId, $languageCode);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function variantAttributes(int $variantId, string $languageCode): array
+    {
+        return $this->attributeValues('variant', $variantId, $languageCode);
     }
 
     /** @return list<array<string,mixed>> */
@@ -234,5 +241,69 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
             $params['category_id'] = (int) $filters['category_id'];
         }
         return [$where, $params];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function attributeValues(string $scope, int $ownerId, string $languageCode): array
+    {
+        $table = $scope === 'variant' ? 'business_variant_attribute_values' : 'business_product_attribute_values';
+        $owner = $scope === 'variant' ? 'variant_id' : 'product_id';
+        $rows = $this->database()->all(
+            'SELECT a.id AS attribute_id, a.code, a.name, a.data_type, a.unit, a.is_filterable, a.is_searchable,
+                    v.language, v.value_text, v.value_number, v.value_json
+             FROM ' . $table . ' v
+             INNER JOIN business_attributes a ON a.id = v.attribute_id
+             WHERE v.' . $owner . ' = :owner_id
+               AND a.is_public = 1
+               AND a.archived_at IS NULL
+               AND v.language IN (:language, "und")
+             ORDER BY a.sort_order ASC, a.name ASC,
+                      CASE v.language WHEN :language THEN 0 ELSE 1 END',
+            [
+                'owner_id' => $ownerId,
+                'language' => $this->language($languageCode),
+            ]
+        );
+
+        $seen = [];
+        $attributes = [];
+        foreach ($rows as $row) {
+            $code = (string) $row['code'];
+            if (isset($seen[$code])) {
+                continue;
+            }
+            $seen[$code] = true;
+            $attributes[] = [
+                'attribute_id' => (int) $row['attribute_id'],
+                'code' => $code,
+                'name' => (string) $row['name'],
+                'data_type' => (string) $row['data_type'],
+                'unit' => $row['unit'] ?? null,
+                'value' => $this->publicAttributeValue($row),
+                'language' => (string) $row['language'],
+                'is_filterable' => (bool) $row['is_filterable'],
+                'is_searchable' => (bool) $row['is_searchable'],
+            ];
+        }
+        return $attributes;
+    }
+
+    /** @param array<string,mixed> $row */
+    private function publicAttributeValue(array $row): mixed
+    {
+        if ($row['value_json'] !== null) {
+            $decoded = json_decode((string) $row['value_json'], true);
+            return $decoded;
+        }
+        if ($row['value_number'] !== null) {
+            return (float) $row['value_number'];
+        }
+        return $row['value_text'] ?? null;
+    }
+
+    private function language(string $languageCode): string
+    {
+        $languageCode = strtolower(trim($languageCode));
+        return preg_match('/^[a-z]{2,12}$/', $languageCode) === 1 ? $languageCode : 'und';
     }
 }

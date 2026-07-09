@@ -42,7 +42,7 @@ final class PublicCatalogApiHandler
         [$site, $languageCode] = $this->context();
         $page = $this->catalog->products((int) $site['id'], $this->filters(), $this->limit(), $this->offset());
         return $this->json([
-            'items' => array_map(fn(array $product): array => $this->productPayload((int) $site['id'], $product, false), $page['items']),
+            'items' => array_map(fn(array $product): array => $this->productPayload((int) $site['id'], $product, false, $languageCode), $page['items']),
             'pagination' => [
                 'total' => $page['total'],
                 'limit' => $page['limit'],
@@ -63,7 +63,7 @@ final class PublicCatalogApiHandler
         if (!$product) {
             return $this->notFound('Produit introuvable.', ['slug' => $slug]);
         }
-        return $this->json(['product' => $this->productPayload((int) $site['id'], $product, true)], 'public.catalog.products.show.v1', $site, $languageCode);
+        return $this->json(['product' => $this->productPayload((int) $site['id'], $product, true, $languageCode)], 'public.catalog.products.show.v1', $site, $languageCode);
     }
 
     public function variant(string|int $id): Response
@@ -78,7 +78,7 @@ final class PublicCatalogApiHandler
         if (!$product) {
             return $this->notFound('Produit introuvable.', ['id' => (string) ($variant['product_id'] ?? '')]);
         }
-        return $this->json(['variant' => $this->variantPayload($product, $variant, true)], 'public.catalog.variants.show.v1', $site, $languageCode);
+        return $this->json(['variant' => $this->variantPayload($product, $variant, true, $languageCode)], 'public.catalog.variants.show.v1', $site, $languageCode);
     }
 
     /** @return array{0:array<string,mixed>,1:string} */
@@ -109,9 +109,11 @@ final class PublicCatalogApiHandler
     }
 
     /** @param array<string,mixed> $product */
-    private function productPayload(int $siteId, array $product, bool $detailed): array
+    private function productPayload(int $siteId, array $product, bool $detailed, string $languageCode): array
     {
-        $variants = array_map(fn(array $variant): array => $this->variantPayload($product, $variant, $detailed), $this->catalog->activeVariants($siteId, (int) $product['id']));
+        $variants = array_map(fn(array $variant): array => $this->variantPayload($product, $variant, $detailed, $languageCode), $this->catalog->activeVariants($siteId, (int) $product['id']));
+        $media = $this->publicMedia($this->catalog->productMedia((int) $product['id']));
+        $availability = $this->productAvailability($product, $variants);
         $payload = [
             'id' => (int) $product['id'],
             'name' => (string) $product['name'],
@@ -120,9 +122,13 @@ final class PublicCatalogApiHandler
             'summary' => (string) ($product['short_description'] ?? ''),
             'brand' => $this->catalog->publicBrand($siteId, isset($product['brand_id']) ? (int) $product['brand_id'] : null),
             'category' => $this->catalog->publicCategory($siteId, isset($product['category_id']) ? (int) $product['category_id'] : null),
-            'media' => $this->publicMedia($this->catalog->productMedia((int) $product['id'])),
+            'media' => $media,
+            'main_asset' => $this->mainAsset($media),
+            'gallery_assets' => $this->galleryAssets($media),
+            'public_attributes' => $this->catalog->productAttributes((int) $product['id'], $languageCode),
             'variants' => $variants,
-            'availability' => $this->productAvailability($product, $variants),
+            'availability' => $availability,
+            'is_sellable_public' => (bool) ($availability['available'] ?? false) && $this->hasSellableVariant($variants),
             'updated_at' => (string) ($product['updated_at'] ?? ''),
         ];
         if ($detailed) {
@@ -134,19 +140,26 @@ final class PublicCatalogApiHandler
     }
 
     /** @param array<string,mixed> $product @param array<string,mixed> $variant */
-    private function variantPayload(array $product, array $variant, bool $detailed): array
+    private function variantPayload(array $product, array $variant, bool $detailed, string $languageCode): array
     {
+        $pricing = $this->publicPricing((int) $variant['id']);
+        $availability = $this->variantAvailability($product, $variant);
+        $media = $detailed ? $this->publicMedia($this->catalog->productMedia((int) $product['id'], (int) $variant['id'])) : [];
         $payload = [
             'id' => (int) $variant['id'],
             'product_id' => (int) $variant['product_id'],
             'sku' => (string) $variant['sku'],
             'name' => (string) $variant['name'],
             'options' => $this->catalog->variantOptions((int) $variant['id']),
-            'pricing' => $this->publicPricing((int) $variant['id']),
-            'availability' => $this->variantAvailability($product, $variant),
+            'public_attributes' => $this->catalog->variantAttributes((int) $variant['id'], $languageCode),
+            'pricing' => $pricing,
+            'availability' => $availability,
+            'is_sellable_public' => $this->isVariantSellablePublic($pricing, $availability),
         ];
         if ($detailed) {
-            $payload['media'] = $this->publicMedia($this->catalog->productMedia((int) $product['id'], (int) $variant['id']));
+            $payload['media'] = $media;
+            $payload['main_asset'] = $this->mainAsset($media);
+            $payload['gallery_assets'] = $this->galleryAssets($media);
         }
         return $payload;
     }
@@ -177,12 +190,59 @@ final class PublicCatalogApiHandler
     /** @param list<array<string,mixed>> $media */
     private function publicMedia(array $media): array
     {
-        return array_map(static fn(array $row): array => [
+        return array_values(array_map(static fn(array $row): array => [
+            'asset_id' => (int) ($row['asset_id'] ?? $row['id'] ?? 0),
             'media_id' => (int) ($row['media_id'] ?? 0),
             'variant_id' => isset($row['variant_id']) ? (int) $row['variant_id'] : null,
             'role' => (string) ($row['role'] ?? 'gallery'),
+            'title' => (string) ($row['title'] ?? ''),
             'alt_text' => (string) ($row['alt_text'] ?? ''),
-        ], $media);
+            'caption' => (string) ($row['caption'] ?? ''),
+            'url' => (string) ($row['url'] ?? ('/media/' . (int) ($row['media_id'] ?? 0))),
+        ], array_values(array_filter($media, static function (array $row): bool {
+            $role = (string) ($row['role'] ?? 'gallery');
+            return $role !== 'internal' && (bool) ($row['is_public'] ?? true);
+        }))));
+    }
+
+    /** @param list<array<string,mixed>> $media */
+    private function mainAsset(array $media): ?array
+    {
+        foreach (['main', 'variant', 'thumbnail'] as $role) {
+            foreach ($media as $asset) {
+                if (($asset['role'] ?? '') === $role) {
+                    return $asset;
+                }
+            }
+        }
+        return $media[0] ?? null;
+    }
+
+    /** @param list<array<string,mixed>> $media @return list<array<string,mixed>> */
+    private function galleryAssets(array $media): array
+    {
+        $mainId = $this->mainAsset($media)['asset_id'] ?? null;
+        return array_values(array_filter($media, static fn(array $asset): bool => ($asset['asset_id'] ?? null) !== $mainId));
+    }
+
+    /** @param array<string,mixed>|null $pricing @param array<string,mixed> $availability */
+    private function isVariantSellablePublic(?array $pricing, array $availability): bool
+    {
+        if ($pricing === null || !((bool) ($availability['available'] ?? false))) {
+            return false;
+        }
+        return (float) ($pricing['final_sale_price'] ?? $pricing['regular_sale_price'] ?? 0) > 0.0;
+    }
+
+    /** @param list<array<string,mixed>> $variants */
+    private function hasSellableVariant(array $variants): bool
+    {
+        foreach ($variants as $variant) {
+            if ((bool) ($variant['is_sellable_public'] ?? false)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** @param array<string,mixed> $product @param array<string,mixed> $variant */

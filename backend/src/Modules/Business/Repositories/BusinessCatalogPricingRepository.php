@@ -89,6 +89,9 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
             return ['variant_id' => $variantId, 'price_kind' => $priceKind, 'adjustment_type' => 'none', 'adjustment_value' => null, 'currency' => null];
         }
         $value = round((float) $adjustmentValue, 2);
+        if ($value < 0) {
+            throw new InvalidArgumentException('business.catalog.price_adjustment_positive_required');
+        }
         $currency = $adjustmentType === 'fixed_override' ? 'CHF' : null;
         $db->run('DELETE FROM business_product_variant_price_adjustments WHERE variant_id = ? AND price_kind = ? AND valid_from IS NULL', [$variantId, $priceKind]);
         $db->run(

@@ -22,6 +22,7 @@ generated: true
 | `boolean` |
 | `date` |
 | `datetime` |
+| `decimal` |
 | `email` |
 | `integer` |
 | `json` |

@@ -1,14 +1,42 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
-import { businessCatalogApi, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogRecord, type CatalogVariant, type ProductDetail } from '@/api/businessCatalog';
+import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogVariant, type ProductDetail } from '@/api/businessCatalog';
 import { useAdminContextStore } from '@/stores/adminContext';
+import BusinessPageHeader from './business/BusinessPageHeader.vue';
 
 type CatalogTab = 'products' | 'offers';
 type IdValue = number | string | null | undefined;
+type ProductSection = 'summary' | 'variants' | 'stock' | 'prices' | 'media' | 'attributes' | 'quality' | 'channels';
+type ProductSignal = { label: string; tone: 'success' | 'warning' | 'danger' | 'muted' };
+type ProductColumnKey = 'sku' | 'brand' | 'variants' | 'stock' | 'price' | 'image' | 'channels' | 'status' | 'quality';
+type ProductFilterKey = 'type' | 'status' | 'brand_id' | 'category_id' | 'channel' | 'archived' | 'low_stock' | 'view' | 'image' | 'price' | 'purchase_price';
+type ProductEditField = 'type' | 'status' | 'brand' | 'category';
+type ProductEditFocus = ProductEditField | 'sku' | 'name' | 'slug' | 'name_type';
+type ProductModalScope = 'all' | 'identity' | 'classification' | 'stock' | 'prices' | 'media' | 'attributes' | 'channels';
+type ProductReferenceKind = ProductEditField;
+type AttributeSettingsModal = 'groups' | 'attributes' | 'options';
+type ProductSortKey = ProductColumnKey | 'product';
+type ProductPageSize = 10 | 25 | 50 | 100 | 'all';
+type BulkTriState = '' | '1' | '0';
+type OfferKind = 'bundle' | 'discount';
+type OfferFilterKey = 'type' | 'status' | 'channel';
+type OfferSortKey = 'type' | 'name' | 'status' | 'channels';
+type OfferPageSize = 10 | 25 | 50 | 100 | 'all';
+type CatalogOfferRow = {
+  key: string;
+  kind: OfferKind;
+  id: number;
+  name: string;
+  status: string;
+  channels: string[];
+  detail: string;
+  bundle?: CatalogProduct;
+  discount?: CatalogDiscount;
+};
 
 const props = withDefaults(defineProps<{
   embedded?: boolean;
@@ -20,6 +48,22 @@ const props = withDefaults(defineProps<{
 
 const context = useAdminContextStore();
 const activeTab = ref<CatalogTab>(props.fixedTab ?? 'products');
+const activeProductSection = ref<ProductSection>('summary');
+const productModalOpen = ref(false);
+const productModalMode = ref<'create' | 'edit'>('create');
+const productModalScope = ref<ProductModalScope>('all');
+const productModalFocus = ref<ProductEditFocus | ''>('');
+const productViewModalOpen = ref(false);
+const variantPriceModalOpen = ref(false);
+const referenceModalOpen = ref(false);
+const referenceKind = ref<ProductReferenceKind>('type');
+const attributeSettingsModal = ref<AttributeSettingsModal | ''>('');
+const showImportPanel = ref(false);
+const showOfferImportPanel = ref(false);
+const offerViewModalOpen = ref(false);
+const offerEditModalOpen = ref(false);
+const offerEditKind = ref<OfferKind>('bundle');
+const selectedOfferRow = ref<CatalogOfferRow | null>(null);
 const loading = ref(false);
 const busy = ref('');
 const error = ref('');
@@ -34,33 +78,122 @@ const canDiscountWrite = computed(() => context.can('business.catalog.discounts.
 const canStockWrite = computed(() => context.can('business.catalog.stock.write'));
 
 const brands = ref<CatalogRecord[]>([]);
+const brandCompanies = ref<CatalogRecord[]>([]);
 const categories = ref<CatalogRecord[]>([]);
 const options = ref<CatalogRecord[]>([]);
 const products = ref<CatalogProduct[]>([]);
+const bundleProductRows = ref<CatalogProduct[]>([]);
+const bundleComponentProductRows = ref<CatalogProduct[]>([]);
 const discounts = ref<CatalogDiscount[]>([]);
+const productAssets = ref<CatalogProductAsset[]>([]);
+const attributeGroups = ref<CatalogAttributeGroup[]>([]);
+const attributes = ref<CatalogAttribute[]>([]);
+const productAttributeValues = ref<CatalogAttributeValue[]>([]);
+const variantAttributeValues = ref<CatalogAttributeValue[]>([]);
+const mediaRows = ref<CatalogRecord[]>([]);
 const selectedProduct = ref<ProductDetail | null>(null);
 const selectedVariant = ref<CatalogVariant | null>(null);
 const selectedDiscount = ref<CatalogDiscount | null>(null);
+const selectedBundleProductId = ref(0);
+const selectedBundle = ref<CatalogProductBundle | null>(null);
+const bundleLoading = ref(false);
 const variantStock = ref<Record<string, unknown> | null>(null);
 const stockMovements = ref<Array<Record<string, unknown>>>([]);
 const importCsvText = ref('');
 const importReport = ref<CatalogImportReport | null>(null);
+const offerImportCsvText = ref('');
+const offerImportReport = ref<CatalogImportReport | null>(null);
+const bulkReport = ref<CatalogBulkReport | null>(null);
+const selectedProductIds = ref<number[]>([]);
+const offerBulkReport = ref<CatalogBulkReport | null>(null);
+const selectedOfferKeys = ref<string[]>([]);
 const importOptions = reactive({
   create_brands: true,
   create_categories: true,
   create_options: true,
   overwrite_existing: false,
 });
+const bulkProductForm = reactive({
+  status: '',
+  brand_id: '',
+  category_id: '',
+  is_public: '' as BulkTriState,
+  is_ecommerce_enabled: '' as BulkTriState,
+  is_pos_enabled: '' as BulkTriState,
+  archive: false,
+});
+const bulkOfferForm = reactive({
+  status: '',
+  channel: '',
+  archive: false,
+});
+const bundleForm = reactive({
+  bundle_variant_id: '',
+  pricing_mode: 'fixed',
+  stock_mode: 'components',
+  is_active: true,
+});
+const bundleIdentityForm = reactive({
+  sku_base: '',
+  name: '',
+  slug: '',
+  short_description: '',
+  description: '',
+  status: 'draft',
+  is_public: false,
+  is_ecommerce_enabled: true,
+  is_pos_enabled: true,
+});
+const bundlePriceForm = reactive({
+  currency: 'CHF',
+  base_purchase_price: '',
+  base_sale_price: '',
+});
+const bundleComponentForm = reactive({
+  component_product_id: '',
+  component_variant_id: '',
+  quantity: '1',
+  is_required: true,
+});
 
-const productFilter = reactive({ q: '', type: '', brand_id: '', category_id: '', status: '', channel: '', low_stock: false });
+const productFilter = reactive({ q: '', type: '', brand_id: '', category_id: '', status: '', channel: '', archived: '1', low_stock: false, view: '', image: '', price: '', purchase_price: false });
+const offerFilter = reactive({ q: '', type: '', status: '', channel: '' });
+const appliedProductFilters = reactive({ type: '', brand_id: '', category_id: '', status: '', channel: '', archived: '', low_stock: false, view: '', image: '', price: '', purchase_price: false });
+const appliedOfferFilters = reactive({ type: '', status: '', channel: '' });
+const productSort = reactive<{ key: ProductSortKey; direction: 'asc' | 'desc' }>({ key: 'product', direction: 'asc' });
+const productPage = ref(1);
+const productPageSize = ref<ProductPageSize>(25);
+const productPagination = ref({ limit: 25, offset: 0, total: 0 });
+const productPageSizeOptions: ProductPageSize[] = [10, 25, 50, 100, 'all'];
+const offerSort = reactive<{ key: OfferSortKey; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+const offerPage = ref(1);
+const offerPageSize = ref<OfferPageSize>(25);
+const offerPageSizeOptions: OfferPageSize[] = [10, 25, 50, 100, 'all'];
+const productColumns: Array<{ key: ProductColumnKey; label: string }> = [
+  { key: 'sku', label: 'SKU' },
+  { key: 'brand', label: 'Marque / Catégorie' },
+  { key: 'variants', label: 'Variantes' },
+  { key: 'stock', label: 'Stock' },
+  { key: 'price', label: 'Vente / Achat' },
+  { key: 'image', label: 'Image' },
+  { key: 'channels', label: 'Canaux' },
+  { key: 'status', label: 'Statut' },
+  { key: 'quality', label: 'Complétude' },
+];
+const visibleProductColumns = reactive<Record<ProductColumnKey, boolean>>({ sku: true, brand: true, variants: true, stock: true, price: true, image: true, channels: true, status: true, quality: true });
 const productForm = reactive({
   id: 0,
+  sku_base: '',
   name: '',
   slug: '',
   type: 'physical',
   status: 'draft',
   brand_id: '',
   category_id: '',
+  unit: 'unit',
+  tax_class_id: '',
+  track_stock: false,
+  allow_backorder: false,
   short_description: '',
   description: '',
   is_public: false,
@@ -69,6 +202,7 @@ const productForm = reactive({
   base_purchase_price: '',
   base_sale_price: '',
   currency: 'CHF',
+  attribute_group_ids: [] as number[],
   option_ids: [] as number[]
 });
 const variantForm = reactive({
@@ -98,8 +232,40 @@ const discountForm = reactive({
   ends_at: '',
   priority: '100'
 });
+const brandForm = reactive({ id: 0, name: '', slug: '', company_id: '', description: '', website_url: '', status: 'active', sort_order: '0' });
+const categoryForm = reactive({ id: 0, name: '', slug: '', parent_id: '', description: '', sort_order: '0' });
+const assetForm = reactive({
+  id: 0,
+  media_id: '',
+  variant_id: '',
+  role: 'gallery',
+  channel_scope: 'all',
+  title: '',
+  alt_text: '',
+  caption: '',
+  sort_order: '0',
+  is_public: true,
+});
+const assetUploadFile = ref<File | null>(null);
+const attributeGroupForm = reactive({ id: 0, code: '', name: '', description: '', sort_order: '0' });
+const attributeForm = reactive({
+  id: 0,
+  group_id: '',
+  code: '',
+  name: '',
+  data_type: 'text',
+  unit: '',
+  is_required: false,
+  is_filterable: false,
+  is_searchable: false,
+  is_public: false,
+  sort_order: '0',
+});
+const attributeOptionForm = reactive({ id: 0, attribute_id: '', code: '', label: '', value: '', color_hex: '', sort_order: '0' });
+const productAttributeForm = reactive<Record<number, string>>({});
+const variantAttributeForm = reactive<Record<number, string>>({});
 
-const productTypes = ['physical', 'service', 'gift_card'];
+const productTypes = ['physical', 'service', 'gift_card', 'bundle'];
 const statuses = ['draft', 'active', 'archived'];
 const channels = ['public', 'ecommerce', 'pos'];
 const discountTypes = ['percent', 'amount'];
@@ -107,6 +273,73 @@ const discountScopes = ['brand', 'category', 'product', 'variant'];
 const discountChannels = ['all', 'ecommerce', 'pos', 'admin'];
 const movementTypes = ['initial', 'purchase', 'sale', 'adjustment', 'return', 'reservation', 'release'];
 const adjustmentTypes = ['none', 'amount_delta', 'percent_delta', 'fixed_override'];
+const assetRoles = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'internal'];
+const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'];
+const attributeTypes = ['text', 'textarea', 'rich_text', 'number', 'decimal', 'boolean', 'select', 'multi_select', 'date', 'url', 'file', 'dimension', 'weight', 'color'];
+const colorSwatches = ['#000000', '#334155', '#FFFFFF', '#E11D48', '#EA580C', '#F59E0B', '#16A34A', '#0EA5E9', '#2563EB', '#7C3AED', '#C026D3'];
+const attributeTypeLabels: Record<string, string> = {
+  text: 'Texte',
+  textarea: 'Texte long',
+  rich_text: 'Texte riche',
+  number: 'Nombre',
+  decimal: 'Décimal',
+  boolean: 'Oui/non',
+  select: 'Choix',
+  multi_select: 'Choix multiple',
+  date: 'Date',
+  url: 'URL',
+  file: 'Fichier',
+  dimension: 'Dimension',
+  weight: 'Poids',
+  color: 'Couleur',
+};
+const assetRoleLabels: Record<string, string> = {
+  main: 'Image principale',
+  gallery: 'Galerie',
+  variant: 'Image variante',
+  thumbnail: 'Miniature',
+  document: 'Document',
+  technical_sheet: 'Fiche technique',
+  internal: 'Fichier interne',
+};
+const assetChannelLabels: Record<string, string> = {
+  all: 'Tous',
+  public: 'Public',
+  ecommerce: 'E-commerce',
+  pos: 'POS',
+  admin: 'Admin',
+  pdf: 'PDF',
+};
+const defaultProductTypeLabels: Record<string, string> = { physical: 'Produits physiques', service: 'Services', gift_card: 'Bon cadeau', bundle: 'Offres composees' };
+const defaultProductStatusLabels: Record<string, string> = { draft: 'Brouillons', active: 'Actifs', archived: 'Archivés' };
+const productTypeLabels = reactive<Record<string, string>>({ ...defaultProductTypeLabels });
+const productStatusLabels = reactive<Record<string, string>>({ ...defaultProductStatusLabels });
+const productChannelLabels: Record<string, string> = { public: 'Public', ecommerce: 'E-commerce', pos: 'POS' };
+const productViewLabels: Record<string, string> = {
+  all: 'Tous les produits',
+  to_complete: 'À compléter',
+  ready_pos: 'POS prêts',
+  ready_ecommerce: 'E-commerce prêts',
+  without_image: 'Sans image',
+  without_price: 'Sans prix',
+  low_stock: 'Stock faible',
+};
+const productImageFilterLabels: Record<string, string> = { with: 'Avec image', without: 'Sans image' };
+const productPriceFilterLabels: Record<string, string> = { with: 'Avec prix de vente', without: 'Sans prix de vente' };
+const quickProductFilters: Array<{ key: string; label: string }> = [
+  { key: 'all', label: 'Tous les produits' },
+  { key: 'to_complete', label: 'À compléter' },
+  { key: 'ready_pos', label: 'POS prêts' },
+  { key: 'ready_ecommerce', label: 'E-commerce prêts' },
+  { key: 'without_image', label: 'Sans image' },
+  { key: 'without_price', label: 'Sans prix' },
+  { key: 'low_stock', label: 'Stock faible' },
+  { key: 'active', label: 'Actifs' },
+  { key: 'draft', label: 'Brouillons' },
+  { key: 'archived', label: 'Archivés' },
+  { key: 'ecommerce', label: 'E-commerce' },
+  { key: 'pos', label: 'POS' },
+];
 
 const productData = computed(() => selectedProduct.value?.data || null);
 const selectedVariants = computed(() => selectedProduct.value?.variants || []);
@@ -115,7 +348,222 @@ const selectedProductStock = computed(() => selectedProduct.value?.stock || []);
 const selectedOffers = computed(() => (selectedProduct.value?.offers || []).filter((offer) => !offer.archived_at));
 const selectedProductId = computed(() => Number(productData.value?.id || productForm.id || 0));
 const exportCsvUrl = computed(() => businessCatalogApi.exportCsvUrl());
+const exportIncompleteCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ quality: 'incomplete' }));
+const exportPosCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'pos' }));
+const exportEcommerceCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'ecommerce' }));
 const importHasErrors = computed(() => Number(importReport.value?.skipped || 0) > 0 || Number(importReport.value?.errors?.length || 0) > 0);
+const exportOffersCsvUrl = computed(() => businessCatalogApi.exportOffersCsvUrl());
+const exportBundlesCsvUrl = computed(() => businessCatalogApi.exportOffersCsvUrl({ type: 'bundle' }));
+const exportDiscountsCsvUrl = computed(() => businessCatalogApi.exportOffersCsvUrl({ type: 'discount' }));
+const offerImportHasErrors = computed(() => Number(offerImportReport.value?.skipped || 0) > 0 || Number(offerImportReport.value?.errors?.length || 0) > 0);
+const selectedProductSummary = computed(() => productData.value ? productSummary(productData.value as CatalogProduct) : null);
+const selectedProductSignals = computed(() => productData.value ? productSignals(productData.value as CatalogProduct, selectedProduct.value) : []);
+const bundleProducts = computed(() => bundleProductRows.value);
+const selectedBundleProduct = computed(() => bundleProductRows.value.find((product) => Number(product.id) === selectedBundleProductId.value) || null);
+const selectedBundleProductVariants = computed(() => Number(productData.value?.id || 0) === selectedBundleProductId.value ? selectedVariants.value : []);
+const bundleComponentProducts = computed(() => bundleComponentProductRows.value.filter((product) => Number(product.id) !== selectedBundleProductId.value && product.type !== 'bundle'));
+const selectedBundleDiscounts = computed(() => {
+  const productId = selectedBundleProductId.value;
+  const variantId = Number(bundleForm.bundle_variant_id || 0);
+  return discounts.value.filter((discount) => {
+    if ((discount.status || 'active') !== 'active') return false;
+    if (discount.scope_type === 'product') return Number(discount.scope_id || 0) === productId;
+    if (discount.scope_type === 'variant') return variantId > 0 && Number(discount.scope_id || 0) === variantId;
+    return false;
+  });
+});
+const offerRows = computed<CatalogOfferRow[]>(() => {
+  const bundleRows = bundleProductRows.value.map((product) => ({
+    key: `bundle-${product.id}`,
+    kind: 'bundle' as const,
+    id: Number(product.id || 0),
+    name: text(product.name),
+    status: text(product.status || 'draft'),
+    channels: productChannelKeys(product),
+    detail: `${product.sku_base || '—'} · ${pricePairLabel(product)}`,
+    bundle: product,
+  }));
+  const discountRows = discounts.value.map((discount) => ({
+    key: `discount-${discount.id}`,
+    kind: 'discount' as const,
+    id: Number(discount.id || 0),
+    name: text(discount.name),
+    status: text(discount.status || 'active'),
+    channels: [text(discount.channel || 'all')],
+    detail: `${discount.discount_type === 'amount' ? `${discount.discount_value} ${discount.currency || 'CHF'}` : `${discount.discount_value}%`} · ${discount.scope_type} ${discountScopeLabel(discount)}`,
+    discount,
+  }));
+  return [...bundleRows, ...discountRows].sort((a, b) => a.name.localeCompare(b.name));
+});
+const filteredOfferRows = computed(() => {
+  const q = offerFilter.q.trim().toLowerCase();
+  return offerRows.value.filter((row) => {
+    if (appliedOfferFilters.type && row.kind !== appliedOfferFilters.type) return false;
+    if (appliedOfferFilters.status && row.status !== appliedOfferFilters.status) return false;
+    if (appliedOfferFilters.channel && !row.channels.includes(appliedOfferFilters.channel)) return false;
+    if (!q) return true;
+    return `${row.name} ${row.detail} ${row.status} ${row.channels.join(' ')}`.toLowerCase().includes(q);
+  });
+});
+const sortedOfferRows = computed(() => {
+  const rows = [...filteredOfferRows.value];
+  rows.sort((a, b) => compareOfferValue(a, b, offerSort.key) * (offerSort.direction === 'asc' ? 1 : -1));
+  return rows;
+});
+const offerTotal = computed(() => sortedOfferRows.value.length);
+const offerNumericPageLimit = computed(() => offerPageSize.value === 'all' ? Math.max(1, offerTotal.value || 1) : offerPageSize.value);
+const offerPageCount = computed(() => offerPageSize.value === 'all' ? 1 : Math.max(1, Math.ceil(offerTotal.value / offerNumericPageLimit.value)));
+const paginatedOfferRows = computed(() => {
+  if (offerPageSize.value === 'all') return sortedOfferRows.value;
+  const start = (offerPage.value - 1) * offerNumericPageLimit.value;
+  return sortedOfferRows.value.slice(start, start + offerNumericPageLimit.value);
+});
+const visibleOfferKeys = computed(() => paginatedOfferRows.value.map((row) => row.key));
+const selectedOfferRows = computed(() => offerRows.value.filter((row) => selectedOfferKeys.value.includes(row.key)));
+const selectedOffersCount = computed(() => selectedOfferKeys.value.length);
+const allVisibleOffersSelected = computed(() => visibleOfferKeys.value.length > 0 && visibleOfferKeys.value.every((key) => selectedOfferKeys.value.includes(key)));
+const someVisibleOffersSelected = computed(() => visibleOfferKeys.value.some((key) => selectedOfferKeys.value.includes(key)));
+const canBulkOffersWrite = computed(() => selectedOfferRows.value.length > 0 && selectedOfferRows.value.every((row) => row.kind === 'bundle' ? canWrite.value : canDiscountWrite.value));
+const bulkOfferChanges = computed<Record<string, unknown>>(() => {
+  const changes: Record<string, unknown> = {};
+  if (bulkOfferForm.status) changes.status = bulkOfferForm.status;
+  if (bulkOfferForm.channel) {
+    changes.channel = bulkOfferForm.channel;
+    if (bulkOfferForm.channel === 'all') {
+      changes.is_public = true;
+      changes.is_ecommerce_enabled = true;
+      changes.is_pos_enabled = true;
+    } else if (bulkOfferForm.channel === 'public') {
+      changes.is_public = true;
+    } else if (bulkOfferForm.channel === 'ecommerce') {
+      changes.is_ecommerce_enabled = true;
+    } else if (bulkOfferForm.channel === 'pos') {
+      changes.is_pos_enabled = true;
+    }
+  }
+  if (bulkOfferForm.archive) changes.archive = true;
+  return changes;
+});
+const bulkHasOfferChanges = computed(() => Object.keys(bulkOfferChanges.value).length > 0);
+const offerPaginationLabel = computed(() => {
+  if (offerTotal.value < 1) return '0 offre';
+  const start = offerPageSize.value === 'all' ? 1 : ((offerPage.value - 1) * offerNumericPageLimit.value) + 1;
+  const end = Math.min(start + paginatedOfferRows.value.length - 1, offerTotal.value);
+  return `${start}-${end} / ${offerTotal.value}`;
+});
+const sortedProducts = computed(() => {
+  const rows = [...products.value];
+  rows.sort((a, b) => compareProductValue(a, b, productSort.key) * (productSort.direction === 'asc' ? 1 : -1));
+  return rows;
+});
+const visibleProductIds = computed(() => sortedProducts.value.map((product) => Number(product.id || 0)).filter(Boolean));
+const selectedProductsCount = computed(() => selectedProductIds.value.length);
+const allVisibleProductsSelected = computed(() => visibleProductIds.value.length > 0 && visibleProductIds.value.every((id) => selectedProductIds.value.includes(id)));
+const someVisibleProductsSelected = computed(() => visibleProductIds.value.some((id) => selectedProductIds.value.includes(id)));
+const bulkProductChanges = computed<Record<string, unknown>>(() => {
+  const changes: Record<string, unknown> = {};
+  if (bulkProductForm.status) changes.status = bulkProductForm.status;
+  if (bulkProductForm.brand_id !== '') changes.brand_id = idOrNull(bulkProductForm.brand_id);
+  if (bulkProductForm.category_id !== '') changes.category_id = idOrNull(bulkProductForm.category_id);
+  if (bulkProductForm.is_public !== '') changes.is_public = bulkProductForm.is_public === '1';
+  if (bulkProductForm.is_ecommerce_enabled !== '') changes.is_ecommerce_enabled = bulkProductForm.is_ecommerce_enabled === '1';
+  if (bulkProductForm.is_pos_enabled !== '') changes.is_pos_enabled = bulkProductForm.is_pos_enabled === '1';
+  if (bulkProductForm.archive) changes.archive = true;
+  return changes;
+});
+const bulkHasProductChanges = computed(() => Object.keys(bulkProductChanges.value).length > 0);
+const productPageLimit = computed(() => productPageSize.value === 'all' ? 'all' : productPageSize.value);
+const productNumericPageLimit = computed(() => productPageSize.value === 'all' ? Math.max(1, productTotal.value || products.value.length || 1) : productPageSize.value);
+const productTotal = computed(() => Number(productPagination.value.total || products.value.length));
+const productPageCount = computed(() => productPageSize.value === 'all' ? 1 : Math.max(1, Math.ceil(productTotal.value / productNumericPageLimit.value)));
+const productPaginationLabel = computed(() => {
+  if (productTotal.value < 1) return '0 produit';
+  const start = Number(productPagination.value.offset || 0) + 1;
+  const end = Math.min(start + products.value.length - 1, productTotal.value);
+  return `${start}-${end} / ${productTotal.value}`;
+});
+const mainProductAsset = computed(() => productAssets.value.find((asset) => asset.role === 'main' && !asset.variant_id) || null);
+const galleryProductAssets = computed(() => productAssets.value.filter((asset) => ['gallery', 'thumbnail'].includes(String(asset.role || '')) && !asset.variant_id));
+const variantProductAssets = computed(() => productAssets.value.filter((asset) => Boolean(asset.variant_id) || asset.role === 'variant'));
+const documentProductAssets = computed(() => productAssets.value.filter((asset) => ['document', 'technical_sheet'].includes(String(asset.role || ''))));
+const internalProductAssets = computed(() => productAssets.value.filter((asset) => asset.role === 'internal' || asset.is_public === false));
+const assetWarnings = computed(() => {
+  const warnings: string[] = [];
+  if (productData.value && !mainProductAsset.value) warnings.push('Aucune image principale.');
+  for (const asset of productAssets.value) {
+    if (asset.is_public && ['main', 'gallery', 'variant', 'thumbnail'].includes(String(asset.role || '')) && !text(asset.alt_text)) {
+      warnings.push(`${assetRoleLabel(asset.role)} public sans texte alternatif.`);
+    }
+    if (asset.is_public && ['internal', 'document', 'technical_sheet'].includes(String(asset.role || ''))) {
+      warnings.push(`${assetRoleLabel(asset.role)} marqué public.`);
+    }
+    if (text(asset.expires_at) && new Date(text(asset.expires_at)).getTime() < Date.now()) {
+      warnings.push(`${assetRoleLabel(asset.role)} expiré.`);
+    }
+    if (text(asset.usage_rights) && !text(asset.license)) {
+      warnings.push(`${assetRoleLabel(asset.role)} sans licence.`);
+    }
+  }
+  return Array.from(new Set(warnings));
+});
+const groupedAttributes = computed(() => {
+  const selectedGroupIds = new Set(productForm.attribute_group_ids.map((id) => Number(id || 0)).filter(Boolean));
+  const activeAttributes = selectedGroupIds.size > 0
+    ? attributes.value.filter((attribute) => selectedGroupIds.has(Number(attribute.group_id || 0)))
+    : [];
+  const groups = attributeGroups.value.map((group) => ({
+    group,
+    attributes: activeAttributes.filter((attribute) => Number(attribute.group_id || 0) === Number(group.id || 0)),
+  }));
+  return groups.filter((group) => group.attributes.length > 0);
+});
+const selectableAttributes = computed(() => groupedAttributes.value.flatMap((group) => group.attributes));
+const selectedOptionAttribute = computed(() => attributes.value.find((attribute) => Number(attribute.id || 0) === Number(attributeOptionForm.attribute_id || 0)) || null);
+const selectedOptionAttributeOptions = computed(() => selectedOptionAttribute.value ? attributeOptions(selectedOptionAttribute.value) : []);
+const attributeOptionUsesColor = computed(() => {
+  const attribute = selectedOptionAttribute.value;
+  if (!attribute) return false;
+  const haystack = `${attribute.data_type || ''} ${attribute.name || ''} ${attribute.code || ''}`.toLowerCase();
+  return haystack.includes('color') || haystack.includes('couleur');
+});
+const attributeDefinitionWarnings = computed(() => attributes.value
+  .filter((attribute) => ['select', 'multi_select'].includes(String(attribute.data_type || '')) && attributeOptions(attribute).length === 0)
+  .map((attribute) => `${attribute.name || attribute.code} attend au moins une option.`));
+const attributeSettingsTitle = computed(() => {
+  if (attributeSettingsModal.value === 'groups') return 'Groupes d’attributs';
+  if (attributeSettingsModal.value === 'options') return 'Options d’attributs';
+  return 'Attributs produit';
+});
+const productAttributeWarnings = computed(() => attributeValueWarnings(productAttributeForm, selectableAttributes.value));
+const variantAttributeWarnings = computed(() => selectedVariant.value ? attributeValueWarnings(variantAttributeForm, selectableAttributes.value) : []);
+const referenceTitle = computed(() => {
+  if (referenceKind.value === 'type') return 'Types de produits';
+  if (referenceKind.value === 'status') return 'Statuts produits';
+  if (referenceKind.value === 'brand') return 'Marques';
+  return 'Catégories';
+});
+const activeProductFilterChips = computed<Array<{ key: ProductFilterKey; label: string }>>(() => {
+  const chips: Array<{ key: ProductFilterKey; label: string }> = [];
+  if (appliedProductFilters.view) chips.push({ key: 'view', label: `Vue · ${productViewLabels[appliedProductFilters.view] || appliedProductFilters.view}` });
+  if (appliedProductFilters.type) chips.push({ key: 'type', label: `Type · ${productTypeLabels[appliedProductFilters.type] || appliedProductFilters.type}` });
+  if (appliedProductFilters.status) chips.push({ key: 'status', label: `Statut · ${productStatusLabels[appliedProductFilters.status] || appliedProductFilters.status}` });
+  if (appliedProductFilters.brand_id) chips.push({ key: 'brand_id', label: `Marque · ${brandName(appliedProductFilters.brand_id)}` });
+  if (appliedProductFilters.category_id) chips.push({ key: 'category_id', label: `Catégorie · ${categoryName(appliedProductFilters.category_id)}` });
+  if (appliedProductFilters.channel) chips.push({ key: 'channel', label: `Canal · ${productChannelLabels[appliedProductFilters.channel] || appliedProductFilters.channel}` });
+  if (appliedProductFilters.image) chips.push({ key: 'image', label: `Image · ${productImageFilterLabels[appliedProductFilters.image] || appliedProductFilters.image}` });
+  if (appliedProductFilters.price) chips.push({ key: 'price', label: `Prix · ${productPriceFilterLabels[appliedProductFilters.price] || appliedProductFilters.price}` });
+  if (appliedProductFilters.archived) chips.push({ key: 'archived', label: 'Archivés inclus' });
+  if (appliedProductFilters.low_stock) chips.push({ key: 'low_stock', label: 'Stock faible' });
+  if (appliedProductFilters.purchase_price) chips.push({ key: 'purchase_price', label: 'Prix d’achat manquant' });
+  return chips;
+});
+const activeOfferFilterChips = computed<Array<{ key: OfferFilterKey; label: string }>>(() => {
+  const chips: Array<{ key: OfferFilterKey; label: string }> = [];
+  if (appliedOfferFilters.type) chips.push({ key: 'type', label: `Type · ${offerKindLabel(appliedOfferFilters.type)}` });
+  if (appliedOfferFilters.status) chips.push({ key: 'status', label: `Statut · ${productStatusLabel(appliedOfferFilters.status)}` });
+  if (appliedOfferFilters.channel) chips.push({ key: 'channel', label: `Canal · ${offerChannelLabel(appliedOfferFilters.channel)}` });
+  return chips;
+});
 
 function setNotice(message: string): void {
   success.value = message;
@@ -127,6 +575,31 @@ function setError(err: unknown, fallback = 'Action catalogue impossible.'): void
   success.value = '';
 }
 
+function labelStorageKey(kind: 'type' | 'status'): string {
+  return kind === 'type' ? 'dec.business.catalog.productTypeLabels' : 'dec.business.catalog.productStatusLabels';
+}
+
+function loadReferenceLabels(): void {
+  if (typeof window === 'undefined') return;
+  for (const [kind, target] of [['type', productTypeLabels], ['status', productStatusLabels]] as const) {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(labelStorageKey(kind)) || '{}') as Record<string, unknown>;
+      for (const key of Object.keys(target)) {
+        if (typeof stored[key] === 'string' && stored[key].trim()) target[key] = stored[key].trim();
+      }
+    } catch {
+      // Les libellés locaux sont facultatifs; un stockage invalide ne doit pas bloquer le catalogue.
+    }
+  }
+}
+
+function saveReferenceLabels(kind: 'type' | 'status'): void {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(labelStorageKey(kind), JSON.stringify(kind === 'type' ? productTypeLabels : productStatusLabels));
+  }
+  setNotice('Libellés enregistrés.');
+}
+
 function idOrNull(value: IdValue): number | null {
   const number = Number(value || 0);
   return Number.isFinite(number) && number > 0 ? number : null;
@@ -136,9 +609,178 @@ function text(value: unknown): string {
   return value === null || value === undefined ? '' : String(value);
 }
 
+function eventValue(event: Event): string {
+  return String((event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null)?.value ?? '');
+}
+
 function money(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
+}
+
+function optionalMoneyPayload(value: unknown): string | undefined {
+  const normalized = text(value).trim().replace(',', '.');
+  return normalized === '' ? undefined : normalized;
+}
+
+function numberValue(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeSkuInput(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '');
+}
+
+function priceLabel(value: unknown, currency = 'CHF'): string {
+  if (value === null || value === undefined || value === '') return '—';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${currency} ${parsed.toFixed(2)}` : String(value);
+}
+
+function tablePriceLabel(value: unknown, currency = 'CHF'): string {
+  if (value === null || value === undefined || value === '') return '--';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${currency} ${parsed.toFixed(2)}` : String(value);
+}
+
+function tableAmountLabel(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '--';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(2) : String(value);
+}
+
+function pricePairLabel(product: CatalogProduct): string {
+  const sale = tablePriceLabel(product.sale_price_min);
+  const purchase = tableAmountLabel(product.purchase_price_min);
+  return `${sale} / ${purchase}`;
+}
+
+function sortText(value: unknown): string {
+  return text(value).toLocaleLowerCase('fr');
+}
+
+function productSortValue(product: CatalogProduct, key: ProductSortKey): string | number {
+  if (key === 'sku') return sortText(product.sku_base);
+  if (key === 'brand') return sortText(`${brandName(product.brand_id)} ${categoryName(product.category_id)}`);
+  if (key === 'variants') return numberValue(product.active_variant_count);
+  if (key === 'stock') return Math.max(0, numberValue(product.stock_quantity_total) - numberValue(product.stock_reserved_total));
+  if (key === 'price') return numberValue(product.sale_price_min);
+  if (key === 'image') return numberValue(product.image_count);
+  if (key === 'channels') return channelReadinessSignals(product).filter((signal) => signal.tone === 'success').length;
+  if (key === 'status') return statuses.indexOf(text(product.status || 'draft'));
+  if (key === 'quality') return numberValue(product.completeness_score);
+  return sortText(product.name);
+}
+
+function compareProductValue(a: CatalogProduct, b: CatalogProduct, key: ProductSortKey): number {
+  const left = productSortValue(a, key);
+  const right = productSortValue(b, key);
+  if (typeof left === 'number' && typeof right === 'number') return left - right || Number(a.id || 0) - Number(b.id || 0);
+  return String(left).localeCompare(String(right), 'fr', { numeric: true, sensitivity: 'base' }) || Number(a.id || 0) - Number(b.id || 0);
+}
+
+function setProductSort(key: ProductSortKey): void {
+  if (productSort.key === key) productSort.direction = productSort.direction === 'asc' ? 'desc' : 'asc';
+  else {
+    productSort.key = key;
+    productSort.direction = 'asc';
+  }
+}
+
+function productSortLabel(key: ProductSortKey): string {
+  if (productSort.key !== key) return 'Trier';
+  return productSort.direction === 'asc' ? 'Tri croissant' : 'Tri décroissant';
+}
+
+function offerSortValue(row: CatalogOfferRow, key: OfferSortKey): string | number {
+  if (key === 'type') return row.kind === 'bundle' ? 0 : 1;
+  if (key === 'status') return statuses.indexOf(text(row.status || 'draft'));
+  if (key === 'channels') return sortText(row.channels.map((channel) => offerChannelLabel(channel)).join(' '));
+  return sortText(row.name);
+}
+
+function compareOfferValue(a: CatalogOfferRow, b: CatalogOfferRow, key: OfferSortKey): number {
+  const left = offerSortValue(a, key);
+  const right = offerSortValue(b, key);
+  if (typeof left === 'number' && typeof right === 'number') return left - right || a.id - b.id;
+  return String(left).localeCompare(String(right), 'fr', { numeric: true, sensitivity: 'base' }) || a.id - b.id;
+}
+
+function setOfferSort(key: OfferSortKey): void {
+  if (offerSort.key === key) offerSort.direction = offerSort.direction === 'asc' ? 'desc' : 'asc';
+  else {
+    offerSort.key = key;
+    offerSort.direction = 'asc';
+  }
+}
+
+function offerSortLabel(key: OfferSortKey): string {
+  if (offerSort.key !== key) return 'Trier';
+  return offerSort.direction === 'asc' ? 'Tri croissant' : 'Tri décroissant';
+}
+
+function productPageSizeLabel(size: ProductPageSize): string {
+  return size === 'all' ? 'Tous' : String(size);
+}
+
+function offerPageSizeLabel(size: OfferPageSize): string {
+  return size === 'all' ? 'Tous' : String(size);
+}
+
+function setProductPageSize(size: ProductPageSize): void {
+  productPageSize.value = size;
+  productPage.value = 1;
+  void loadCatalog();
+}
+
+function setOfferPageSize(size: OfferPageSize): void {
+  offerPageSize.value = size;
+  offerPage.value = 1;
+}
+
+function onProductPageSizeChange(event: Event): void {
+  const value = eventValue(event);
+  setProductPageSize(value === 'all' ? 'all' : (Number(value) as ProductPageSize));
+}
+
+function onOfferPageSizeChange(event: Event): void {
+  const value = eventValue(event);
+  setOfferPageSize(value === 'all' ? 'all' : (Number(value) as OfferPageSize));
+}
+
+function setProductPage(page: number): void {
+  const next = Math.max(1, Math.min(productPageCount.value, page));
+  if (next === productPage.value) return;
+  productPage.value = next;
+  void loadCatalog();
+}
+
+function setOfferPage(page: number): void {
+  offerPage.value = Math.max(1, Math.min(offerPageCount.value, page));
+}
+
+function productHasAnyPrice(product: CatalogProduct): boolean {
+  return hasProductSalePrice(product) || (product.purchase_price_min !== null && product.purchase_price_min !== undefined && product.purchase_price_min !== '');
+}
+
+function productIsArchived(product: CatalogProduct): boolean {
+  return product.status === 'archived' || Boolean(product.archived_at);
+}
+
+function productStatusLabel(status: unknown): string {
+  const key = text(status || 'draft');
+  return productStatusLabels[key] || key;
+}
+
+function productDetailId(detail: ProductDetail | CatalogProduct | null | undefined): number {
+  const value = detail as Record<string, unknown> | null | undefined;
+  const nested = value?.data as Record<string, unknown> | undefined;
+  return Number(nested?.id || value?.id || 0);
 }
 
 function optionLabel(option: Record<string, unknown>): string {
@@ -168,6 +810,164 @@ function variantName(id: IdValue): string {
   return variant?.sku || variant?.name || (id ? `Variante #${id}` : '—');
 }
 
+function assetRoleLabel(role: unknown): string {
+  const key = text(role);
+  return assetRoleLabels[key] || key || 'Média';
+}
+
+function assetChannelLabel(channel: unknown): string {
+  const key = text(channel || 'all');
+  return assetChannelLabels[key] || key || 'Tous';
+}
+
+function assetMediaLabel(mediaId: IdValue): string {
+  const id = Number(mediaId || 0);
+  const media = mediaRows.value.find((item) => Number(item.id || 0) === id);
+  return text(media?.title || media?.original_filename || media?.filename || media?.name) || (id ? `Média ${id}` : 'Média');
+}
+
+function assetPreviewUrl(asset: CatalogProductAsset): string {
+  const media = mediaRows.value.find((item) => Number(item.id || 0) === Number(asset.media_id || 0));
+  return text(media?.thumbnail_url || media?.public_url || '');
+}
+
+function assetIsImage(asset: CatalogProductAsset): boolean {
+  const media = mediaRows.value.find((item) => Number(item.id || 0) === Number(asset.media_id || 0));
+  return text(media?.mime_type).startsWith('image/');
+}
+
+function assetVariantLabel(asset: CatalogProductAsset): string {
+  return asset.variant_id ? variantName(asset.variant_id) : 'Produit';
+}
+
+function normalizeMediaResponse(payload: unknown): CatalogRecord[] {
+  if (Array.isArray(payload)) return payload as CatalogRecord[];
+  const data = payload as Record<string, unknown>;
+  for (const key of ['assets', 'media', 'items', 'rows']) {
+    if (Array.isArray(data?.[key])) return data[key] as CatalogRecord[];
+  }
+  return [];
+}
+
+function attributeTypeLabel(type: unknown): string {
+  const key = text(type || 'text');
+  return attributeTypeLabels[key] || key;
+}
+
+function isChoiceAttribute(attribute: CatalogAttribute): boolean {
+  return ['select', 'multi_select', 'color'].includes(String(attribute.data_type || ''));
+}
+
+function attributeInputType(attribute: CatalogAttribute): string {
+  const type = text(attribute.data_type || 'text');
+  if (['number', 'decimal', 'dimension', 'weight'].includes(type)) return 'number';
+  if (type === 'date') return 'date';
+  if (type === 'url') return 'url';
+  if (type === 'color') return 'color';
+  return 'text';
+}
+
+function attributeValue(attributeId: IdValue, scope: 'product' | 'variant'): string {
+  const source = scope === 'variant' ? variantAttributeForm : productAttributeForm;
+  return source[Number(attributeId || 0)] ?? '';
+}
+
+function setAttributeValue(attributeId: IdValue, scope: 'product' | 'variant', value: string): void {
+  const source = scope === 'variant' ? variantAttributeForm : productAttributeForm;
+  source[Number(attributeId || 0)] = value;
+}
+
+function attributeValueParts(attributeId: IdValue, scope: 'product' | 'variant'): string[] {
+  return attributeValue(attributeId, scope).split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function attributeOptionSelected(attribute: CatalogAttribute, scope: 'product' | 'variant', option: CatalogRecord): boolean {
+  return attributeValueParts(attribute.id, scope).includes(attributeOptionValue(option));
+}
+
+function toggleAttributeOption(attribute: CatalogAttribute, scope: 'product' | 'variant', option: CatalogRecord): void {
+  const value = attributeOptionValue(option);
+  if (!value) return;
+  if (attribute.data_type === 'multi_select') {
+    const values = new Set(attributeValueParts(attribute.id, scope));
+    if (values.has(value)) values.delete(value);
+    else values.add(value);
+    setAttributeValue(attribute.id, scope, Array.from(values).join(', '));
+    return;
+  }
+  setAttributeValue(attribute.id, scope, attributeOptionSelected(attribute, scope, option) ? '' : value);
+}
+
+function attributeOptions(attribute: CatalogAttribute): CatalogRecord[] {
+  return Array.isArray(attribute.options) ? attribute.options : [];
+}
+
+function attributeOptionKey(option: CatalogRecord): string | number {
+  return Number(option.id || 0) > 0 ? Number(option.id) : text(option.code || option.value || option.label || option.name);
+}
+
+function attributeOptionValue(option: CatalogRecord): string {
+  return text(option.value || option.code || option.label || option.name);
+}
+
+function attributeOptionLabel(option: CatalogRecord): string {
+  return text(option.label || option.name || option.value || option.code) || 'Option';
+}
+
+function attributeValueWarnings(values: Record<number, string>, sourceAttributes: CatalogAttribute[]): string[] {
+  const warnings: string[] = [];
+  for (const attribute of sourceAttributes) {
+    const value = text(values[Number(attribute.id || 0)]).trim();
+    if (attribute.is_required && value === '') warnings.push(`${attribute.name || attribute.code} requis manquant.`);
+    if (attribute.is_public && value === '') warnings.push(`${attribute.name || attribute.code} public sans valeur.`);
+  }
+  return warnings;
+}
+
+function valuePayloadForAttribute(attribute: CatalogAttribute, value: string): Record<string, unknown> {
+  const dataType = text(attribute.data_type || 'text');
+  const payload: Record<string, unknown> = { attribute_id: Number(attribute.id), language: 'und' };
+  if (value.trim() === '') return payload;
+  if (['number', 'decimal', 'dimension', 'weight'].includes(dataType)) payload.value_number = Number(value);
+  else if (dataType === 'boolean') payload.value_text = ['1', 'true', 'yes', 'oui', 'on'].includes(value.toLowerCase()) ? '1' : '0';
+  else if (dataType === 'multi_select') payload.value_json = value.split(',').map((item) => item.trim()).filter(Boolean);
+  else if (dataType === 'json') {
+    try {
+      payload.value_json = JSON.parse(value);
+    } catch {
+      payload.value_text = value;
+    }
+  } else {
+    payload.value_text = value;
+  }
+  return payload;
+}
+
+function valuesPayloadFromForm(values: Record<number, string>): Array<Record<string, unknown>> {
+  return selectableAttributes.value
+    .map((attribute) => valuePayloadForAttribute(attribute, values[Number(attribute.id || 0)] ?? ''))
+    .filter((value) => Object.keys(value).some((key) => key.startsWith('value_')));
+}
+
+function applyAttributeValues(scope: 'product' | 'variant', rows: CatalogAttributeValue[]): void {
+  const target = scope === 'variant' ? variantAttributeForm : productAttributeForm;
+  for (const key of Object.keys(target)) delete target[Number(key)];
+  for (const row of rows) {
+    const attributeId = Number(row.attribute_id || 0);
+    if (attributeId > 0) target[attributeId] = Array.isArray(row.value) ? row.value.join(', ') : text(row.value);
+  }
+}
+
+function pruneAttributeForms(): void {
+  const allowed = new Set(selectableAttributes.value.map((attribute) => Number(attribute.id || 0)).filter(Boolean));
+  for (const key of Object.keys(productAttributeForm)) {
+    if (!allowed.has(Number(key))) delete productAttributeForm[Number(key)];
+  }
+  for (const key of Object.keys(variantAttributeForm)) {
+    if (!allowed.has(Number(key))) delete variantAttributeForm[Number(key)];
+  }
+}
+
 function channelsFor(product: CatalogProduct): string[] {
   return [
     product.is_public ? 'public' : '',
@@ -176,15 +976,200 @@ function channelsFor(product: CatalogProduct): string[] {
   ].filter(Boolean);
 }
 
-function resetProductForm(): void {
+function productChannelKeys(product: CatalogProduct): string[] {
+  return [
+    product.is_public ? 'public' : '',
+    product.is_ecommerce_enabled ? 'ecommerce' : '',
+    product.is_pos_enabled ? 'pos' : '',
+  ].filter(Boolean);
+}
+
+function offerChannelLabel(channel: string): string {
+  if (channel === 'all') return 'Tous';
+  return productChannelLabels[channel] || channel;
+}
+
+function offerKindLabel(kind: string): string {
+  if (kind === 'bundle') return 'Bundle';
+  if (kind === 'discount') return 'Réduction';
+  return kind;
+}
+
+function productSummary(product: CatalogProduct): Record<string, unknown> {
+  const variantCount = numberValue(product.variant_count);
+  const activeVariantCount = numberValue(product.active_variant_count);
+  const imageCount = numberValue(product.image_count);
+  const salePrice = product.sale_price_min ?? selectedPrices.value.find((price) => price.price_kind === 'sale')?.amount ?? null;
+  const detailMedia = Array.isArray(selectedProduct.value?.media) ? selectedProduct.value.media.length : 0;
+  const detailVariants = selectedVariants.value.length;
+  return {
+    variant_count: variantCount || detailVariants,
+    active_variant_count: activeVariantCount || selectedVariants.value.filter((variant) => variant.status === 'active').length,
+    sale_price_min: salePrice,
+    image_count: imageCount || detailMedia,
+    completeness_score: product.completeness_score ?? null,
+    is_sellable_summary: product.is_sellable_summary ?? null,
+  };
+}
+
+function productSignals(product: CatalogProduct, detail: ProductDetail | null = null): ProductSignal[] {
+  const summary = detail ? productSummary(product) : {
+    variant_count: numberValue(product.variant_count),
+    active_variant_count: numberValue(product.active_variant_count),
+    sale_price_min: product.sale_price_min ?? null,
+    image_count: numberValue(product.image_count),
+    completeness_score: product.completeness_score ?? null,
+    is_sellable_summary: product.is_sellable_summary ?? null,
+  };
+  const activeVariants = numberValue(summary.active_variant_count);
+  const totalVariants = numberValue(summary.variant_count);
+  const hasSalePrice = summary.sale_price_min !== null && summary.sale_price_min !== undefined && summary.sale_price_min !== '';
+  const hasImage = numberValue(summary.image_count) > 0;
+  const signals: ProductSignal[] = [];
+
+  signals.push({ label: 'POS', tone: product.is_pos_enabled && product.status === 'active' && hasSalePrice && activeVariants > 0 ? 'success' : 'danger' });
+  signals.push({ label: 'E-commerce', tone: product.is_ecommerce_enabled && product.is_public && product.status === 'active' && hasSalePrice && hasImage && activeVariants > 0 ? 'success' : 'danger' });
+  if (!hasImage) signals.push({ label: 'Image manquante', tone: 'warning' });
+  if (!hasSalePrice) signals.push({ label: 'Prix manquant', tone: 'danger' });
+  if (!product.tax_class_id) signals.push({ label: 'TVA manquante', tone: 'warning' });
+  if (totalVariants > activeVariants) signals.push({ label: 'Variante inactive', tone: 'muted' });
+  if (summary.is_sellable_summary === false) signals.push({ label: 'À compléter', tone: 'warning' });
+
+  return signals.slice(0, 6);
+}
+
+function hasProductImage(product: CatalogProduct): boolean {
+  return numberValue(product.image_count) > 0;
+}
+
+function hasProductSalePrice(product: CatalogProduct): boolean {
+  return product.sale_price_min !== null && product.sale_price_min !== undefined && product.sale_price_min !== '';
+}
+
+function hasInactiveVariants(product: CatalogProduct): boolean {
+  return numberValue(product.variant_count) > numberValue(product.active_variant_count);
+}
+
+function mediaCountLabel(product: CatalogProduct): string {
+  const count = numberValue(product.image_count);
+  return count > 1 ? `${count} médias` : `${count} média`;
+}
+
+function channelReady(product: CatalogProduct, channel: 'pos' | 'ecommerce'): boolean {
+  const activeVariants = numberValue(product.active_variant_count);
+  const hasSalePrice = hasProductSalePrice(product);
+  if (channel === 'pos') {
+    return Boolean(product.is_pos_enabled) && product.status === 'active' && hasSalePrice && activeVariants > 0;
+  }
+  return Boolean(product.is_ecommerce_enabled)
+    && Boolean(product.is_public)
+    && product.status === 'active'
+    && hasSalePrice
+    && hasProductImage(product)
+    && activeVariants > 0;
+}
+
+function channelReadinessSignals(product: CatalogProduct): ProductSignal[] {
+  return [
+    { label: 'Public', tone: product.is_public ? 'success' : 'muted' },
+    { label: 'POS', tone: product.is_pos_enabled ? (channelReady(product, 'pos') ? 'success' : 'danger') : 'muted' },
+    { label: 'E-commerce', tone: product.is_ecommerce_enabled ? (channelReady(product, 'ecommerce') ? 'success' : 'danger') : 'muted' },
+  ];
+}
+
+function stockSignal(product: CatalogProduct): ProductSignal {
+  const trackedVariants = numberValue(product.stock_tracked_variant_count);
+  const detailTracked = Number(product.id || 0) === selectedProductId.value
+    ? selectedVariants.value.filter((variant) => variant.track_stock === true || (variant.track_stock === null && product.track_stock)).length
+    : 0;
+  if (!product.track_stock && trackedVariants === 0 && detailTracked === 0) return { label: 'Non suivi', tone: 'muted' };
+  if (numberValue(product.low_stock_variant_count) > 0) return { label: 'Stock faible', tone: 'warning' };
+  return { label: 'Stock suivi', tone: 'success' };
+}
+
+function stockSummaryLabel(product: CatalogProduct): string {
+  let quantity = numberValue(product.stock_quantity_total);
+  let reserved = numberValue(product.stock_reserved_total);
+  if (Number(product.id || 0) === selectedProductId.value && selectedVariants.value.length > 0 && quantity === 0 && reserved === 0) {
+    quantity = selectedVariants.value.reduce((total, variant) => total + numberValue(variant.stock_quantity), 0);
+    reserved = selectedVariants.value.reduce((total, variant) => total + numberValue(variant.stock_reserved), 0);
+  }
+  const available = Math.max(0, quantity - reserved);
+  return `${available} disponible${available > 1 ? 's' : ''}`;
+}
+
+function qualitySignals(product: CatalogProduct): ProductSignal[] {
+  return productSignals(product).filter((signal) => ['TVA manquante', 'À compléter'].includes(signal.label));
+}
+
+function completenessLabel(product: CatalogProduct): string {
+  return product.completeness_score === null || product.completeness_score === undefined
+    ? 'Non calculée'
+    : `${Number(product.completeness_score)}%`;
+}
+
+function variantActivityLabel(product: CatalogProduct): string {
+  const active = numberValue(product.active_variant_count);
+  const total = numberValue(product.variant_count);
+  const adjective = active > 1 ? 'actives' : 'active';
+  return `${active} / ${total} ${adjective}`;
+}
+
+function setProductSection(section: ProductSection): void {
+  activeProductSection.value = section;
+}
+
+function productModalTitle(): string {
+  if (productModalMode.value === 'create') return 'Nouveau produit';
+  if (productModalScope.value === 'identity' && productModalFocus.value === 'sku') return 'Modifier le SKU';
+  if (productModalScope.value === 'identity' && productModalFocus.value === 'name_type') return 'Modifier le nom et le type';
+  if (productModalScope.value === 'identity') return 'Modifier l’identité';
+  if (productModalScope.value === 'classification') return 'Modifier le classement';
+  if (productModalScope.value === 'stock') return 'Modifier le stock';
+  if (productModalScope.value === 'prices') return 'Modifier les prix';
+  if (productModalScope.value === 'media') return 'Modifier les médias';
+  if (productModalScope.value === 'attributes') return 'Modifier les attributs';
+  if (productModalScope.value === 'channels') return 'Modifier les canaux';
+  return 'Modifier le produit';
+}
+
+function productModalShows(scope: ProductModalScope): boolean {
+  if (scope === 'media' || scope === 'attributes') {
+    return productModalScope.value === scope;
+  }
+  return productModalMode.value === 'create' || productModalScope.value === 'all' || productModalScope.value === scope;
+}
+
+async function selectProductSection(product: CatalogProduct, section: ProductSection): Promise<void> {
+  closeCatalogMenus();
+  await selectProduct(product);
+  setProductSection(section);
+}
+
+async function openViewProduct(product: CatalogProduct): Promise<void> {
+  closeCatalogMenus();
+  await selectProduct(product);
+  productViewModalOpen.value = true;
+}
+
+function productColumnVisible(key: ProductColumnKey): boolean {
+  return visibleProductColumns[key] === true;
+}
+
+function resetProductForm(preserveSelection = false): void {
   Object.assign(productForm, {
     id: 0,
+    sku_base: '',
     name: '',
     slug: '',
     type: 'physical',
     status: 'draft',
     brand_id: '',
     category_id: '',
+    unit: 'unit',
+    tax_class_id: '',
+    track_stock: false,
+    allow_backorder: false,
     short_description: '',
     description: '',
     is_public: false,
@@ -193,30 +1178,43 @@ function resetProductForm(): void {
     base_purchase_price: '',
     base_sale_price: '',
     currency: 'CHF',
+    attribute_group_ids: [],
     option_ids: [],
   });
-  selectedProduct.value = null;
-  selectedVariant.value = null;
-  variantStock.value = null;
-  stockMovements.value = [];
+  if (!preserveSelection) {
+    selectedProduct.value = null;
+    selectedVariant.value = null;
+    productAssets.value = [];
+    productAttributeValues.value = [];
+    variantAttributeValues.value = [];
+    variantStock.value = null;
+    stockMovements.value = [];
+    activeProductSection.value = 'summary';
+  }
 }
 
 function fillProductForm(detail: ProductDetail): void {
   const data = (detail.data || {}) as Partial<CatalogProduct>;
   Object.assign(productForm, {
     id: Number(data.id || 0),
+    sku_base: text(data.sku_base),
     name: text(data.name),
     slug: text(data.slug),
     type: text(data.type || 'physical'),
     status: text(data.status || 'draft'),
     brand_id: text(data.brand_id || ''),
     category_id: text(data.category_id || ''),
+    unit: text(data.unit || 'unit'),
+    tax_class_id: text(data.tax_class_id || ''),
+    track_stock: Boolean(data.track_stock),
+    allow_backorder: Boolean(data.allow_backorder),
     short_description: text(data.short_description),
     description: text(data.description),
     is_public: Boolean(data.is_public),
     is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled),
     is_pos_enabled: Boolean(data.is_pos_enabled),
     currency: 'CHF',
+    attribute_group_ids: Array.isArray(detail.attribute_groups) ? detail.attribute_groups.map((group) => Number(group.id || 0)).filter(Boolean) : [],
     option_ids: Array.isArray(detail.options) ? detail.options.map((option) => Number(option.id || 0)).filter(Boolean) : [],
   });
   const sale = selectedPrices.value.find((price) => price.price_kind === 'sale');
@@ -227,6 +1225,7 @@ function fillProductForm(detail: ProductDetail): void {
 }
 
 function productPayload(): Record<string, unknown> {
+  productForm.sku_base = normalizeSkuInput(productForm.sku_base);
   const channelList = [
     productForm.is_public ? 'public' : '',
     productForm.is_ecommerce_enabled ? 'ecommerce' : '',
@@ -234,22 +1233,300 @@ function productPayload(): Record<string, unknown> {
   ].filter(Boolean);
   return {
     name: productForm.name,
+    sku_base: productForm.sku_base || undefined,
     slug: productForm.slug || productForm.name,
     type: productForm.type,
     status: productForm.status,
     brand_id: idOrNull(productForm.brand_id),
     category_id: idOrNull(productForm.category_id),
+    unit: productForm.unit || 'unit',
+    tax_class_id: idOrNull(productForm.tax_class_id),
+    track_stock: productForm.track_stock,
+    allow_backorder: productForm.allow_backorder,
     short_description: productForm.short_description,
     description: productForm.description,
     channels: channelList.length > 0 ? channelList : ['internal'],
     is_public: productForm.is_public,
     is_ecommerce_enabled: productForm.is_ecommerce_enabled,
     is_pos_enabled: productForm.is_pos_enabled,
+    attribute_group_ids: productForm.attribute_group_ids,
     option_ids: productForm.option_ids,
-    base_purchase_price: productForm.base_purchase_price || undefined,
-    base_sale_price: productForm.base_sale_price || undefined,
+    base_purchase_price: optionalMoneyPayload(productForm.base_purchase_price),
+    base_sale_price: optionalMoneyPayload(productForm.base_sale_price),
     currency: productForm.currency || 'CHF',
   };
+}
+
+function productSelected(product: CatalogProduct): boolean {
+  return selectedProductIds.value.includes(Number(product.id || 0));
+}
+
+function toggleProductSelection(product: CatalogProduct, checked: boolean): void {
+  const id = Number(product.id || 0);
+  if (id < 1) return;
+  const set = new Set(selectedProductIds.value);
+  if (checked) set.add(id);
+  else set.delete(id);
+  selectedProductIds.value = Array.from(set);
+}
+
+function toggleVisibleProductSelection(checked: boolean): void {
+  const set = new Set(selectedProductIds.value);
+  for (const id of visibleProductIds.value) {
+    if (checked) set.add(id);
+    else set.delete(id);
+  }
+  selectedProductIds.value = Array.from(set);
+}
+
+function checkedFromEvent(event: Event): boolean {
+  return Boolean((event.target as HTMLInputElement | null)?.checked);
+}
+
+function clearBulkSelection(): void {
+  selectedProductIds.value = [];
+  bulkReport.value = null;
+}
+
+function offerSelected(row: CatalogOfferRow): boolean {
+  return selectedOfferKeys.value.includes(row.key);
+}
+
+function toggleOfferSelection(row: CatalogOfferRow, checked: boolean): void {
+  const set = new Set(selectedOfferKeys.value);
+  if (checked) set.add(row.key);
+  else set.delete(row.key);
+  selectedOfferKeys.value = Array.from(set);
+}
+
+function toggleVisibleOfferSelection(checked: boolean): void {
+  const set = new Set(selectedOfferKeys.value);
+  for (const key of visibleOfferKeys.value) {
+    if (checked) set.add(key);
+    else set.delete(key);
+  }
+  selectedOfferKeys.value = Array.from(set);
+}
+
+function clearOfferBulkSelection(): void {
+  selectedOfferKeys.value = [];
+  offerBulkReport.value = null;
+}
+
+function resetBulkProductForm(): void {
+  Object.assign(bulkProductForm, {
+    status: '',
+    brand_id: '',
+    category_id: '',
+    is_public: '',
+    is_ecommerce_enabled: '',
+    is_pos_enabled: '',
+    archive: false,
+  });
+  bulkReport.value = null;
+}
+
+function resetBulkOfferForm(): void {
+  Object.assign(bulkOfferForm, {
+    status: '',
+    channel: '',
+    archive: false,
+  });
+  offerBulkReport.value = null;
+}
+
+function applyProductFilters(): void {
+  productPage.value = 1;
+  Object.assign(appliedProductFilters, {
+    view: productFilter.view,
+    type: productFilter.type,
+    brand_id: productFilter.brand_id,
+    category_id: productFilter.category_id,
+    status: productFilter.status,
+    channel: productFilter.channel,
+    archived: productFilter.archived,
+    low_stock: productFilter.low_stock,
+    image: productFilter.image,
+    price: productFilter.price,
+    purchase_price: productFilter.purchase_price,
+  });
+  closeCatalogMenus();
+  void loadCatalog();
+}
+
+function resetQuickProductFilters(): void {
+  productFilter.view = '';
+  productFilter.type = '';
+  productFilter.brand_id = '';
+  productFilter.category_id = '';
+  productFilter.status = '';
+  productFilter.channel = '';
+  productFilter.archived = '1';
+  productFilter.low_stock = false;
+  productFilter.image = '';
+  productFilter.price = '';
+  productFilter.purchase_price = false;
+}
+
+function clearAppliedProductFilters(): void {
+  Object.assign(appliedProductFilters, {
+    view: '',
+    type: '',
+    brand_id: '',
+    category_id: '',
+    status: '',
+    channel: '',
+    archived: '',
+    low_stock: false,
+    image: '',
+    price: '',
+    purchase_price: false,
+  });
+}
+
+function resetProductFilters(): void {
+  productPage.value = 1;
+  productFilter.q = '';
+  resetQuickProductFilters();
+  clearAppliedProductFilters();
+  closeCatalogMenus();
+  void loadCatalog();
+}
+
+function quickProductFilterActive(key: string): boolean {
+  if (key === 'all') return !productFilter.view && !productFilter.status && !productFilter.channel && productFilter.archived === '1' && !productFilter.low_stock;
+  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'without_image', 'without_price', 'low_stock'].includes(key)) return productFilter.view === key;
+  if (key === 'active' || key === 'draft') return productFilter.status === key && !productFilter.view && !productFilter.channel && !productFilter.archived && !productFilter.low_stock;
+  if (key === 'archived') return productFilter.archived === '1' && productFilter.status === 'archived';
+  if (key === 'ecommerce' || key === 'pos') return !productFilter.view && !productFilter.status && productFilter.channel === key && !productFilter.low_stock;
+  return false;
+}
+
+function applyQuickProductFilter(key: string): void {
+  productPage.value = 1;
+  resetQuickProductFilters();
+  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'without_image', 'without_price', 'low_stock'].includes(key)) {
+    productFilter.view = key;
+  }
+  else if (key === 'active' || key === 'draft') {
+    productFilter.status = key;
+    productFilter.archived = '';
+  }
+  else if (key === 'archived') {
+    productFilter.status = 'archived';
+    productFilter.archived = '1';
+  }
+  else if (key === 'ecommerce' || key === 'pos') productFilter.channel = key;
+  clearAppliedProductFilters();
+  void loadCatalog();
+}
+
+function removeProductFilterChip(key: ProductFilterKey): void {
+  productPage.value = 1;
+  if (key === 'view') productFilter.view = appliedProductFilters.view = '';
+  else if (key === 'type') productFilter.type = appliedProductFilters.type = '';
+  else if (key === 'status') productFilter.status = appliedProductFilters.status = '';
+  else if (key === 'brand_id') productFilter.brand_id = appliedProductFilters.brand_id = '';
+  else if (key === 'category_id') productFilter.category_id = appliedProductFilters.category_id = '';
+  else if (key === 'channel') productFilter.channel = appliedProductFilters.channel = '';
+  else if (key === 'archived') productFilter.archived = appliedProductFilters.archived = '';
+  else if (key === 'low_stock') productFilter.low_stock = appliedProductFilters.low_stock = false;
+  else if (key === 'image') productFilter.image = appliedProductFilters.image = '';
+  else if (key === 'price') productFilter.price = appliedProductFilters.price = '';
+  else if (key === 'purchase_price') productFilter.purchase_price = appliedProductFilters.purchase_price = false;
+  void loadCatalog();
+}
+
+function applyOfferFilters(): void {
+  offerPage.value = 1;
+  Object.assign(appliedOfferFilters, {
+    type: offerFilter.type,
+    status: offerFilter.status,
+    channel: offerFilter.channel,
+  });
+  closeCatalogMenus();
+}
+
+function removeOfferFilterChip(key: OfferFilterKey): void {
+  offerPage.value = 1;
+  if (key === 'type') offerFilter.type = appliedOfferFilters.type = '';
+  else if (key === 'status') offerFilter.status = appliedOfferFilters.status = '';
+  else if (key === 'channel') offerFilter.channel = appliedOfferFilters.channel = '';
+}
+
+function openCreateProduct(): void {
+  closeCatalogMenus();
+  resetProductForm(true);
+  productModalMode.value = 'create';
+  productModalScope.value = 'all';
+  productModalFocus.value = '';
+  productModalOpen.value = true;
+}
+
+async function openEditProduct(product?: CatalogProduct, scope: ProductModalScope = 'all', focus: ProductEditFocus | '' = ''): Promise<void> {
+  closeCatalogMenus();
+  if (product && Number(product.id) !== selectedProductId.value) {
+    await selectProduct(product);
+  } else if (selectedProduct.value) {
+    fillProductForm(selectedProduct.value);
+  }
+  productModalMode.value = 'edit';
+  productModalScope.value = scope;
+  productModalFocus.value = focus;
+  productModalOpen.value = true;
+  if (focus) {
+    await nextTick();
+    const control = document.querySelector<HTMLElement>(`[data-product-field="${focus}"]`);
+    control?.focus();
+  }
+}
+
+async function openProductMedia(product?: CatalogProduct): Promise<void> {
+  await openEditProduct(product, 'media');
+}
+
+async function openProductAttributes(product?: CatalogProduct): Promise<void> {
+  await openEditProduct(product, 'attributes');
+}
+
+async function openVariantPriceAdjustments(product: CatalogProduct): Promise<void> {
+  closeCatalogMenus();
+  if (Number(product.id) !== selectedProductId.value) {
+    await selectProduct(product);
+  } else if (selectedProduct.value) {
+    fillProductForm(selectedProduct.value);
+  }
+  if (!selectedVariant.value && selectedVariants.value.length > 0) {
+    await selectVariant(selectedVariants.value[0]);
+  } else if (selectedVariant.value) {
+    fillVariantFormFromVariant(selectedVariant.value);
+  }
+  variantPriceModalOpen.value = true;
+}
+
+function closeVariantPriceModal(): void {
+  variantPriceModalOpen.value = false;
+}
+
+function closeProductModal(): void {
+  productModalOpen.value = false;
+  if (selectedProduct.value) fillProductForm(selectedProduct.value);
+}
+
+function closeProductViewModal(): void {
+  productViewModalOpen.value = false;
+}
+
+function closeCatalogMenus(): void {
+  document.querySelectorAll<HTMLDetailsElement>('.catalog-menu[open]').forEach((menu) => {
+    menu.open = false;
+  });
+}
+
+function onDocumentPointerDown(event: PointerEvent): void {
+  const target = event.target as HTMLElement | null;
+  if (target?.closest('.catalog-menu')) return;
+  closeCatalogMenus();
 }
 
 function resetVariantForm(): void {
@@ -264,6 +1541,34 @@ function resetVariantForm(): void {
     purchase_adjustment_value: '',
     sale_adjustment_type: 'none',
     sale_adjustment_value: '',
+  });
+}
+
+function variantAdjustmentValue(variant: CatalogVariant, priceKind: 'purchase' | 'sale', field: 'type' | 'value'): string {
+  const computed = variant.computed_prices || {};
+  const computedKey = `${priceKind}_adjustment_${field}` as keyof typeof computed;
+  const computedValue = computed[computedKey];
+  if (computedValue !== null && computedValue !== undefined && computedValue !== '') return text(computedValue);
+  const adjustment = Array.isArray(variant.adjustments)
+    ? variant.adjustments.find((row) => row.price_kind === priceKind)
+    : null;
+  if (!adjustment) return field === 'type' ? 'none' : '';
+  const key = field === 'type' ? 'adjustment_type' : 'adjustment_value';
+  return text(adjustment[key] ?? (field === 'type' ? 'none' : ''));
+}
+
+function fillVariantFormFromVariant(variant: CatalogVariant): void {
+  Object.assign(variantForm, {
+    sku: text(variant.sku),
+    barcode: text(variant.barcode),
+    name: text(variant.name),
+    status: text(variant.status || 'active'),
+    stock_quantity: text(variant.stock_quantity ?? 0),
+    track_stock: variant.track_stock !== null && variant.track_stock !== undefined ? Boolean(variant.track_stock) : true,
+    purchase_adjustment_type: variantAdjustmentValue(variant, 'purchase', 'type') || 'none',
+    purchase_adjustment_value: variantAdjustmentValue(variant, 'purchase', 'value'),
+    sale_adjustment_type: variantAdjustmentValue(variant, 'sale', 'type') || 'none',
+    sale_adjustment_value: variantAdjustmentValue(variant, 'sale', 'value'),
   });
 }
 
@@ -285,6 +1590,915 @@ function fillDiscountForm(discount: CatalogDiscount | null = null): void {
   selectedDiscount.value = discount;
 }
 
+function fillBundleForm(bundle: CatalogProductBundle | null): void {
+  Object.assign(bundleForm, {
+    bundle_variant_id: text(bundle?.bundle_variant_id),
+    pricing_mode: text(bundle?.pricing_mode || 'fixed'),
+    stock_mode: text(bundle?.stock_mode || 'components'),
+    is_active: bundle?.is_active !== false,
+  });
+}
+
+function resetBundleIdentityForm(): void {
+  Object.assign(bundleIdentityForm, {
+    sku_base: '',
+    name: '',
+    slug: '',
+    short_description: '',
+    description: '',
+    status: 'draft',
+    is_public: false,
+    is_ecommerce_enabled: true,
+    is_pos_enabled: true,
+  });
+  Object.assign(bundlePriceForm, { currency: 'CHF', base_purchase_price: '', base_sale_price: '' });
+}
+
+function fillBundleIdentityForm(detail: ProductDetail | null): void {
+  const data = (detail?.data || {}) as Partial<CatalogProduct>;
+  if (!data.id) {
+    resetBundleIdentityForm();
+    return;
+  }
+  Object.assign(bundleIdentityForm, {
+    sku_base: text(data.sku_base),
+    name: text(data.name),
+    slug: text(data.slug),
+    short_description: text(data.short_description),
+    description: text(data.description),
+    status: text(data.status || 'draft'),
+    is_public: Boolean(data.is_public),
+    is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled),
+    is_pos_enabled: Boolean(data.is_pos_enabled),
+  });
+}
+
+function fillBundlePriceForm(detail: ProductDetail | null): void {
+  const prices = Array.isArray(detail?.prices) ? detail.prices : [];
+  const sale = prices.find((price) => price.price_kind === 'sale');
+  const purchase = prices.find((price) => price.price_kind === 'purchase');
+  Object.assign(bundlePriceForm, {
+    currency: text(sale?.currency || purchase?.currency || 'CHF'),
+    base_purchase_price: text(purchase?.amount || ''),
+    base_sale_price: text(sale?.amount || ''),
+  });
+}
+
+function bundleChannels(): string[] {
+  return [
+    bundleIdentityForm.is_public ? 'public' : '',
+    bundleIdentityForm.is_ecommerce_enabled ? 'ecommerce' : '',
+    bundleIdentityForm.is_pos_enabled ? 'pos' : '',
+  ].filter(Boolean);
+}
+
+function bundleProductPayload(): Record<string, unknown> {
+  bundleIdentityForm.sku_base = normalizeSkuInput(bundleIdentityForm.sku_base || bundleIdentityForm.name || `BUNDLE${String(Date.now()).slice(-6)}`).slice(0, 80);
+  return {
+    sku_base: bundleIdentityForm.sku_base || undefined,
+    name: bundleIdentityForm.name,
+    slug: bundleIdentityForm.slug || bundleIdentityForm.name,
+    type: 'bundle',
+    status: bundleIdentityForm.status || 'draft',
+    short_description: bundleIdentityForm.short_description,
+    description: bundleIdentityForm.description,
+    unit: 'unit',
+    track_stock: false,
+    allow_backorder: false,
+    channels: bundleChannels().length > 0 ? bundleChannels() : ['internal'],
+    is_public: bundleIdentityForm.is_public,
+    is_ecommerce_enabled: bundleIdentityForm.is_ecommerce_enabled,
+    is_pos_enabled: bundleIdentityForm.is_pos_enabled,
+    base_purchase_price: optionalMoneyPayload(bundlePriceForm.base_purchase_price),
+    base_sale_price: optionalMoneyPayload(bundlePriceForm.base_sale_price),
+    currency: bundlePriceForm.currency || 'CHF',
+  };
+}
+
+async function changeBundleProduct(event: Event): Promise<void> {
+  selectedBundleProductId.value = Number((event.target as HTMLSelectElement | null)?.value || 0);
+  selectedBundle.value = null;
+  bundleComponentForm.component_product_id = '';
+  bundleComponentForm.component_variant_id = '';
+  const product = selectedBundleProduct.value;
+  if (product) {
+    await selectProduct(product);
+    fillBundleIdentityForm(selectedProduct.value);
+    fillBundlePriceForm(selectedProduct.value);
+  } else {
+    selectedProduct.value = null;
+    fillBundleForm(null);
+    resetBundleIdentityForm();
+  }
+  await loadSelectedBundle();
+}
+
+async function loadSelectedBundle(): Promise<void> {
+  if (selectedBundleProductId.value < 1) {
+    selectedBundle.value = null;
+    selectedProduct.value = null;
+    fillBundleForm(null);
+    resetBundleIdentityForm();
+    return;
+  }
+  bundleLoading.value = true;
+  try {
+    const [bundleResponse, productResponse] = await Promise.all([
+      businessCatalogApi.productBundle(selectedBundleProductId.value),
+      businessCatalogApi.product(selectedBundleProductId.value),
+    ]);
+    selectedProduct.value = productResponse.data.product || null;
+    selectedBundle.value = bundleResponse.data.bundle || null;
+    fillBundleForm(selectedBundle.value);
+    fillBundleIdentityForm(productResponse.data.product || null);
+    fillBundlePriceForm(productResponse.data.product || null);
+  } catch (err) {
+    setError(err, 'Offre composée indisponible.');
+  } finally {
+    bundleLoading.value = false;
+  }
+}
+
+function newBundleProduct(): void {
+  selectedBundleProductId.value = 0;
+  selectedBundle.value = null;
+  selectedProduct.value = null;
+  bundleComponentForm.component_product_id = '';
+  bundleComponentForm.component_variant_id = '';
+  fillBundleForm(null);
+  resetBundleIdentityForm();
+}
+
+function openCreateBundleOffer(): void {
+  newBundleProduct();
+  selectedOfferRow.value = null;
+  offerEditKind.value = 'bundle';
+  offerEditModalOpen.value = true;
+}
+
+function openCreateDiscountOffer(): void {
+  fillDiscountForm();
+  selectedOfferRow.value = null;
+  offerEditKind.value = 'discount';
+  offerEditModalOpen.value = true;
+}
+
+async function openViewOffer(row: CatalogOfferRow): Promise<void> {
+  selectedOfferRow.value = row;
+  if (row.kind === 'bundle') {
+    selectedBundleProductId.value = row.id;
+    await loadSelectedBundle();
+  } else if (row.discount) {
+    fillDiscountForm(row.discount);
+  }
+  offerViewModalOpen.value = true;
+}
+
+async function openEditOffer(row: CatalogOfferRow): Promise<void> {
+  selectedOfferRow.value = row;
+  offerEditKind.value = row.kind;
+  if (row.kind === 'bundle') {
+    selectedBundleProductId.value = row.id;
+    await loadSelectedBundle();
+  } else if (row.discount) {
+    fillDiscountForm(row.discount);
+  }
+  offerEditModalOpen.value = true;
+}
+
+async function duplicateDiscount(discount: CatalogDiscount): Promise<void> {
+  if (!canDiscountWrite.value) return;
+  busy.value = `duplicate-discount-${discount.id}`;
+  try {
+    await businessCatalogApi.createDiscount({
+      name: `${discount.name || 'Réduction'} copie`,
+      status: 'draft',
+      type: discount.discount_type || 'percent',
+      value: Number(discount.discount_value || 0),
+      currency: discount.discount_type === 'amount' ? discount.currency || 'CHF' : undefined,
+      scope: discount.scope_type || 'product',
+      scope_id: idOrNull(discount.scope_id),
+      channel: discount.channel || 'all',
+      starts_at: discount.starts_at || undefined,
+      ends_at: discount.ends_at || undefined,
+      priority: Number(discount.priority || 100),
+    });
+    await loadCatalog();
+    setNotice('Réduction dupliquée.');
+  } catch (err) {
+    setError(err, 'Réduction non dupliquée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function duplicateBundleOffer(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (!canWrite.value || productId < 1) return;
+  busy.value = `duplicate-bundle-${productId}`;
+  try {
+    const [detailResponse, bundleResponse] = await Promise.all([
+      businessCatalogApi.product(productId),
+      businessCatalogApi.productBundle(productId),
+    ]);
+    const detail = detailResponse.data.product;
+    const data = detail.data || product;
+    const prices = Array.isArray(detail.prices) ? detail.prices : [];
+    const sale = prices.find((price) => price.price_kind === 'sale');
+    const purchase = prices.find((price) => price.price_kind === 'purchase');
+    const currency = text(sale?.currency || purchase?.currency || 'CHF');
+    const copySku = duplicateSkuBase(data.sku_base || product.sku_base || data.name || product.name);
+    const created = await businessCatalogApi.createProduct({
+      name: `${text(data.name || product.name)} copie`,
+      sku_base: copySku,
+      slug: `${text(data.slug || product.slug || data.name || product.name)}-copie-${String(Date.now()).slice(-6)}`,
+      type: 'bundle',
+      status: 'draft',
+      short_description: text(data.short_description),
+      description: text(data.description),
+      is_public: false,
+      is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled ?? product.is_ecommerce_enabled),
+      is_pos_enabled: Boolean(data.is_pos_enabled ?? product.is_pos_enabled),
+      track_stock: false,
+      allow_backorder: false,
+      base_sale_price: sale?.amount ?? undefined,
+      base_purchase_price: canPurchaseRead.value ? purchase?.amount ?? undefined : undefined,
+      currency: currency || 'CHF',
+    });
+    const copyId = productDetailId(created.data.product);
+    if (copyId > 0) {
+      await businessCatalogApi.createVariant(copyId, { sku: copySku, name: 'Standard', status: 'active', stock_quantity: 0, track_stock: false });
+      const sourceBundle = bundleResponse.data.bundle;
+      const copiedBundle = await businessCatalogApi.updateProductBundle(copyId, {
+        pricing_mode: sourceBundle?.pricing_mode || 'fixed',
+        stock_mode: sourceBundle?.stock_mode || 'components',
+        is_active: sourceBundle?.is_active !== false,
+      });
+      for (const component of sourceBundle?.components || []) {
+        await businessCatalogApi.addBundleComponent(Number(copiedBundle.data.bundle.id), {
+          component_product_id: component.component_product_id,
+          component_variant_id: component.component_variant_id || undefined,
+          quantity: component.quantity || 1,
+          is_required: component.is_required !== false,
+          sort_order: component.sort_order || 0,
+        });
+      }
+    }
+    await loadCatalog();
+    setNotice('Bundle dupliqué en brouillon.');
+  } catch (err) {
+    setError(err, 'Bundle non dupliqué.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function duplicateOffer(row: CatalogOfferRow): Promise<void> {
+  closeCatalogMenus();
+  if (row.kind === 'bundle' && row.bundle) await duplicateBundleOffer(row.bundle);
+  if (row.kind === 'discount' && row.discount) await duplicateDiscount(row.discount);
+}
+
+async function archiveOffer(row: CatalogOfferRow): Promise<void> {
+  closeCatalogMenus();
+  if (row.kind === 'bundle' && row.bundle) await archiveProduct(row.bundle);
+  if (row.kind === 'discount' && row.discount) await archiveDiscount(row.discount);
+}
+
+async function saveBundle(): Promise<void> {
+  if (!canWrite.value || !bundleIdentityForm.name.trim()) return;
+  busy.value = 'bundle';
+  try {
+    let productId = selectedBundleProductId.value;
+    const productPayload = bundleProductPayload();
+    const targetStatus = String(productPayload.status || 'draft');
+    const identityPayload = { ...productPayload };
+    if (targetStatus === 'active') {
+      delete identityPayload.status;
+    }
+    if (productId > 0) {
+      await businessCatalogApi.updateProduct(productId, identityPayload);
+    } else {
+      const created = await businessCatalogApi.createProduct({ ...productPayload, status: 'draft' });
+      productId = productDetailId(created.data.product);
+      selectedBundleProductId.value = productId;
+      if (productId < 1) {
+        throw new Error('business.bundle_product_id_missing');
+      }
+      if (productId > 0 && bundleIdentityForm.sku_base) {
+        await businessCatalogApi.createVariant(productId, {
+          sku: bundleIdentityForm.sku_base,
+          name: 'Standard',
+          status: 'active',
+          stock_quantity: 0,
+          track_stock: false,
+        });
+      }
+    }
+    const response = await businessCatalogApi.updateProductBundle(productId, {
+      bundle_variant_id: idOrNull(bundleForm.bundle_variant_id),
+      pricing_mode: bundleForm.pricing_mode,
+      stock_mode: bundleForm.stock_mode,
+      is_active: bundleForm.is_active,
+    });
+    if (canPriceWrite.value) {
+      const pricePayload: Record<string, unknown> = { currency: bundlePriceForm.currency || 'CHF' };
+      const purchasePrice = canPurchaseRead.value ? optionalMoneyPayload(bundlePriceForm.base_purchase_price) : undefined;
+      const salePrice = optionalMoneyPayload(bundlePriceForm.base_sale_price);
+      if (purchasePrice !== undefined) pricePayload.base_purchase_price = purchasePrice;
+      if (salePrice !== undefined) pricePayload.base_sale_price = salePrice;
+      if (purchasePrice !== undefined || salePrice !== undefined) {
+        await businessCatalogApi.updateBasePrices(productId, pricePayload);
+      }
+    }
+    if (targetStatus !== 'draft') {
+      await businessCatalogApi.updateProduct(productId, { ...productPayload, status: targetStatus });
+    }
+    selectedBundle.value = response.data.bundle;
+    fillBundleForm(selectedBundle.value);
+    await loadCatalog();
+    await loadSelectedBundle();
+    setNotice('Offre composée enregistrée.');
+  } catch (err) {
+    setError(err, 'Offre composée non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function prepareBundleDiscount(): void {
+  if (selectedBundleProductId.value < 1) return;
+  const variantId = Number(bundleForm.bundle_variant_id || 0);
+  fillDiscountForm();
+  Object.assign(discountForm, {
+    name: `Réduction ${selectedBundleProduct.value?.name || 'bundle'}`,
+    status: 'active',
+    type: 'percent',
+    value: '',
+    currency: bundlePriceForm.currency || 'CHF',
+    scope: variantId > 0 ? 'variant' : 'product',
+    scope_id: text(variantId > 0 ? variantId : selectedBundleProductId.value),
+    channel: 'all',
+    priority: '50',
+  });
+  setNotice('Réduction préparée pour cette offre composée.');
+}
+
+async function disableBundle(): Promise<void> {
+  if (!canWrite.value || selectedBundleProductId.value < 1) return;
+  busy.value = 'bundle';
+  try {
+    await businessCatalogApi.deleteProductBundle(selectedBundleProductId.value);
+    selectedBundle.value = null;
+    fillBundleForm(null);
+    setNotice('Offre composée désactivée.');
+  } catch (err) {
+    setError(err, 'Offre composée non désactivée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function addBundleComponent(): Promise<void> {
+  if (!canWrite.value || !selectedBundle.value?.id) return;
+  busy.value = 'bundle-component';
+  try {
+    await businessCatalogApi.addBundleComponent(Number(selectedBundle.value.id), {
+      component_product_id: idOrNull(bundleComponentForm.component_product_id),
+      component_variant_id: idOrNull(bundleComponentForm.component_variant_id),
+      quantity: Number(bundleComponentForm.quantity || 1),
+      is_required: bundleComponentForm.is_required,
+    });
+    Object.assign(bundleComponentForm, { component_product_id: '', component_variant_id: '', quantity: '1', is_required: true });
+    await loadSelectedBundle();
+    setNotice('Composant ajouté.');
+  } catch (err) {
+    setError(err, 'Composant non ajouté.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function removeBundleComponent(component: CatalogBundleComponent): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = `bundle-component-${component.id}`;
+  try {
+    await businessCatalogApi.deleteBundleComponent(Number(component.id));
+    await loadSelectedBundle();
+    setNotice('Composant retiré.');
+  } catch (err) {
+    setError(err, 'Composant non retiré.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function bundlePricingLabel(mode: string | undefined): string {
+  return ({ fixed: 'Prix fixe', sum_components: 'Somme des composants', discount_components: 'Somme remisée' } as Record<string, string>)[mode || 'fixed'] || mode || '—';
+}
+
+function bundleStockLabel(mode: string | undefined): string {
+  return ({ components: 'Selon composants', virtual: 'Virtuel', none: 'Sans suivi' } as Record<string, string>)[mode || 'components'] || mode || '—';
+}
+
+function fillBrandForm(brand: CatalogRecord | null = null): void {
+  Object.assign(brandForm, {
+    id: Number(brand?.id || 0),
+    name: text(brand?.name),
+    slug: text(brand?.slug),
+    company_id: text(brand?.company_id),
+    description: text(brand?.description),
+    website_url: text(brand?.website_url),
+    status: text(brand?.status || 'active'),
+    sort_order: text(brand?.sort_order || 0),
+  });
+}
+
+function fillCategoryForm(category: CatalogRecord | null = null): void {
+  Object.assign(categoryForm, {
+    id: Number(category?.id || 0),
+    name: text(category?.name),
+    slug: text(category?.slug),
+    parent_id: text(category?.parent_id),
+    description: text(category?.description),
+    sort_order: text(category?.sort_order || 0),
+  });
+}
+
+function resetAssetForm(asset: CatalogProductAsset | null = null): void {
+  Object.assign(assetForm, {
+    id: Number(asset?.asset_id || asset?.id || 0),
+    media_id: text(asset?.media_id),
+    variant_id: text(asset?.variant_id),
+    role: text(asset?.role || 'gallery'),
+    channel_scope: text(asset?.channel_scope || 'all'),
+    title: text(asset?.title),
+    alt_text: text(asset?.alt_text),
+    caption: text(asset?.caption),
+    sort_order: text(asset?.sort_order || 0),
+    is_public: asset ? Boolean(asset.is_public) : true,
+  });
+}
+
+function fillAttributeGroupForm(group: CatalogAttributeGroup | null = null): void {
+  Object.assign(attributeGroupForm, {
+    id: Number(group?.id || 0),
+    code: text(group?.code),
+    name: text(group?.name),
+    description: text(group?.description),
+    sort_order: text(group?.sort_order || 0),
+  });
+}
+
+function fillAttributeForm(attribute: CatalogAttribute | null = null): void {
+  Object.assign(attributeForm, {
+    id: Number(attribute?.id || 0),
+    group_id: text(attribute?.group_id),
+    code: text(attribute?.code),
+    name: text(attribute?.name),
+    data_type: text(attribute?.data_type || 'text'),
+    unit: text(attribute?.unit),
+    is_required: Boolean(attribute?.is_required),
+    is_filterable: Boolean(attribute?.is_filterable),
+    is_searchable: Boolean(attribute?.is_searchable),
+    is_public: Boolean(attribute?.is_public),
+    sort_order: text(attribute?.sort_order || 0),
+  });
+  attributeOptionForm.attribute_id = text(attribute?.id);
+}
+
+function fillAttributeOptionForm(attribute: CatalogAttribute, option: CatalogRecord | null = null): void {
+  Object.assign(attributeOptionForm, {
+    id: Number(option?.id || 0),
+    attribute_id: text(attribute.id),
+    code: text(option?.code),
+    label: text(option?.label || option?.name),
+    value: text(option?.value || option?.label || option?.name),
+    color_hex: text(option?.color_hex),
+    sort_order: text(option?.sort_order || 0),
+  });
+}
+
+function openAttributeSettings(modal: AttributeSettingsModal = 'attributes'): void {
+  closeCatalogMenus();
+  attributeSettingsModal.value = modal;
+  void loadAttributeDefinitions();
+}
+
+function openProductReference(kind: ProductReferenceKind): void {
+  closeCatalogMenus();
+  referenceKind.value = kind;
+  if (kind === 'brand') fillBrandForm(null);
+  if (kind === 'category') fillCategoryForm(null);
+  referenceModalOpen.value = true;
+}
+
+function closeReferenceModal(): void {
+  referenceModalOpen.value = false;
+}
+
+function closeAttributeSettings(): void {
+  attributeSettingsModal.value = '';
+}
+
+function resetAttributeOptionForm(attribute: CatalogAttribute | null = selectedOptionAttribute.value): void {
+  Object.assign(attributeOptionForm, {
+    id: 0,
+    attribute_id: text(attribute?.id || attributeOptionForm.attribute_id),
+    code: '',
+    label: '',
+    value: '',
+    color_hex: '',
+    sort_order: '0',
+  });
+}
+
+function setAttributeOptionColor(color: string): void {
+  attributeOptionForm.color_hex = color.toUpperCase();
+}
+
+async function saveBrand(): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = 'brand';
+  try {
+    const payload = {
+      name: brandForm.name,
+      slug: brandForm.slug || brandForm.name,
+      company_id: idOrNull(brandForm.company_id),
+      description: brandForm.description,
+      website_url: brandForm.website_url,
+      status: brandForm.status,
+      sort_order: Number(brandForm.sort_order || 0),
+    };
+    if (brandForm.id > 0) await businessCatalogApi.updateBrand(brandForm.id, payload);
+    else await businessCatalogApi.createBrand(payload);
+    await loadCatalog();
+    fillBrandForm(null);
+    setNotice('Marque enregistrée.');
+  } catch (err) {
+    setError(err, 'Marque non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function deleteCurrentBrand(): Promise<void> {
+  if (!canWrite.value || brandForm.id < 1) return;
+  if (typeof window !== 'undefined' && !window.confirm('Effacer cette marque ? Cette action est possible uniquement si aucun produit ne l’utilise.')) return;
+  busy.value = 'brand-delete';
+  try {
+    await businessCatalogApi.deleteBrand(brandForm.id);
+    await loadCatalog();
+    if (String(productForm.brand_id) === String(brandForm.id)) productForm.brand_id = '';
+    fillBrandForm(null);
+    setNotice('Marque effacée.');
+  } catch (err) {
+    setError(err, 'Marque non effacée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveCategory(): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = 'category';
+  try {
+    const payload = {
+      name: categoryForm.name,
+      slug: categoryForm.slug || categoryForm.name,
+      parent_id: idOrNull(categoryForm.parent_id),
+      description: categoryForm.description,
+      sort_order: Number(categoryForm.sort_order || 0),
+    };
+    if (categoryForm.id > 0) await businessCatalogApi.updateCategory(categoryForm.id, payload);
+    else await businessCatalogApi.createCategory(payload);
+    await loadCatalog();
+    fillCategoryForm(null);
+    setNotice('Catégorie enregistrée.');
+  } catch (err) {
+    setError(err, 'Catégorie non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function deleteCurrentCategory(): Promise<void> {
+  if (!canWrite.value || categoryForm.id < 1) return;
+  if (typeof window !== 'undefined' && !window.confirm('Effacer cette catégorie ?')) return;
+  busy.value = 'category-delete';
+  try {
+    await businessCatalogApi.deleteCategory(categoryForm.id);
+    await loadCatalog();
+    if (String(productForm.category_id) === String(categoryForm.id)) productForm.category_id = '';
+    fillCategoryForm(null);
+    setNotice('Catégorie effacée.');
+  } catch (err) {
+    setError(err, 'Catégorie non effacée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function loadAttributeDefinitions(): Promise<void> {
+  try {
+    const [groupResponse, attributeResponse] = await Promise.all([
+      businessCatalogApi.attributeGroups(),
+      businessCatalogApi.attributes(),
+    ]);
+    attributeGroups.value = groupResponse.data.attribute_groups || [];
+    attributes.value = attributeResponse.data.attributes || [];
+  } catch (err) {
+    setError(err, 'Attributs indisponibles.');
+  }
+}
+
+async function loadProductAttributeValues(productId = selectedProductId.value): Promise<void> {
+  if (!productId) {
+    productAttributeValues.value = [];
+    applyAttributeValues('product', []);
+    return;
+  }
+  try {
+    const response = await businessCatalogApi.productAttributes(productId);
+    productAttributeValues.value = response.data.attributes || [];
+    applyAttributeValues('product', productAttributeValues.value);
+  } catch (err) {
+    productAttributeValues.value = [];
+    applyAttributeValues('product', []);
+    setError(err, 'Attributs produit indisponibles.');
+  }
+}
+
+async function loadVariantAttributeValues(variantId = Number(selectedVariant.value?.id || 0)): Promise<void> {
+  if (!variantId) {
+    variantAttributeValues.value = [];
+    applyAttributeValues('variant', []);
+    return;
+  }
+  try {
+    const response = await businessCatalogApi.variantAttributes(variantId);
+    variantAttributeValues.value = response.data.attributes || [];
+    applyAttributeValues('variant', variantAttributeValues.value);
+  } catch (err) {
+    variantAttributeValues.value = [];
+    applyAttributeValues('variant', []);
+    setError(err, 'Attributs variante indisponibles.');
+  }
+}
+
+async function saveAttributeGroup(): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = 'attribute-group';
+  try {
+    const payload = {
+      code: attributeGroupForm.code || attributeGroupForm.name,
+      name: attributeGroupForm.name,
+      description: attributeGroupForm.description,
+      sort_order: Number(attributeGroupForm.sort_order || 0),
+    };
+    if (attributeGroupForm.id > 0) await businessCatalogApi.updateAttributeGroup(attributeGroupForm.id, payload);
+    else await businessCatalogApi.createAttributeGroup(payload);
+    await loadAttributeDefinitions();
+    fillAttributeGroupForm(null);
+    setNotice('Groupe attribut enregistré.');
+  } catch (err) {
+    setError(err, 'Groupe attribut non enregistré.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveAttributeDefinition(): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = 'attribute';
+  try {
+    const payload = {
+      group_id: idOrNull(attributeForm.group_id),
+      code: attributeForm.code || attributeForm.name,
+      name: attributeForm.name,
+      data_type: attributeForm.data_type,
+      unit: attributeForm.unit,
+      is_required: attributeForm.is_required,
+      is_filterable: attributeForm.is_filterable,
+      is_searchable: attributeForm.is_searchable,
+      is_public: attributeForm.is_public,
+      sort_order: Number(attributeForm.sort_order || 0),
+    };
+    if (attributeForm.id > 0) await businessCatalogApi.updateAttribute(attributeForm.id, payload);
+    else await businessCatalogApi.createAttribute(payload);
+    await loadAttributeDefinitions();
+    fillAttributeForm(null);
+    setNotice('Attribut enregistré.');
+  } catch (err) {
+    setError(err, 'Attribut non enregistré.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveAttributeOption(): Promise<void> {
+  const attributeId = idOrNull(attributeOptionForm.attribute_id);
+  if (!canWrite.value || !attributeId) return;
+  busy.value = 'attribute-option';
+  try {
+    const payload = {
+      code: attributeOptionForm.code || attributeOptionForm.label,
+      label: attributeOptionForm.label,
+      value: attributeOptionForm.value || attributeOptionForm.label,
+      color_hex: attributeOptionForm.color_hex,
+      sort_order: Number(attributeOptionForm.sort_order || 0),
+    };
+    if (attributeOptionForm.id > 0) await businessCatalogApi.updateAttributeOption(attributeOptionForm.id, payload);
+    else await businessCatalogApi.createAttributeOption(attributeId, payload);
+    await loadAttributeDefinitions();
+    resetAttributeOptionForm(selectedOptionAttribute.value);
+    setNotice('Option attribut enregistrée.');
+  } catch (err) {
+    setError(err, 'Option attribut non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function deleteCurrentAttributeOption(): Promise<void> {
+  if (!canWrite.value || attributeOptionForm.id < 1) return;
+  if (typeof window !== 'undefined' && !window.confirm('Effacer cette option ?')) return;
+  busy.value = 'attribute-option-delete';
+  try {
+    await businessCatalogApi.deleteAttributeOption(attributeOptionForm.id);
+    await loadAttributeDefinitions();
+    resetAttributeOptionForm(selectedOptionAttribute.value);
+    setNotice('Option attribut effacée.');
+  } catch (err) {
+    setError(err, 'Option attribut non effacée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveProductAttributeValues(notify = true): Promise<boolean> {
+  const productId = selectedProductId.value;
+  if (!canWrite.value || productId < 1) return false;
+  busy.value = 'product-attributes';
+  try {
+    const response = await businessCatalogApi.updateProductAttributes(productId, { values: valuesPayloadFromForm(productAttributeForm) });
+    productAttributeValues.value = response.data.attributes || [];
+    applyAttributeValues('product', productAttributeValues.value);
+    if (notify) setNotice('Attributs produit enregistrés.');
+    return true;
+  } catch (err) {
+    setError(err, 'Attributs produit non enregistrés.');
+    return false;
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveVariantAttributeValues(notify = true): Promise<boolean> {
+  const variantId = Number(selectedVariant.value?.id || 0);
+  if (!canWrite.value || variantId < 1) return false;
+  busy.value = 'variant-attributes';
+  try {
+    const response = await businessCatalogApi.updateVariantAttributes(variantId, { values: valuesPayloadFromForm(variantAttributeForm) });
+    variantAttributeValues.value = response.data.attributes || [];
+    applyAttributeValues('variant', variantAttributeValues.value);
+    if (notify) setNotice('Attributs variante enregistrés.');
+    return true;
+  } catch (err) {
+    setError(err, 'Attributs variante non enregistrés.');
+    return false;
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function loadProductAssets(productId = selectedProductId.value): Promise<void> {
+  if (!productId) {
+    productAssets.value = [];
+    return;
+  }
+  try {
+    const response = await businessCatalogApi.productAssets(productId, { include_product_assets: 1 });
+    productAssets.value = response.data.assets || [];
+  } catch (err) {
+    productAssets.value = [];
+    setError(err, 'Médias produit indisponibles.');
+  }
+}
+
+async function loadMediaRows(): Promise<void> {
+  try {
+    const response = await businessCatalogApi.media({ limit: 120, type: 'all' });
+    mediaRows.value = normalizeMediaResponse(response.data);
+  } catch (_) {
+    mediaRows.value = [];
+  }
+}
+
+function assetPayload(): Record<string, unknown> {
+  return {
+    media_id: idOrNull(assetForm.media_id),
+    variant_id: idOrNull(assetForm.variant_id),
+    role: assetForm.role,
+    channel_scope: assetForm.channel_scope,
+    title: assetForm.title,
+    alt_text: assetForm.alt_text,
+    caption: assetForm.caption,
+    sort_order: Number(assetForm.sort_order || 0),
+    is_public: assetForm.is_public,
+  };
+}
+
+async function saveProductAsset(): Promise<void> {
+  const productId = selectedProductId.value;
+  if (!canWrite.value || productId < 1) return;
+  busy.value = 'asset';
+  try {
+    if (assetForm.id > 0) await businessCatalogApi.updateProductAsset(assetForm.id, assetPayload());
+    else await businessCatalogApi.assignProductAsset(productId, assetPayload());
+    await loadProductAssets(productId);
+    await loadCatalog();
+    resetAssetForm(null);
+    setNotice('Média produit enregistré.');
+  } catch (err) {
+    setError(err, 'Média produit non enregistré.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function archiveProductAsset(asset: CatalogProductAsset): Promise<void> {
+  const assetId = Number(asset.asset_id || asset.id || 0);
+  if (!canWrite.value || assetId < 1) return;
+  busy.value = `asset-${assetId}`;
+  try {
+    await businessCatalogApi.archiveProductAsset(assetId);
+    await loadProductAssets();
+    await loadCatalog();
+    setNotice('Lien média archivé.');
+  } catch (err) {
+    setError(err, 'Lien média non archivé.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function archiveCurrentAsset(): Promise<void> {
+  if (assetForm.id < 1) return;
+  await archiveProductAsset({ id: assetForm.id } as CatalogProductAsset);
+  resetAssetForm(null);
+}
+
+async function setMainProductAsset(asset: CatalogProductAsset): Promise<void> {
+  const assetId = Number(asset.asset_id || asset.id || 0);
+  if (!canWrite.value || assetId < 1) return;
+  busy.value = `asset-${assetId}`;
+  try {
+    await businessCatalogApi.setMainProductAsset(assetId);
+    await loadProductAssets();
+    await loadCatalog();
+    setNotice('Image principale définie.');
+  } catch (err) {
+    setError(err, 'Image principale non définie.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function setCurrentAssetAsMain(): Promise<void> {
+  if (assetForm.id < 1) return;
+  await setMainProductAsset({ id: assetForm.id } as CatalogProductAsset);
+  assetForm.role = 'main';
+}
+
+function onAssetUploadChange(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  assetUploadFile.value = input.files?.[0] || null;
+}
+
+async function uploadAndAssignAsset(): Promise<void> {
+  const productId = selectedProductId.value;
+  if (!canWrite.value || productId < 1 || !assetUploadFile.value) return;
+  busy.value = 'asset-upload';
+  try {
+    const form = new FormData();
+    form.append('file', assetUploadFile.value);
+    if (assetForm.title) form.append('title', assetForm.title);
+    if (assetForm.alt_text) form.append('alt_text', assetForm.alt_text);
+    const upload = await businessCatalogApi.uploadMedia(form);
+    const mediaId = Number(upload.data.media_id || (upload.data.asset as Record<string, unknown> | undefined)?.id || 0);
+    if (mediaId < 1) throw new Error('media_id_missing');
+    assetForm.media_id = String(mediaId);
+    await saveProductAsset();
+    await loadMediaRows();
+    assetUploadFile.value = null;
+  } catch (err) {
+    setError(err, 'Téléversement média impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
 function discountScopeLabel(discount: CatalogDiscount): string {
   if (discount.scope_type === 'brand') return brandName(discount.scope_id);
   if (discount.scope_type === 'category') return categoryName(discount.scope_id);
@@ -296,27 +2510,58 @@ async function loadCatalog(): Promise<void> {
   if (!canRead.value) return;
   loading.value = true;
   try {
-    const [brandResponse, categoryResponse, optionResponse, productResponse, discountResponse] = await Promise.all([
+    const pageLimit = productPageLimit.value;
+    const pageOffset = productPageSize.value === 'all' ? 0 : (productPage.value - 1) * productNumericPageLimit.value;
+    const [brandResponse, categoryResponse, optionResponse, productResponse, bundleProductResponse, componentProductResponse, discountResponse] = await Promise.all([
       businessCatalogApi.brands(),
       businessCatalogApi.categories(),
       businessCatalogApi.options(),
       businessCatalogApi.products({
         q: productFilter.q,
+        view: productFilter.view || undefined,
         type: productFilter.type || undefined,
         brand_id: productFilter.brand_id || undefined,
         category_id: productFilter.category_id || undefined,
         status: productFilter.status || undefined,
         channel: productFilter.channel || undefined,
+        archived: (productFilter.archived || productFilter.status === 'archived') ? '1' : undefined,
         low_stock: productFilter.low_stock ? 1 : undefined,
-        limit: 100,
+        image: productFilter.image || undefined,
+        price: productFilter.price || undefined,
+        purchase_price: productFilter.purchase_price ? 'missing' : undefined,
+        limit: pageLimit,
+        offset: pageOffset,
       }),
+      businessCatalogApi.products({ type: 'bundle', archived: '1', limit: 200, offset: 0 }),
+      businessCatalogApi.products({ archived: '1', limit: 500, offset: 0 }),
       businessCatalogApi.discounts(),
     ]);
     brands.value = brandResponse.data.brands || [];
     categories.value = categoryResponse.data.categories || [];
     options.value = optionResponse.data.options || [];
     products.value = productResponse.data.products || [];
+    bundleProductRows.value = bundleProductResponse.data.products || [];
+    bundleComponentProductRows.value = componentProductResponse.data.products || [];
+    if (selectedBundleProductId.value < 1) {
+      const firstBundle = bundleProductRows.value[0];
+      selectedBundleProductId.value = Number(firstBundle?.id || 0);
+    }
+    productPagination.value = {
+      limit: Number(productResponse.data.pagination?.limit || productNumericPageLimit.value),
+      offset: Number(productResponse.data.pagination?.offset || pageOffset),
+      total: Number(productResponse.data.pagination?.total || products.value.length),
+    };
+    if (productPage.value > productPageCount.value) productPage.value = productPageCount.value;
     discounts.value = discountResponse.data.discounts || [];
+    if (selectedBundleProductId.value > 0) {
+      void loadSelectedBundle();
+    }
+    try {
+      const companyResponse = await businessCatalogApi.brandCompanies();
+      brandCompanies.value = companyResponse.data.companies || [];
+    } catch {
+      brandCompanies.value = [];
+    }
   } catch (err) {
     setError(err, 'Catalogue indisponible.');
   } finally {
@@ -331,7 +2576,8 @@ async function selectProduct(product: CatalogProduct): Promise<void> {
     selectedProduct.value = response.data.product;
     fillProductForm(response.data.product);
     selectedVariant.value = selectedProduct.value.variants?.[0] || null;
-    if (selectedVariant.value) await loadVariantStock(selectedVariant.value);
+    await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows()]);
+    if (selectedVariant.value) await Promise.all([loadVariantStock(selectedVariant.value), loadVariantAttributeValues(Number(selectedVariant.value.id || 0))]);
   } catch (err) {
     setError(err, 'Produit indisponible.');
   } finally {
@@ -339,11 +2585,14 @@ async function selectProduct(product: CatalogProduct): Promise<void> {
   }
 }
 
-async function saveProduct(): Promise<void> {
-  if (!canWrite.value) return;
+async function saveProduct(notify = true): Promise<boolean> {
+  if (!canWrite.value) return false;
   busy.value = 'product';
   try {
-    const id = selectedProductId.value;
+    const id = productForm.id;
+    const basePurchasePrice = productForm.base_purchase_price;
+    const baseSalePrice = productForm.base_sale_price;
+    const currency = productForm.currency || 'CHF';
     const response = id > 0
       ? await businessCatalogApi.updateProduct(id, productPayload())
       : await businessCatalogApi.createProduct(productPayload());
@@ -351,16 +2600,156 @@ async function saveProduct(): Promise<void> {
     fillProductForm(response.data.product);
     if (id > 0 && canPriceWrite.value) {
       await businessCatalogApi.updateBasePrices(id, {
-        base_purchase_price: canPurchaseRead.value ? productForm.base_purchase_price || undefined : undefined,
-        base_sale_price: productForm.base_sale_price || undefined,
-        currency: productForm.currency || 'CHF',
+        base_purchase_price: canPurchaseRead.value ? optionalMoneyPayload(basePurchasePrice) : undefined,
+        base_sale_price: optionalMoneyPayload(baseSalePrice),
+        currency,
       });
-      await selectProduct({ id, name: productForm.name });
+      await selectProduct({ id, name: response.data.product?.data?.name || productForm.name });
     }
     await loadCatalog();
-    setNotice('Produit enregistré.');
+    if (notify) setNotice('Produit enregistré.');
+    return true;
   } catch (err) {
     setError(err, 'Produit non enregistré.');
+    return false;
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveProductModal(): Promise<void> {
+  if (productModalScope.value !== 'attributes' || productModalMode.value !== 'edit') {
+    await saveProduct();
+    return;
+  }
+  const productId = selectedProductId.value;
+  const variantId = Number(selectedVariant.value?.id || 0);
+  const productValues = valuesPayloadFromForm(productAttributeForm);
+  const variantValues = valuesPayloadFromForm(variantAttributeForm);
+  const productSaved = await saveProduct(false);
+  if (!productSaved) return;
+  try {
+    busy.value = 'product-attributes';
+    const productResponse = await businessCatalogApi.updateProductAttributes(productId, { values: productValues });
+    productAttributeValues.value = productResponse.data.attributes || [];
+    applyAttributeValues('product', productAttributeValues.value);
+    if (variantId > 0) {
+      busy.value = 'variant-attributes';
+      const variantResponse = await businessCatalogApi.updateVariantAttributes(variantId, { values: variantValues });
+      variantAttributeValues.value = variantResponse.data.attributes || [];
+      applyAttributeValues('variant', variantAttributeValues.value);
+    }
+    await selectProduct({ id: productId, name: productForm.name });
+    setNotice('Produit et attributs enregistrés.');
+  } catch (err) {
+    setError(err, 'Attributs non enregistrés.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function duplicateSkuBase(value: unknown): string {
+  const base = normalizeSkuInput(value).slice(0, 64) || 'PRODUIT';
+  return `${base}COPIE${String(Date.now()).slice(-6)}`.slice(0, 80);
+}
+
+async function duplicateProduct(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (!canWrite.value || productId < 1) return;
+  closeCatalogMenus();
+  busy.value = `duplicate-product-${productId}`;
+  try {
+    const response = await businessCatalogApi.product(productId);
+    const detail = response.data.product;
+    const data = detail.data || product;
+    const prices = Array.isArray(detail.prices) ? detail.prices : [];
+    const sale = prices.find((price) => price.price_kind === 'sale');
+    const purchase = prices.find((price) => price.price_kind === 'purchase');
+    const currency = text(sale?.currency || purchase?.currency || 'CHF');
+    const payload: Record<string, unknown> = {
+      name: `${text(data.name || product.name)} copie`,
+      sku_base: duplicateSkuBase(data.sku_base || product.sku_base),
+      slug: `${text(data.slug || product.slug || data.name || product.name)}-copie-${String(Date.now()).slice(-6)}`,
+      type: text(data.type || product.type || 'physical'),
+      status: 'draft',
+      brand_id: idOrNull(data.brand_id || product.brand_id),
+      category_id: idOrNull(data.category_id || product.category_id),
+      short_description: text(data.short_description),
+      description: text(data.description),
+      is_public: false,
+      is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled ?? product.is_ecommerce_enabled),
+      is_pos_enabled: Boolean(data.is_pos_enabled ?? product.is_pos_enabled),
+      option_ids: Array.isArray(detail.options) ? detail.options.map((option) => Number(option.id || 0)).filter(Boolean) : [],
+      base_sale_price: sale?.amount ?? undefined,
+      currency: currency || 'CHF',
+    };
+    if (canPurchaseRead.value && purchase?.amount !== undefined && purchase?.amount !== null) {
+      payload.base_purchase_price = purchase.amount;
+    }
+    const created = await businessCatalogApi.createProduct(payload);
+    await loadCatalog();
+    if (created.data.product?.data) {
+      await selectProduct(created.data.product.data as CatalogProduct);
+    }
+    setNotice('Produit dupliqué en brouillon.');
+  } catch (err) {
+    setError(err, 'Produit non dupliqué.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function archiveProduct(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (!canWrite.value || productId < 1 || productIsArchived(product)) return;
+  closeCatalogMenus();
+  if (typeof window !== 'undefined' && !window.confirm(`Archiver le produit « ${product.name || productId} » ?`)) return;
+  busy.value = `archive-product-${productId}`;
+  try {
+    await businessCatalogApi.deleteProduct(productId);
+    if (productId === selectedProductId.value) {
+      resetProductForm(false);
+    }
+    await loadCatalog();
+    setNotice('Produit archivé.');
+  } catch (err) {
+    setError(err, 'Produit non archivé.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function restoreProduct(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (!canWrite.value || productId < 1 || !productIsArchived(product)) return;
+  closeCatalogMenus();
+  busy.value = `restore-product-${productId}`;
+  try {
+    await businessCatalogApi.restoreProduct(productId);
+    await loadCatalog();
+    setNotice('Produit désarchivé en brouillon.');
+  } catch (err) {
+    setError(err, 'Produit non désarchivé.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function purgeProduct(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (!canWrite.value || productId < 1 || !productIsArchived(product)) return;
+  closeCatalogMenus();
+  if (typeof window !== 'undefined' && !window.confirm(`Effacer définitivement le produit « ${product.name || productId} » ? Cette action est irréversible.`)) return;
+  busy.value = `purge-product-${productId}`;
+  try {
+    await businessCatalogApi.purgeProduct(productId);
+    if (productId === selectedProductId.value) {
+      resetProductForm(false);
+    }
+    await loadCatalog();
+    setNotice('Produit effacé définitivement.');
+  } catch (err) {
+    setError(err, 'Produit non effacé.');
   } finally {
     busy.value = '';
   }
@@ -379,9 +2768,9 @@ async function createVariant(): Promise<void> {
       stock_quantity: Number(variantForm.stock_quantity || 0),
       track_stock: variantForm.track_stock,
       purchase_adjustment_type: canPurchaseRead.value ? variantForm.purchase_adjustment_type : 'none',
-      purchase_adjustment_value: canPurchaseRead.value ? variantForm.purchase_adjustment_value || undefined : undefined,
+      purchase_adjustment_value: canPurchaseRead.value ? positiveAdjustmentValue(variantForm.purchase_adjustment_value, variantForm.purchase_adjustment_type) : undefined,
       sale_adjustment_type: variantForm.sale_adjustment_type,
-      sale_adjustment_value: variantForm.sale_adjustment_value || undefined,
+      sale_adjustment_value: positiveAdjustmentValue(variantForm.sale_adjustment_value, variantForm.sale_adjustment_type),
     });
     resetVariantForm();
     await selectProduct({ id: productId, name: productForm.name });
@@ -395,7 +2784,19 @@ async function createVariant(): Promise<void> {
 
 async function selectVariant(variant: CatalogVariant): Promise<void> {
   selectedVariant.value = variant;
-  await loadVariantStock(variant);
+  fillVariantFormFromVariant(variant);
+  await Promise.all([loadVariantStock(variant), loadVariantAttributeValues(Number(variant.id || 0))]);
+}
+
+async function selectVariantById(value: IdValue): Promise<void> {
+  const variant = selectedVariants.value.find((item) => Number(item.id || 0) === Number(value || 0));
+  if (!variant) {
+    selectedVariant.value = null;
+    variantAttributeValues.value = [];
+    applyAttributeValues('variant', []);
+    return;
+  }
+  await selectVariant(variant);
 }
 
 async function loadVariantStock(variant: CatalogVariant): Promise<void> {
@@ -410,15 +2811,23 @@ async function loadVariantStock(variant: CatalogVariant): Promise<void> {
   }
 }
 
+function positiveAdjustmentValue(value: unknown, type: unknown): number | undefined {
+  if (String(type || 'none') === 'none') return undefined;
+  if (value === null || value === undefined || String(value).trim() === '') return undefined;
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return undefined;
+  return Math.abs(amount);
+}
+
 async function saveVariantAdjustments(variant: CatalogVariant): Promise<void> {
   if (!canPriceWrite.value || !variant.id) return;
   busy.value = `variant-${variant.id}`;
   try {
     await businessCatalogApi.updateVariantPriceAdjustments(Number(variant.id), {
       sale_adjustment_type: variant.sale_adjustment_type || 'none',
-      sale_adjustment_value: variant.sale_adjustment_value || undefined,
+      sale_adjustment_value: positiveAdjustmentValue(variant.sale_adjustment_value, variant.sale_adjustment_type),
       purchase_adjustment_type: canPurchaseRead.value ? variant.purchase_adjustment_type || 'none' : undefined,
-      purchase_adjustment_value: canPurchaseRead.value ? variant.purchase_adjustment_value || undefined : undefined,
+      purchase_adjustment_value: canPurchaseRead.value ? positiveAdjustmentValue(variant.purchase_adjustment_value, variant.purchase_adjustment_type) : undefined,
     });
     await selectProduct({ id: selectedProductId.value, name: productForm.name });
     setNotice('Ajustements enregistrés.');
@@ -427,6 +2836,17 @@ async function saveVariantAdjustments(variant: CatalogVariant): Promise<void> {
   } finally {
     busy.value = '';
   }
+}
+
+async function saveSelectedVariantAdjustments(): Promise<void> {
+  if (!selectedVariant.value) return;
+  await saveVariantAdjustments({
+    ...selectedVariant.value,
+    purchase_adjustment_type: variantForm.purchase_adjustment_type,
+    purchase_adjustment_value: variantForm.purchase_adjustment_value,
+    sale_adjustment_type: variantForm.sale_adjustment_type,
+    sale_adjustment_value: variantForm.sale_adjustment_value,
+  });
 }
 
 async function createStockMovement(): Promise<void> {
@@ -537,6 +2957,132 @@ async function applyCatalogImport(): Promise<void> {
   }
 }
 
+async function previewBulkProductUpdate(): Promise<void> {
+  if (!canWrite.value || selectedProductsCount.value < 1 || !bulkHasProductChanges.value) return;
+  busy.value = 'bulk-preview';
+  try {
+    const response = await businessCatalogApi.bulkUpdateProducts({
+      product_ids: selectedProductIds.value,
+      changes: bulkProductChanges.value,
+      dry_run: true,
+    });
+    bulkReport.value = response.data.bulk;
+    setNotice(`${selectedProductsCount.value} produit(s) prêt(s) pour modification en masse.`);
+  } catch (err) {
+    setError(err, 'Prévisualisation en masse impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function applyBulkProductUpdate(): Promise<void> {
+  if (!canWrite.value || selectedProductsCount.value < 1 || !bulkHasProductChanges.value) return;
+  busy.value = 'bulk-apply';
+  try {
+    const response = await businessCatalogApi.bulkUpdateProducts({
+      product_ids: selectedProductIds.value,
+      changes: bulkProductChanges.value,
+      dry_run: false,
+    });
+    bulkReport.value = response.data.bulk;
+    await loadCatalog();
+    setNotice(`${Number(response.data.bulk.updated || 0)} produit(s) modifié(s).`);
+  } catch (err) {
+    setError(err, 'Modification en masse impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function recalculateSelectedProductCompleteness(): Promise<void> {
+  if (!canWrite.value || selectedProductsCount.value < 1) return;
+  busy.value = 'bulk-recalculate';
+  try {
+    const response = await businessCatalogApi.bulkRecalculateProducts({ product_ids: selectedProductIds.value });
+    bulkReport.value = response.data.bulk;
+    await loadCatalog();
+    setNotice(`${Number(response.data.bulk.recalculated || 0)} complétude(s) recalculée(s).`);
+  } catch (err) {
+    setError(err, 'Recalcul en masse impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function selectedOfferPayload(): Array<{ kind: OfferKind; id: number }> {
+  return selectedOfferRows.value.map((row) => ({ kind: row.kind, id: row.id }));
+}
+
+async function previewBulkOfferUpdate(): Promise<void> {
+  if (!canBulkOffersWrite.value || selectedOffersCount.value < 1 || !bulkHasOfferChanges.value) return;
+  busy.value = 'bulk-offer-preview';
+  try {
+    const response = await businessCatalogApi.bulkUpdateOffers({
+      offers: selectedOfferPayload(),
+      changes: bulkOfferChanges.value,
+      dry_run: true,
+    });
+    offerBulkReport.value = response.data.bulk;
+    setNotice(`${selectedOffersCount.value} offre(s) prête(s) pour modification en masse.`);
+  } catch (err) {
+    setError(err, 'Prévisualisation offres impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function applyBulkOfferUpdate(): Promise<void> {
+  if (!canBulkOffersWrite.value || selectedOffersCount.value < 1 || !bulkHasOfferChanges.value) return;
+  busy.value = 'bulk-offer-apply';
+  try {
+    const response = await businessCatalogApi.bulkUpdateOffers({
+      offers: selectedOfferPayload(),
+      changes: bulkOfferChanges.value,
+      dry_run: false,
+    });
+    offerBulkReport.value = response.data.bulk;
+    await loadCatalog();
+    setNotice(`${Number(response.data.bulk.updated || 0)} offre(s) modifiée(s).`);
+  } catch (err) {
+    setError(err, 'Modification en masse des offres impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function offerImportPayload(): Record<string, unknown> {
+  return { csv: offerImportCsvText.value };
+}
+
+async function previewOffersImport(): Promise<void> {
+  if (!canWrite.value || !offerImportCsvText.value.trim()) return;
+  busy.value = 'offers-csv-preview';
+  try {
+    const response = await businessCatalogApi.previewOffersImport(offerImportPayload());
+    offerImportReport.value = response.data.import;
+    setNotice(offerImportHasErrors.value ? 'Prévisualisation offres terminée avec erreurs.' : 'Prévisualisation offres valide.');
+  } catch (err) {
+    setError(err, 'Prévisualisation CSV offres impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function applyOffersImport(): Promise<void> {
+  if (!canWrite.value || !offerImportCsvText.value.trim() || offerImportHasErrors.value) return;
+  busy.value = 'offers-csv-apply';
+  try {
+    const response = await businessCatalogApi.applyOffersImport(offerImportPayload());
+    offerImportReport.value = response.data.import;
+    await loadCatalog();
+    setNotice('Import CSV offres appliqué.');
+  } catch (err) {
+    setError(err, 'Import CSV offres impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
 watch(() => props.fixedTab, (tab) => {
   if (tab && activeTab.value !== tab) {
     activeTab.value = tab;
@@ -544,9 +3090,19 @@ watch(() => props.fixedTab, (tab) => {
 });
 
 watch(() => context.siteId, () => { void loadCatalog(); });
+watch(() => productForm.attribute_group_ids.slice(), () => pruneAttributeForms());
+watch(() => [offerFilter.q, appliedOfferFilters.type, appliedOfferFilters.status, appliedOfferFilters.channel], () => { offerPage.value = 1; });
+watch(offerPageCount, (count) => {
+  if (offerPage.value > count) offerPage.value = count;
+});
 
 onMounted(async () => {
-  await loadCatalog();
+  loadReferenceLabels();
+  document.addEventListener('pointerdown', onDocumentPointerDown);
+  await Promise.all([loadCatalog(), loadMediaRows(), loadAttributeDefinitions()]);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocumentPointerDown);
 });
 </script>
 
@@ -563,52 +3119,150 @@ onMounted(async () => {
       <div v-if="!embedded" class="catalog-tabs card">
         <button class="btn" :class="{ primary: activeTab === 'products' }" type="button" @click="activeTab = 'products'">Produits</button>
         <button class="btn" :class="{ primary: activeTab === 'offers' }" type="button" @click="activeTab = 'offers'">Offres</button>
-        <button class="btn ghost" type="button" :disabled="loading" @click="loadCatalog">Actualiser</button>
       </div>
 
-      <div v-if="activeTab === 'products'" class="catalog-layout">
-        <aside class="card catalog-list-card">
-          <div class="panel__header">
-            <div>
-              <p class="eyebrow">Produits</p>
-              <h2>Catalogue</h2>
+      <div v-if="activeTab === 'products'" class="catalog-products-shell">
+        <section class="catalog-products-panel">
+          <BusinessPageHeader eyebrow="Catalogue" title="Produits">
+            <template #actions>
+              <button class="btn primary small" type="button" :disabled="!canWrite" @click="openCreateProduct">Nouveau produit</button>
+            </template>
+          </BusinessPageHeader>
+
+          <form class="catalog-toolbar" @submit.prevent="applyProductFilters">
+            <div class="catalog-search-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              <input v-model="productFilter.q" type="search" placeholder="Recherche produit, marque, catégorie, SKU" @keyup.enter="applyProductFilters">
+              <button v-if="productFilter.q" type="button" aria-label="Effacer la recherche" @click="productFilter.q = ''; applyProductFilters()">×</button>
             </div>
-            <button class="btn ghost" type="button" :disabled="!canWrite" @click="resetProductForm">Nouveau</button>
+            <div class="catalog-toolbar-buttons">
+              <details class="catalog-menu catalog-menu--filters">
+                <summary class="catalog-icon-summary" aria-label="Filtres produits" title="Filtres">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </summary>
+                <div class="catalog-menu-panel catalog-filter-panel">
+                  <strong>Filtres</strong>
+                  <label>
+                    <select v-model="productFilter.type" aria-label="Type">
+                      <option value="">Tous types</option>
+                      <option v-for="type in productTypes" :key="type" :value="type">{{ productTypeLabels[type] || type }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.status" aria-label="Statut">
+                      <option value="">Tous statuts</option>
+                      <option v-for="status in statuses" :key="status" :value="status">{{ productStatusLabels[status] || status }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.brand_id" aria-label="Marque">
+                      <option value="">Toutes marques</option>
+                      <option v-for="brand in brands" :key="brand.id" :value="brand.id">{{ brand.name }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.category_id" aria-label="Catégorie">
+                      <option value="">Toutes catégories</option>
+                      <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.channel" aria-label="Canal">
+                      <option value="">Tous canaux</option>
+                      <option value="public">Public</option>
+                      <option value="ecommerce">E-commerce</option>
+                      <option value="pos">POS</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.archived" aria-label="Archivage">
+                      <option value="">Masquer les archivés</option>
+                      <option value="1">Inclure les archivés</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.image" aria-label="Images">
+                      <option value="">Toutes images</option>
+                      <option value="with">Avec image</option>
+                      <option value="without">Sans image</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="productFilter.price" aria-label="Prix de vente">
+                      <option value="">Tous prix</option>
+                      <option value="with">Avec prix</option>
+                      <option value="without">Sans prix</option>
+                    </select>
+                  </label>
+                  <label><input v-model="productFilter.low_stock" type="checkbox"> Stock faible</label>
+                  <label><input v-model="productFilter.purchase_price" type="checkbox"> Prix d’achat manquant</label>
+                  <div class="catalog-filter-actions">
+                    <button class="btn small" type="submit" :disabled="loading">Appliquer</button>
+                    <button class="btn ghost small" type="button" :disabled="loading" @click="resetProductFilters">Réinitialiser</button>
+                  </div>
+                </div>
+              </details>
+              <details class="catalog-menu catalog-menu--columns">
+                <summary class="catalog-icon-summary" aria-label="Colonnes produits" title="Colonnes">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm5 0v14m6-14v14" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                </summary>
+                <div class="catalog-menu-panel catalog-column-panel">
+                  <strong>Colonnes</strong>
+                  <label v-for="column in productColumns" :key="column.key"><input v-model="visibleProductColumns[column.key]" type="checkbox"> {{ column.label }}</label>
+                </div>
+              </details>
+              <details class="catalog-menu catalog-menu--actions">
+                <summary aria-label="Actions produits" title="Actions">...</summary>
+                <div class="catalog-menu-panel">
+                  <button type="button" :disabled="!canWrite" @click="openProductReference('type')">Type</button>
+                  <button type="button" :disabled="!canWrite" @click="openProductReference('status')">Statut</button>
+                  <button type="button" :disabled="!canWrite" @click="openProductReference('brand')">Marque</button>
+                  <button type="button" :disabled="!canWrite" @click="openProductReference('category')">Catégorie</button>
+                  <button type="button" :disabled="!canWrite" @click="openAttributeSettings('groups')">Groupes</button>
+                  <button type="button" :disabled="!canWrite" @click="openAttributeSettings('attributes')">Attributs</button>
+                  <button type="button" :disabled="!canWrite" @click="openAttributeSettings('options')">Options</button>
+                  <a :href="exportCsvUrl">Exporter tout le catalogue</a>
+                  <a :href="exportIncompleteCsvUrl">Exporter les incomplets</a>
+                  <a :href="exportPosCsvUrl">Exporter POS</a>
+                  <a :href="exportEcommerceCsvUrl">Exporter e-commerce</a>
+                  <button type="button" :disabled="!canWrite" @click="showImportPanel = !showImportPanel; closeCatalogMenus()">Importer CSV</button>
+                </div>
+              </details>
+            </div>
+          </form>
+
+          <nav class="catalog-quick-filters" aria-label="Filtres rapides produits">
+            <button
+              v-for="filter in quickProductFilters"
+              :key="filter.key"
+              type="button"
+              :class="{ active: quickProductFilterActive(filter.key) }"
+              @click="applyQuickProductFilter(filter.key)"
+            >
+              {{ filter.label }}
+            </button>
+          </nav>
+
+          <div v-if="activeProductFilterChips.length" class="catalog-active-filters" aria-label="Filtres actifs">
+            <button
+              v-for="chip in activeProductFilterChips"
+              :key="chip.key"
+              type="button"
+              class="catalog-filter-chip"
+              :aria-label="`Retirer le filtre ${chip.label}`"
+              @click="removeProductFilterChip(chip.key)"
+            >
+              <span aria-hidden="true">×</span>
+              <strong>{{ chip.label }}</strong>
+            </button>
           </div>
 
-          <div class="catalog-filters">
-            <input v-model="productFilter.q" class="input" type="search" placeholder="Recherche" @keyup.enter="loadCatalog">
-            <select v-model="productFilter.type" class="select" @change="loadCatalog">
-              <option value="">Types</option>
-              <option v-for="type in productTypes" :key="type" :value="type">{{ type }}</option>
-            </select>
-            <select v-model="productFilter.status" class="select" @change="loadCatalog">
-              <option value="">Statuts</option>
-              <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
-            </select>
-            <select v-model="productFilter.brand_id" class="select" @change="loadCatalog">
-              <option value="">Marques</option>
-              <option v-for="brand in brands" :key="brand.id" :value="brand.id">{{ brand.name }}</option>
-            </select>
-            <select v-model="productFilter.category_id" class="select" @change="loadCatalog">
-              <option value="">Catégories</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
-            </select>
-            <select v-model="productFilter.channel" class="select" @change="loadCatalog">
-              <option value="">Canaux</option>
-              <option value="public">public</option>
-              <option value="ecommerce">e-commerce</option>
-              <option value="pos">POS</option>
-            </select>
-            <label class="checkbox-inline">
-              <input v-model="productFilter.low_stock" type="checkbox" @change="loadCatalog">
-              Stock faible
-            </label>
-          </div>
-
-          <div class="catalog-csv-panel">
+          <div v-if="showImportPanel" class="catalog-csv-panel">
             <div class="toolbar">
-              <a class="btn ghost" :href="exportCsvUrl">Exporter CSV</a>
+              <a class="btn ghost" :href="exportCsvUrl">Exporter tout</a>
+              <a class="btn ghost" :href="exportIncompleteCsvUrl">Incomplets</a>
+              <a class="btn ghost" :href="exportPosCsvUrl">POS</a>
+              <a class="btn ghost" :href="exportEcommerceCsvUrl">E-commerce</a>
               <button class="btn ghost" type="button" :disabled="!canWrite || !importCsvText.trim() || busy === 'csv-preview'" @click="previewCatalogImport">Prévisualiser</button>
               <button class="btn primary" type="button" :disabled="!canWrite || !importCsvText.trim() || importHasErrors || busy === 'csv-apply'" @click="applyCatalogImport">Importer</button>
             </div>
@@ -628,71 +3282,288 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="catalog-product-list">
-            <button
-              v-for="product in products"
-              :key="product.id"
-              class="catalog-product-row"
-              :class="{ active: product.id === selectedProductId }"
-              type="button"
-              @click="selectProduct(product)"
-            >
-              <span>
-                <strong>{{ product.name }}</strong>
-                <small>{{ product.type }} · {{ brandName(product.brand_id) }} · {{ categoryName(product.category_id) }}</small>
-              </span>
-              <StatusBadge :status="product.status || 'draft'" />
-              <small>{{ channelsFor(product).join(', ') || 'interne' }}</small>
-            </button>
+          <div v-if="selectedProductsCount > 0" class="catalog-bulk-panel">
+            <div class="catalog-bulk-panel__summary">
+              <strong>{{ selectedProductsCount }} produit(s) sélectionné(s)</strong>
+              <button class="btn ghost btn-sm" type="button" @click="clearBulkSelection">Vider</button>
+            </div>
+            <div class="catalog-bulk-grid">
+              <label>Statut
+                <select v-model="bulkProductForm.status" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="active">Actif</option>
+                </select>
+              </label>
+              <label>Marque
+                <select v-model="bulkProductForm.brand_id" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="0">Aucune marque</option>
+                  <option v-for="brand in brands" :key="Number(brand.id)" :value="String(brand.id)">{{ brand.name }}</option>
+                </select>
+              </label>
+              <label>Catégorie
+                <select v-model="bulkProductForm.category_id" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="0">Aucune catégorie</option>
+                  <option v-for="category in categories" :key="Number(category.id)" :value="String(category.id)">{{ category.name }}</option>
+                </select>
+              </label>
+              <label>Public
+                <select v-model="bulkProductForm.is_public" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="1">Activer</option>
+                  <option value="0">Désactiver</option>
+                </select>
+              </label>
+              <label>E-commerce
+                <select v-model="bulkProductForm.is_ecommerce_enabled" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="1">Activer</option>
+                  <option value="0">Désactiver</option>
+                </select>
+              </label>
+              <label>POS
+                <select v-model="bulkProductForm.is_pos_enabled" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="1">Activer</option>
+                  <option value="0">Désactiver</option>
+                </select>
+              </label>
+              <label class="checkbox-inline catalog-bulk-checkbox"><input v-model="bulkProductForm.archive" type="checkbox" :disabled="!canWrite"> Archiver</label>
+            </div>
+            <div class="toolbar">
+              <button class="btn ghost" type="button" :disabled="!canWrite || !bulkHasProductChanges || busy === 'bulk-preview'" @click="previewBulkProductUpdate">Prévisualiser</button>
+              <button class="btn primary" type="button" :disabled="!canWrite || !bulkHasProductChanges || busy === 'bulk-apply'" @click="applyBulkProductUpdate">Appliquer</button>
+              <button class="btn ghost" type="button" :disabled="!canWrite || busy === 'bulk-recalculate'" @click="recalculateSelectedProductCompleteness">Recalculer complétude</button>
+              <button class="btn ghost" type="button" @click="resetBulkProductForm">Réinitialiser</button>
+            </div>
+            <small v-if="bulkReport" class="muted">
+              Dry-run: {{ bulkReport.dry_run ? 'oui' : 'non' }} · Modifiés: {{ bulkReport.updated ?? 0 }} · Recalculés: {{ bulkReport.recalculated ?? 0 }}
+            </small>
           </div>
-        </aside>
 
+          <div class="catalog-products-table table-wrap">
+            <table class="table catalog-table">
+              <thead>
+                <tr>
+                  <th class="catalog-select-col">
+                    <input
+                      type="checkbox"
+                      :checked="allVisibleProductsSelected"
+                      :indeterminate.prop="someVisibleProductsSelected && !allVisibleProductsSelected"
+                      aria-label="Sélectionner les produits visibles"
+                      @change="toggleVisibleProductSelection(checkedFromEvent($event))"
+                    >
+                  </th>
+                  <th v-if="productColumnVisible('sku')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('sku')" @click="setProductSort('sku')">SKU<span :class="{ active: productSort.key === 'sku' }">{{ productSort.key === 'sku' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('product')" @click="setProductSort('product')">Produit<span :class="{ active: productSort.key === 'product' }">{{ productSort.key === 'product' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('brand')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('brand')" @click="setProductSort('brand')">Marque / Catégorie<span :class="{ active: productSort.key === 'brand' }">{{ productSort.key === 'brand' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('variants')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('variants')" @click="setProductSort('variants')">Variantes<span :class="{ active: productSort.key === 'variants' }">{{ productSort.key === 'variants' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('stock')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('stock')" @click="setProductSort('stock')">Stock<span :class="{ active: productSort.key === 'stock' }">{{ productSort.key === 'stock' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('price')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('price')" @click="setProductSort('price')">Vente / Achat<span :class="{ active: productSort.key === 'price' }">{{ productSort.key === 'price' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('image')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('image')" @click="setProductSort('image')">Image<span :class="{ active: productSort.key === 'image' }">{{ productSort.key === 'image' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('channels')" class="catalog-channel-col"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('channels')" @click="setProductSort('channels')">Canaux<span :class="{ active: productSort.key === 'channels' }">{{ productSort.key === 'channels' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('status')" class="catalog-status-col"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('status')" @click="setProductSort('status')">Statut<span :class="{ active: productSort.key === 'status' }">{{ productSort.key === 'status' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th v-if="productColumnVisible('quality')"><button class="catalog-sort-button" type="button" :aria-label="productSortLabel('quality')" @click="setProductSort('quality')">Complétude<span :class="{ active: productSort.key === 'quality' }">{{ productSort.key === 'quality' && productSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="product in sortedProducts"
+                  :key="product.id"
+                  class="catalog-table-row"
+                  :class="{ active: product.id === selectedProductId, 'is-archived': productIsArchived(product) }"
+                  @click="!productIsArchived(product) && selectProduct(product)"
+                >
+                  <td class="catalog-select-col" @click.stop>
+                    <input
+                      type="checkbox"
+                      :checked="productSelected(product)"
+                      :aria-label="`Sélectionner ${product.name}`"
+                      @change="toggleProductSelection(product, checkedFromEvent($event))"
+                    >
+                  </td>
+                  <td v-if="productColumnVisible('sku')" class="catalog-sku-cell" @click.stop="!productIsArchived(product) && openEditProduct(product, 'identity', 'sku')">
+                    <code>{{ product.sku_base || '—' }}</code>
+                  </td>
+                  <td class="catalog-product-cell">
+                    <button v-if="!productIsArchived(product)" class="catalog-product-name" type="button" @click.stop="openEditProduct(product, 'identity', 'name_type')">{{ product.name }}</button>
+                    <strong v-else class="catalog-product-name catalog-product-name--static">{{ product.name }}</strong>
+                    <small>{{ product.type || 'produit' }}</small>
+                  </td>
+                  <td v-if="productColumnVisible('brand')" @click.stop="!productIsArchived(product) && openEditProduct(product, 'classification')">
+                    <span>{{ brandName(product.brand_id) }}</span>
+                    <small>{{ categoryName(product.category_id) }}</small>
+                  </td>
+                  <td v-if="productColumnVisible('variants')" @click.stop="!productIsArchived(product) && selectProduct(product)">
+                    <div v-if="hasInactiveVariants(product)" class="catalog-cell-inline">
+                      <span class="catalog-signal catalog-signal--muted">Variante inactive</span>
+                    </div>
+                    <div v-else class="catalog-cell-inline"><strong class="catalog-variant-count">{{ variantActivityLabel(product) }}</strong></div>
+                  </td>
+                  <td v-if="productColumnVisible('stock')" @click.stop="!productIsArchived(product) && openEditProduct(product, 'stock')">
+                    <div class="catalog-cell-inline catalog-cell-inline--wrap">
+                      <span class="catalog-signal" :class="`catalog-signal--${stockSignal(product).tone}`">{{ stockSignal(product).label }}</span>
+                      <span>{{ stockSummaryLabel(product) }}</span>
+                    </div>
+                  </td>
+                  <td v-if="productColumnVisible('price')" @click.stop="!productIsArchived(product) && openEditProduct(product, 'prices')">
+                    <div v-if="productHasAnyPrice(product)" class="catalog-cell-inline">
+                      <span>{{ pricePairLabel(product) }}</span>
+                    </div>
+                    <div v-if="!hasProductSalePrice(product)" class="catalog-cell-inline">
+                      <span class="catalog-signal catalog-signal--danger">Prix manquant</span>
+                    </div>
+                  </td>
+                  <td v-if="productColumnVisible('image')" @click.stop="!productIsArchived(product) && openProductMedia(product)">
+                    <div class="catalog-cell-inline">
+                      <span class="catalog-signal" :class="hasProductImage(product) ? 'catalog-signal--success' : 'catalog-signal--warning'">
+                        {{ hasProductImage(product) ? mediaCountLabel(product) : 'Image manquante' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td v-if="productColumnVisible('channels')" class="catalog-channel-col" @click.stop="!productIsArchived(product) && openEditProduct(product, 'channels')">
+                    <div class="catalog-cell-inline catalog-cell-inline--wrap">
+                      <span v-for="(signal, index) in channelReadinessSignals(product)" :key="`${product.id}-channel-${signal.label}-${index}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+                    </div>
+                  </td>
+                  <td v-if="productColumnVisible('status')" class="catalog-status-col" @click.stop="!productIsArchived(product) && openEditProduct(product, 'classification', 'status')">
+                    <div class="catalog-cell-inline">
+                      <span class="badge" :class="product.status || 'draft'">{{ productStatusLabel(product.status) }}</span>
+                    </div>
+                  </td>
+                  <td v-if="productColumnVisible('quality')" @click.stop="!productIsArchived(product) && openProductAttributes(product)">
+                    <div class="catalog-cell-inline">
+                      <span class="catalog-completeness" :class="{ 'is-low': Number(product.completeness_score ?? 0) < 80 }">{{ completenessLabel(product) }}</span>
+                      <span v-for="signal in qualitySignals(product)" :key="`${product.id}-quality-${signal.label}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+                    </div>
+                  </td>
+                  <td class="action-cell catalog-actions-cell">
+                    <button class="btn ghost btn-sm" type="button" @click.stop="openViewProduct(product)">Voir</button>
+                    <details class="catalog-menu" @click.stop>
+                      <summary class="catalog-row-menu-summary" :aria-label="`Actions pour ${product.name}`">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>
+                      </summary>
+                      <div class="catalog-menu-panel">
+                        <template v-if="productIsArchived(product)">
+                          <button type="button" :disabled="!canWrite || busy === `restore-product-${product.id}`" @click.stop="restoreProduct(product)">Désarchiver</button>
+                          <button type="button" class="danger-action" :disabled="!canWrite || busy === `purge-product-${product.id}`" @click.stop="purgeProduct(product)">Effacer définitivement</button>
+                        </template>
+                        <template v-else>
+                          <button type="button" :disabled="!canWrite" @click.stop="openEditProduct(product)">Éditer</button>
+                          <button type="button" :disabled="!canWrite" @click.stop="openProductMedia(product)">Médias</button>
+                          <button type="button" :disabled="!canWrite" @click.stop="openProductAttributes(product)">Attributs du produit</button>
+                          <button type="button" :disabled="!canPriceWrite" @click.stop="openVariantPriceAdjustments(product)">Ajustements prix</button>
+                          <button type="button" :disabled="!canWrite || busy === `duplicate-product-${product.id}`" @click.stop="duplicateProduct(product)">Dupliquer</button>
+                          <button type="button" :disabled="!canWrite || busy === `archive-product-${product.id}`" @click.stop="archiveProduct(product)">Archiver</button>
+                        </template>
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+                <tr v-if="sortedProducts.length === 0">
+                  <td colspan="11" class="muted">Aucun produit ne correspond aux filtres.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="catalog-pagination" aria-label="Pagination produits">
+            <label>
+              Lignes
+              <select class="select" :value="productPageSize" @change="onProductPageSizeChange">
+                <option v-for="size in productPageSizeOptions" :key="String(size)" :value="size">{{ productPageSizeLabel(size) }}</option>
+              </select>
+            </label>
+            <span>{{ productPaginationLabel }}</span>
+            <div class="catalog-pagination-actions">
+              <button class="btn ghost btn-sm" type="button" :disabled="productPage <= 1 || loading || productPageSize === 'all'" @click="setProductPage(productPage - 1)">Précédent</button>
+              <strong>Page {{ productPage }} / {{ productPageCount }}</strong>
+              <button class="btn ghost btn-sm" type="button" :disabled="productPage >= productPageCount || loading || productPageSize === 'all'" @click="setProductPage(productPage + 1)">Suivant</button>
+            </div>
+          </div>
+        </section>
+
+        <!--
         <main class="catalog-detail">
           <div class="card">
             <div class="panel__header">
               <div>
                 <p class="eyebrow">Produit</p>
-                <h2>{{ productForm.id ? productForm.name : 'Nouveau produit' }}</h2>
+                <h2>{{ productData?.name || 'Sélectionnez un produit' }}</h2>
               </div>
-              <button class="btn primary" type="button" :disabled="!canWrite || busy === 'product'" @click="saveProduct">Enregistrer</button>
+              <button class="btn primary" type="button" :disabled="!canWrite || !selectedProduct" @click="openEditProduct()">Modifier</button>
             </div>
 
-            <div class="catalog-form-grid">
-              <label class="field">Nom<input v-model="productForm.name" class="input" :disabled="!canWrite"></label>
-              <label class="field">Slug<input v-model="productForm.slug" class="input" :disabled="!canWrite"></label>
-              <label class="field">Type<select v-model="productForm.type" class="select" :disabled="!canWrite"><option v-for="type in productTypes" :key="type" :value="type">{{ type }}</option></select></label>
-              <label class="field">Statut<select v-model="productForm.status" class="select" :disabled="!canWrite"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
-              <label class="field">Marque<select v-model="productForm.brand_id" class="select" :disabled="!canWrite"><option value="">Aucune</option><option v-for="brand in brands" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
-              <label class="field">Catégorie<select v-model="productForm.category_id" class="select" :disabled="!canWrite"><option value="">Aucune</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
-              <label class="field wide">Résumé<textarea v-model="productForm.short_description" class="input" rows="2" :disabled="!canWrite"></textarea></label>
-              <label class="field wide">Description<textarea v-model="productForm.description" class="input" rows="4" :disabled="!canWrite"></textarea></label>
+            <div class="catalog-detail-nav">
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'summary' }" type="button" @click="setProductSection('summary')">Résumé</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'variants' }" type="button" @click="setProductSection('variants')">Variantes</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'prices' }" type="button" @click="setProductSection('prices')">Prix</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'media' }" type="button" @click="setProductSection('media')">Médias</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'attributes' }" type="button" @click="setProductSection('attributes')">Attributs</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'quality' }" type="button" @click="setProductSection('quality')">Qualité</button>
+              <button class="btn ghost btn-sm" :class="{ active: activeProductSection === 'channels' }" type="button" @click="setProductSection('channels')">Canaux</button>
             </div>
 
-            <div class="catalog-section">
+            <div v-if="selectedProductSummary" class="catalog-summary-grid">
+              <div class="catalog-summary-card">
+                <span>Variantes actives</span>
+                <strong>{{ selectedProductSummary.active_variant_count ?? 0 }} / {{ selectedProductSummary.variant_count ?? 0 }}</strong>
+              </div>
+              <div class="catalog-summary-card">
+                <span>Prix de vente</span>
+                <strong>{{ priceLabel(selectedProductSummary.sale_price_min) }}</strong>
+              </div>
+              <div class="catalog-summary-card">
+                <span>Médias</span>
+                <strong>{{ selectedProductSummary.image_count ?? 0 }}</strong>
+              </div>
+              <div class="catalog-summary-card">
+                <span>Complétude</span>
+                <strong>{{ selectedProductSummary.completeness_score === null || selectedProductSummary.completeness_score === undefined ? 'Non calculée' : `${selectedProductSummary.completeness_score}%` }}</strong>
+              </div>
+            </div>
+
+            <div v-if="selectedProductSignals.length" class="catalog-quality-strip">
+              <span v-for="signal in selectedProductSignals" :key="`selected-${signal.label}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+            </div>
+
+            <div v-if="productData" class="catalog-read-grid" :class="{ 'catalog-section-focus': activeProductSection === 'summary' }">
+              <div><span>Nom</span><strong>{{ productData.name }}</strong></div>
+              <div><span>Slug</span><strong>{{ productData.slug || '—' }}</strong></div>
+              <div><span>Type</span><strong>{{ productTypeLabels[String(productData.type || '')] || productData.type || '—' }}</strong></div>
+              <div><span>Statut</span><StatusBadge :status="productData.status || 'draft'" /></div>
+              <div><span>Marque</span><strong>{{ brandName(productData.brand_id) }}</strong></div>
+              <div><span>Catégorie</span><strong>{{ categoryName(productData.category_id) }}</strong></div>
+              <div class="wide"><span>Résumé</span><p>{{ productData.short_description || '—' }}</p></div>
+              <div class="wide"><span>Description</span><p>{{ productData.description || '—' }}</p></div>
+            </div>
+            <p v-else class="muted">Choisissez un produit dans la liste pour afficher sa fiche.</p>
+
+            <div v-if="productData" class="catalog-section" :class="{ 'catalog-section-focus': activeProductSection === 'channels' }">
               <h3>Canaux</h3>
-              <div class="toolbar">
-                <label class="checkbox-inline"><input v-model="productForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
-                <label class="checkbox-inline"><input v-model="productForm.is_ecommerce_enabled" type="checkbox" :disabled="!canWrite"> E-commerce</label>
-                <label class="checkbox-inline"><input v-model="productForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
+              <div class="token-row token-row--wrap">
+                <span v-for="channel in channelsFor(productData)" :key="`detail-${channel}`" class="token">{{ channel }}</span>
+                <span v-if="channelsFor(productData).length === 0" class="muted">interne</span>
               </div>
             </div>
 
-            <div class="catalog-section">
-              <h3>Prix de base</h3>
-              <div class="catalog-form-grid">
-                <label v-if="canPurchaseRead" class="field">Prix d'achat de base<input v-model="productForm.base_purchase_price" class="input" :disabled="!canPriceWrite"></label>
-                <label class="field">Prix de vente de base<input v-model="productForm.base_sale_price" class="input" :disabled="!canPriceWrite"></label>
-                <label class="field">Devise<input v-model="productForm.currency" class="input" :disabled="!canPriceWrite"></label>
+            <div v-if="productData" class="catalog-section" :class="{ 'catalog-section-focus': activeProductSection === 'prices' }">
+              <h3>Schéma des prix</h3>
+              <div class="catalog-read-grid catalog-price-grid">
+                <div><span>Devise</span><strong>{{ productForm.currency || 'CHF' }}</strong></div>
+                <div v-if="canPurchaseRead"><span>Prix d'achat (base HT)</span><strong>{{ productForm.base_purchase_price || '—' }} {{ productForm.currency }}</strong></div>
+                <div><span>Prix de vente (base HT)</span><strong>{{ productForm.base_sale_price || priceLabel(selectedProductSummary?.sale_price_min) }}</strong></div>
               </div>
             </div>
 
-            <div class="catalog-section">
+            <div v-if="productData" class="catalog-section" :class="{ 'catalog-section-focus': activeProductSection === 'attributes' }">
               <h3>Options utilisées</h3>
-              <div class="option-grid">
-                <label v-for="option in options" :key="option.id" class="checkbox-inline">
-                  <input v-model="productForm.option_ids" type="checkbox" :value="option.id" :disabled="!canWrite || productForm.id > 0">
-                  {{ option.name }}
-                </label>
+              <div class="token-row token-row--wrap">
+                <span v-for="option in selectedProduct?.options || []" :key="Number(option.id)" class="token">{{ option.name }}</span>
+                <span v-if="!(selectedProduct?.options || []).length" class="muted">Aucune option.</span>
               </div>
             </div>
           </div>
@@ -704,7 +3575,7 @@ onMounted(async () => {
                 <h2>Prix calculés et stock</h2>
               </div>
             </div>
-            <div class="table-wrap">
+            <div class="table-wrap" :class="{ 'catalog-section-focus': activeProductSection === 'variants' }">
               <table class="table">
                 <thead>
                   <tr>
@@ -810,75 +3681,1025 @@ onMounted(async () => {
               </div>
             </div>
           </div>
+
+          <div class="grid grid-2">
+            <div class="card catalog-section" :class="{ 'catalog-section-focus': activeProductSection === 'media' }">
+              <h3>Médias</h3>
+              <p class="muted">Les médias produit dédiés arrivent au point 12. Pour l’instant, cette section signale surtout les produits sans image dans la liste.</p>
+              <div class="catalog-quality-strip">
+                <span class="catalog-signal" :class="Number(selectedProductSummary?.image_count || 0) > 0 ? 'catalog-signal--success' : 'catalog-signal--warning'">
+                  {{ Number(selectedProductSummary?.image_count || 0) > 0 ? 'Image disponible' : 'Image manquante' }}
+                </span>
+              </div>
+            </div>
+            <div class="card catalog-section" :class="{ 'catalog-section-focus': activeProductSection === 'quality' }">
+              <h3>Qualité</h3>
+              <p class="muted">La complétude détaillée sera pilotée par les règles PIM du point 14. Les alertes visibles ici reprennent déjà les manques critiques.</p>
+              <div class="catalog-quality-strip">
+                <span v-for="signal in selectedProductSignals" :key="`quality-${signal.label}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+                <span v-if="selectedProductSignals.length === 0" class="catalog-signal catalog-signal--success">Aucun blocage visible</span>
+              </div>
+            </div>
+          </div>
         </main>
+        -->
       </div>
 
-      <div v-else class="catalog-layout catalog-layout--offers">
-        <section class="card">
-          <div class="panel__header">
-            <div>
-              <p class="eyebrow">Offres</p>
-              <h2>Réductions simples</h2>
+      <div v-else class="catalog-products-shell catalog-offers-shell">
+        <section class="catalog-products-panel">
+          <BusinessPageHeader eyebrow="Catalogue" title="Offres">
+            <template #actions>
+              <button class="btn primary small" type="button" :disabled="!canWrite" @click="openCreateBundleOffer">Nouveau bundle</button>
+              <button class="btn ghost small" type="button" :disabled="!canDiscountWrite" @click="openCreateDiscountOffer">Nouvelle réduction</button>
+            </template>
+          </BusinessPageHeader>
+
+          <form class="catalog-toolbar" @submit.prevent="applyOfferFilters">
+            <div class="catalog-search-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              <input v-model="offerFilter.q" type="search" placeholder="Recherche offre, bundle, réduction, SKU">
+              <button v-if="offerFilter.q" type="button" aria-label="Effacer la recherche" @click="offerFilter.q = ''">×</button>
             </div>
-            <button class="btn ghost" type="button" :disabled="!canDiscountWrite" @click="fillDiscountForm()">Nouvelle</button>
+            <div class="catalog-toolbar-buttons">
+              <details class="catalog-menu catalog-menu--filters">
+                <summary class="catalog-icon-summary" aria-label="Filtres offres" title="Filtres">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                </summary>
+                <div class="catalog-menu-panel catalog-filter-panel">
+                  <strong>Filtres</strong>
+                  <label>
+                    <select v-model="offerFilter.type" aria-label="Type">
+                      <option value="">Tous types</option>
+                      <option value="bundle">Bundle</option>
+                      <option value="discount">Réduction</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="offerFilter.status" aria-label="Statut">
+                      <option value="">Tous statuts</option>
+                      <option value="draft">Brouillon</option>
+                      <option value="active">Actif</option>
+                      <option value="archived">Archivé</option>
+                    </select>
+                  </label>
+                  <label>
+                    <select v-model="offerFilter.channel" aria-label="Canal">
+                      <option value="">Tous canaux</option>
+                      <option value="all">Tous</option>
+                      <option value="public">Public</option>
+                      <option value="ecommerce">E-commerce</option>
+                      <option value="pos">POS</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                  <button class="btn small" type="submit" :disabled="loading">Appliquer</button>
+                </div>
+              </details>
+              <details class="catalog-menu catalog-menu--actions">
+                <summary aria-label="Actions offres" title="Actions">...</summary>
+                <div class="catalog-menu-panel">
+                  <button type="button" :disabled="!canWrite" @click="openCreateBundleOffer">Nouveau bundle</button>
+                  <button type="button" :disabled="!canDiscountWrite" @click="openCreateDiscountOffer">Nouvelle réduction</button>
+                  <a :href="exportOffersCsvUrl">Exporter offres</a>
+                  <a :href="exportBundlesCsvUrl">Exporter bundles</a>
+                  <a :href="exportDiscountsCsvUrl">Exporter réductions</a>
+                  <button type="button" :disabled="!canWrite" @click="showOfferImportPanel = !showOfferImportPanel; closeCatalogMenus()">Importer CSV offres</button>
+                </div>
+              </details>
+            </div>
+          </form>
+
+          <div v-if="activeOfferFilterChips.length" class="catalog-active-filters" aria-label="Filtres actifs offres">
+            <button
+              v-for="chip in activeOfferFilterChips"
+              :key="chip.key"
+              type="button"
+              class="catalog-filter-chip"
+              :aria-label="`Retirer le filtre ${chip.label}`"
+              @click="removeOfferFilterChip(chip.key)"
+            >
+              <span aria-hidden="true">×</span>
+              <strong>{{ chip.label }}</strong>
+            </button>
           </div>
-          <div class="table-wrap">
-            <table class="table">
+
+          <div v-if="showOfferImportPanel" class="catalog-csv-panel">
+            <div class="toolbar">
+              <a class="btn ghost" :href="exportOffersCsvUrl">Exporter tout</a>
+              <a class="btn ghost" :href="exportBundlesCsvUrl">Bundles</a>
+              <a class="btn ghost" :href="exportDiscountsCsvUrl">Réductions</a>
+              <button class="btn ghost" type="button" :disabled="!canWrite || !offerImportCsvText.trim() || busy === 'offers-csv-preview'" @click="previewOffersImport">Prévisualiser</button>
+              <button class="btn primary" type="button" :disabled="!canWrite || !offerImportCsvText.trim() || offerImportHasErrors || busy === 'offers-csv-apply'" @click="applyOffersImport">Importer</button>
+            </div>
+            <textarea v-model="offerImportCsvText" class="input catalog-csv-input" rows="5" :disabled="!canWrite" placeholder="Coller un CSV offres"></textarea>
+            <div v-if="offerImportReport" class="catalog-import-report" :class="{ 'has-errors': offerImportHasErrors }">
+              <strong>{{ offerImportReport.valid_rows || 0 }} ligne(s) valides / {{ offerImportReport.rows_total || 0 }}</strong>
+              <span>{{ offerImportReport.skipped || 0 }} erreur(s)</span>
+              <small v-for="row in offerImportReport.rows || []" :key="Number(row.line || 0)">
+                Ligne {{ row.line }} · {{ row.status }} · {{ row.action || '' }}
+              </small>
+            </div>
+          </div>
+
+          <div v-if="selectedOffersCount > 0" class="catalog-bulk-panel">
+            <div class="catalog-bulk-panel__summary">
+              <strong>{{ selectedOffersCount }} offre(s) sélectionnée(s)</strong>
+              <button class="btn ghost btn-sm" type="button" @click="clearOfferBulkSelection">Vider</button>
+            </div>
+            <div class="catalog-bulk-grid">
+              <label>Statut
+                <select v-model="bulkOfferForm.status" class="select" :disabled="!canBulkOffersWrite">
+                  <option value="">Conserver</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="active">Actif</option>
+                </select>
+              </label>
+              <label>Canal
+                <select v-model="bulkOfferForm.channel" class="select" :disabled="!canBulkOffersWrite">
+                  <option value="">Conserver</option>
+                  <option value="all">Tous</option>
+                  <option value="public">Public</option>
+                  <option value="ecommerce">E-commerce</option>
+                  <option value="pos">POS</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label class="checkbox-inline catalog-bulk-checkbox"><input v-model="bulkOfferForm.archive" type="checkbox" :disabled="!canBulkOffersWrite"> Archiver</label>
+            </div>
+            <div class="toolbar">
+              <button class="btn ghost" type="button" :disabled="!canBulkOffersWrite || !bulkHasOfferChanges || busy === 'bulk-offer-preview'" @click="previewBulkOfferUpdate">Prévisualiser</button>
+              <button class="btn primary" type="button" :disabled="!canBulkOffersWrite || !bulkHasOfferChanges || busy === 'bulk-offer-apply'" @click="applyBulkOfferUpdate">Appliquer</button>
+              <button class="btn ghost" type="button" @click="resetBulkOfferForm">Réinitialiser</button>
+            </div>
+            <small v-if="offerBulkReport" class="muted">
+              Dry-run: {{ offerBulkReport.dry_run ? 'oui' : 'non' }} · Modifiées: {{ offerBulkReport.updated ?? 0 }}
+            </small>
+          </div>
+
+          <div class="catalog-products-table table-wrap catalog-offers-table-wrap">
+            <table class="table catalog-table">
               <thead>
                 <tr>
-                  <th>Nom</th>
-                  <th>Statut</th>
-                  <th>Type</th>
-                  <th>Valeur</th>
-                  <th>Portée</th>
-                  <th>Canal</th>
-                  <th>Dates</th>
-                  <th>Priorité</th>
-                  <th>Actions</th>
+                  <th class="catalog-select-col">
+                    <input
+                      type="checkbox"
+                      :checked="allVisibleOffersSelected"
+                      :indeterminate.prop="someVisibleOffersSelected && !allVisibleOffersSelected"
+                      aria-label="Sélectionner les offres visibles"
+                      @change="toggleVisibleOfferSelection(checkedFromEvent($event))"
+                    >
+                  </th>
+                  <th><button class="catalog-sort-button" type="button" :aria-label="offerSortLabel('type')" @click="setOfferSort('type')">TYPE<span :class="{ active: offerSort.key === 'type' }">{{ offerSort.key === 'type' && offerSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th><button class="catalog-sort-button" type="button" :aria-label="offerSortLabel('name')" @click="setOfferSort('name')">NOM<span :class="{ active: offerSort.key === 'name' }">{{ offerSort.key === 'name' && offerSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th><button class="catalog-sort-button" type="button" :aria-label="offerSortLabel('status')" @click="setOfferSort('status')">STATUT<span :class="{ active: offerSort.key === 'status' }">{{ offerSort.key === 'status' && offerSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th><button class="catalog-sort-button" type="button" :aria-label="offerSortLabel('channels')" @click="setOfferSort('channels')">CANAUX<span :class="{ active: offerSort.key === 'channels' }">{{ offerSort.key === 'channels' && offerSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                  <th>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="discount in discounts" :key="discount.id">
-                  <td>{{ discount.name }}</td>
-                  <td><StatusBadge :status="discount.status || 'active'" /></td>
-                  <td>{{ discount.discount_type }}</td>
-                  <td>{{ discount.discount_value }} {{ discount.discount_type === 'amount' ? discount.currency : '%' }}</td>
-                  <td>{{ discount.scope_type }} · {{ discountScopeLabel(discount) }}</td>
-                  <td>{{ discount.channel }}</td>
-                  <td>{{ discount.starts_at || '—' }} → {{ discount.ends_at || '—' }}</td>
-                  <td>{{ discount.priority }}</td>
-                  <td class="action-cell">
-                    <button class="btn ghost btn-sm" type="button" @click="fillDiscountForm(discount)">Modifier</button>
-                    <button class="btn ghost btn-sm" type="button" :disabled="!canDiscountWrite || busy === `discount-${discount.id}`" @click="archiveDiscount(discount)">Archiver</button>
+                <tr v-for="row in paginatedOfferRows" :key="row.key">
+                  <td class="catalog-select-col" @click.stop>
+                    <input
+                      type="checkbox"
+                      :checked="offerSelected(row)"
+                      :aria-label="`Sélectionner ${row.name}`"
+                      @change="toggleOfferSelection(row, checkedFromEvent($event))"
+                    >
                   </td>
+                  <td><span class="catalog-signal" :class="row.kind === 'bundle' ? 'catalog-signal--success' : 'catalog-signal--muted'">{{ offerKindLabel(row.kind) }}</span></td>
+                  <td>
+                    <div class="catalog-product-name">
+                      <strong>{{ row.name }}</strong>
+                      <span>{{ row.detail }}</span>
+                    </div>
+                  </td>
+                  <td><span class="badge" :class="row.status">{{ productStatusLabel(row.status) }}</span></td>
+                  <td>
+                    <div class="catalog-cell-inline catalog-cell-inline--wrap">
+                      <span v-for="channel in row.channels" :key="`${row.key}-${channel}`" class="catalog-signal catalog-signal--muted">{{ offerChannelLabel(channel) }}</span>
+                    </div>
+                  </td>
+                  <td class="action-cell catalog-actions-cell">
+                    <button class="btn ghost btn-sm" type="button" @click.stop="openViewOffer(row)">Voir</button>
+                    <details class="catalog-menu" @click.stop>
+                      <summary class="catalog-row-menu-summary" :aria-label="`Actions pour ${row.name}`">
+                        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>
+                      </summary>
+                      <div class="catalog-menu-panel">
+                        <button type="button" :disabled="row.kind === 'bundle' ? !canWrite : !canDiscountWrite" @click.stop="openEditOffer(row)">Éditer</button>
+                        <button type="button" :disabled="row.kind === 'bundle' ? !canWrite : !canDiscountWrite" @click.stop="duplicateOffer(row)">Dupliquer</button>
+                        <button type="button" class="danger-action" :disabled="row.kind === 'bundle' ? !canWrite : !canDiscountWrite" @click.stop="archiveOffer(row)">Archiver</button>
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+                <tr v-if="filteredOfferRows.length === 0">
+                  <td colspan="6" class="muted">Aucune offre ne correspond aux filtres.</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </section>
-
-        <aside class="card catalog-editor-card">
-          <div class="panel__header">
-            <div>
-              <p class="eyebrow">Édition</p>
-              <h2>{{ discountForm.id ? discountForm.name : 'Nouvelle offre' }}</h2>
+          <div class="catalog-pagination" aria-label="Pagination offres">
+            <label>
+              Lignes
+              <select class="select" :value="offerPageSize" @change="onOfferPageSizeChange">
+                <option v-for="size in offerPageSizeOptions" :key="String(size)" :value="size">{{ offerPageSizeLabel(size) }}</option>
+              </select>
+            </label>
+            <span>{{ offerPaginationLabel }}</span>
+            <div class="catalog-pagination-actions">
+              <button class="btn ghost btn-sm" type="button" :disabled="offerPage <= 1 || loading || offerPageSize === 'all'" @click="setOfferPage(offerPage - 1)">Précédent</button>
+              <strong>Page {{ offerPage }} / {{ offerPageCount }}</strong>
+              <button class="btn ghost btn-sm" type="button" :disabled="offerPage >= offerPageCount || loading || offerPageSize === 'all'" @click="setOfferPage(offerPage + 1)">Suivant</button>
             </div>
-            <button class="btn primary" type="button" :disabled="!canDiscountWrite || busy === 'discount'" @click="saveDiscount">Enregistrer</button>
           </div>
-          <div class="catalog-form-grid">
-            <label class="field wide">Nom<input v-model="discountForm.name" class="input" :disabled="!canDiscountWrite"></label>
-            <label class="field">Statut<select v-model="discountForm.status" class="select" :disabled="!canDiscountWrite"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
-            <label class="field">Type<select v-model="discountForm.type" class="select" :disabled="!canDiscountWrite"><option v-for="type in discountTypes" :key="type" :value="type">{{ type }}</option></select></label>
-            <label class="field">Valeur<input v-model="discountForm.value" class="input" :disabled="!canDiscountWrite"></label>
-            <label v-if="discountForm.type === 'amount'" class="field">Devise<input v-model="discountForm.currency" class="input" :disabled="!canDiscountWrite"></label>
-            <label class="field">Portée<select v-model="discountForm.scope" class="select" :disabled="!canDiscountWrite"><option v-for="scope in discountScopes" :key="scope" :value="scope">{{ scope }}</option></select></label>
-            <label class="field">ID portée<input v-model="discountForm.scope_id" class="input" :disabled="!canDiscountWrite"></label>
-            <label class="field">Canal<select v-model="discountForm.channel" class="select" :disabled="!canDiscountWrite"><option v-for="channel in discountChannels" :key="channel" :value="channel">{{ channel }}</option></select></label>
-            <label class="field">Début<input v-model="discountForm.starts_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
-            <label class="field">Fin<input v-model="discountForm.ends_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
-            <label class="field">Priorité<input v-model="discountForm.priority" class="input" :disabled="!canDiscountWrite"></label>
+        </section>
+      </div>
+
+      <div v-if="offerViewModalOpen && selectedOfferRow" class="catalog-modal-backdrop" role="presentation" @click.self="offerViewModalOpen = false">
+        <section class="catalog-modal catalog-modal--product" role="dialog" aria-modal="true" :aria-label="`Voir ${selectedOfferRow.name}`">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">{{ selectedOfferRow.kind === 'bundle' ? 'Bundle' : 'Réduction' }}</p>
+              <h2>{{ selectedOfferRow.name }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="offerViewModalOpen = false">×</button>
+          </header>
+          <div v-if="selectedOfferRow.kind === 'bundle'" class="stack">
+            <div class="catalog-read-grid">
+              <div><span>SKU</span><strong>{{ bundleIdentityForm.sku_base || '—' }}</strong></div>
+              <div><span>Statut</span><strong>{{ productStatusLabel(bundleIdentityForm.status) }}</strong></div>
+              <div><span>Prix</span><strong>{{ bundlePriceForm.base_sale_price || '—' }} {{ bundlePriceForm.currency }}</strong></div>
+              <div><span>Disponibilité</span><strong>{{ selectedBundle ? bundleStockLabel(selectedBundle.stock_mode) : '—' }}</strong></div>
+            </div>
+            <p class="muted">{{ bundleIdentityForm.short_description || bundleIdentityForm.description || 'Aucun descriptif.' }}</p>
+            <div class="catalog-quality-strip">
+              <span v-for="channel in selectedOfferRow.channels" :key="`view-offer-channel-${channel}`" class="catalog-signal catalog-signal--muted">{{ offerChannelLabel(channel) }}</span>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Composant</th><th>Quantité</th><th>Requis</th></tr></thead>
+                <tbody>
+                  <tr v-for="component in selectedBundle?.components || []" :key="component.id">
+                    <td><strong>{{ component.component_name }}</strong><small v-if="component.component_sku"> · {{ component.component_sku }}</small></td>
+                    <td>{{ component.quantity }}</td>
+                    <td>{{ component.is_required ? 'Oui' : 'Non' }}</td>
+                  </tr>
+                  <tr v-if="!(selectedBundle?.components || []).length"><td colspan="3" class="muted">Aucun composant défini.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </aside>
+          <div v-else class="catalog-read-grid">
+            <div><span>Type</span><strong>{{ discountForm.type }}</strong></div>
+            <div><span>Valeur</span><strong>{{ discountForm.value }} {{ discountForm.type === 'amount' ? discountForm.currency : '%' }}</strong></div>
+            <div><span>Portée</span><strong>{{ discountForm.scope }} #{{ discountForm.scope_id || '—' }}</strong></div>
+            <div><span>Canal</span><strong>{{ offerChannelLabel(discountForm.channel) }}</strong></div>
+            <div><span>Début</span><strong>{{ discountForm.starts_at || '—' }}</strong></div>
+            <div><span>Fin</span><strong>{{ discountForm.ends_at || '—' }}</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <div v-if="offerEditModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="offerEditModalOpen = false">
+        <section class="catalog-modal catalog-modal--product" role="dialog" aria-modal="true" :aria-label="offerEditKind === 'bundle' ? 'Éditer bundle' : 'Éditer réduction'">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Édition offre</p>
+              <h2>{{ offerEditKind === 'bundle' ? (bundleIdentityForm.name || 'Nouveau bundle') : (discountForm.name || 'Nouvelle réduction') }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="offerEditModalOpen = false">×</button>
+          </header>
+
+          <div v-if="offerEditKind === 'bundle'" class="stack">
+            <div class="catalog-form-grid">
+              <label class="field">SKU bundle<input v-model="bundleIdentityForm.sku_base" class="input" :disabled="!canWrite" @blur="bundleIdentityForm.sku_base = normalizeSkuInput(bundleIdentityForm.sku_base)"></label>
+              <label class="field wide">Nom du bundle<input v-model="bundleIdentityForm.name" class="input" :disabled="!canWrite"></label>
+              <label class="field">Slug<input v-model="bundleIdentityForm.slug" class="input" :disabled="!canWrite"></label>
+              <label class="field">Statut<select v-model="bundleIdentityForm.status" class="select" :disabled="!canWrite"><option value="draft">Brouillon</option><option value="active">Actif</option><option value="archived">Archivé</option></select></label>
+              <label class="field wide">Descriptif court<input v-model="bundleIdentityForm.short_description" class="input" :disabled="!canWrite"></label>
+              <label class="field wide">Descriptif e-commerce / catalogue<textarea v-model="bundleIdentityForm.description" class="input" rows="3" :disabled="!canWrite"></textarea></label>
+              <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
+              <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_ecommerce_enabled" type="checkbox" :disabled="!canWrite"> E-commerce</label>
+              <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
+              <label class="field">Mode de prix<select v-model="bundleForm.pricing_mode" class="select" :disabled="!canWrite"><option value="fixed">Prix fixe</option><option value="sum_components">Somme des composants</option><option value="discount_components">Somme remisée</option></select></label>
+              <label class="field">Mode de disponibilité<select v-model="bundleForm.stock_mode" class="select" :disabled="!canWrite"><option value="components">Selon composants</option><option value="virtual">Virtuel</option><option value="none">Sans suivi</option></select></label>
+              <label class="field">Devise<input v-model="bundlePriceForm.currency" class="input" :disabled="!canPriceWrite"></label>
+              <label v-if="canPurchaseRead" class="field">Prix d'achat (base HT)<input v-model="bundlePriceForm.base_purchase_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
+              <label class="field">Prix de vente (base HT)<input v-model="bundlePriceForm.base_sale_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
+              <label class="checkbox-inline"><input v-model="bundleForm.is_active" type="checkbox" :disabled="!canWrite"> Bundle actif</label>
+            </div>
+            <div v-if="selectedBundle" class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Composant</th><th>Quantité</th><th>Requis</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr v-for="component in selectedBundle.components || []" :key="component.id">
+                    <td><strong>{{ component.component_name }}</strong><small v-if="component.component_sku"> · {{ component.component_sku }}</small></td>
+                    <td>{{ component.quantity }}</td>
+                    <td>{{ component.is_required ? 'Oui' : 'Non' }}</td>
+                    <td><button class="btn ghost btn-sm" type="button" :disabled="!canWrite || busy === `bundle-component-${component.id}`" @click="removeBundleComponent(component)">Retirer</button></td>
+                  </tr>
+                  <tr v-if="!(selectedBundle.components || []).length"><td colspan="4" class="muted">Aucun composant défini.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-if="selectedBundle" class="catalog-form-grid catalog-bundle-component-form">
+              <label class="field wide">Produit composant<select v-model="bundleComponentForm.component_product_id" class="select" :disabled="!canWrite"><option value="">Sélectionner</option><option v-for="product in bundleComponentProducts" :key="`component-product-${product.id}`" :value="product.id">{{ product.sku_base || '—' }} · {{ product.name }}</option></select></label>
+              <label class="field">Quantité<input v-model="bundleComponentForm.quantity" class="input" type="number" min="0.0001" step="0.0001" :disabled="!canWrite"></label>
+              <label class="checkbox-inline"><input v-model="bundleComponentForm.is_required" type="checkbox" :disabled="!canWrite"> Requis</label>
+              <button class="btn ghost" type="button" :disabled="!canWrite || busy === 'bundle-component' || !bundleComponentForm.component_product_id" @click="addBundleComponent">Ajouter composant</button>
+            </div>
+            <footer class="catalog-modal-actions">
+              <button class="btn ghost" type="button" @click="offerEditModalOpen = false">Fermer</button>
+              <button class="btn primary" type="button" :disabled="!canWrite || busy === 'bundle' || !bundleIdentityForm.name.trim()" @click="saveBundle">Enregistrer</button>
+            </footer>
+          </div>
+
+          <div v-else class="stack">
+            <div class="catalog-form-grid">
+              <label class="field wide">Nom<input v-model="discountForm.name" class="input" :disabled="!canDiscountWrite"></label>
+              <label class="field">Statut<select v-model="discountForm.status" class="select" :disabled="!canDiscountWrite"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
+              <label class="field">Type<select v-model="discountForm.type" class="select" :disabled="!canDiscountWrite"><option v-for="type in discountTypes" :key="type" :value="type">{{ type }}</option></select></label>
+              <label class="field">Valeur<input v-model="discountForm.value" class="input" :disabled="!canDiscountWrite"></label>
+              <label v-if="discountForm.type === 'amount'" class="field">Devise<input v-model="discountForm.currency" class="input" :disabled="!canDiscountWrite"></label>
+              <label class="field">Portée<select v-model="discountForm.scope" class="select" :disabled="!canDiscountWrite"><option v-for="scope in discountScopes" :key="scope" :value="scope">{{ scope }}</option></select></label>
+              <label class="field">ID portée<input v-model="discountForm.scope_id" class="input" :disabled="!canDiscountWrite"></label>
+              <label class="field">Canal<select v-model="discountForm.channel" class="select" :disabled="!canDiscountWrite"><option v-for="channel in discountChannels" :key="channel" :value="channel">{{ offerChannelLabel(channel) }}</option></select></label>
+              <label class="field">Début<input v-model="discountForm.starts_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
+              <label class="field">Fin<input v-model="discountForm.ends_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
+              <label class="field">Priorité<input v-model="discountForm.priority" class="input" :disabled="!canDiscountWrite"></label>
+            </div>
+            <footer class="catalog-modal-actions">
+              <button class="btn ghost" type="button" @click="offerEditModalOpen = false">Fermer</button>
+              <button class="btn primary" type="button" :disabled="!canDiscountWrite || busy === 'discount'" @click="saveDiscount">Enregistrer</button>
+            </footer>
+          </div>
+        </section>
+      </div>
+
+      <div v-if="referenceModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="closeReferenceModal">
+        <section class="catalog-modal catalog-modal--reference" role="dialog" aria-modal="true" :aria-label="referenceTitle">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Référentiel produit</p>
+              <h2>{{ referenceTitle }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeReferenceModal">×</button>
+          </header>
+
+          <div v-if="referenceKind === 'type'" class="catalog-reference-grid">
+            <label v-for="type in productTypes" :key="type" class="field">
+              {{ type }}
+              <input v-model="productTypeLabels[type]" class="input" :disabled="!canWrite">
+            </label>
+            <footer class="catalog-modal-actions wide">
+              <button class="btn ghost" type="button" @click="Object.assign(productTypeLabels, defaultProductTypeLabels)">Réinitialiser</button>
+              <button class="btn primary" type="button" :disabled="!canWrite" @click="saveReferenceLabels('type')">Enregistrer</button>
+            </footer>
+          </div>
+
+          <div v-else-if="referenceKind === 'status'" class="catalog-reference-grid">
+            <label v-for="status in statuses" :key="status" class="field">
+              {{ status }}
+              <input v-model="productStatusLabels[status]" class="input" :disabled="!canWrite">
+            </label>
+            <footer class="catalog-modal-actions wide">
+              <button class="btn ghost" type="button" @click="Object.assign(productStatusLabels, defaultProductStatusLabels)">Réinitialiser</button>
+              <button class="btn primary" type="button" :disabled="!canWrite" @click="saveReferenceLabels('status')">Enregistrer</button>
+            </footer>
+          </div>
+
+          <div v-else-if="referenceKind === 'brand'" class="catalog-reference-layout">
+            <div class="catalog-reference-list">
+              <button v-for="brand in brands" :key="brand.id" type="button" @click="fillBrandForm(brand)">
+                <strong>{{ brand.name }}</strong>
+                <span>{{ brand.company_name || brand.slug || '—' }}</span>
+              </button>
+              <p v-if="brands.length === 0" class="muted">Aucune marque.</p>
+            </div>
+            <div class="catalog-form-grid">
+              <label class="field">Nom<input v-model="brandForm.name" class="input" :disabled="!canWrite"></label>
+              <label class="field">Slug<input v-model="brandForm.slug" class="input" :disabled="!canWrite"></label>
+              <label class="field">Entreprise CRM
+                <select v-model="brandForm.company_id" class="select" :disabled="!canWrite">
+                  <option value="">Aucune liaison</option>
+                  <option v-for="company in brandCompanies" :key="company.id" :value="String(company.id)">{{ company.name }}</option>
+                </select>
+              </label>
+              <label class="field">Statut<select v-model="brandForm.status" class="select" :disabled="!canWrite"><option v-for="status in statuses" :key="status" :value="status">{{ productStatusLabels[status] || status }}</option></select></label>
+              <label class="field">Ordre<input v-model="brandForm.sort_order" class="input" :disabled="!canWrite"></label>
+              <label class="field wide">Site web<input v-model="brandForm.website_url" class="input" :disabled="!canWrite"></label>
+              <label class="field wide">Description<textarea v-model="brandForm.description" class="input" rows="3" :disabled="!canWrite"></textarea></label>
+              <footer class="catalog-modal-actions wide">
+                <button class="btn ghost" type="button" @click="fillBrandForm(null)">Nouvelle marque</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !brandForm.id || busy === 'brand-delete'" @click="deleteCurrentBrand">Effacer</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !brandForm.name.trim() || busy === 'brand'" @click="saveBrand">Enregistrer</button>
+              </footer>
+            </div>
+          </div>
+
+          <div v-else class="catalog-reference-layout">
+            <div class="catalog-reference-list">
+              <button v-for="category in categories" :key="category.id" type="button" @click="fillCategoryForm(category)">
+                <strong>{{ category.name }}</strong>
+                <span>{{ category.slug || '—' }}</span>
+              </button>
+              <p v-if="categories.length === 0" class="muted">Aucune catégorie.</p>
+            </div>
+            <div class="catalog-form-grid">
+              <label class="field">Nom<input v-model="categoryForm.name" class="input" :disabled="!canWrite"></label>
+              <label class="field">Slug<input v-model="categoryForm.slug" class="input" :disabled="!canWrite"></label>
+              <label class="field">Parent<select v-model="categoryForm.parent_id" class="select" :disabled="!canWrite"><option value="">Aucun</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
+              <label class="field">Ordre<input v-model="categoryForm.sort_order" class="input" :disabled="!canWrite"></label>
+              <label class="field wide">Description<textarea v-model="categoryForm.description" class="input" rows="3" :disabled="!canWrite"></textarea></label>
+              <footer class="catalog-modal-actions wide">
+                <button class="btn ghost" type="button" @click="fillCategoryForm(null)">Nouvelle catégorie</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !categoryForm.id || busy === 'category-delete'" @click="deleteCurrentCategory">Effacer</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !categoryForm.name.trim() || busy === 'category'" @click="saveCategory">Enregistrer</button>
+              </footer>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div v-if="attributeSettingsModal" class="catalog-modal-backdrop" role="presentation" @click.self="closeAttributeSettings">
+        <section class="catalog-modal catalog-modal--attributes" role="dialog" aria-modal="true" aria-label="Réglages attributs">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Réglages catalogue</p>
+              <h2>{{ attributeSettingsTitle }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeAttributeSettings">×</button>
+          </header>
+
+          <div v-if="attributeSettingsModal !== 'groups' && attributeDefinitionWarnings.length" class="catalog-quality-strip catalog-definition-warnings">
+            <span v-for="warning in attributeDefinitionWarnings" :key="`definition-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+          </div>
+
+          <div class="catalog-attribute-settings-grid catalog-attribute-settings-grid--single">
+            <section v-if="attributeSettingsModal === 'groups'" class="catalog-settings-card">
+              <div class="panel__header compact">
+                <div>
+                  <h3>Groupes</h3>
+                  <p class="muted">Ex. Général, Textile, Service, Technique, SEO, Logistique.</p>
+                </div>
+                <button class="btn ghost btn-sm" type="button" @click="fillAttributeGroupForm(null)">Nouveau</button>
+              </div>
+              <div class="catalog-reference-list compact-list">
+                <button v-for="group in attributeGroups" :key="group.id" type="button" @click="fillAttributeGroupForm(group)">
+                  <strong>{{ group.name }}</strong>
+                  <span>{{ group.code || '—' }}</span>
+                </button>
+                <p v-if="attributeGroups.length === 0" class="muted">Aucun groupe.</p>
+              </div>
+              <div class="catalog-form-grid catalog-form-grid--single">
+                <label class="field">Nom<input v-model="attributeGroupForm.name" class="input" :disabled="!canWrite"></label>
+                <label class="field">Code<input v-model="attributeGroupForm.code" class="input" :disabled="!canWrite"></label>
+                <label class="field">Ordre<input v-model="attributeGroupForm.sort_order" class="input" :disabled="!canWrite"></label>
+                <label class="field">Description<textarea v-model="attributeGroupForm.description" class="input" rows="2" :disabled="!canWrite"></textarea></label>
+                <button class="btn primary" type="button" :disabled="!canWrite || !attributeGroupForm.name.trim() || busy === 'attribute-group'" @click="saveAttributeGroup">Enregistrer groupe</button>
+              </div>
+            </section>
+
+            <section v-if="attributeSettingsModal === 'attributes'" class="catalog-settings-card">
+              <div class="panel__header compact">
+                <div>
+                  <h3>Attributs</h3>
+                  <p class="muted">Visibilité publique, filtre, recherche et complétude.</p>
+                </div>
+                <button class="btn ghost btn-sm" type="button" @click="fillAttributeForm(null)">Nouveau</button>
+              </div>
+              <div class="catalog-reference-list compact-list">
+                <button v-for="attribute in attributes" :key="attribute.id" type="button" @click="fillAttributeForm(attribute)">
+                  <strong>{{ attribute.name }}</strong>
+                  <span>{{ attribute.group_name || 'Général' }} · {{ attributeTypeLabel(attribute.data_type) }}</span>
+                </button>
+                <p v-if="attributes.length === 0" class="muted">Aucun attribut.</p>
+              </div>
+              <div class="catalog-form-grid">
+                <label class="field">Nom<input v-model="attributeForm.name" class="input" :disabled="!canWrite"></label>
+                <label class="field">Code<input v-model="attributeForm.code" class="input" :disabled="!canWrite"></label>
+                <label class="field">Groupe<select v-model="attributeForm.group_id" class="select" :disabled="!canWrite"><option value="">Général</option><option v-for="group in attributeGroups" :key="group.id" :value="group.id">{{ group.name }}</option></select></label>
+                <label class="field">Type<select v-model="attributeForm.data_type" class="select" :disabled="!canWrite"><option v-for="type in attributeTypes" :key="type" :value="type">{{ attributeTypeLabel(type) }}</option></select></label>
+                <label class="field">Unité<input v-model="attributeForm.unit" class="input" :disabled="!canWrite"></label>
+                <label class="field">Ordre<input v-model="attributeForm.sort_order" class="input" :disabled="!canWrite"></label>
+                <div class="catalog-flag-grid wide">
+                  <label class="checkbox-inline"><input v-model="attributeForm.is_required" type="checkbox" :disabled="!canWrite"> Requis</label>
+                  <label class="checkbox-inline"><input v-model="attributeForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
+                  <label class="checkbox-inline"><input v-model="attributeForm.is_filterable" type="checkbox" :disabled="!canWrite"> Filtrable</label>
+                  <label class="checkbox-inline"><input v-model="attributeForm.is_searchable" type="checkbox" :disabled="!canWrite"> Recherchable</label>
+                </div>
+                <button class="btn primary wide" type="button" :disabled="!canWrite || !attributeForm.name.trim() || busy === 'attribute'" @click="saveAttributeDefinition">Enregistrer attribut</button>
+              </div>
+            </section>
+
+            <section v-if="attributeSettingsModal === 'options'" class="catalog-settings-card">
+              <div class="panel__header compact">
+                <div>
+                  <h3>Options</h3>
+                  <p class="muted">Les attributs de choix utilisent des options; les autres restent visibles pour vérification.</p>
+                </div>
+                <button class="btn ghost btn-sm" type="button" :disabled="!selectedOptionAttribute" @click="resetAttributeOptionForm()">Nouvelle</button>
+              </div>
+              <label class="field">Attribut
+                <select v-model="attributeOptionForm.attribute_id" class="select" :disabled="!canWrite" @change="resetAttributeOptionForm()">
+                  <option value="">Choisir un attribut</option>
+                  <option v-for="attribute in selectableAttributes" :key="attribute.id" :value="attribute.id">{{ attribute.name }}</option>
+                </select>
+              </label>
+              <div class="catalog-reference-list compact-list">
+                <button v-for="option in selectedOptionAttributeOptions" :key="attributeOptionKey(option)" type="button" @click="selectedOptionAttribute && fillAttributeOptionForm(selectedOptionAttribute, option)">
+                  <strong>{{ attributeOptionLabel(option) }}</strong>
+                  <span>{{ option.code || '—' }} · {{ attributeOptionValue(option) || '—' }}</span>
+                </button>
+                <p v-if="!selectedOptionAttribute" class="muted">Sélectionner un attribut.</p>
+                <p v-else-if="selectedOptionAttributeOptions.length === 0" class="muted">Aucune option.</p>
+                <p v-if="selectedOptionAttribute && !isChoiceAttribute(selectedOptionAttribute)" class="muted">Cet attribut n’est pas un choix; les options sont généralement inutiles pour ce type.</p>
+              </div>
+              <div class="catalog-form-grid catalog-form-grid--single">
+                <label class="field">Libellé<input v-model="attributeOptionForm.label" class="input" :disabled="!canWrite || !selectedOptionAttribute"></label>
+                <label class="field">Valeur<input v-model="attributeOptionForm.value" class="input" :disabled="!canWrite || !selectedOptionAttribute"></label>
+                <label class="field">Code<input v-model="attributeOptionForm.code" class="input" :disabled="!canWrite || !selectedOptionAttribute"></label>
+                <div v-if="attributeOptionUsesColor" class="field catalog-color-field">
+                  <span>Couleur</span>
+                  <div class="catalog-color-picker">
+                    <input v-model="attributeOptionForm.color_hex" type="color" :disabled="!canWrite || !selectedOptionAttribute" :value="attributeOptionForm.color_hex || '#000000'" @input="setAttributeOptionColor(eventValue($event))">
+                    <input v-model="attributeOptionForm.color_hex" class="input" placeholder="#000000" :disabled="!canWrite || !selectedOptionAttribute">
+                  </div>
+                  <div class="catalog-color-swatches">
+                    <button v-for="color in colorSwatches" :key="color" type="button" :class="{ active: attributeOptionForm.color_hex.toUpperCase() === color }" :style="{ background: color }" :aria-label="`Choisir ${color}`" :disabled="!canWrite || !selectedOptionAttribute" @click="setAttributeOptionColor(color)"></button>
+                  </div>
+                </div>
+                <label v-else class="field">Couleur<input v-model="attributeOptionForm.color_hex" class="input" placeholder="#000000" :disabled="!canWrite || !selectedOptionAttribute"></label>
+                <label class="field">Ordre<input v-model="attributeOptionForm.sort_order" class="input" :disabled="!canWrite || !selectedOptionAttribute"></label>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !attributeOptionForm.id || busy === 'attribute-option-delete'" @click="deleteCurrentAttributeOption">Effacer option</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !selectedOptionAttribute || !attributeOptionForm.label.trim() || busy === 'attribute-option'" @click="saveAttributeOption">Enregistrer option</button>
+              </div>
+            </section>
+          </div>
+
+          <footer class="catalog-modal-actions">
+            <button class="btn ghost" type="button" @click="closeAttributeSettings">Fermer</button>
+          </footer>
+        </section>
+      </div>
+
+      <div v-if="productViewModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="closeProductViewModal">
+        <section class="catalog-modal catalog-modal--view" role="dialog" aria-modal="true" aria-label="Voir le produit">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Produit</p>
+              <h2>{{ productData?.name || 'Produit' }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeProductViewModal">×</button>
+          </header>
+
+          <div v-if="selectedProductSummary" class="catalog-summary-grid">
+            <div class="catalog-summary-card">
+              <span>Variantes actives</span>
+              <strong>{{ selectedProductSummary.active_variant_count ?? 0 }} / {{ selectedProductSummary.variant_count ?? 0 }}</strong>
+            </div>
+            <div class="catalog-summary-card">
+              <span>Prix de vente</span>
+              <strong>{{ priceLabel(selectedProductSummary.sale_price_min) }}</strong>
+            </div>
+            <div class="catalog-summary-card">
+              <span>Médias</span>
+              <strong>{{ selectedProductSummary.image_count ?? 0 }}</strong>
+            </div>
+            <div class="catalog-summary-card">
+              <span>Complétude</span>
+              <strong>{{ selectedProductSummary.completeness_score === null || selectedProductSummary.completeness_score === undefined ? 'Non calculée' : `${selectedProductSummary.completeness_score}%` }}</strong>
+            </div>
+          </div>
+
+          <div v-if="selectedProductSignals.length" class="catalog-quality-strip">
+            <span v-for="signal in selectedProductSignals" :key="`modal-${signal.label}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+          </div>
+
+          <div v-if="productData" class="catalog-read-grid">
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity', 'name')"><span>Nom</span><strong>{{ productData.name }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity', 'slug')"><span>Slug</span><strong>{{ productData.slug || '—' }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'type')"><span>Type</span><strong>{{ productTypeLabels[String(productData.type || '')] || productData.type || '—' }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'status')"><span>Statut</span><StatusBadge :status="productData.status || 'draft'" /></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'brand')"><span>Marque</span><strong>{{ brandName(productData.brand_id) }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'category')"><span>Catégorie</span><strong>{{ categoryName(productData.category_id) }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'stock')"><span>Stock</span><strong>{{ productForm.track_stock ? 'Suivi' : 'Non suivi' }} · {{ productForm.allow_backorder ? 'réassort autorisé' : 'réassort bloqué' }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Unité</span><strong>{{ productData.unit || 'unit' }}</strong></button>
+            <button class="wide" type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Résumé</span><p>{{ productData.short_description || '—' }}</p></button>
+            <button class="wide" type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Description</span><p>{{ productData.description || '—' }}</p></button>
+          </div>
+
+          <div class="catalog-modal-sections">
+            <section>
+              <h3>Variantes</h3>
+              <div class="catalog-compact-list">
+                <button v-for="variant in selectedVariants" :key="variant.id" type="button" class="catalog-compact-row" @click="productViewModalOpen = false; openProductAttributes()">
+                  <strong>{{ variant.sku || variant.name }}</strong>
+                  <span>{{ money(variant.computed_prices?.final_sale_price) }} · stock {{ variant.stock_quantity ?? 0 }}</span>
+                </button>
+                <p v-if="selectedVariants.length === 0" class="muted">Aucune variante.</p>
+              </div>
+            </section>
+            <section class="catalog-clickable-section" @click="productViewModalOpen = false; openEditProduct(undefined, 'channels')">
+              <h3>Canaux</h3>
+              <div v-if="productData" class="token-row token-row--wrap">
+                <span v-for="channel in channelsFor(productData)" :key="`modal-channel-${channel}`" class="token">{{ channel }}</span>
+                <span v-if="channelsFor(productData).length === 0" class="muted">interne</span>
+              </div>
+            </section>
+            <section class="catalog-clickable-section" @click="productViewModalOpen = false; openEditProduct(undefined, 'stock')">
+              <h3>Stock</h3>
+              <div v-if="productData" class="catalog-quality-strip">
+                <span class="catalog-signal" :class="`catalog-signal--${stockSignal(productData).tone}`">{{ stockSignal(productData).label }}</span>
+                <span class="catalog-signal catalog-signal--muted">{{ stockSummaryLabel(productData) }}</span>
+              </div>
+            </section>
+            <section class="catalog-clickable-section" @click="productViewModalOpen = false; openProductAttributes()">
+              <h3>Options</h3>
+              <div class="token-row token-row--wrap">
+                <span v-for="option in selectedProduct?.options || []" :key="Number(option.id)" class="token">{{ option.name }}</span>
+                <span v-if="!(selectedProduct?.options || []).length" class="muted">Aucune option.</span>
+              </div>
+            </section>
+            <section class="catalog-clickable-section" @click="productViewModalOpen = false; openProductMedia()">
+              <h3>Médias</h3>
+              <div class="catalog-asset-overview">
+                <div>
+                  <span>Image principale</span>
+                  <strong>{{ mainProductAsset ? assetMediaLabel(mainProductAsset.media_id) : 'Manquante' }}</strong>
+                </div>
+                <div>
+                  <span>Galerie</span>
+                  <strong>{{ galleryProductAssets.length }}</strong>
+                </div>
+                <div>
+                  <span>Images variantes</span>
+                  <strong>{{ variantProductAssets.length }}</strong>
+                </div>
+                <div>
+                  <span>Documents</span>
+                  <strong>{{ documentProductAssets.length }}</strong>
+                </div>
+              </div>
+              <div v-if="assetWarnings.length" class="catalog-quality-strip">
+                <span v-for="warning in assetWarnings.slice(0, 3)" :key="`asset-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+              </div>
+            </section>
+            <section class="catalog-clickable-section" @click="productViewModalOpen = false; openProductAttributes()">
+              <h3>Qualité</h3>
+              <div class="catalog-quality-strip">
+                <span v-for="signal in selectedProductSignals" :key="`modal-quality-${signal.label}`" class="catalog-signal" :class="`catalog-signal--${signal.tone}`">{{ signal.label }}</span>
+                <span v-if="selectedProductSignals.length === 0" class="catalog-signal catalog-signal--success">Aucun blocage visible</span>
+              </div>
+            </section>
+          </div>
+          <footer class="catalog-modal-actions">
+            <button class="btn ghost" type="button" @click="closeProductViewModal">Fermer</button>
+            <button class="btn primary" type="button" :disabled="!canWrite || !productData" @click="productViewModalOpen = false; openEditProduct()">Modifier</button>
+          </footer>
+        </section>
+      </div>
+
+      <div v-if="productModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="closeProductModal">
+        <section class="catalog-modal" role="dialog" aria-modal="true" :aria-label="productModalTitle()">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Produit</p>
+              <h2>{{ productModalTitle() }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeProductModal">×</button>
+          </header>
+          <div v-if="productModalShows('identity')" class="catalog-form-grid">
+            <label v-if="productModalScope === 'all' || productModalMode === 'create' || !productModalFocus || productModalFocus === 'sku'" class="field">SKU produit<input v-model="productForm.sku_base" class="input" data-product-field="sku" :disabled="!canWrite" placeholder="SKU ou préfixe" @input="productForm.sku_base = normalizeSkuInput(productForm.sku_base)"></label>
+            <label v-if="productModalScope === 'all' || productModalMode === 'create' || !productModalFocus || productModalFocus === 'name' || productModalFocus === 'name_type'" class="field">Nom<input v-model="productForm.name" class="input" data-product-field="name" :disabled="!canWrite"></label>
+            <label v-if="productModalFocus === 'name_type'" class="field">Type<select v-model="productForm.type" class="select" data-product-field="type" :disabled="!canWrite"><option v-for="type in productTypes" :key="type" :value="type">{{ productTypeLabels[type] || type }}</option></select></label>
+            <label v-if="productModalScope === 'all' || productModalMode === 'create' || !productModalFocus || productModalFocus === 'slug'" class="field">Slug<input v-model="productForm.slug" class="input" data-product-field="slug" :disabled="!canWrite"></label>
+          </div>
+          <div v-if="productModalShows('classification')" class="catalog-form-grid">
+            <label class="field">Type<select v-model="productForm.type" class="select" data-product-field="type" :disabled="!canWrite"><option v-for="type in productTypes" :key="type" :value="type">{{ productTypeLabels[type] || type }}</option></select></label>
+            <label class="field">Statut<select v-model="productForm.status" class="select" data-product-field="status" :disabled="!canWrite"><option v-for="status in statuses" :key="status" :value="status">{{ productStatusLabels[status] || status }}</option></select></label>
+            <label class="field">Marque<select v-model="productForm.brand_id" class="select" data-product-field="brand" :disabled="!canWrite"><option value="">Aucune</option><option v-for="brand in brands" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+            <label class="field">Catégorie<select v-model="productForm.category_id" class="select" data-product-field="category" :disabled="!canWrite"><option value="">Aucune</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
+          </div>
+          <div v-if="productModalShows('identity') && (productModalScope === 'all' || productModalMode === 'create' || !productModalFocus)" class="catalog-form-grid">
+            <label class="field wide">Résumé<textarea v-model="productForm.short_description" class="input" rows="2" :disabled="!canWrite"></textarea></label>
+            <label class="field wide">Description<textarea v-model="productForm.description" class="input" rows="4" :disabled="!canWrite"></textarea></label>
+          </div>
+          <div v-if="productModalShows('channels')" class="catalog-section">
+            <h3>Canaux</h3>
+            <div class="toolbar">
+              <label class="checkbox-inline"><input v-model="productForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
+              <label class="checkbox-inline"><input v-model="productForm.is_ecommerce_enabled" type="checkbox" :disabled="!canWrite"> E-commerce</label>
+              <label class="checkbox-inline"><input v-model="productForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
+            </div>
+          </div>
+          <div v-if="productModalShows('stock')" class="catalog-section">
+            <h3>Stock</h3>
+            <div class="catalog-form-grid">
+              <label class="field">Unité<input v-model="productForm.unit" class="input" :disabled="!canWrite" placeholder="unit, kg, h..."></label>
+              <label class="checkbox-inline"><input v-model="productForm.track_stock" type="checkbox" :disabled="!canWrite"> Suivre le stock</label>
+              <label class="checkbox-inline"><input v-model="productForm.allow_backorder" type="checkbox" :disabled="!canWrite"> Autoriser le réassort / backorder</label>
+            </div>
+            <p class="muted">Les quantités se gèrent au niveau des variantes via les mouvements de stock.</p>
+          </div>
+          <div v-if="productModalShows('prices')" class="catalog-section">
+            <h3>Schéma des prix</h3>
+            <div class="catalog-form-grid catalog-price-grid">
+              <label class="field">Devise<input v-model="productForm.currency" class="input" :disabled="!canPriceWrite"></label>
+              <label v-if="canPurchaseRead" class="field">Prix d'achat (base HT)<input v-model="productForm.base_purchase_price" class="input" :disabled="!canPriceWrite"></label>
+              <label class="field">Prix de vente (base HT)<input v-model="productForm.base_sale_price" class="input" :disabled="!canPriceWrite"></label>
+            </div>
+          </div>
+          <div v-if="productModalShows('media')" class="catalog-section catalog-asset-manager">
+            <div class="panel__header compact">
+              <div>
+                <h3>Médias</h3>
+                <p class="muted">Image principale, galerie, images variantes, documents et fichiers internes.</p>
+              </div>
+            </div>
+            <div v-if="assetWarnings.length" class="catalog-quality-strip">
+              <span v-for="warning in assetWarnings" :key="`edit-asset-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+            </div>
+            <div class="catalog-asset-groups">
+              <div class="catalog-asset-group">
+                <h4>Image principale</h4>
+                <div v-if="mainProductAsset" class="catalog-asset-card">
+                  <img v-if="assetPreviewUrl(mainProductAsset) && assetIsImage(mainProductAsset)" :src="assetPreviewUrl(mainProductAsset)" alt="">
+                  <div>
+                    <strong>{{ assetMediaLabel(mainProductAsset.media_id) }}</strong>
+                    <span>{{ assetChannelLabel(mainProductAsset.channel_scope) }} · {{ mainProductAsset.alt_text || 'Alt manquant' }}</span>
+                  </div>
+                  <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(mainProductAsset)">Modifier</button>
+                </div>
+                <p v-else class="muted">Aucune image principale.</p>
+              </div>
+              <div class="catalog-asset-group">
+                <h4>Galerie</h4>
+                <div v-for="asset in galleryProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
+                  <img v-if="assetPreviewUrl(asset) && assetIsImage(asset)" :src="assetPreviewUrl(asset)" alt="">
+                  <div>
+                    <strong>{{ assetMediaLabel(asset.media_id) }}</strong>
+                    <span>{{ assetChannelLabel(asset.channel_scope) }} · {{ asset.alt_text || 'Alt manquant' }}</span>
+                  </div>
+                  <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
+                </div>
+                <p v-if="galleryProductAssets.length === 0" class="muted">Aucune image de galerie.</p>
+              </div>
+              <div class="catalog-asset-group">
+                <h4>Images variantes</h4>
+                <div v-for="asset in variantProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
+                  <img v-if="assetPreviewUrl(asset) && assetIsImage(asset)" :src="assetPreviewUrl(asset)" alt="">
+                  <div>
+                    <strong>{{ assetMediaLabel(asset.media_id) }}</strong>
+                    <span>{{ assetVariantLabel(asset) }} · {{ assetChannelLabel(asset.channel_scope) }}</span>
+                  </div>
+                  <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
+                </div>
+                <p v-if="variantProductAssets.length === 0" class="muted">Aucune image variante.</p>
+              </div>
+              <div class="catalog-asset-group">
+                <h4>Documents</h4>
+                <div v-for="asset in documentProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
+                  <div>
+                    <strong>{{ assetMediaLabel(asset.media_id) }}</strong>
+                    <span>{{ assetRoleLabel(asset.role) }} · {{ assetChannelLabel(asset.channel_scope) }}</span>
+                  </div>
+                  <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
+                </div>
+                <p v-if="documentProductAssets.length === 0" class="muted">Aucun document.</p>
+              </div>
+              <div class="catalog-asset-group">
+                <h4>Fichiers internes</h4>
+                <div v-for="asset in internalProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
+                  <div>
+                    <strong>{{ assetMediaLabel(asset.media_id) }}</strong>
+                    <span>{{ assetRoleLabel(asset.role) }} · {{ assetChannelLabel(asset.channel_scope) }}</span>
+                  </div>
+                  <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
+                </div>
+                <p v-if="internalProductAssets.length === 0" class="muted">Aucun fichier interne.</p>
+              </div>
+            </div>
+            <div class="catalog-asset-editor">
+              <div class="catalog-form-grid">
+                <label class="field">Média existant
+                  <select v-model="assetForm.media_id" class="select" :disabled="!canWrite">
+                    <option value="">Choisir un média</option>
+                    <option v-for="media in mediaRows" :key="media.id" :value="media.id">{{ text(media.title || media.original_filename || media.filename || media.name) }}</option>
+                  </select>
+                </label>
+                <label class="field">Variante
+                  <select v-model="assetForm.variant_id" class="select" :disabled="!canWrite">
+                    <option value="">Produit</option>
+                    <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
+                  </select>
+                </label>
+                <label class="field">Rôle
+                  <select v-model="assetForm.role" class="select" :disabled="!canWrite">
+                    <option v-for="role in assetRoles" :key="role" :value="role">{{ assetRoleLabel(role) }}</option>
+                  </select>
+                </label>
+                <label class="field">Canal
+                  <select v-model="assetForm.channel_scope" class="select" :disabled="!canWrite">
+                    <option v-for="channel in assetChannels" :key="channel" :value="channel">{{ assetChannelLabel(channel) }}</option>
+                  </select>
+                </label>
+                <label class="field">Titre<input v-model="assetForm.title" class="input" :disabled="!canWrite"></label>
+                <label class="field">Ordre<input v-model="assetForm.sort_order" class="input" :disabled="!canWrite"></label>
+                <label class="field wide">Texte alternatif<input v-model="assetForm.alt_text" class="input" :disabled="!canWrite"></label>
+                <label class="field wide">Légende<textarea v-model="assetForm.caption" class="input" rows="2" :disabled="!canWrite"></textarea></label>
+                <label class="checkbox-inline"><input v-model="assetForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
+                <label class="field">Téléverser<input class="input" type="file" :disabled="!canWrite" @change="onAssetUploadChange"></label>
+              </div>
+              <div class="catalog-modal-actions">
+                <button class="btn ghost" type="button" @click="resetAssetForm(null)">Nouveau lien</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !assetForm.id" @click="archiveCurrentAsset">Archiver le lien</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !assetForm.id" @click="setCurrentAssetAsMain">Définir principale</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !assetUploadFile || busy === 'asset-upload'" @click="uploadAndAssignAsset">Téléverser et lier</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !assetForm.media_id || busy === 'asset'" @click="saveProductAsset">Enregistrer média</button>
+              </div>
+            </div>
+          </div>
+          <div v-if="productModalShows('attributes')" class="catalog-section catalog-attribute-manager">
+            <div class="panel__header compact">
+              <div>
+                <h3>Attributs</h3>
+                <p class="muted">Choisir les groupes applicables, puis renseigner uniquement les attributs correspondants.</p>
+              </div>
+            </div>
+            <section class="catalog-attribute-scope">
+              <div class="catalog-attribute-scope-head">
+                <div>
+                  <h4>Groupes d’attributs du produit</h4>
+                </div>
+              </div>
+              <div class="catalog-option-buttons">
+                <label v-for="group in attributeGroups" :key="`product-attribute-group-${group.id}`" class="catalog-option-button" :class="{ active: productForm.attribute_group_ids.includes(Number(group.id || 0)) }">
+                  <input v-model="productForm.attribute_group_ids" type="checkbox" :value="Number(group.id || 0)" :disabled="!canWrite">
+                  <span>{{ group.name }}</span>
+                </label>
+              </div>
+              <p v-if="attributeGroups.length === 0" class="muted">Aucun groupe d’attributs configuré.</p>
+            </section>
+            <div v-if="groupedAttributes.length" class="catalog-attribute-groups">
+              <section class="catalog-attribute-scope">
+                <div class="catalog-attribute-scope-head">
+                  <div>
+                    <h4>Produit</h4>
+                    <p class="muted">Attributs communs à toutes les variantes.</p>
+                  </div>
+                </div>
+                <div v-if="productAttributeWarnings.length" class="catalog-quality-strip">
+                  <span v-for="warning in productAttributeWarnings" :key="`product-attribute-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+                </div>
+                <section v-for="group in groupedAttributes" :key="`product-${group.group.id || group.group.code}`" class="catalog-attribute-group">
+                  <h5>{{ group.group.name }}</h5>
+                  <div v-for="attribute in group.attributes" :key="`product-${attribute.id}`" class="catalog-attribute-row catalog-attribute-row--single">
+                    <div>
+                      <strong>{{ attribute.name }}</strong>
+                      <span>{{ attributeTypeLabel(attribute.data_type) }}<template v-if="attribute.unit"> · {{ attribute.unit }}</template></span>
+                      <div class="token-row token-row--wrap">
+                        <span v-if="attribute.is_required" class="token">Requis</span>
+                        <span v-if="attribute.is_public" class="token">Public</span>
+                        <span v-if="attribute.is_filterable" class="token">Filtrable</span>
+                        <span v-if="attribute.is_searchable" class="token">Recherchable</span>
+                      </div>
+                    </div>
+                    <label class="field">
+                      Valeur produit
+                      <div v-if="isChoiceAttribute(attribute)" class="catalog-option-buttons">
+                        <button v-for="option in attributeOptions(attribute)" :key="attributeOptionKey(option)" type="button" class="catalog-option-button" :class="{ active: attributeOptionSelected(attribute, 'product', option) }" :disabled="!canWrite" @click="toggleAttributeOption(attribute, 'product', option)">
+                          <span v-if="option.color_hex" class="catalog-color-dot" :style="{ background: String(option.color_hex) }"></span>
+                          <span>{{ attributeOptionLabel(option) }}</span>
+                        </button>
+                        <span v-if="attributeOptions(attribute).length === 0" class="muted">Aucune option définie.</span>
+                      </div>
+                      <select v-else-if="attribute.data_type === 'boolean'" class="select" :value="attributeValue(attribute.id, 'product')" :disabled="!canWrite" @change="setAttributeValue(attribute.id, 'product', eventValue($event))">
+                        <option value="">—</option>
+                        <option value="1">Oui</option>
+                        <option value="0">Non</option>
+                      </select>
+                      <textarea v-else-if="attribute.data_type === 'textarea' || attribute.data_type === 'rich_text'" class="input" rows="2" :value="attributeValue(attribute.id, 'product')" :disabled="!canWrite" @input="setAttributeValue(attribute.id, 'product', eventValue($event))"></textarea>
+                      <input v-else class="input" :type="attributeInputType(attribute)" :value="attributeValue(attribute.id, 'product')" :disabled="!canWrite" @input="setAttributeValue(attribute.id, 'product', eventValue($event))">
+	                    </label>
+	                  </div>
+	                </section>
+	              </section>
+
+	              <section class="catalog-attribute-scope catalog-attribute-scope--variant">
+                <div class="catalog-attribute-scope-head">
+                  <div>
+                    <h4>Variante</h4>
+                    <p class="muted">Attributs propres à la variante choisie.</p>
+                  </div>
+                  <label class="field catalog-variant-picker">
+                    <select class="select" :value="selectedVariant?.id || ''" :disabled="!canWrite || selectedVariants.length === 0" @change="selectVariantById(eventValue($event))">
+                      <option value="">Aucune variante</option>
+                      <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
+                    </select>
+                  </label>
+                </div>
+                <div v-if="variantAttributeWarnings.length" class="catalog-quality-strip">
+                  <span v-for="warning in variantAttributeWarnings" :key="`variant-attribute-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+                </div>
+                <template v-if="selectedVariant">
+                  <section v-for="group in groupedAttributes" :key="`variant-${group.group.id || group.group.code}`" class="catalog-attribute-group">
+                    <h5>{{ group.group.name }}</h5>
+                    <div v-for="attribute in group.attributes" :key="`variant-${attribute.id}`" class="catalog-attribute-row catalog-attribute-row--single">
+                      <div>
+                        <strong>{{ attribute.name }}</strong>
+                        <span>{{ attributeTypeLabel(attribute.data_type) }}<template v-if="attribute.unit"> · {{ attribute.unit }}</template></span>
+                        <div class="token-row token-row--wrap">
+                          <span v-if="attribute.is_required" class="token">Requis</span>
+                          <span v-if="attribute.is_public" class="token">Public</span>
+                          <span v-if="attribute.is_filterable" class="token">Filtrable</span>
+                          <span v-if="attribute.is_searchable" class="token">Recherchable</span>
+                        </div>
+                      </div>
+                      <label class="field">
+                        Valeur variante
+                        <div v-if="isChoiceAttribute(attribute)" class="catalog-option-buttons">
+                          <button v-for="option in attributeOptions(attribute)" :key="attributeOptionKey(option)" type="button" class="catalog-option-button" :class="{ active: attributeOptionSelected(attribute, 'variant', option) }" :disabled="!canWrite" @click="toggleAttributeOption(attribute, 'variant', option)">
+                            <span v-if="option.color_hex" class="catalog-color-dot" :style="{ background: String(option.color_hex) }"></span>
+                            <span>{{ attributeOptionLabel(option) }}</span>
+                          </button>
+                          <span v-if="attributeOptions(attribute).length === 0" class="muted">Aucune option définie.</span>
+                        </div>
+                        <select v-else-if="attribute.data_type === 'boolean'" class="select" :value="attributeValue(attribute.id, 'variant')" :disabled="!canWrite" @change="setAttributeValue(attribute.id, 'variant', eventValue($event))">
+                          <option value="">—</option>
+                          <option value="1">Oui</option>
+                          <option value="0">Non</option>
+                        </select>
+                        <textarea v-else-if="attribute.data_type === 'textarea' || attribute.data_type === 'rich_text'" class="input" rows="2" :value="attributeValue(attribute.id, 'variant')" :disabled="!canWrite" @input="setAttributeValue(attribute.id, 'variant', eventValue($event))"></textarea>
+                        <input v-else class="input" :type="attributeInputType(attribute)" :value="attributeValue(attribute.id, 'variant')" :disabled="!canWrite" @input="setAttributeValue(attribute.id, 'variant', eventValue($event))">
+                      </label>
+                    </div>
+                  </section>
+                </template>
+                <p v-else class="muted">Aucune variante sélectionnée.</p>
+              </section>
+            </div>
+            <p v-else class="muted">Sélectionnez au moins un groupe d’attributs pour ce produit.</p>
+          </div>
+          <footer class="catalog-modal-actions">
+            <button class="btn ghost" type="button" @click="closeProductModal">Fermer</button>
+            <button v-if="productModalScope !== 'media' || productModalMode === 'create'" class="btn primary" type="button" :disabled="!canWrite || busy === 'product' || busy === 'product-attributes' || busy === 'variant-attributes'" @click="saveProductModal">Enregistrer</button>
+          </footer>
+        </section>
+      </div>
+
+      <div v-if="variantPriceModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="closeVariantPriceModal">
+        <section class="catalog-modal" role="dialog" aria-modal="true" aria-label="Ajustements de prix par variante">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Prix</p>
+              <h2>Ajustements par variante</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeVariantPriceModal">×</button>
+          </header>
+          <div v-if="selectedVariants.length > 0" class="catalog-section">
+            <p class="muted">Les prix de base restent sur le produit. Ces ajustements s’appliquent uniquement à la variante sélectionnée.</p>
+            <div class="catalog-form-grid">
+              <label class="field">Variante
+                <select class="select" :value="selectedVariant?.id || ''" :disabled="!canPriceWrite" @change="selectVariantById(eventValue($event))">
+                  <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
+                </select>
+              </label>
+              <label v-if="canPurchaseRead" class="field">Ajustement achat
+                <select v-model="variantForm.purchase_adjustment_type" class="select" :disabled="!canPriceWrite || !selectedVariant">
+                  <option v-for="type in adjustmentTypes" :key="`modal-purchase-${type}`" :value="type">{{ type }}</option>
+                </select>
+              </label>
+              <label v-if="canPurchaseRead" class="field">Valeur achat
+                <span class="catalog-positive-input">
+                  <span aria-hidden="true">+</span>
+                  <input v-model="variantForm.purchase_adjustment_value" type="number" min="0" step="0.01" class="input" :disabled="!canPriceWrite || !selectedVariant || variantForm.purchase_adjustment_type === 'none'">
+                </span>
+              </label>
+              <label class="field">Ajustement vente
+                <select v-model="variantForm.sale_adjustment_type" class="select" :disabled="!canPriceWrite || !selectedVariant">
+                  <option v-for="type in adjustmentTypes" :key="`modal-sale-${type}`" :value="type">{{ type }}</option>
+                </select>
+              </label>
+              <label class="field">Valeur vente
+                <span class="catalog-positive-input">
+                  <span aria-hidden="true">+</span>
+                  <input v-model="variantForm.sale_adjustment_value" type="number" min="0" step="0.01" class="input" :disabled="!canPriceWrite || !selectedVariant || variantForm.sale_adjustment_type === 'none'">
+                </span>
+              </label>
+            </div>
+            <div v-if="selectedVariant?.computed_prices" class="catalog-quality-strip">
+              <span v-if="canPurchaseRead" class="catalog-signal catalog-signal--muted">Achat {{ selectedVariant.computed_prices.regular_purchase_price || '—' }}</span>
+              <span class="catalog-signal catalog-signal--muted">Vente {{ selectedVariant.computed_prices.final_sale_price || selectedVariant.computed_prices.regular_sale_price || '—' }}</span>
+            </div>
+          </div>
+          <p v-else class="muted">Créez une variante pour appliquer un ajustement de prix par taille, couleur ou option.</p>
+          <footer class="catalog-modal-actions">
+            <button class="btn ghost" type="button" @click="closeVariantPriceModal">Annuler</button>
+            <button class="btn primary" type="button" :disabled="!canPriceWrite || !selectedVariant || busy === `variant-${selectedVariant?.id}`" @click="saveSelectedVariantAdjustments">Enregistrer ajustements</button>
+          </footer>
+        </section>
       </div>
     </template>
   </section>
@@ -897,9 +4718,141 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+.catalog-products-shell,
+.catalog-products-panel {
+  display: grid;
+  gap: .9rem;
+}
+
+.catalog-products-panel {
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 8px;
+  background: #fff;
+  padding: 1rem;
+}
+
+.catalog-toolbar,
+.catalog-toolbar-buttons,
+.catalog-quick-filters,
+.catalog-active-filters {
+  display: flex;
+  gap: .55rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.catalog-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+}
+
+.catalog-toolbar-buttons {
+  justify-content: flex-end;
+}
+
+.catalog-search-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  min-height: 2.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04), inset 0 1px 0 rgba(255, 255, 255, .85);
+  padding: .25rem .45rem .25rem .85rem;
+}
+
+.catalog-search-control:focus-within {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+}
+
+.catalog-search-control svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #64748b;
+}
+
+.catalog-search-control input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.1rem;
+  border: 0;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+
+.catalog-search-control button {
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  line-height: 1;
+}
+
+.catalog-quick-filters {
+  gap: .35rem;
+}
+
+.catalog-quick-filters button {
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  min-height: 1.95rem;
+  padding: .25rem .65rem;
+  font-size: .84rem;
+}
+
+.catalog-quick-filters button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.catalog-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.85rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: .22rem .6rem .22rem .38rem;
+}
+
+.catalog-filter-chip span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: .9rem;
+  line-height: 1;
+}
+
+.catalog-filter-chip strong {
+  font-size: .82rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
 .catalog-layout {
   display: grid;
-  grid-template-columns: minmax(320px, .72fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(540px, 1.18fr) minmax(380px, .82fr);
   gap: 1rem;
   align-items: start;
 }
@@ -928,6 +4881,41 @@ onMounted(async () => {
   display: grid;
   gap: .65rem;
   padding: .75rem;
+}
+
+.catalog-bulk-panel {
+  border: 1px solid #dbe3ec;
+  border-radius: .75rem;
+  background: #f8fafc;
+  display: grid;
+  gap: .65rem;
+  padding: .75rem;
+}
+
+.catalog-bulk-panel__summary,
+.catalog-bulk-grid {
+  display: flex;
+  align-items: end;
+  gap: .65rem;
+  flex-wrap: wrap;
+}
+
+.catalog-bulk-panel__summary {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.catalog-bulk-grid label {
+  color: #475467;
+  display: grid;
+  font-size: .82rem;
+  gap: .25rem;
+  min-width: 9rem;
+}
+
+.catalog-bulk-checkbox {
+  align-self: center;
+  min-width: auto;
 }
 
 .catalog-import-options {
@@ -975,6 +4963,466 @@ onMounted(async () => {
   color: #64748b;
 }
 
+.catalog-products-table {
+  border: 1px solid #eef2f6;
+  border-radius: 8px;
+  background: #fff;
+  overflow: visible;
+}
+
+.catalog-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: .92rem;
+}
+
+.catalog-table th,
+.catalog-table td {
+  border-bottom: 1px solid #eef2f6;
+  padding: .5rem .45rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.catalog-select-col {
+  width: 2.4rem;
+  text-align: center;
+}
+
+.catalog-table th {
+  color: #667085;
+  font-size: .78rem;
+  text-transform: uppercase;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.catalog-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  font: inherit;
+  gap: .32rem;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+}
+
+.catalog-sort-button span {
+  align-items: center;
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  color: #98a2b3;
+  display: inline-flex;
+  font-size: .68rem;
+  height: 1.05rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.05rem;
+}
+
+.catalog-sort-button span.active {
+  border-color: #0f172a;
+  color: #0f172a;
+}
+
+.catalog-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  justify-content: space-between;
+  padding: .75rem .1rem 0;
+}
+
+.catalog-pagination label,
+.catalog-pagination-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: .5rem;
+}
+
+.catalog-pagination label {
+  color: #667085;
+  font-size: .84rem;
+  font-weight: 700;
+}
+
+.catalog-pagination .select {
+  min-width: 5.5rem;
+}
+
+.catalog-pagination > span,
+.catalog-pagination-actions strong {
+  color: #475467;
+  font-size: .84rem;
+  white-space: nowrap;
+}
+
+.catalog-table-row {
+  cursor: pointer;
+}
+
+.catalog-table-row.is-archived {
+  cursor: default;
+}
+
+.catalog-table-row:hover,
+.catalog-table-row.active {
+  background: #f8fafc;
+}
+
+.catalog-product-cell {
+  min-width: 14rem;
+}
+
+.catalog-sku-cell {
+  width: 9rem;
+}
+
+.catalog-channel-col {
+  width: 13rem;
+}
+
+.catalog-status-col {
+  width: 5.8rem;
+}
+
+.catalog-status-col .badge.active {
+  background: #fff;
+  border: 1px solid #344054;
+  color: #344054;
+}
+
+.catalog-status-col .badge.draft {
+  background: #b45309;
+  border: 1px solid #b45309;
+  color: #fff;
+}
+
+.catalog-status-col .badge.archived {
+  background: #344054;
+  border: 1px solid #344054;
+  color: #fff;
+}
+
+.catalog-sku-cell code {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #475467;
+  display: inline-block;
+  font-size: .78rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: .12rem .35rem;
+}
+
+.catalog-product-name {
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 0;
+  text-align: left;
+}
+
+.catalog-product-name:hover,
+.catalog-product-name:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: .16em;
+}
+
+.catalog-product-name--static,
+.catalog-product-name--static:hover,
+.catalog-product-name--static:focus-visible {
+  display: block;
+  text-decoration: none;
+}
+
+.catalog-product-cell strong,
+.catalog-product-cell small,
+.catalog-table td > span,
+.catalog-table td > small {
+  display: block;
+}
+
+.catalog-cell-inline {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.65rem;
+}
+
+.catalog-cell-inline--wrap {
+  flex-wrap: wrap;
+}
+
+.catalog-signal-row,
+.catalog-quality-strip,
+.catalog-detail-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  align-items: center;
+}
+
+.catalog-signal-row {
+  margin-top: .35rem;
+}
+
+.catalog-signal {
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  color: #475467;
+  display: inline-flex;
+  font-size: .74rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: .28rem .45rem;
+  white-space: nowrap;
+}
+
+.catalog-signal--success {
+  background: #ecfdf3;
+  border-color: #abefc6;
+  color: #067647;
+}
+
+.catalog-signal--warning {
+  background: #fffaeb;
+  border-color: #fedf89;
+  color: #b54708;
+}
+
+.catalog-signal--danger {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.catalog-signal--muted {
+  background: #f2f4f7;
+  border-color: #d0d5dd;
+  color: #344054;
+}
+
+.catalog-signal-button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.catalog-linked-offers {
+  border-top: 1px solid #eaecf0;
+  margin-top: .85rem;
+  padding-top: .85rem;
+}
+
+.catalog-image-state,
+.catalog-completeness {
+  color: #067647;
+  font-weight: 700;
+}
+
+.catalog-image-state.is-missing,
+.catalog-completeness.is-low {
+  color: #b54708;
+}
+
+.catalog-actions-cell {
+  min-width: 7rem;
+  border-bottom-color: transparent !important;
+  cursor: default;
+}
+
+.catalog-actions-cell .btn,
+.catalog-actions-cell .btn:hover,
+.catalog-actions-cell .btn:focus-visible,
+.catalog-actions-cell summary {
+  text-decoration: none;
+}
+
+.catalog-menu {
+  position: relative;
+  z-index: 3;
+}
+
+.catalog-menu[open] {
+  z-index: 20;
+}
+
+.catalog-menu summary {
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 6px;
+  cursor: pointer;
+  list-style: none;
+  min-width: 2.1rem;
+  min-height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  user-select: none;
+}
+
+.catalog-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.catalog-icon-summary svg,
+.catalog-row-menu-summary svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
+
+.catalog-menu-panel {
+  position: absolute;
+  right: 0;
+  z-index: 8;
+  min-width: 170px;
+  margin-top: .35rem;
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, .16);
+  padding: .35rem;
+  display: grid;
+  gap: .2rem;
+}
+
+.catalog-menu-panel button,
+.catalog-menu-panel a {
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  color: #344054;
+  padding: .45rem .55rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.catalog-menu-panel button:not(:disabled):hover,
+.catalog-menu-panel a:hover {
+  background: #f2f4f7;
+}
+
+.catalog-menu-panel button:disabled {
+  color: #98a2b3;
+}
+
+.catalog-menu-panel .danger-action {
+  color: #b42318;
+}
+
+.catalog-menu-panel .danger-action:not(:disabled):hover {
+  background: #fef3f2;
+}
+
+.catalog-filter-panel {
+  min-width: 280px;
+}
+
+.catalog-filter-panel label {
+  display: grid;
+  gap: .25rem;
+  color: #344054;
+  padding: .35rem .45rem;
+}
+
+.catalog-filter-panel label:has(input[type="checkbox"]) {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.catalog-filter-actions {
+  display: flex;
+  gap: .45rem;
+  padding: .35rem .45rem;
+}
+
+.catalog-filter-panel select,
+.catalog-column-panel label {
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 6px;
+  min-height: 2.25rem;
+  padding: .4rem .55rem;
+}
+
+.catalog-column-panel {
+  min-width: 210px;
+}
+
+.catalog-column-panel strong,
+.catalog-filter-panel strong {
+  color: #344054;
+  font-size: .82rem;
+  padding: .3rem .45rem;
+}
+
+.catalog-column-panel label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .45rem;
+  align-items: center;
+  border: 0;
+  color: #344054;
+}
+
+.catalog-detail-nav {
+  border-bottom: 1px solid #e5e7eb;
+  margin: .5rem 0 1rem;
+  padding-bottom: .75rem;
+}
+
+.catalog-detail-nav .btn.active {
+  background: #0f172a;
+  color: #fff;
+}
+
+.catalog-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .65rem;
+  margin-bottom: .85rem;
+}
+
+.catalog-summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: .75rem;
+  background: #f8fafc;
+  padding: .7rem;
+}
+
+.catalog-summary-card span {
+  color: #64748b;
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-bottom: .25rem;
+}
+
+.catalog-summary-card strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.catalog-section-focus {
+  border: 1px solid rgba(37, 99, 235, .32);
+  border-radius: .75rem;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .08);
+  padding: .75rem;
+}
+
 .catalog-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -983,6 +5431,537 @@ onMounted(async () => {
 
 .catalog-form-grid .wide {
   grid-column: 1 / -1;
+}
+
+.catalog-price-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+
+.catalog-positive-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .4rem;
+}
+
+.catalog-positive-input > span {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.catalog-option-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  align-items: center;
+}
+
+.catalog-option-button {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  padding: .35rem .65rem;
+  font-size: .86rem;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.catalog-option-button input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.catalog-option-button.active {
+  border-color: #0f172a;
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: inset 0 0 0 1px #0f172a;
+}
+
+.catalog-option-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.catalog-color-dot {
+  width: .75rem;
+  height: .75rem;
+  border: 1px solid rgba(15, 23, 42, .22);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45);
+}
+
+.catalog-color-field {
+  display: grid;
+  gap: .4rem;
+}
+
+.catalog-color-picker {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: .45rem;
+  align-items: center;
+}
+
+.catalog-color-picker input[type="color"] {
+  width: 2.75rem;
+  height: 2.4rem;
+  border: 0;
+  border-radius: .6rem;
+  background: #fff;
+  padding: 0;
+}
+
+.catalog-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+}
+
+.catalog-color-swatches button {
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid #94a3b8;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .65);
+}
+
+.catalog-color-swatches button.active {
+  outline: 2px solid #0f172a;
+  outline-offset: 2px;
+}
+
+.catalog-read-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.catalog-read-grid > div,
+.catalog-read-grid > button {
+  border: 1px solid #e5e7eb;
+  border-radius: .75rem;
+  background: #f8fafc;
+  padding: .7rem;
+}
+
+.catalog-read-grid > button {
+  text-align: left;
+}
+
+.catalog-read-grid > button:hover,
+.catalog-compact-row:hover,
+.catalog-clickable-section:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.catalog-read-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.catalog-read-grid span {
+  color: #64748b;
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-bottom: .25rem;
+}
+
+.catalog-read-grid strong,
+.catalog-read-grid p {
+  color: #0f172a;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.catalog-variant-count {
+  white-space: nowrap;
+}
+
+.catalog-asset-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.catalog-asset-overview div {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  padding: .55rem;
+}
+
+.catalog-asset-overview span {
+  color: #64748b;
+  display: block;
+  font-size: .76rem;
+  font-weight: 700;
+  margin-bottom: .2rem;
+}
+
+.catalog-asset-manager {
+  display: grid;
+  gap: .75rem;
+}
+
+.panel__header.compact {
+  margin: 0;
+}
+
+.panel__header.compact h3,
+.panel__header.compact p {
+  margin: 0;
+}
+
+.catalog-asset-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: .65rem;
+}
+
+.catalog-asset-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: grid;
+  align-content: start;
+  gap: .45rem;
+  padding: .65rem;
+}
+
+.catalog-asset-group h4 {
+  color: #0f172a;
+  font-size: .88rem;
+  margin: 0;
+}
+
+.catalog-asset-card {
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  padding: .45rem;
+}
+
+.catalog-asset-card img {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.catalog-asset-card strong,
+.catalog-asset-card span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-asset-card span {
+  color: #64748b;
+  font-size: .78rem;
+}
+
+.catalog-asset-editor {
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  padding: .75rem;
+}
+
+.catalog-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: grid;
+  place-items: start center;
+  background: rgba(15, 23, 42, .42);
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.catalog-modal {
+  width: min(920px, 100%);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+  margin: auto 0;
+  overflow: visible;
+  padding: 1rem;
+}
+
+.catalog-modal--view {
+  width: min(1060px, 100%);
+}
+
+.catalog-modal--reference {
+  width: min(980px, 100%);
+}
+
+.catalog-modal--attributes {
+  width: min(1180px, 100%);
+}
+
+.catalog-modal-head,
+.catalog-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.catalog-modal-head {
+  border-bottom: 1px solid #eef2f6;
+  margin-bottom: 1rem;
+  padding-bottom: .75rem;
+}
+
+.catalog-modal-head h2 {
+  margin: 0;
+}
+
+.catalog-modal-close {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--business-border, #d0d5dd);
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.catalog-modal-actions {
+  border-top: 1px solid #eef2f6;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: .75rem;
+}
+
+.catalog-modal-actions.wide {
+  grid-column: 1 / -1;
+}
+
+.catalog-reference-grid,
+.catalog-reference-layout {
+  display: grid;
+  gap: .75rem;
+}
+
+.catalog-reference-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.catalog-reference-layout {
+  grid-template-columns: minmax(220px, 280px) 1fr;
+}
+
+.catalog-reference-list {
+  display: grid;
+  align-content: start;
+  gap: .35rem;
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  padding-right: .25rem;
+}
+
+.catalog-reference-list button {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  display: grid;
+  gap: .15rem;
+  padding: .55rem .65rem;
+  text-align: left;
+}
+
+.catalog-reference-list button:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.catalog-reference-list span {
+  color: #64748b;
+  font-size: .78rem;
+}
+
+.catalog-reference-list.compact-list {
+  max-height: 13rem;
+}
+
+.catalog-attribute-settings-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(360px, 1.25fr) minmax(260px, .95fr);
+  gap: .75rem;
+  align-items: start;
+}
+
+.catalog-attribute-settings-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.catalog-settings-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: grid;
+  gap: .75rem;
+  padding: .75rem;
+}
+
+.catalog-settings-card .catalog-reference-list button {
+  background: #fff;
+}
+
+.catalog-form-grid--single {
+  grid-template-columns: 1fr;
+}
+
+.catalog-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .4rem .65rem;
+}
+
+.catalog-definition-warnings {
+  margin-bottom: .75rem;
+}
+
+.catalog-attribute-manager {
+  display: grid;
+  gap: .75rem;
+}
+
+.catalog-attribute-groups {
+  display: grid;
+  gap: .75rem;
+}
+
+.catalog-attribute-scope {
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #eff6ff;
+  display: grid;
+  gap: .75rem;
+  padding: .75rem;
+}
+
+.catalog-attribute-scope--variant {
+  background: #f8fafc;
+  border-color: #e5e7eb;
+}
+
+.catalog-attribute-scope-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .65rem;
+  align-items: end;
+}
+
+.catalog-attribute-scope-head h4,
+.catalog-attribute-scope-head p {
+  margin: 0;
+}
+
+.catalog-attribute-scope-head h4 {
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.catalog-attribute-scope-head .catalog-variant-picker {
+  min-width: 220px;
+}
+
+.catalog-attribute-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: grid;
+  gap: .6rem;
+  padding: .7rem;
+}
+
+.catalog-attribute-group h5 {
+  color: #0f172a;
+  font-size: .9rem;
+  margin: 0;
+}
+
+.catalog-attribute-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: minmax(180px, .85fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: .65rem;
+  padding: .65rem;
+}
+
+.catalog-attribute-row--single {
+  grid-template-columns: minmax(180px, .9fr) minmax(220px, 1fr);
+}
+
+.catalog-attribute-row strong,
+.catalog-attribute-row span {
+  display: block;
+}
+
+.catalog-attribute-row > div > span {
+  color: #64748b;
+  font-size: .8rem;
+  margin-top: .12rem;
+}
+
+.catalog-modal-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  margin-top: .85rem;
+}
+
+.catalog-modal-sections section,
+.catalog-compact-row {
+  border: 1px solid #e5e7eb;
+  border-radius: .75rem;
+  background: #f8fafc;
+  padding: .7rem;
+}
+
+.catalog-modal-sections h3 {
+  margin: 0 0 .55rem;
+  color: #0f172a;
+  font-size: .95rem;
+}
+
+.catalog-compact-list {
+  display: grid;
+  gap: .4rem;
+}
+
+.catalog-compact-row {
+  display: grid;
+  gap: .15rem;
+  background: #fff;
+  text-align: left;
+  width: 100%;
+}
+
+.catalog-compact-row span {
+  color: #667085;
+  font-size: .84rem;
 }
 
 .catalog-section {
@@ -1003,6 +5982,18 @@ onMounted(async () => {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.catalog-offers-table-wrap.table-wrap {
+  overflow: visible;
+}
+
+.catalog-offers-table-wrap .catalog-menu-panel {
+  z-index: 60;
+}
+
+.catalog-products-table.table-wrap {
+  overflow: visible;
 }
 
 .price-stack {
@@ -1066,6 +6057,7 @@ onMounted(async () => {
 
 @media (max-width: 720px) {
   .catalog-form-grid,
+  .catalog-price-grid,
   .option-grid {
     grid-template-columns: 1fr;
   }

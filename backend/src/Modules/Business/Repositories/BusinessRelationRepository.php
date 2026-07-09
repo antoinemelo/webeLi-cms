@@ -12,7 +12,7 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
     public function list(int $siteId, array $filters = [], int $limit = 100, int $offset = 0): array
     {
         $siteId = $this->requireSiteId($siteId);
-        $limit = $this->limit($limit, 200);
+        $limit = $this->limit($limit, 10000);
         $offset = $this->offset($offset);
         $type = $this->type(($filters['type'] ?? '') !== '' ? $filters['type'] : ($filters['kind'] ?? ''));
         $status = trim((string) ($filters['status'] ?? ''));

@@ -2,10 +2,10 @@
   "contract": "public.catalog.products.show.v1",
   "kind": "schema",
   "summary": "Lire un produit public e-commerce par slug.",
-  "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics et prix de vente publics.",
+  "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les métadonnées asset internes, attributs non publics, prix d'achat, marges et stocks exacts ne sont jamais exposés.",
   "method": "GET",
   "path": "/api/v1/catalog/products/{slug}",
-  "source": "business_products + business_product_variants",
+  "source": "business_products + business_product_variants + business_product_assets + business_attributes publics",
   "security": "Public read endpoint; may be protected by bearer scope catalog:read or headless:read.",
   "query_params": {
     "lang": {"type": "string", "required": false}
@@ -28,6 +28,6 @@
     {"status": 404, "description": "Produit public introuvable."}
   ],
   "examples": {
-    "response": {"data": {"product": {"id": 1, "name": "T-shirt", "slug": "t-shirt", "variants": []}}, "meta": {"contract": "public.catalog.products.show.v1"}}
+    "response": {"data": {"product": {"id": 1, "name": "T-shirt", "slug": "t-shirt", "main_asset": {"asset_id": 20, "media_id": 101, "role": "main", "url": "/media/101", "alt_text": "T-shirt"}, "gallery_assets": [], "public_attributes": [{"code": "matiere", "name": "Matière", "data_type": "text", "value": "Coton"}], "is_sellable_public": true, "variants": []}}, "meta": {"contract": "public.catalog.products.show.v1"}}
   }
 }

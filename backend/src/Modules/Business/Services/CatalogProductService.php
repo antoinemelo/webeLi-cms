@@ -34,7 +34,7 @@ final class CatalogProductService implements CatalogProductServiceContract
     public function update(int $siteId, int $id, array $payload, ?int $actorId = null): ?array
     {
         if (($payload['status'] ?? null) === 'active') {
-            $this->assertCanBeActive($id);
+            $this->assertCanBeActive($siteId, $id);
         }
         return $this->products->update($siteId, $id, $payload, $actorId);
     }
@@ -44,9 +44,21 @@ final class CatalogProductService implements CatalogProductServiceContract
         return $this->products->archive($siteId, $id, $actorId);
     }
 
-    private function assertCanBeActive(int $productId): void
+    public function restore(int $siteId, int $id, ?int $actorId = null): bool
     {
-        if (!$this->products->hasSaleBasePrice($productId)) {
+        return $this->products->restore($siteId, $id, $actorId);
+    }
+
+    public function deletePermanently(int $siteId, int $id): bool
+    {
+        return $this->products->deletePermanently($siteId, $id);
+    }
+
+    private function assertCanBeActive(int $siteId, int $productId): void
+    {
+        $product = $this->products->find($siteId, $productId, true);
+        $isBundle = ($product['type'] ?? null) === 'bundle';
+        if (!$isBundle && !$this->products->hasSaleBasePrice($productId)) {
             throw new \InvalidArgumentException('business.catalog.active_product_sale_price_required');
         }
         if ($this->products->activeVariantCount($productId) < 1) {

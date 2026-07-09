@@ -2,10 +2,10 @@
   "contract": "public.catalog.products.index.v1",
   "kind": "schema",
   "summary": "Lister les produits publics e-commerce.",
-  "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Les prix d'achat, marges, fournisseurs, notes internes et stocks exacts ne sont jamais exposés.",
+  "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Le payload public peut inclure main_asset, gallery_assets, public_attributes et is_sellable_public. Les prix d'achat, marges, fournisseurs, notes internes, métadonnées asset internes et stocks exacts ne sont jamais exposés.",
   "method": "GET",
   "path": "/api/v1/catalog/products",
-  "source": "business_products + business_product_variants + business_product_base_prices + business_catalog_discounts",
+  "source": "business_products + business_product_variants + business_product_base_prices + business_catalog_discounts + business_product_assets + business_attributes publics",
   "security": "Public read endpoint; may be protected by bearer scope catalog:read or headless:read.",
   "query_params": {
     "lang": {"type": "string", "required": false},
@@ -43,8 +43,13 @@
           "id": 1,
           "name": "T-shirt",
           "slug": "t-shirt",
+          "main_asset": {"asset_id": 20, "media_id": 101, "role": "main", "url": "/media/101", "alt_text": "T-shirt"},
+          "gallery_assets": [{"asset_id": 21, "media_id": 102, "role": "gallery", "url": "/media/102", "alt_text": "T-shirt détail"}],
+          "public_attributes": [{"code": "matiere", "name": "Matière", "data_type": "text", "value": "Coton", "language": "fr"}],
+          "is_sellable_public": true,
           "variants": [{
             "id": 10,
+            "is_sellable_public": true,
             "pricing": {"regular_sale_price": "38.50", "final_sale_price": "36.58", "currency": "CHF", "discount": {"label": "Offre spéciale", "type": "percent", "value": "5.00"}}
           }]
         }],

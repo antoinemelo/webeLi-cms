@@ -31,6 +31,12 @@ EXPECTED_TABLES = {
     "crm_message_delivery_events",
     "crm_message_templates",
     "crm_messaging_providers",
+    "business_product_assets",
+    "business_attribute_groups",
+    "business_attributes",
+    "business_product_attribute_values",
+    "business_variant_attribute_values",
+    "business_product_completeness_scores",
 }
 
 EXPECTED_INDEXES = {
@@ -42,6 +48,9 @@ EXPECTED_INDEXES = {
     "idx_crm_consents_channel_status",
     "idx_crm_mailing_lists_site",
     "idx_crm_message_outbox_status",
+    "idx_business_product_assets_product",
+    "idx_business_attributes_group",
+    "idx_business_product_completeness_scores_sellable",
 }
 
 EXPECTED_BUSINESS_ROUTES = {
@@ -55,6 +64,12 @@ EXPECTED_BUSINESS_ROUTES = {
     "GET /admin/api/business/mailing/lists",
     "POST /admin/api/business/mailing/campaigns/{id}/preview-recipients",
     "POST /admin/api/business/messaging/send-test",
+    "GET /admin/api/business/pim/products/{id}/assets",
+    "POST /admin/api/business/pim/products/{id}/assets",
+    "GET /admin/api/business/pim/attribute-groups",
+    "GET /admin/api/business/pim/attributes",
+    "GET /admin/api/business/pim/sellable-variants",
+    "POST /admin/api/business/pim/products/bulk-update",
 }
 
 
@@ -127,6 +142,8 @@ class BusinessModuleSmokeTest(unittest.TestCase):
             "unit/business_crm_service_test.php",
             "unit/business_crm_api_controller_test.php",
             "unit/business_csv_service_test.php",
+            "unit/business_pim_api_controller_test.php",
+            "unit/business_pim_lite_blueprints_test.php",
             "unit/business_mailing_service_test.php",
             "unit/business_messaging_provider_test.php",
         ]:

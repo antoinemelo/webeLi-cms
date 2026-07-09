@@ -140,6 +140,10 @@ use App\Modules\Business\Services\BusinessRelationSummaryService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
 use App\Modules\Business\Services\BusinessMailingService;
+use App\Modules\Business\Services\BusinessPimAdminService;
+use App\Modules\Business\Services\BusinessProductAssetService;
+use App\Modules\Business\Services\BusinessProductBundleService;
+use App\Modules\Business\Services\BusinessProductCompletenessService;
 use App\Modules\Business\Services\CatalogCsvService;
 use App\Modules\Business\Services\CatalogDiscountService;
 use App\Modules\Business\Services\CatalogProductService;
@@ -833,7 +837,27 @@ final class ServiceFactory
 
     public function businessCatalogSellables(): BusinessCatalogSellableReadService
     {
-        return $this->once('business_catalog_sellables', fn() => new BusinessCatalogSellableReadService($this->businessCatalogPricingRepository(), $this->businessCatalogPricing(), $this->businessPosCatalog()));
+        return $this->once('business_catalog_sellables', fn() => new BusinessCatalogSellableReadService($this->businessCatalogPricingRepository(), $this->businessCatalogPricing(), $this->businessPosCatalog(), null, $this->businessProductBundles()));
+    }
+
+    public function businessProductAssets(): BusinessProductAssetService
+    {
+        return $this->once('business_product_assets', fn() => new BusinessProductAssetService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessProductBundles(): BusinessProductBundleService
+    {
+        return $this->once('business_product_bundles', fn() => new BusinessProductBundleService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessProductCompleteness(): BusinessProductCompletenessService
+    {
+        return $this->once('business_product_completeness', fn() => new BusinessProductCompletenessService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPimAdmin(): BusinessPimAdminService
+    {
+        return $this->once('business_pim_admin', fn() => new BusinessPimAdminService($this->businessDatabaseConnection()->database(), $this->businessProductCompleteness()));
     }
 
     public function businessPublicCatalog(): PublicCatalogRepository

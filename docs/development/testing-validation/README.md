@@ -43,4 +43,5 @@ Les qualifications lentes couvrent notamment l’intégrité des bases actives, 
 ## Tests spécialisés
 
 - [Tests du module Business CRM](business-crm.md) : schema, migrations, permissions, memos, mailing, messaging et CSV sans API externe.
+- [Tests PIM-lite Opérations](business-pim-lite.md) : schema PIM, assets, attributs, completude, snapshot vendable, routes admin protegees et frontiere Vente.
 - [Tests de charge traçables](load-testing.md) : campagnes HTTP manuelles sous `tools/tests/`, hors suites automatisées `tools/cms.py test`.

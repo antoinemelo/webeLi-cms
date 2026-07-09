@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_products (
     site_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
-    product_type TEXT NOT NULL DEFAULT 'physical' CHECK(product_type IN ('physical','service','gift_card')),
+    product_type TEXT NOT NULL DEFAULT 'physical' CHECK(product_type IN ('physical','service','gift_card','bundle')),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(currency IN ('CHF','EUR','USD')),
     base_purchase_price REAL,
@@ -208,6 +208,7 @@ CREATE TABLE IF NOT EXISTS business_product_brands (
     site_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
+    company_id INTEGER,
     description TEXT,
     website_url TEXT,
     logo_media_id INTEGER,
@@ -219,6 +220,7 @@ CREATE TABLE IF NOT EXISTS business_product_brands (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     archived_at TEXT,
+    FOREIGN KEY(company_id) REFERENCES business_companies(id) ON DELETE SET NULL ON UPDATE CASCADE,
     UNIQUE(site_id, slug),
     CHECK(site_id > 0),
     CHECK(trim(name) <> ''),
@@ -280,7 +282,7 @@ CREATE TABLE IF NOT EXISTS business_products (
     site_id INTEGER NOT NULL,
     brand_id INTEGER,
     category_id INTEGER,
-    type TEXT NOT NULL CHECK(type IN ('physical','service','gift_card')),
+    type TEXT NOT NULL CHECK(type IN ('physical','service','gift_card','bundle')),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
     visibility TEXT NOT NULL DEFAULT 'internal' CHECK(visibility IN ('private','internal','public')),
     sku_base TEXT,
@@ -467,6 +469,45 @@ CREATE TABLE IF NOT EXISTS business_catalog_discounts (
     CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at)
 );
 
+CREATE TABLE IF NOT EXISTS business_product_bundles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    bundle_product_id INTEGER NOT NULL,
+    bundle_variant_id INTEGER,
+    pricing_mode TEXT NOT NULL DEFAULT 'fixed' CHECK(pricing_mode IN ('fixed','sum_components','discount_components')),
+    stock_mode TEXT NOT NULL DEFAULT 'components' CHECK(stock_mode IN ('components','virtual','none')),
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(bundle_product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(bundle_variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(site_id > 0),
+    CHECK(bundle_product_id > 0),
+    CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0)
+);
+
+CREATE TABLE IF NOT EXISTS business_bundle_components (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bundle_id INTEGER NOT NULL,
+    component_product_id INTEGER NOT NULL,
+    component_variant_id INTEGER,
+    quantity REAL NOT NULL DEFAULT 1 CHECK(quantity > 0),
+    is_required INTEGER NOT NULL DEFAULT 1 CHECK(is_required IN (0,1)),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(bundle_id) REFERENCES business_product_bundles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(component_product_id) REFERENCES business_products(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(component_variant_id) REFERENCES business_product_variants(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(component_product_id > 0),
+    CHECK(component_variant_id IS NULL OR component_variant_id > 0)
+);
+
 CREATE TABLE IF NOT EXISTS business_stock_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     variant_id INTEGER NOT NULL,
@@ -480,23 +521,6 @@ CREATE TABLE IF NOT EXISTS business_stock_movements (
     FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(quantity <> 0),
     CHECK(reference_type IS NULL OR trim(reference_type) <> '')
-);
-
-CREATE TABLE IF NOT EXISTS business_product_media (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    variant_id INTEGER,
-    media_id INTEGER NOT NULL,
-    role TEXT NOT NULL DEFAULT 'gallery' CHECK(role IN ('main','gallery','thumbnail','variant','document')),
-    alt_text TEXT,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_by_iam_user_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    archived_at TEXT,
-    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CHECK(media_id > 0),
-    CHECK(variant_id IS NULL OR role IN ('variant','gallery','thumbnail'))
 );
 
 CREATE TABLE IF NOT EXISTS business_product_tags (
@@ -546,9 +570,296 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_business_variant_adjustments_current_uniqu
     WHERE valid_from IS NULL;
 CREATE INDEX IF NOT EXISTS idx_business_catalog_discounts_scope ON business_catalog_discounts(scope_type, scope_id, status, priority);
 CREATE INDEX IF NOT EXISTS idx_business_catalog_discounts_site_channel ON business_catalog_discounts(site_id, channel, status, starts_at, ends_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_bundles_product_active
+    ON business_product_bundles(bundle_product_id)
+    WHERE bundle_variant_id IS NULL AND archived_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_bundles_variant_active
+    ON business_product_bundles(bundle_variant_id)
+    WHERE bundle_variant_id IS NOT NULL AND archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_business_bundle_components_bundle
+    ON business_bundle_components(bundle_id, archived_at, sort_order);
+CREATE INDEX IF NOT EXISTS idx_business_bundle_components_product
+    ON business_bundle_components(component_product_id, component_variant_id, archived_at);
 CREATE INDEX IF NOT EXISTS idx_business_stock_movements_variant ON business_stock_movements(variant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_business_product_media_product ON business_product_media(product_id, role, sort_order);
-CREATE INDEX IF NOT EXISTS idx_business_product_media_variant ON business_product_media(variant_id, role, sort_order);
+CREATE TABLE IF NOT EXISTS business_product_assets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    variant_id INTEGER,
+    media_id INTEGER NOT NULL,
+    role TEXT NOT NULL DEFAULT 'gallery' CHECK(role IN ('main','gallery','variant','thumbnail','document','technical_sheet','brand_logo','packaging','seo','internal')),
+    title TEXT,
+    alt_text TEXT,
+    caption TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
+    channel_scope TEXT NOT NULL DEFAULT 'all' CHECK(channel_scope IN ('all','public','ecommerce','pos','admin','pdf')),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(site_id > 0),
+    CHECK(media_id > 0),
+    CHECK(trim(role) <> ''),
+    CHECK(variant_id IS NULL OR variant_id > 0),
+    CHECK(product_id > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_assets_product
+    ON business_product_assets(site_id, product_id, channel_scope, role, sort_order)
+    WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_business_product_assets_variant
+    ON business_product_assets(site_id, variant_id, channel_scope, role, sort_order)
+    WHERE variant_id IS NOT NULL AND archived_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_assets_main_product
+    ON business_product_assets(product_id, channel_scope)
+    WHERE variant_id IS NULL AND role = 'main' AND archived_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_assets_main_variant
+    ON business_product_assets(variant_id, channel_scope)
+    WHERE variant_id IS NOT NULL AND role = 'main' AND archived_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS business_asset_metadata (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    media_id INTEGER NOT NULL,
+    asset_type TEXT NOT NULL DEFAULT 'image' CHECK(asset_type IN ('image','document','video','audio','archive','other')),
+    usage_rights TEXT NOT NULL DEFAULT 'unknown' CHECK(usage_rights IN ('unknown','owned','licensed','third_party','restricted','expired')),
+    license TEXT,
+    credit TEXT,
+    source TEXT,
+    expires_at TEXT,
+    internal_notes TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0),
+    CHECK(media_id > 0)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_asset_metadata_media
+    ON business_asset_metadata(site_id, media_id);
+CREATE INDEX IF NOT EXISTS idx_business_asset_metadata_usage
+    ON business_asset_metadata(site_id, usage_rights, expires_at);
+
+CREATE TABLE IF NOT EXISTS business_asset_renditions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    media_id INTEGER NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    rendition_key TEXT NOT NULL,
+    width INTEGER CHECK(width IS NULL OR width > 0),
+    height INTEGER CHECK(height IS NULL OR height > 0),
+    format TEXT CHECK(format IS NULL OR format IN ('jpg','jpeg','png','webp','avif','pdf')),
+    file_size INTEGER CHECK(file_size IS NULL OR file_size >= 0),
+    generated_media_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, media_id, channel, rendition_key),
+    CHECK(site_id > 0),
+    CHECK(media_id > 0),
+    CHECK(rendition_key = lower(trim(rendition_key)) AND rendition_key GLOB '[a-z0-9_.-]*'),
+    CHECK(generated_media_id IS NULL OR generated_media_id > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_asset_renditions_media
+    ON business_asset_renditions(site_id, media_id, channel);
+
+CREATE TABLE IF NOT EXISTS business_attribute_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    UNIQUE(site_id, code),
+    CHECK(site_id > 0),
+    CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
+    CHECK(trim(name) <> '')
+);
+
+CREATE TABLE IF NOT EXISTS business_attributes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    group_id INTEGER,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    data_type TEXT NOT NULL CHECK(data_type IN ('text','textarea','rich_text','number','decimal','boolean','select','multi_select','date','url','file','dimension','weight','color')),
+    unit TEXT,
+    is_required INTEGER NOT NULL DEFAULT 0 CHECK(is_required IN (0,1)),
+    is_filterable INTEGER NOT NULL DEFAULT 0 CHECK(is_filterable IN (0,1)),
+    is_searchable INTEGER NOT NULL DEFAULT 0 CHECK(is_searchable IN (0,1)),
+    is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    validation_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(validation_json)),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    UNIQUE(site_id, code),
+    CHECK(site_id > 0),
+    CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
+    CHECK(trim(name) <> ''),
+    CHECK(unit IS NULL OR trim(unit) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_attributes_group
+    ON business_attributes(site_id, group_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_business_attributes_public
+    ON business_attributes(site_id, is_public, is_filterable, is_searchable)
+    WHERE archived_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS business_product_attribute_group_links (
+    product_id INTEGER NOT NULL,
+    group_id INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(product_id, group_id),
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(sort_order >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_attribute_group_links_group
+    ON business_product_attribute_group_links(group_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS business_attribute_options (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attribute_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    label TEXT NOT NULL,
+    value TEXT NOT NULL,
+    color_hex TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(attribute_id) REFERENCES business_attributes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(attribute_id, code),
+    CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
+    CHECK(trim(label) <> ''),
+    CHECK(trim(value) <> ''),
+    CHECK(color_hex IS NULL OR color_hex GLOB '#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]')
+);
+
+CREATE TABLE IF NOT EXISTS business_product_attribute_values (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    attribute_id INTEGER NOT NULL,
+    language TEXT NOT NULL DEFAULT 'und',
+    value_text TEXT,
+    value_number REAL,
+    value_json TEXT CHECK(value_json IS NULL OR json_valid(value_json)),
+    updated_by_iam_user_id INTEGER,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(attribute_id) REFERENCES business_attributes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(product_id, attribute_id, language),
+    CHECK(language = lower(trim(language)) AND language GLOB '[a-z][a-z]*'),
+    CHECK(value_text IS NOT NULL OR value_number IS NOT NULL OR value_json IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_attribute_values_attribute
+    ON business_product_attribute_values(attribute_id, language);
+
+CREATE TABLE IF NOT EXISTS business_variant_attribute_values (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    variant_id INTEGER NOT NULL,
+    attribute_id INTEGER NOT NULL,
+    language TEXT NOT NULL DEFAULT 'und',
+    value_text TEXT,
+    value_number REAL,
+    value_json TEXT CHECK(value_json IS NULL OR json_valid(value_json)),
+    updated_by_iam_user_id INTEGER,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(attribute_id) REFERENCES business_attributes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(variant_id, attribute_id, language),
+    CHECK(language = lower(trim(language)) AND language GLOB '[a-z][a-z]*'),
+    CHECK(value_text IS NOT NULL OR value_number IS NOT NULL OR value_json IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_variant_attribute_values_attribute
+    ON business_variant_attribute_values(attribute_id, language);
+
+CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    scope TEXT NOT NULL CHECK(scope IN ('product','variant','asset','price','tax','channel')),
+    required_field TEXT,
+    required_attribute_id INTEGER,
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    weight INTEGER NOT NULL DEFAULT 1 CHECK(weight > 0),
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(required_attribute_id) REFERENCES business_attributes(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    UNIQUE(site_id, code),
+    CHECK(site_id > 0),
+    CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
+    CHECK(trim(name) <> ''),
+    CHECK(required_field IS NOT NULL OR required_attribute_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_completeness_rules_scope
+    ON business_product_completeness_rules(site_id, scope, channel, is_active);
+
+CREATE TABLE IF NOT EXISTS business_product_completeness_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    variant_id INTEGER,
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    score INTEGER NOT NULL CHECK(score >= 0 AND score <= 100),
+    is_sellable INTEGER NOT NULL DEFAULT 0 CHECK(is_sellable IN (0,1)),
+    missing_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(missing_json)),
+    calculated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(product_id > 0),
+    CHECK(variant_id IS NULL OR variant_id > 0)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_completeness_scores_product
+    ON business_product_completeness_scores(product_id, channel)
+    WHERE variant_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_completeness_scores_variant
+    ON business_product_completeness_scores(variant_id, channel)
+    WHERE variant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_business_product_completeness_scores_sellable
+    ON business_product_completeness_scores(channel, is_sellable, score);
+
+CREATE TABLE IF NOT EXISTS business_product_relations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    related_product_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL CHECK(relation_type IN ('accessory','alternative','bundle_candidate','replacement','upsell','cross_sell','similar')),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(related_product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id, product_id, related_product_id, relation_type),
+    CHECK(site_id > 0),
+    CHECK(product_id > 0),
+    CHECK(related_product_id > 0),
+    CHECK(product_id <> related_product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_relations_product
+    ON business_product_relations(site_id, product_id, relation_type, sort_order);
+CREATE INDEX IF NOT EXISTS idx_business_product_relations_related
+    ON business_product_relations(site_id, related_product_id, relation_type);
+
 CREATE INDEX IF NOT EXISTS idx_business_product_tags_site ON business_product_tags(site_id, archived_at, slug);
 
 INSERT OR IGNORE INTO business_tax_classes(site_id, code, name, rate, country, is_default)
@@ -590,28 +901,6 @@ SELECT id, 'purchase', 'CHF', 0.00, 0 FROM business_products WHERE site_id = 1 A
 INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
 SELECT id, 'sale', 'CHF', 100.00, 1 FROM business_products WHERE site_id = 1 AND slug = 'bon-cadeau-demo';
 
-INSERT OR IGNORE INTO business_product_options(site_id, code, name, type, sort_order)
-VALUES (1, 'formule', 'Formule', 'select', 10), (1, 'duree', 'Duree', 'duration', 20), (1, 'couleur', 'Couleur', 'color', 30);
-
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'classic', 'Classic', 'classic', 10 FROM business_product_options WHERE site_id = 1 AND code = 'formule';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'premium', 'Premium', 'premium', 20 FROM business_product_options WHERE site_id = 1 AND code = 'formule';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, '20_min', '20 min', '20_min', 10 FROM business_product_options WHERE site_id = 1 AND code = 'duree';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, '40_min', '40 min', '40_min', 20 FROM business_product_options WHERE site_id = 1 AND code = 'duree';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, color_hex, sort_order)
-SELECT id, 'bleu', 'Bleu', 'bleu', '#0066CC', 10 FROM business_product_options WHERE site_id = 1 AND code = 'couleur';
-
-INSERT OR IGNORE INTO business_product_option_links(product_id, option_id, is_required, sort_order)
-SELECT p.id, o.id, 1, o.sort_order FROM business_products p, business_product_options o
-WHERE p.site_id = 1 AND p.slug = 'vol-decouverte' AND o.site_id = 1 AND o.code IN ('formule','duree');
-
-INSERT OR IGNORE INTO business_product_option_links(product_id, option_id, is_required, sort_order)
-SELECT p.id, o.id, 1, o.sort_order FROM business_products p, business_product_options o
-WHERE p.site_id = 1 AND p.slug = 'gourde-demo' AND o.site_id = 1 AND o.code = 'couleur';
-
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
 SELECT id, 'active', 'DEMO-VOL-CLASSIC-20', 'Classic 20 min', 0, 0, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 'vol-decouverte';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
@@ -625,22 +914,6 @@ INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, pri
 SELECT v.id, 'purchase', 'percent_delta', 20.00, NULL FROM business_product_variants v WHERE v.sku = 'DEMO-VOL-PREMIUM-40';
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
 SELECT v.id, 'sale', 'amount_delta', 60.00, NULL FROM business_product_variants v WHERE v.sku = 'DEMO-VOL-PREMIUM-40';
-
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'DEMO-VOL-CLASSIC-20' AND o.site_id = 1 AND o.code = 'formule' AND ov.option_id = o.id AND ov.code = 'classic';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'DEMO-VOL-CLASSIC-20' AND o.site_id = 1 AND o.code = 'duree' AND ov.option_id = o.id AND ov.code = '20_min';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'DEMO-VOL-PREMIUM-40' AND o.site_id = 1 AND o.code = 'formule' AND ov.option_id = o.id AND ov.code = 'premium';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'DEMO-VOL-PREMIUM-40' AND o.site_id = 1 AND o.code = 'duree' AND ov.option_id = o.id AND ov.code = '40_min';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'DEMO-GOURDE-BLEU' AND o.site_id = 1 AND o.code = 'couleur' AND ov.option_id = o.id AND ov.code = 'bleu';
 
 INSERT OR IGNORE INTO business_catalog_discounts(site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, priority)
 SELECT 1, 'Lancement POS', 'active', 'percent', 10.00, NULL, 'product', p.id, 'pos', 100
@@ -659,9 +932,9 @@ VALUES (1, 'catalog_standard', 'Catalogue standard CH', 8.1, 'CH', 0);
 
 INSERT OR IGNORE INTO business_product_options(site_id, code, name, type, sort_order)
 VALUES
-    (1, 'model', 'Model', 'select', 40),
-    (1, 'size', 'Size', 'select', 50),
-    (1, 'color', 'Color', 'color', 60);
+    (1, 'model', 'Modèle', 'select', 40),
+    (1, 'size', 'Taille', 'select', 50),
+    (1, 'color', 'Couleur', 'color', 60);
 
 INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
 SELECT id, 'classic', 'Classic', 'classic', 10 FROM business_product_options WHERE site_id = 1 AND code = 'model';
@@ -674,9 +947,9 @@ SELECT id, 'm', 'M', 'm', 20 FROM business_product_options WHERE site_id = 1 AND
 INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
 SELECT id, 'l', 'L', 'l', 30 FROM business_product_options WHERE site_id = 1 AND code = 'size';
 INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, color_hex, sort_order)
-SELECT id, 'blue', 'Blue', 'blue', '#0066CC', 10 FROM business_product_options WHERE site_id = 1 AND code = 'color';
+SELECT id, 'blue', 'Bleu', 'blue', '#0066CC', 10 FROM business_product_options WHERE site_id = 1 AND code = 'color';
 INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, color_hex, sort_order)
-SELECT id, 'black', 'Black', 'black', '#000000', 20 FROM business_product_options WHERE site_id = 1 AND code = 'color';
+SELECT id, 'black', 'Noir', 'black', '#000000', 20 FROM business_product_options WHERE site_id = 1 AND code = 'color';
 
 INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
 SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'TSHIRT-DEMO', 'T-shirt Demo', 't-shirt-demo', 'Marchandise de demonstration avec variantes.', 'piece', t.id, 1, 0, 1, 1, 1
@@ -693,6 +966,11 @@ SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'GIFT-DEMO', 'Bon cadeau 
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'services' AND t.site_id = 1 AND t.code = 'catalog_standard';
 
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
+SELECT 1, b.id, c.id, 'bundle', 'active', 'public', 'BUNDLE-DEMO', 'Pack demo', 'pack-demo', 'Offre composee de demonstration regroupant un produit et un service.', 'bundle', t.id, 0, 0, 1, 1, 1
+FROM business_product_brands b, business_product_categories c, business_tax_classes t
+WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'marchandises' AND t.site_id = 1 AND t.code = 'catalog_standard';
+
 INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
 SELECT id, 'purchase', 'CHF', 14.00, 0 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
@@ -705,6 +983,10 @@ INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, curre
 SELECT id, 'purchase', 'CHF', 0.00, 0 FROM business_products WHERE site_id = 1 AND slug = 'bon-cadeau-simple';
 INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
 SELECT id, 'sale', 'CHF', 100.00, 1 FROM business_products WHERE site_id = 1 AND slug = 'bon-cadeau-simple';
+INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
+SELECT id, 'purchase', 'CHF', 59.00, 0 FROM business_products WHERE site_id = 1 AND slug = 'pack-demo';
+INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
+SELECT id, 'sale', 'CHF', 119.00, 1 FROM business_products WHERE site_id = 1 AND slug = 'pack-demo';
 
 INSERT OR IGNORE INTO business_product_option_links(product_id, option_id, is_required, sort_order)
 SELECT p.id, o.id, 1, o.sort_order
@@ -712,15 +994,39 @@ FROM business_products p, business_product_options o
 WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND o.site_id = 1 AND o.code IN ('model','size','color');
 
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-M-BLUE', 'Classic / M / Blue', 1, 15, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-M-BLUE', 'Classic / M / Bleu', 1, 15, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-L-BLUE', 'Classic / L / Blue', 1, 10, 0, 0, 20 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-L-BLUE', 'Classic / L / Bleu', 1, 10, 0, 0, 20 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-PREMIUM-M-BLACK', 'Premium / M / Black', 1, 8, 0, 0, 30 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-PREMIUM-M-BLACK', 'Premium / M / Noir', 1, 8, 0, 0, 30 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
 SELECT id, 'active', 'CONSULTATION-STANDARD', 'Consultation standard', 0, 0, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 'consultation';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
 SELECT id, 'active', 'GIFT-DEMO-100', 'Bon cadeau simple 100 CHF', 0, 0, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 'bon-cadeau-simple';
+INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
+SELECT id, 'active', 'BUNDLE-DEMO-STANDARD', 'Pack demo standard', 0, 0, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 'pack-demo';
+
+INSERT OR IGNORE INTO business_product_bundles(site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, is_active)
+SELECT 1, p.id, v.id, 'fixed', 'components', 1
+FROM business_products p
+INNER JOIN business_product_variants v ON v.product_id = p.id
+WHERE p.site_id = 1 AND p.slug = 'pack-demo' AND v.sku = 'BUNDLE-DEMO-STANDARD';
+
+INSERT OR IGNORE INTO business_bundle_components(bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json)
+SELECT b.id, p.id, v.id, 1, 1, 10, '{"fixture":"pim_lite","component":"product"}'
+FROM business_product_bundles b
+INNER JOIN business_products bundle_product ON bundle_product.id = b.bundle_product_id
+INNER JOIN business_products p ON p.site_id = b.site_id AND p.slug = 't-shirt-demo'
+INNER JOIN business_product_variants v ON v.product_id = p.id AND v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE'
+WHERE bundle_product.slug = 'pack-demo';
+
+INSERT OR IGNORE INTO business_bundle_components(bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json)
+SELECT b.id, p.id, v.id, 1, 1, 20, '{"fixture":"pim_lite","component":"service"}'
+FROM business_product_bundles b
+INNER JOIN business_products bundle_product ON bundle_product.id = b.bundle_product_id
+INNER JOIN business_products p ON p.site_id = b.site_id AND p.slug = 'consultation'
+INNER JOIN business_product_variants v ON v.product_id = p.id AND v.sku = 'CONSULTATION-STANDARD'
+WHERE bundle_product.slug = 'pack-demo';
 
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
 SELECT v.id, 'purchase', 'amount_delta', 2.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE';
@@ -760,6 +1066,159 @@ WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK' AND o.site_id = 1 AND o.code = 'size
 INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
 SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
 WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK' AND o.site_id = 1 AND o.code = 'color' AND ov.option_id = o.id AND ov.code = 'black';
+
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
+VALUES (1, NULL, NULL, 'physical', 'draft', 'internal', 'INCOMPLETE-DEMO', 'Produit incomplet demo', 'produit-incomplet-demo', 'Produit volontairement incomplet pour tester la qualite catalogue.', 'piece', 1, 0, 0, 0, 0);
+
+INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
+SELECT id, 'draft', 'INCOMPLETE-DEMO-DRAFT', 'Brouillon incomplet', 1, 0, 0, 0, 10
+FROM business_products
+WHERE site_id = 1 AND slug = 'produit-incomplet-demo';
+
+INSERT OR IGNORE INTO business_asset_metadata(site_id, media_id, asset_type, usage_rights, license, credit, source, metadata_json)
+VALUES
+    (1, 4, 'image', 'owned', 'demo', 'DEC CMS demo', 'seed', '{"fixture":"pim_lite","kind":"main_image"}'),
+    (1, 5, 'image', 'owned', 'demo', 'DEC CMS demo', 'seed', '{"fixture":"pim_lite","kind":"variant_image"}'),
+    (1, 6, 'document', 'owned', 'demo', 'DEC CMS demo', 'seed', '{"fixture":"pim_lite","kind":"technical_sheet"}');
+
+INSERT OR IGNORE INTO business_asset_renditions(site_id, media_id, channel, rendition_key, width, height, format, file_size, generated_media_id)
+VALUES
+    (1, 4, 'ecommerce', 'card', 800, 600, 'webp', 120000, NULL),
+    (1, 5, 'pos', 'thumb', 320, 320, 'webp', 42000, NULL),
+    (1, 6, 'pdf', 'original', NULL, NULL, 'pdf', 64000, NULL);
+
+INSERT OR IGNORE INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+SELECT 1, p.id, 4, 'main', 'Image principale gourde', 'Gourde demo bleue', 'Image principale de demonstration.', 10, 1, 'all'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 'gourde-demo';
+
+INSERT OR IGNORE INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+SELECT 1, p.id, 5, 'main', 'Image principale textile', 'T-shirt demo', 'Image principale textile.', 10, 1, 'all'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo';
+
+INSERT OR IGNORE INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+SELECT 1, p.id, 4, 'main', 'Image principale service', 'Consultation demo', 'Image principale service.', 10, 1, 'ecommerce'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 'consultation';
+
+INSERT OR IGNORE INTO business_product_assets(site_id, product_id, variant_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+SELECT 1, p.id, v.id, 5, 'main', 'Image variante gourde bleue', 'Variante gourde bleue', 'Image specifique POS.', 10, 1, 'pos'
+FROM business_products p
+INNER JOIN business_product_variants v ON v.product_id = p.id
+WHERE p.site_id = 1 AND v.sku = 'DEMO-GOURDE-BLEU';
+
+INSERT OR IGNORE INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+SELECT 1, p.id, 6, 'technical_sheet', 'Fiche technique fictive', 'Fiche technique de demonstration', 'Document technique fictif pour tester le PIM-lite.', 50, 0, 'pdf'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo';
+
+INSERT OR IGNORE INTO business_attribute_groups(site_id, code, name, description, sort_order)
+VALUES
+    (1, 'textile', 'Textile', 'Attributs de demonstration pour les produits textiles.', 10),
+    (1, 'service', 'Service', 'Attributs de demonstration pour les prestations.', 20),
+    (1, 'technique', 'Technique', 'Attributs techniques communs.', 30),
+    (1, 'seo', 'SEO', 'Attributs de qualification SEO catalogue.', 40);
+
+INSERT OR IGNORE INTO business_product_attribute_group_links(product_id, group_id, sort_order)
+SELECT p.id, g.id, 10
+FROM business_products p, business_attribute_groups g
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND g.site_id = 1 AND g.code = 'textile';
+
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'couleur', 'Couleur', 'color', NULL, 1, 1, 1, 1, 10, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'textile';
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'taille', 'Taille', 'select', NULL, 1, 1, 1, 1, 20, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'textile';
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'duree', 'Duree', 'number', 'min', 0, 1, 0, 1, 10, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'service';
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'matiere', 'Matiere', 'select', NULL, 1, 1, 1, 1, 30, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'textile';
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'niveau', 'Niveau', 'select', NULL, 0, 1, 1, 1, 20, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'service';
+INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
+SELECT 1, g.id, 'poids', 'Poids', 'weight', 'g', 0, 1, 0, 0, 10, '{}'
+FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'technique';
+
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, color_hex, sort_order)
+SELECT id, 'bleu', 'Bleu', 'bleu', '#0066CC', 10 FROM business_attributes WHERE site_id = 1 AND code = 'couleur';
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
+SELECT id, 'm', 'M', 'm', 20 FROM business_attributes WHERE site_id = 1 AND code = 'taille';
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
+SELECT id, 'l', 'L', 'l', 30 FROM business_attributes WHERE site_id = 1 AND code = 'taille';
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
+SELECT id, 'coton', 'Coton', 'coton', 10 FROM business_attributes WHERE site_id = 1 AND code = 'matiere';
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
+SELECT id, 'debutant', 'Debutant', 'debutant', 10 FROM business_attributes WHERE site_id = 1 AND code = 'niveau';
+
+INSERT OR IGNORE INTO business_product_attribute_values(product_id, attribute_id, language, value_text)
+SELECT p.id, a.id, 'fr', 'Coton'
+FROM business_products p, business_attributes a
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND a.site_id = 1 AND a.code = 'matiere';
+INSERT OR IGNORE INTO business_product_attribute_values(product_id, attribute_id, language, value_number)
+SELECT p.id, a.id, 'und', 180
+FROM business_products p, business_attributes a
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND a.site_id = 1 AND a.code = 'poids';
+INSERT OR IGNORE INTO business_product_attribute_values(product_id, attribute_id, language, value_number)
+SELECT p.id, a.id, 'und', 60
+FROM business_products p, business_attributes a
+WHERE p.site_id = 1 AND p.slug = 'consultation' AND a.site_id = 1 AND a.code = 'duree';
+INSERT OR IGNORE INTO business_product_attribute_values(product_id, attribute_id, language, value_text)
+SELECT p.id, a.id, 'fr', 'Debutant'
+FROM business_products p, business_attributes a
+WHERE p.site_id = 1 AND p.slug = 'vol-decouverte' AND a.site_id = 1 AND a.code = 'niveau';
+
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'Bleu'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'DEMO-GOURDE-BLEU' AND a.site_id = 1 AND a.code = 'couleur';
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'M'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE' AND a.site_id = 1 AND a.code = 'taille';
+
+INSERT OR IGNORE INTO business_product_completeness_rules(site_id, code, name, scope, required_field, channel, weight, is_active)
+VALUES
+    (1, 'name-required', 'Nom requis', 'product', 'name', 'all', 2, 1),
+    (1, 'variant-sku-required', 'SKU variante requis', 'variant', 'sku', 'all', 2, 1),
+    (1, 'sale-price-required', 'Prix de vente requis', 'price', 'sale_price', 'all', 3, 1),
+    (1, 'tax-required', 'TVA requise', 'tax', 'tax_class_id', 'all', 1, 1),
+    (1, 'main-image-pos-required', 'Image principale POS requise', 'asset', 'main_asset', 'pos', 2, 1),
+    (1, 'active-variant-required', 'Variante active requise', 'variant', 'active_variant', 'all', 2, 1),
+    (1, 'pos-channel-required', 'Canal POS active', 'channel', 'is_pos_enabled', 'pos', 2, 1),
+    (1, 'ecommerce-channel-required', 'Canal e-commerce active', 'channel', 'is_ecommerce_enabled', 'ecommerce', 2, 1);
+
+INSERT OR IGNORE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+SELECT p.id, 'pos', 100, 1, '[]'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 'gourde-demo';
+INSERT OR IGNORE INTO business_product_completeness_scores(product_id, variant_id, channel, score, is_sellable, missing_json)
+SELECT p.id, v.id, 'pos', 100, 1, '[]'
+FROM business_products p
+INNER JOIN business_product_variants v ON v.product_id = p.id
+WHERE p.site_id = 1 AND v.sku = 'DEMO-GOURDE-BLEU';
+INSERT OR IGNORE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+SELECT p.id, 'ecommerce', 95, 1, '[]'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 'consultation';
+INSERT OR IGNORE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+SELECT p.id, 'all', 30, 0, '["brand","category","tax_class","sale_price","main_asset","active_channel"]'
+FROM business_products p
+WHERE p.site_id = 1 AND p.slug = 'produit-incomplet-demo';
+INSERT OR IGNORE INTO business_product_completeness_scores(product_id, variant_id, channel, score, is_sellable, missing_json)
+SELECT p.id, v.id, 'all', 20, 0, '["active_variant","stock","sale_price"]'
+FROM business_products p
+INNER JOIN business_product_variants v ON v.product_id = p.id
+WHERE p.site_id = 1 AND v.sku = 'INCOMPLETE-DEMO-DRAFT';
+
+INSERT OR IGNORE INTO business_product_relations(site_id, product_id, related_product_id, relation_type, sort_order)
+SELECT 1, source.id, target.id, 'cross_sell', 10
+FROM business_products source, business_products target
+WHERE source.site_id = 1 AND target.site_id = 1 AND source.slug = 't-shirt-demo' AND target.slug = 'gourde-demo';
 
 CREATE TABLE IF NOT EXISTS crm_memos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

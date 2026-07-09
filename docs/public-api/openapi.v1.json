@@ -301,7 +301,7 @@
       "get": {
         "operationId": "get_public_catalog_products_index_v1",
         "summary": "Lister les produits publics e-commerce.",
-        "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Les prix d'achat, marges, fournisseurs, notes internes et stocks exacts ne sont jamais exposés.",
+        "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Le payload public peut inclure main_asset, gallery_assets, public_attributes et is_sellable_public. Les prix d'achat, marges, fournisseurs, notes internes, métadonnées asset internes et stocks exacts ne sont jamais exposés.",
         "tags": [
           "Headless v1"
         ],
@@ -440,9 +440,36 @@
                             "id": 1,
                             "name": "T-shirt",
                             "slug": "t-shirt",
+                            "main_asset": {
+                              "asset_id": 20,
+                              "media_id": 101,
+                              "role": "main",
+                              "url": "/media/101",
+                              "alt_text": "T-shirt"
+                            },
+                            "gallery_assets": [
+                              {
+                                "asset_id": 21,
+                                "media_id": 102,
+                                "role": "gallery",
+                                "url": "/media/102",
+                                "alt_text": "T-shirt détail"
+                              }
+                            ],
+                            "public_attributes": [
+                              {
+                                "code": "matiere",
+                                "name": "Matière",
+                                "data_type": "text",
+                                "value": "Coton",
+                                "language": "fr"
+                              }
+                            ],
+                            "is_sellable_public": true,
                             "variants": [
                               {
                                 "id": 10,
+                                "is_sellable_public": true,
                                 "pricing": {
                                   "regular_sale_price": "38.50",
                                   "final_sale_price": "36.58",
@@ -480,7 +507,7 @@
       "get": {
         "operationId": "get_public_catalog_products_show_v1",
         "summary": "Lire un produit public e-commerce par slug.",
-        "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics et prix de vente publics.",
+        "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les métadonnées asset internes, attributs non publics, prix d'achat, marges et stocks exacts ne sont jamais exposés.",
         "tags": [
           "Headless v1"
         ],
@@ -546,6 +573,23 @@
                           "id": 1,
                           "name": "T-shirt",
                           "slug": "t-shirt",
+                          "main_asset": {
+                            "asset_id": 20,
+                            "media_id": 101,
+                            "role": "main",
+                            "url": "/media/101",
+                            "alt_text": "T-shirt"
+                          },
+                          "gallery_assets": [],
+                          "public_attributes": [
+                            {
+                              "code": "matiere",
+                              "name": "Matière",
+                              "data_type": "text",
+                              "value": "Coton"
+                            }
+                          ],
+                          "is_sellable_public": true,
                           "variants": []
                         }
                       },
@@ -590,7 +634,7 @@
       "get": {
         "operationId": "get_public_catalog_variants_show_v1",
         "summary": "Lire une variante publique active.",
-        "description": "Retourne une variante active rattachée à un produit actif, public, e-commerce et non archivé. Les prix d'achat, marges et stocks exacts ne sont pas exposés.",
+        "description": "Retourne une variante active rattachée à un produit actif, public, e-commerce et non archivé avec options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les prix d'achat, marges, attributs non publics, métadonnées asset internes et stocks exacts ne sont pas exposés.",
         "tags": [
           "Headless v1"
         ],
@@ -656,6 +700,22 @@
                         "variant": {
                           "id": 10,
                           "sku": "TSHIRT-M",
+                          "main_asset": {
+                            "asset_id": 20,
+                            "media_id": 101,
+                            "role": "main",
+                            "url": "/media/101",
+                            "alt_text": "T-shirt M"
+                          },
+                          "public_attributes": [
+                            {
+                              "code": "couleur",
+                              "name": "Couleur",
+                              "data_type": "text",
+                              "value": "Bleu"
+                            }
+                          ],
+                          "is_sellable_public": true,
                           "pricing": {
                             "regular_sale_price": "38.50",
                             "final_sale_price": "36.58",

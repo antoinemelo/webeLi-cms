@@ -9,7 +9,12 @@ use App\Modules\Business\Catalog\BusinessCatalogValidator;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 
 $h = new TestHarness();
-[$dir, $dbPath, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql');
+[$dir, $dbPath, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
+$catalogSchema = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql');
+if ($catalogSchema === false) {
+    throw new RuntimeException('Unable to read business catalog schema.');
+}
+$db->pdo()->exec($catalogSchema);
 
 try {
     $validator = new BusinessCatalogValidator();

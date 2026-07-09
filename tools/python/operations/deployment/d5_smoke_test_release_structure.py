@@ -45,6 +45,11 @@ WRITABLE_DIRS = [
     "storage/exports/static",
     "storage/backups/sqlite",
 ]
+RELEASE_VERIFIED_COMMANDS = [
+    "python3 tools/cms.py smoke",
+    "python3 tools/cms.py validate",
+    "python3 tools/cms.py docs check",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -97,8 +102,13 @@ def main() -> int:
         else:
             if data.get("include_databases") is not True:
                 errors.append("release-manifest.json doit déclarer include_databases=true pour une release standard.")
+            verified_commands = data.get("verified_commands")
+            commands_documented = isinstance(verified_commands, list) and all(
+                command in verified_commands for command in RELEASE_VERIFIED_COMMANDS
+            )
             notes = data.get("notes")
-            if isinstance(notes, list) and not any("smoke, validate et docs check" in str(note) for note in notes):
+            notes_documented = isinstance(notes, list) and any("smoke, validate et docs check" in str(note) for note in notes)
+            if not commands_documented and not notes_documented:
                 warnings.append("release-manifest.json ne documente pas les commandes release autonomes.")
     if args.json:
         print(json.dumps({"ok": not errors, "errors": errors, "warnings": warnings, "root": str(root)}, ensure_ascii=False, indent=2))

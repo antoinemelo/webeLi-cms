@@ -38,20 +38,20 @@ final class BusinessCatalogDemoData
                 'base_sale_price' => 149.00,
             ],
             'options' => [
-                ['name' => 'Formule', 'option_key' => 'formule', 'values' => [
+                ['name' => 'Modèle', 'option_key' => 'model', 'values' => [
                     ['label' => 'Classic', 'value_key' => 'classic'],
                     ['label' => 'Premium', 'value_key' => 'premium'],
                 ]],
-                ['name' => 'Duree', 'option_key' => 'duree', 'values' => [
-                    ['label' => '20 min', 'value_key' => '20_min'],
-                    ['label' => '40 min', 'value_key' => '40_min'],
+                ['name' => 'Taille', 'option_key' => 'size', 'values' => [
+                    ['label' => 'M', 'value_key' => 'm'],
+                    ['label' => 'L', 'value_key' => 'l'],
                 ]],
             ],
             'variants' => [
                 [
                     'sku' => 'DEMO-VOL-CLASSIC-20',
                     'status' => 'active',
-                    'option_values' => ['formule' => 'classic', 'duree' => '20_min'],
+                    'option_values' => ['model' => 'classic', 'size' => 'm'],
                     'purchase_adjustment_type' => 'none',
                     'sale_adjustment_type' => 'none',
                     'stock_quantity' => 0,
@@ -59,7 +59,7 @@ final class BusinessCatalogDemoData
                 [
                     'sku' => 'DEMO-VOL-PREMIUM-40',
                     'status' => 'active',
-                    'option_values' => ['formule' => 'premium', 'duree' => '40_min'],
+                    'option_values' => ['model' => 'premium', 'size' => 'l'],
                     'purchase_adjustment_type' => 'percent_delta',
                     'purchase_adjustment_value' => 20.00,
                     'sale_adjustment_type' => 'amount_delta',

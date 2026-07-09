@@ -38,9 +38,11 @@ final class CatalogCsvService
         private readonly CatalogPricingService $pricing,
     ) {}
 
-    public function exportProductsCsv(int $siteId, bool $includePurchasePrices): string
+    /** @param array<string,mixed> $filters */
+    public function exportProductsCsv(int $siteId, bool $includePurchasePrices, array $filters = []): string
     {
         $rows = [self::HEADERS];
+        [$where, $params] = $this->exportWhere($siteId, $filters);
         $records = $this->db->all(
             'SELECT p.*, b.name AS brand_name, c.name AS category_name, v.id AS variant_id, v.sku AS variant_sku,
                     v.barcode AS variant_barcode, v.name AS variant_name, v.stock_quantity,
@@ -56,9 +58,9 @@ final class CatalogCsvService
              LEFT JOIN business_product_base_prices bp_sale ON bp_sale.product_id = p.id AND bp_sale.price_kind = "sale" AND bp_sale.valid_from IS NULL
              LEFT JOIN business_product_variant_price_adjustments adj_purchase ON adj_purchase.variant_id = v.id AND adj_purchase.price_kind = "purchase" AND adj_purchase.valid_from IS NULL
              LEFT JOIN business_product_variant_price_adjustments adj_sale ON adj_sale.variant_id = v.id AND adj_sale.price_kind = "sale" AND adj_sale.valid_from IS NULL
-             WHERE p.site_id = ? AND p.archived_at IS NULL
+             ' . $where . '
              ORDER BY p.updated_at DESC, p.id DESC, v.sort_order ASC, v.id ASC',
-            [$siteId]
+            $params
         );
 
         foreach ($records as $record) {
@@ -177,6 +179,37 @@ final class CatalogCsvService
             }
             return $result;
         });
+    }
+
+    /** @param array<string,mixed> $filters @return array{0:string,1:list<mixed>} */
+    private function exportWhere(int $siteId, array $filters): array
+    {
+        $clauses = ['p.site_id = ?', 'p.archived_at IS NULL'];
+        $params = [$siteId];
+
+        $channel = trim((string) ($filters['channel'] ?? ''));
+        if ($channel !== '') {
+            $field = match ($channel) {
+                'public' => 'is_public',
+                'ecommerce' => 'is_ecommerce_enabled',
+                'pos' => 'is_pos_enabled',
+                default => throw new InvalidArgumentException('business.catalog.export_channel_invalid'),
+            };
+            $clauses[] = 'p.' . $field . ' = 1';
+        }
+
+        $quality = trim((string) ($filters['quality'] ?? ''));
+        if ($quality !== '') {
+            if ($quality !== 'incomplete') {
+                throw new InvalidArgumentException('business.catalog.export_quality_invalid');
+            }
+            $clauses[] = 'NOT EXISTS (
+                SELECT 1 FROM business_product_completeness_scores cs
+                WHERE cs.product_id = p.id AND cs.variant_id IS NULL AND cs.channel = "all" AND cs.score >= 100
+            )';
+        }
+
+        return ['WHERE ' . implode(' AND ', $clauses), $params];
     }
 
     /** @param list<array<string,mixed>> $rows */
@@ -299,7 +332,7 @@ final class CatalogCsvService
             'product' => [
                 'name' => $name,
                 'slug' => $slug,
-                'type' => $this->choice($row['type'] ?? 'physical', ['physical', 'service', 'gift_card'], 'type'),
+                'type' => $this->choice($row['type'] ?? 'physical', ['physical', 'service', 'gift_card', 'bundle'], 'type'),
                 'status' => $this->choice($row['status'] ?? 'draft', ['draft', 'active', 'archived'], 'status'),
                 'sku_base' => $row['sku_base'] ?? '',
                 'tax_class_id' => trim($row['tax_class'] ?? '') !== '' ? (int) $row['tax_class'] : null,

@@ -43,6 +43,8 @@ type IamUserOption = { id: number; email: string; name?: string; is_active?: boo
 type BusinessActivity = { id: number; kind: string; action: string; summary: string; created_at?: string | null; metadata?: Record<string, unknown> };
 type DashboardAlert = Record<string, unknown> & { level?: string; code?: string; message?: string; channel?: string; count?: number };
 type DashboardSearchItem = Record<string, unknown> & { group?: string; type?: string; id: number; title?: string; subtitle?: string | null; excerpt?: string | null; status?: string | null; company_id?: number | null; contact_id?: number | null };
+type CatalogDashboardProduct = Record<string, unknown> & { status?: string; archived_at?: string | null; stock_quantity_total?: number | string | null; stock_reserved_total?: number | string | null; purchase_price_min?: number | string | null; completeness_score?: number | null; image_count?: number };
+type CatalogDashboardMetric = { label: string; value: string };
 type ProviderDraft = { id: number; provider_key: string; name: string; channel: string; provider_type: string; config_json: string; secret_ref: string; is_enabled: boolean; is_default: boolean };
 type BusinessDashboard = {
   counters: Record<string, number>;
@@ -93,6 +95,7 @@ const relationActivity = ref<BusinessActivity[]>([]);
 const dashboard = ref<BusinessDashboard | null>(null);
 const dashboardSearch = reactive({ q: '' });
 const dashboardSearchResults = ref<DashboardSearchItem[]>([]);
+const catalogDashboardMetrics = ref<CatalogDashboardMetric[]>([]);
 
 const canCrmRead = computed(() => context.can('business.crm.read'));
 const canCrmManage = computed(() => context.can('business.crm.manage'));
@@ -318,6 +321,45 @@ function intOrNull(value: IdValue): number | null {
 
 function valueText(value: unknown): string {
   return value === null || value === undefined ? '' : String(value);
+}
+
+function numberValue(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function priceLabel(value: unknown, currency = 'CHF'): string {
+  if (value === null || value === undefined || value === '') return '—';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? `${currency} ${parsed.toFixed(2)}` : String(value);
+}
+
+function averageCompletenessLabel(rows: CatalogDashboardProduct[]): string {
+  const scores = rows
+    .map((product) => Number(product.completeness_score))
+    .filter((score) => Number.isFinite(score));
+  if (scores.length === 0) return '—';
+  return `${Math.round(scores.reduce((total, score) => total + score, 0) / scores.length)}%`;
+}
+
+function productIsArchived(product: CatalogDashboardProduct): boolean {
+  return product.status === 'archived' || Boolean(product.archived_at);
+}
+
+function buildCatalogDashboardMetrics(brands: Array<Record<string, unknown>>, products: CatalogDashboardProduct[]): CatalogDashboardMetric[] {
+  const activeProducts = products.filter((product) => product.status === 'active' && !productIsArchived(product));
+  const draftProducts = products.filter((product) => product.status === 'draft' && !productIsArchived(product));
+  const stockCostTotal = activeProducts.reduce((total, product) => {
+    const quantity = Math.max(0, numberValue(product.stock_quantity_total) - numberValue(product.stock_reserved_total));
+    return total + (quantity * numberValue(product.purchase_price_min));
+  }, 0);
+  return [
+    { label: 'Marques', value: String(brands.filter((brand) => brand.status !== 'archived').length) },
+    { label: 'Produits actifs', value: String(activeProducts.length) },
+    { label: 'Valeur moyenne', value: activeProducts.length > 0 ? priceLabel(stockCostTotal / activeProducts.length) : '—' },
+    { label: 'Complétude actifs / brouillons', value: `${averageCompletenessLabel(activeProducts)} / ${averageCompletenessLabel(draftProducts)}` },
+    { label: 'Sans image', value: String(products.filter((product) => !productIsArchived(product) && numberValue(product.image_count) < 1).length) },
+  ];
 }
 
 function toDateTimeLocal(value: unknown): string {
@@ -685,6 +727,23 @@ async function loadDashboard(): Promise<void> {
   }
 }
 
+async function loadCatalogDashboard(): Promise<void> {
+  if (!canCatalogRead.value) {
+    catalogDashboardMetrics.value = [];
+    return;
+  }
+  try {
+    const [brandResponse, productResponse] = await Promise.all([
+      adminApi.get<{ brands: Array<Record<string, unknown>> }>('/business/catalog/brands', { limit: 'all', archived: '1' }),
+      adminApi.get<{ products: CatalogDashboardProduct[] }>('/business/catalog/products', { limit: 'all', archived: '1' }),
+    ]);
+    catalogDashboardMetrics.value = buildCatalogDashboardMetrics(brandResponse.data.brands || [], productResponse.data.products || []);
+  } catch (err) {
+    catalogDashboardMetrics.value = [];
+    setError(err, 'Indicateurs catalogue indisponibles.');
+  }
+}
+
 async function runDashboardSearch(): Promise<void> {
   const q = dashboardSearch.q.trim();
   if (q.length < 2) {
@@ -716,7 +775,7 @@ async function loadRelations(): Promise<void> {
 }
 
 async function loadCurrentTab(): Promise<void> {
-  if (activeTab.value === 'dashboard') await Promise.all([loadDashboard(), loadMailing(), loadMessaging()]);
+  if (activeTab.value === 'dashboard') await Promise.all([loadDashboard(), loadCatalogDashboard(), loadMailing(), loadMessaging()]);
   if (activeTab.value === 'relations') await loadRelations();
   if (activeTab.value === 'messages') await Promise.all([loadMailing(), loadMessaging()]);
   if (activeTab.value === 'settings') await loadMessaging();
@@ -1802,11 +1861,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-stack business-crm">
-    <PageHeader title="Opérations" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging.">
-      <template #actions>
-        <button class="btn ghost" type="button" :disabled="loading" @click="loadCurrentTab">Rafraîchir</button>
-      </template>
-    </PageHeader>
+    <PageHeader title="Opérations" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging." />
 
     <ApiFeedback :error="error" :success="success" />
 
@@ -1860,6 +1915,13 @@ onBeforeUnmount(() => {
         <article v-for="status in ['prospect', 'client', 'supplier', 'former_client', 'other']" :key="status">
           <span>{{ statusLabel(status) }}</span>
           <strong>{{ dashboard?.counters?.[status] ?? 0 }}</strong>
+        </article>
+      </div>
+
+      <div v-if="catalogDashboardMetrics.length" class="business-dashboard-counters business-dashboard-counters--catalog" aria-label="Résumé catalogue">
+        <article v-for="metric in catalogDashboardMetrics" :key="metric.label">
+          <span>{{ metric.label }}</span>
+          <strong>{{ metric.value }}</strong>
         </article>
       </div>
 

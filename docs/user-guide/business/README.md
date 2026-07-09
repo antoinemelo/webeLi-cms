@@ -33,6 +33,9 @@ Le module Opérations regroupe le CRM leger et le catalogue commercial du back-o
 - [Messaging Opérations CRM](../../business/crm-messaging.md) : canaux, consentements, providers, outbox et mailing simple.
 - [IA et decouverte de schema Opérations CRM](../../business/crm-ia.md) : blueprints admin, usage futur IA et absence d'exposition headless publique CRM.
 - [Revue finale refonte Opérations CRM](../../business/crm-redesign-final-review.md) : controles, limites, recommandations P0/P1/P2 et checklist release.
+- [Guide utilisateur Catalogue+](../../business/catalogue-plus-guide-utilisateur.md) : preparer un produit vendable, variantes, prix, attributs, canaux et CSV.
+- [Medias produits Catalogue+](../../business/catalogue-medias-produits.md) : ajouter une image principale, rattacher des medias a une variante et separer public/interne.
+- [Qualite et vendabilite Catalogue+](../../business/catalogue-qualite-vendabilite.md) : comprendre la completude, les tags de liste, les canaux et les corrections a faire.
 - [Catalogue Business](../../business/catalogue.md) : creer marques, categories, produits, variantes, prix, reductions simples et stock.
 - [API Catalogue Business](../../business/catalogue-api.md) : comprendre les endpoints admin, publics et POS, les permissions et les regles de prix.
 - [Audit UX Opérations CRM](../../business/crm-ux-audit.md) : constats et backlog de refonte CRM Relations.

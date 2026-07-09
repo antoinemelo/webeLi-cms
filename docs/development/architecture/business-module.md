@@ -1,5 +1,5 @@
 ---
-title: Architecture du module Opérations CRM
+title: Architecture du module Opérations
 audience:
   - developer
   - administrator
@@ -22,13 +22,13 @@ owners:
 document_type: architecture
 generated: false
 ---
-# Architecture du module Opérations CRM
+# Architecture du module Opérations
 
 ## Perimetre
 
-`business` est un module systeme leger livre avec le CMS. Il ajoute une base `business.sqlite` pour le CRM, les memos, les consentements, le mailing simple et l'outbox messaging.
+`business` est un module systeme leger livre avec le CMS. Il ajoute une base `business.sqlite` pour le CRM, les memos, les consentements, le mailing simple, l'outbox messaging, le catalogue et les metadonnees PIM-lite.
 
-Il ne contient pas de commerce, comptabilite, paie, pipeline commercial, taches ou rappels.
+Il ne contient pas de commandes e-commerce, comptabilite, paie, pipeline commercial, taches ou rappels.
 
 ## Base SQLite
 
@@ -41,6 +41,7 @@ Groupes de tables :
 - `crm_contact_channels`, `crm_consents` ;
 - `crm_mailing_lists`, `crm_mailing_list_members`, `crm_mailings`, `crm_mailing_recipients` ;
 - `crm_messaging_providers`, `crm_message_templates`, `crm_message_outbox`, `crm_message_delivery_events`.
+- `business_product_*`, `business_catalog_*` et `business_attribute_*` pour le catalogue Opérations et le PIM-lite.
 
 Les references vers le noyau restent sous forme d'identifiants (`site_id`, `iam_user_id`) afin d'eviter une contrainte cross-database SQLite.
 
@@ -67,6 +68,12 @@ La surface admin reelle est documentee dans [API interne Opérations CRM](../../
 - `GET /business/memos/share/{token}` ;
 - `GET /business/unsubscribe/{token}` ;
 - `POST /business/unsubscribe/{token}`.
+
+## Blueprints admin
+
+Le provider declare des blueprints admin pour le CRM et le PIM-lite. Ces blueprints servent aux contrats admin, a la documentation, a l'import/export futur, a la decouverte IA et a la maintenance. Ils ne remplacent pas l'UX Vue dediee d'Opérations et ne creent aucune route headless publique.
+
+Les blueprints PIM-lite couvrent notamment les assets produit, metadonnees media, attributs, valeurs d'attributs, scores de completude, relations produit et le snapshot interne de variante vendable. Les prix d'achat et marges du snapshot restent sensibles et exigent `business.catalog.purchase_prices.read`.
 
 ## Limites v1
 

@@ -10,10 +10,14 @@ source_paths:
   - /home/amelo/Documents/DEV/Ecol_WebeLi/web/_VENTE/03_STRATEGIE_ARCHITECTURE_MODULE_VENTE.md
   - docs/development/architecture/sale-module-guardrails.md
   - docs/development/architecture/sale-module-audit-existing.md
+  - docs/development/architecture/business-pim-lite.md
+  - docs/development/architecture/business-sellable-snapshot.md
   - docs/development/architecture/module-admin-governance.md
   - docs/development/extending/modules.md
   - backend/src/Module/ModuleProvider.php
   - backend/src/Modules/Business/BusinessModuleProvider.php
+  - backend/src/Modules/Business/Services/BusinessCatalogSellableReadService.php
+  - backend/src/Modules/Sale/Services/SaleCatalogSnapshotService.php
 owners:
   - sale
   - business
@@ -285,3 +289,25 @@ Avant d'ecrire `database/modules/sale.sql`, stabiliser le contrat de snapshot ve
 - disponibilite canal ;
 - stock disponible indicatif ;
 - champs admin-only exclus par defaut.
+
+## Reprise de Vente au point 16
+
+Le socle PIM-lite stabilise la reprise de Vente autour de deux invariants :
+
+- Business reste proprietaire du catalogue et de la qualite produit ;
+- Vente consomme uniquement des snapshots vendables et fige ses propres lignes transactionnelles.
+
+Pour reprendre le point 16, utiliser `SaleCatalogSnapshotService::snapshotForVariant()` comme entree unique cote Vente. Ce service appelle `BusinessCatalogSellableReadService`, refuse une variante non vendable si `requireSellable=true`, puis stocke le dernier snapshot dans `sale_catalog_variant_refs`.
+
+Le workflow Vente ne doit pas :
+
+- joindre directement `business_products`, `business_product_variants` ou les tables PIM ;
+- recalculer une commande placee depuis Business ;
+- exposer prix d'achat, marges ou champs internes dans une surface publique ;
+- copier durablement tout le catalogue dans `sale.sqlite`.
+
+Les documents a relire avant de continuer sont :
+
+- [Architecture PIM-lite Opérations](business-pim-lite.md) ;
+- [Snapshot vendable Business vers Vente](business-sellable-snapshot.md) ;
+- [Tests PIM-lite Opérations](../testing-validation/business-pim-lite.md).

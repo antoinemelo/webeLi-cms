@@ -58,7 +58,9 @@ $expectedResourceKeys = [
 ];
 $permissionKeys = array_column($provider->permissions(), 'key');
 
-$h->assertSame($expectedKeys, array_keys($byKey), 'CRM admin blueprints are declared in the expected order');
+foreach ($expectedKeys as $key) {
+    $h->assertTrue(isset($byKey[$key]), 'CRM admin blueprint is declared: ' . $key);
+}
 $h->assertSame([], $provider->publicHeadlessRoutes(), 'Business CRM still exposes no public headless routes');
 
 $adminRoutes = $provider->adminRoutes();

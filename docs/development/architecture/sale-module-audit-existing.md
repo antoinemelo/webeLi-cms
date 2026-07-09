@@ -87,7 +87,7 @@ Vente doit pouvoir fonctionner sans client CRM, notamment pour le POS. Le lien v
 | `business_catalog_discounts` | Remises simples | Lire au moment du calcul panier/commande. |
 | `business_tax_classes` | Classes de taxe simples | Lire pour snapshot taxe ; ne pas creer un tax engine international en v1. |
 | `business_stock_movements` | Historique stock catalogue simple | Ne pas en faire seul la source transactionnelle Vente. |
-| `business_product_media` | Medias produit/variante | Lire pour affichage POS/e-commerce. |
+| `business_product_assets` | Assets produit/variante relies au gestionnaire Medias du CMS | Lire pour affichage POS/e-commerce. |
 | `business_product_tags`, `business_product_tag_links` | Tags catalogue | Utiles pour recherche/filtrage, pas transactionnels. |
 
 Les tables historiques `business_catalog_products`, `business_catalog_variants`, `business_catalog_variant_price_adjustments` et `business_catalog_offers` existent encore via `0002_catalog_pricing.sql`. Les nouveaux developpements Vente doivent privilegier les tables `business_products`, `business_product_variants`, `business_product_base_prices`, `business_product_variant_price_adjustments` et `business_catalog_discounts`.

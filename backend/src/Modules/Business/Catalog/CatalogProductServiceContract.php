@@ -13,4 +13,8 @@ interface CatalogProductServiceContract
     public function update(int $siteId, int $id, array $payload, ?int $actorId = null): ?array;
 
     public function archive(int $siteId, int $id, ?int $actorId = null): bool;
+
+    public function restore(int $siteId, int $id, ?int $actorId = null): bool;
+
+    public function deletePermanently(int $siteId, int $id): bool;
 }

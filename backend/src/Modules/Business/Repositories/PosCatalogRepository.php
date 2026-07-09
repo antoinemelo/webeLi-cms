@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Business\Repositories;
 
+use App\Modules\Business\Services\BusinessProductAssetService;
+
 final class PosCatalogRepository extends BusinessRepositoryBase
 {
     /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
@@ -141,18 +143,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
 
     public function thumbnail(int $productId, ?int $variantId = null): ?array
     {
-        $row = null;
-        if ($variantId !== null) {
-            $row = $this->database()->one(
-                'SELECT media_id, alt_text FROM business_product_media WHERE product_id = ? AND variant_id = ? AND role = "thumbnail" ORDER BY sort_order ASC, media_id ASC LIMIT 1',
-                [$productId, $variantId]
-            );
-        }
-        $row ??= $this->database()->one(
-            'SELECT media_id, alt_text FROM business_product_media WHERE product_id = ? AND variant_id IS NULL AND role = "thumbnail" ORDER BY sort_order ASC, media_id ASC LIMIT 1',
-            [$productId]
-        );
-        return $row ? $this->castRow($row) : null;
+        return (new BusinessProductAssetService($this->database()))->mainAssetForProduct($productId, $variantId, 'pos');
     }
 
     /** @param array<string,mixed> $filters @return array{0:list<string>,1:array<string,mixed>} */

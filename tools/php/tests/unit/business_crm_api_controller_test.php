@@ -232,9 +232,20 @@ try {
     $schemaPayload = json_decode($schemaResponse->body(), true);
     $h->assertSame(false, $schemaPayload['data']['headless_public'] ?? true, 'business schema is admin scoped, not public headless');
     $h->assertTrue(in_array('contact', $schemaPayload['data']['entities']['relation']['kinds'] ?? [], true), 'business schema exposes contact relation kind');
+    $h->assertTrue(isset($schemaPayload['data']['entities']['product']), 'business schema exposes PIM product entity');
+    $h->assertTrue(isset($schemaPayload['data']['entities']['variant']), 'business schema exposes PIM variant entity');
+    $h->assertTrue(isset($schemaPayload['data']['entities']['product_asset']), 'business schema exposes PIM asset entity');
+    $h->assertTrue(isset($schemaPayload['data']['entities']['completeness_score']), 'business schema exposes PIM completeness entity');
+    $h->assertTrue(isset($schemaPayload['data']['entities']['sellable_variant_snapshot']), 'business schema exposes sellable snapshot entity');
+    $h->assertTrue(in_array('purchase_price_minor', $schemaPayload['data']['entities']['sellable_variant_snapshot']['sensitive_fields'] ?? [], true), 'business schema marks purchase price sensitive');
     $schemaActionKeys = array_column($schemaPayload['data']['actions'] ?? [], 'key');
     $h->assertTrue(in_array('relations.summary', $schemaActionKeys, true), 'business schema exposes relation summary action');
+    $h->assertTrue(in_array('catalog.products.index', $schemaActionKeys, true), 'business schema exposes catalog products action');
+    $h->assertTrue(in_array('pim.sellable_snapshot.show', $schemaActionKeys, true), 'business schema exposes PIM sellable snapshot action');
     $h->assertSame(false, $schemaPayload['data']['ai']['summary']['external_call_by_default'] ?? true, 'business schema makes external AI opt-in only');
+    $h->assertTrue(in_array('catalog.find_products', $schemaPayload['data']['ai']['catalog_actions'] ?? [], true), 'business schema prepares catalog.find_products');
+    $h->assertTrue(in_array('catalog.prepare_sale_snapshot', $schemaPayload['data']['ai']['catalog_actions'] ?? [], true), 'business schema prepares catalog.prepare_sale_snapshot');
+    $h->assertSame('business.catalog.purchase_prices.read', $schemaPayload['data']['ai']['security']['purchase_price_permission'] ?? null, 'business schema documents purchase price permission');
 
     $export = $controllerFor(1, 'GET', '/admin/api/business/companies/export.csv')->exportCompaniesCsv();
     $h->assertSame(200, $export->status(), 'business crm manage can export companies CSV');

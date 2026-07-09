@@ -81,7 +81,7 @@ final class BusinessModuleProvider implements ModuleProvider
     /** @return list<array<string,mixed>> */
     public function blueprints(): array
     {
-        return [
+        return array_merge([
             $this->crmBlueprint(
                 'relation',
                 'Relation Opérations',
@@ -286,7 +286,7 @@ final class BusinessModuleProvider implements ModuleProvider
                     ],
                 ]
             ),
-        ];
+        ], $this->pimBlueprints());
     }
 
     /** @return list<array<string,mixed>> */
@@ -417,6 +417,44 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/business/mailing/campaigns/{id}/preview-recipients', 'BusinessMailingApiController@previewRecipients'),
             $this->route('POST', '/admin/api/business/mailing/campaigns/{id}/enqueue', 'BusinessMailingApiController@enqueueCampaign'),
             $this->route('POST', '/admin/api/business/mailing/campaigns/{id}/cancel', 'BusinessMailingApiController@cancelCampaign'),
+            $this->route('GET', '/admin/api/business/pim/products/{id}/assets', 'BusinessPimApiController@productAssets'),
+            $this->route('POST', '/admin/api/business/pim/products/{id}/assets', 'BusinessPimApiController@storeProductAsset'),
+            $this->route('PATCH', '/admin/api/business/pim/assets/{id}', 'BusinessPimApiController@updateAsset'),
+            $this->route('DELETE', '/admin/api/business/pim/assets/{id}', 'BusinessPimApiController@deleteAsset'),
+            $this->route('POST', '/admin/api/business/pim/assets/{id}/set-main', 'BusinessPimApiController@setMainAsset'),
+            $this->route('GET', '/admin/api/business/pim/products/{id}/bundle', 'BusinessPimApiController@productBundle'),
+            $this->route('PUT', '/admin/api/business/pim/products/{id}/bundle', 'BusinessPimApiController@putProductBundle'),
+            $this->route('DELETE', '/admin/api/business/pim/products/{id}/bundle', 'BusinessPimApiController@deleteProductBundle'),
+            $this->route('GET', '/admin/api/business/pim/bundles/{id}/components', 'BusinessPimApiController@bundleComponents'),
+            $this->route('POST', '/admin/api/business/pim/bundles/{id}/components', 'BusinessPimApiController@storeBundleComponent'),
+            $this->route('PATCH', '/admin/api/business/pim/bundle-components/{id}', 'BusinessPimApiController@updateBundleComponent'),
+            $this->route('DELETE', '/admin/api/business/pim/bundle-components/{id}', 'BusinessPimApiController@deleteBundleComponent'),
+            $this->route('GET', '/admin/api/business/pim/attribute-groups', 'BusinessPimApiController@attributeGroups'),
+            $this->route('POST', '/admin/api/business/pim/attribute-groups', 'BusinessPimApiController@storeAttributeGroup'),
+            $this->route('PATCH', '/admin/api/business/pim/attribute-groups/{id}', 'BusinessPimApiController@updateAttributeGroup'),
+            $this->route('DELETE', '/admin/api/business/pim/attribute-groups/{id}', 'BusinessPimApiController@deleteAttributeGroup'),
+            $this->route('GET', '/admin/api/business/pim/attributes', 'BusinessPimApiController@attributes'),
+            $this->route('POST', '/admin/api/business/pim/attributes', 'BusinessPimApiController@storeAttribute'),
+            $this->route('PATCH', '/admin/api/business/pim/attributes/{id}', 'BusinessPimApiController@updateAttribute'),
+            $this->route('DELETE', '/admin/api/business/pim/attributes/{id}', 'BusinessPimApiController@deleteAttribute'),
+            $this->route('POST', '/admin/api/business/pim/attributes/{id}/options', 'BusinessPimApiController@storeAttributeOption'),
+            $this->route('PATCH', '/admin/api/business/pim/attribute-options/{id}', 'BusinessPimApiController@updateAttributeOption'),
+            $this->route('DELETE', '/admin/api/business/pim/attribute-options/{id}', 'BusinessPimApiController@deleteAttributeOption'),
+            $this->route('GET', '/admin/api/business/pim/products/{id}/attributes', 'BusinessPimApiController@productAttributes'),
+            $this->route('PUT', '/admin/api/business/pim/products/{id}/attributes', 'BusinessPimApiController@putProductAttributes'),
+            $this->route('GET', '/admin/api/business/pim/variants/{id}/attributes', 'BusinessPimApiController@variantAttributes'),
+            $this->route('PUT', '/admin/api/business/pim/variants/{id}/attributes', 'BusinessPimApiController@putVariantAttributes'),
+            $this->route('GET', '/admin/api/business/pim/products/{id}/completeness', 'BusinessPimApiController@productCompleteness'),
+            $this->route('POST', '/admin/api/business/pim/products/{id}/recalculate-completeness', 'BusinessPimApiController@recalculateCompleteness'),
+            $this->route('GET', '/admin/api/business/pim/variants/{id}/sellable-snapshot', 'BusinessPimApiController@variantSellableSnapshot'),
+            $this->route('GET', '/admin/api/business/pim/sellable-variants', 'BusinessPimApiController@sellableVariants'),
+            $this->route('POST', '/admin/api/business/pim/products/bulk-update', 'BusinessPimApiController@bulkUpdateProducts'),
+            $this->route('POST', '/admin/api/business/pim/products/bulk-asset-assign', 'BusinessPimApiController@bulkAssetAssign'),
+            $this->route('POST', '/admin/api/business/pim/products/bulk-recalculate', 'BusinessPimApiController@bulkRecalculate'),
+            $this->route('POST', '/admin/api/business/pim/offers/bulk-update', 'BusinessPimApiController@bulkUpdateOffers'),
+            $this->route('GET', '/admin/api/business/pim/offers/export.csv', 'BusinessPimApiController@exportOffersCsv'),
+            $this->route('POST', '/admin/api/business/pim/offers/import/preview', 'BusinessPimApiController@previewOffersImport'),
+            $this->route('POST', '/admin/api/business/pim/offers/import/apply', 'BusinessPimApiController@applyOffersImport'),
         ];
     }
 
@@ -554,6 +592,8 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->contract('admin.business.catalog.products.store.v1', 'POST', '/admin/api/business/catalog/products', 'business.catalog.write'),
             $this->contract('admin.business.catalog.products.show.v1', 'GET', '/admin/api/business/catalog/products/{id}', 'business.catalog.read'),
             $this->contract('admin.business.catalog.products.update.v1', 'PATCH', '/admin/api/business/catalog/products/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.products.restore.v1', 'POST', '/admin/api/business/catalog/products/{id}/restore', 'business.catalog.write'),
+            $this->contract('admin.business.catalog.products.purge.v1', 'DELETE', '/admin/api/business/catalog/products/{id}/permanent', 'business.catalog.write'),
             $this->contract('admin.business.catalog.products.delete.v1', 'DELETE', '/admin/api/business/catalog/products/{id}', 'business.catalog.write'),
             $this->contract('admin.business.catalog.variants.index.v1', 'GET', '/admin/api/business/catalog/products/{id}/variants', 'business.catalog.read'),
             $this->contract('admin.business.catalog.variants.store.v1', 'POST', '/admin/api/business/catalog/products/{id}/variants', 'business.catalog.write'),
@@ -579,6 +619,44 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->contract('admin.business.catalog.discounts.show.v1', 'GET', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.read'),
             $this->contract('admin.business.catalog.discounts.update.v1', 'PATCH', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.discounts.write'),
             $this->contract('admin.business.catalog.discounts.delete.v1', 'DELETE', '/admin/api/business/catalog/discounts/{id}', 'business.catalog.discounts.write'),
+            $this->contract('admin.business.pim.product_assets.index.v1', 'GET', '/admin/api/business/pim/products/{id}/assets', 'business.catalog.read'),
+            $this->contract('admin.business.pim.product_assets.store.v1', 'POST', '/admin/api/business/pim/products/{id}/assets', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_assets.update.v1', 'PATCH', '/admin/api/business/pim/assets/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_assets.delete.v1', 'DELETE', '/admin/api/business/pim/assets/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_assets.set_main.v1', 'POST', '/admin/api/business/pim/assets/{id}/set-main', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_bundle.show.v1', 'GET', '/admin/api/business/pim/products/{id}/bundle', 'business.catalog.read'),
+            $this->contract('admin.business.pim.product_bundle.update.v1', 'PUT', '/admin/api/business/pim/products/{id}/bundle', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_bundle.delete.v1', 'DELETE', '/admin/api/business/pim/products/{id}/bundle', 'business.catalog.write'),
+            $this->contract('admin.business.pim.bundle_components.index.v1', 'GET', '/admin/api/business/pim/bundles/{id}/components', 'business.catalog.read'),
+            $this->contract('admin.business.pim.bundle_components.store.v1', 'POST', '/admin/api/business/pim/bundles/{id}/components', 'business.catalog.write'),
+            $this->contract('admin.business.pim.bundle_components.update.v1', 'PATCH', '/admin/api/business/pim/bundle-components/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.bundle_components.delete.v1', 'DELETE', '/admin/api/business/pim/bundle-components/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_groups.index.v1', 'GET', '/admin/api/business/pim/attribute-groups', 'business.catalog.read'),
+            $this->contract('admin.business.pim.attribute_groups.store.v1', 'POST', '/admin/api/business/pim/attribute-groups', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_groups.update.v1', 'PATCH', '/admin/api/business/pim/attribute-groups/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_groups.delete.v1', 'DELETE', '/admin/api/business/pim/attribute-groups/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attributes.index.v1', 'GET', '/admin/api/business/pim/attributes', 'business.catalog.read'),
+            $this->contract('admin.business.pim.attributes.store.v1', 'POST', '/admin/api/business/pim/attributes', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attributes.update.v1', 'PATCH', '/admin/api/business/pim/attributes/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attributes.delete.v1', 'DELETE', '/admin/api/business/pim/attributes/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_options.store.v1', 'POST', '/admin/api/business/pim/attributes/{id}/options', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_options.update.v1', 'PATCH', '/admin/api/business/pim/attribute-options/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.attribute_options.delete.v1', 'DELETE', '/admin/api/business/pim/attribute-options/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.product_attributes.index.v1', 'GET', '/admin/api/business/pim/products/{id}/attributes', 'business.catalog.read'),
+            $this->contract('admin.business.pim.product_attributes.update.v1', 'PUT', '/admin/api/business/pim/products/{id}/attributes', 'business.catalog.write'),
+            $this->contract('admin.business.pim.variant_attributes.index.v1', 'GET', '/admin/api/business/pim/variants/{id}/attributes', 'business.catalog.read'),
+            $this->contract('admin.business.pim.variant_attributes.update.v1', 'PUT', '/admin/api/business/pim/variants/{id}/attributes', 'business.catalog.write'),
+            $this->contract('admin.business.pim.completeness.show.v1', 'GET', '/admin/api/business/pim/products/{id}/completeness', 'business.catalog.read'),
+            $this->contract('admin.business.pim.completeness.recalculate.v1', 'POST', '/admin/api/business/pim/products/{id}/recalculate-completeness', 'business.catalog.write'),
+            $this->contract('admin.business.pim.sellable_snapshot.show.v1', 'GET', '/admin/api/business/pim/variants/{id}/sellable-snapshot', 'business.catalog.read'),
+            $this->contract('admin.business.pim.sellable_variants.index.v1', 'GET', '/admin/api/business/pim/sellable-variants', 'business.catalog.read'),
+            $this->contract('admin.business.pim.bulk_update.v1', 'POST', '/admin/api/business/pim/products/bulk-update', 'business.catalog.write'),
+            $this->contract('admin.business.pim.bulk_asset_assign.v1', 'POST', '/admin/api/business/pim/products/bulk-asset-assign', 'business.catalog.write'),
+            $this->contract('admin.business.pim.bulk_recalculate.v1', 'POST', '/admin/api/business/pim/products/bulk-recalculate', 'business.catalog.write'),
+            $this->contract('admin.business.pim.offers.bulk_update.v1', 'POST', '/admin/api/business/pim/offers/bulk-update', 'business.catalog.write'),
+            $this->contract('admin.business.pim.offers.export.v1', 'GET', '/admin/api/business/pim/offers/export.csv', 'business.catalog.read'),
+            $this->contract('admin.business.pim.offers.import.preview.v1', 'POST', '/admin/api/business/pim/offers/import/preview', 'business.catalog.write'),
+            $this->contract('admin.business.pim.offers.import.apply.v1', 'POST', '/admin/api/business/pim/offers/import/apply', 'business.catalog.write'),
         ];
     }
 
@@ -609,7 +687,7 @@ final class BusinessModuleProvider implements ModuleProvider
             'storage' => [
                 'database' => 'business',
                 'table' => $table,
-                'primary_key' => $aggregate ? 'relation_id' : 'id',
+                'primary_key' => $options['primary_key'] ?? ($aggregate ? 'relation_id' : 'id'),
                 'mode' => $aggregate ? 'aggregate_read_model' : 'external_table',
                 'source_tables' => $options['sources'] ?? [$table],
             ],
@@ -625,6 +703,8 @@ final class BusinessModuleProvider implements ModuleProvider
             ],
             'permissions' => $permissions,
             'headless' => ['enabled' => false, 'public' => false],
+            'admin_only' => (bool) ($options['admin_only'] ?? true),
+            'headless_public' => (bool) ($options['headless_public'] ?? false),
             'admin' => [
                 'route' => '/business',
                 'component' => 'BusinessCrmView',
@@ -642,6 +722,7 @@ final class BusinessModuleProvider implements ModuleProvider
             'fields' => $fields,
             'relations' => $options['relations'] ?? [],
             'validation' => $options['validation'] ?? [],
+            'ai' => $this->aiDiscoveryBlock($options['ai'] ?? []),
             'export' => [
                 'enabled' => true,
                 'formats' => ['json', 'csv'],
@@ -661,6 +742,492 @@ final class BusinessModuleProvider implements ModuleProvider
                 'notes' => $options['protected_rows'] ?? null,
                 'noindex_public_share' => (bool) ($options['noindex_public_share'] ?? false),
             ],
+        ];
+    }
+
+    /** @param array<string,mixed> $options @return array<string,mixed> */
+    private function aiDiscoveryBlock(array $options = []): array
+    {
+        return [
+            'discoverable' => (bool) ($options['discoverable'] ?? false),
+            'default_prompt_safe' => (bool) ($options['default_prompt_safe'] ?? true),
+            'allowed_actions' => array_values((array) ($options['allowed_actions'] ?? [])),
+            'sensitive_fields' => array_values((array) ($options['sensitive_fields'] ?? [])),
+            'excluded_by_default' => array_values((array) ($options['excluded_by_default'] ?? [])),
+            'site_scoped' => true,
+            'permission_scoped' => true,
+            'no_external_call_by_default' => true,
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function pimBlueprints(): array
+    {
+        $catalogRead = 'business.catalog.read';
+        $catalogWrite = 'business.catalog.write';
+
+        return [
+            $this->crmBlueprint(
+                'product',
+                'Produit catalogue',
+                'Produit Opérations administré par le catalogue PIM-lite, utilisable par la recherche interne et la future couche IA.',
+                'business_products',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('brand_id', 'Marque', 'relation', 'identity', false, 'brand_id', ['nullable' => true, 'source_resource' => 'brand', 'scope' => 'business_pim']),
+                    $this->field('category_id', 'Catégorie', 'relation', 'identity', false, 'category_id', ['nullable' => true, 'source_resource' => 'category', 'scope' => 'business_pim']),
+                    $this->enumField('type', 'Type', ['physical', 'service', 'gift_card', 'bundle'], 'identity', true, 'type', ['scope' => 'business_pim']),
+                    $this->enumField('status', 'Statut', ['draft', 'active', 'archived'], 'identity', true, 'status', ['scope' => 'business_pim']),
+                    $this->enumField('visibility', 'Visibilité', ['public', 'internal'], 'visibility', true, 'visibility', ['scope' => 'business_pim']),
+                    $this->field('sku_base', 'SKU produit', 'text', 'identity', false, 'sku_base', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
+                    $this->field('slug', 'Slug', 'text', 'identity', true, 'slug', ['scope' => 'business_pim']),
+                    $this->field('short_description', 'Description courte', 'textarea', 'content', false, 'short_description', ['scope' => 'business_pim']),
+                    $this->field('description', 'Description', 'textarea', 'content', false, 'description', ['scope' => 'business_pim']),
+                    $this->field('unit', 'Unité', 'text', 'identity', true, 'unit', ['scope' => 'business_pim']),
+                    $this->field('tax_class_id', 'Classe TVA', 'relation', 'tax', false, 'tax_class_id', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('track_stock', 'Stock suivi', 'boolean', 'stock', true, 'track_stock', ['scope' => 'business_pim']),
+                    $this->field('allow_backorder', 'Vente hors stock', 'boolean', 'stock', true, 'allow_backorder', ['scope' => 'business_pim']),
+                    $this->field('is_public', 'Public', 'boolean', 'channels', true, 'is_public', ['scope' => 'business_pim']),
+                    $this->field('is_ecommerce_enabled', 'E-commerce', 'boolean', 'channels', true, 'is_ecommerce_enabled', ['scope' => 'business_pim']),
+                    $this->field('is_pos_enabled', 'POS', 'boolean', 'channels', true, 'is_pos_enabled', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                [
+                    'relations' => [
+                        ['resource' => 'variant', 'type' => 'has_many', 'foreign_key' => 'product_id'],
+                        ['resource' => 'product_asset', 'type' => 'has_many', 'foreign_key' => 'product_id'],
+                        ['resource' => 'product_attribute_value', 'type' => 'has_many', 'foreign_key' => 'product_id'],
+                    ],
+                    'ai' => [
+                        'discoverable' => true,
+                        'default_prompt_safe' => true,
+                        'allowed_actions' => ['catalog.find_products', 'catalog.suggest_product_description', 'catalog.summarize_product', 'catalog.check_ecommerce_readiness'],
+                        'excluded_by_default' => ['created_by_iam_user_id', 'updated_by_iam_user_id'],
+                    ],
+                ]
+            ),
+            $this->crmBlueprint(
+                'variant',
+                'Variante produit',
+                'Variante vendable Opérations utilisée par le POS, l’e-commerce et les snapshots de Vente.',
+                'business_product_variants',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('product_id', 'Produit', 'relation', 'identity', true, 'product_id', ['source_resource' => 'product', 'scope' => 'business_pim']),
+                    $this->enumField('status', 'Statut', ['draft', 'active', 'archived'], 'identity', true, 'status', ['scope' => 'business_pim']),
+                    $this->field('sku', 'SKU', 'text', 'identity', true, 'sku', ['scope' => 'business_pim']),
+                    $this->field('barcode', 'Code-barres', 'text', 'identity', false, 'barcode', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
+                    $this->field('track_stock', 'Stock suivi', 'boolean', 'stock', false, 'track_stock', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('stock_quantity', 'Stock', 'decimal', 'stock', true, 'stock_quantity', ['scope' => 'business_pim']),
+                    $this->field('stock_reserved', 'Stock réservé', 'decimal', 'stock', true, 'stock_reserved', ['scope' => 'business_pim']),
+                    $this->field('allow_backorder', 'Vente hors stock', 'boolean', 'stock', false, 'allow_backorder', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('weight_grams', 'Poids grammes', 'number', 'logistics', false, 'weight_grams', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'identity', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                [
+                    'relations' => [
+                        ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'product_id'],
+                        ['resource' => 'variant_attribute_value', 'type' => 'has_many', 'foreign_key' => 'variant_id'],
+                        ['resource' => 'sellable_variant_snapshot', 'type' => 'has_one', 'foreign_key' => 'variant_id'],
+                    ],
+                    'ai' => [
+                        'discoverable' => true,
+                        'default_prompt_safe' => true,
+                        'allowed_actions' => ['catalog.find_products', 'catalog.prepare_sale_snapshot', 'catalog.check_ecommerce_readiness'],
+                        'excluded_by_default' => ['created_by_iam_user_id', 'updated_by_iam_user_id'],
+                    ],
+                ]
+            ),
+            $this->crmBlueprint(
+                'product_asset',
+                'Asset produit',
+                'Lien admin entre un produit ou une variante Opérations et un média CMS existant.',
+                'business_product_assets',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('product_id', 'Produit', 'relation', 'identity', true, 'product_id', ['scope' => 'business_pim']),
+                    $this->field('variant_id', 'Variante', 'relation', 'identity', false, 'variant_id', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('media_id', 'Média CMS', 'relation', 'media', true, 'media_id', ['scope' => 'business_pim']),
+                    $this->enumField('role', 'Rôle', $this->productAssetRoles(), 'media', true, 'role', ['scope' => 'business_pim']),
+                    $this->field('title', 'Titre', 'text', 'media', false, 'title', ['scope' => 'business_pim']),
+                    $this->field('alt_text', 'Texte alternatif', 'text', 'media', false, 'alt_text', ['scope' => 'business_pim']),
+                    $this->field('caption', 'Légende', 'textarea', 'media', false, 'caption', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'media', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('is_public', 'Public', 'boolean', 'visibility', true, 'is_public', ['scope' => 'business_pim']),
+                    $this->enumField('channel_scope', 'Canal', $this->catalogChannels(), 'visibility', true, 'channel_scope', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [
+                    ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'product_id'],
+                    ['resource' => 'variant', 'type' => 'belongs_to', 'foreign_key' => 'variant_id'],
+                    ['resource' => 'cms_media_asset', 'type' => 'references_core', 'foreign_key' => 'media_id'],
+                ], 'ai' => [
+                    'discoverable' => true,
+                    'default_prompt_safe' => true,
+                    'allowed_actions' => ['catalog.suggest_alt_text'],
+                    'excluded_by_default' => ['created_by_iam_user_id', 'updated_by_iam_user_id'],
+                ]]
+            ),
+            $this->crmBlueprint(
+                'asset_metadata',
+                'Métadonnées média produit',
+                'Métadonnées PIM admin pour les droits, sources et usages des médias référencés par les produits.',
+                'business_asset_metadata',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('media_id', 'Média CMS', 'relation', 'identity', true, 'media_id', ['scope' => 'business_pim']),
+                    $this->enumField('asset_type', 'Type', ['image', 'document', 'video', 'audio', 'archive', 'other'], 'rights', true, 'asset_type', ['scope' => 'business_pim']),
+                    $this->enumField('usage_rights', 'Droits', ['unknown', 'owned', 'licensed', 'third_party', 'restricted', 'expired'], 'rights', true, 'usage_rights', ['scope' => 'business_pim']),
+                    $this->field('license', 'Licence', 'text', 'rights', false, 'license', ['scope' => 'business_pim']),
+                    $this->field('credit', 'Crédit', 'text', 'rights', false, 'credit', ['scope' => 'business_pim']),
+                    $this->field('source', 'Source', 'url', 'rights', false, 'source', ['scope' => 'business_pim']),
+                    $this->field('expires_at', 'Expiration', 'datetime', 'rights', false, 'expires_at', ['scope' => 'business_pim']),
+                    $this->field('internal_notes', 'Notes internes', 'textarea', 'rights', false, 'internal_notes', ['sensitive' => true, 'admin_only' => true, 'scope' => 'business_pim']),
+                    $this->field('metadata_json', 'Métadonnées JSON', 'json', 'metadata', true, 'metadata_json', ['scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [['resource' => 'cms_media_asset', 'type' => 'references_core', 'foreign_key' => 'media_id']]]
+            ),
+            $this->crmBlueprint(
+                'attribute_group',
+                'Groupe d’attributs PIM',
+                'Groupe logique pour organiser les attributs PIM-lite du catalogue Opérations.',
+                'business_attribute_groups',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('code', 'Code', 'text', 'identity', true, 'code', ['scope' => 'business_pim']),
+                    $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
+                    $this->field('description', 'Description', 'textarea', 'identity', false, 'description', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'identity', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [['resource' => 'attribute', 'type' => 'has_many', 'foreign_key' => 'group_id']]]
+            ),
+            $this->crmBlueprint(
+                'attribute',
+                'Attribut PIM',
+                'Définition admin d’un attribut PIM-lite utilisable au niveau produit ou variante.',
+                'business_attributes',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('group_id', 'Groupe', 'relation', 'identity', false, 'group_id', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('code', 'Code', 'text', 'identity', true, 'code', ['scope' => 'business_pim']),
+                    $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
+                    $this->enumField('data_type', 'Type de donnée', $this->attributeDataTypes(), 'typing', true, 'data_type', ['scope' => 'business_pim']),
+                    $this->field('unit', 'Unité', 'text', 'typing', false, 'unit', ['scope' => 'business_pim']),
+                    $this->field('is_required', 'Requis', 'boolean', 'rules', true, 'is_required', ['scope' => 'business_pim']),
+                    $this->field('is_filterable', 'Filtrable', 'boolean', 'rules', true, 'is_filterable', ['scope' => 'business_pim']),
+                    $this->field('is_searchable', 'Recherchable', 'boolean', 'rules', true, 'is_searchable', ['scope' => 'business_pim']),
+                    $this->field('is_public', 'Public', 'boolean', 'rules', true, 'is_public', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'rules', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('validation_json', 'Validation JSON', 'json', 'rules', true, 'validation_json', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [['resource' => 'attribute_group', 'type' => 'belongs_to', 'foreign_key' => 'group_id']]]
+            ),
+            $this->crmBlueprint(
+                'attribute_option',
+                'Option d’attribut PIM',
+                'Option déclarée pour un attribut PIM-lite de type choix.',
+                'business_attribute_options',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('attribute_id', 'Attribut', 'relation', 'identity', true, 'attribute_id', ['scope' => 'business_pim']),
+                    $this->field('code', 'Code', 'text', 'identity', true, 'code', ['scope' => 'business_pim']),
+                    $this->field('label', 'Libellé', 'text', 'identity', true, 'label', ['scope' => 'business_pim']),
+                    $this->field('value', 'Valeur', 'text', 'identity', true, 'value', ['scope' => 'business_pim']),
+                    $this->field('color_hex', 'Couleur', 'color', 'identity', false, 'color_hex', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'identity', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [['resource' => 'attribute', 'type' => 'belongs_to', 'foreign_key' => 'attribute_id']]]
+            ),
+            $this->crmBlueprint(
+                'product_attribute_value',
+                'Valeur d’attribut produit',
+                'Valeur PIM-lite portée par un produit Opérations.',
+                'business_product_attribute_values',
+                $this->attributeValueFields('product_id', 'Produit', 'product'),
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [
+                    ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'product_id'],
+                    ['resource' => 'attribute', 'type' => 'belongs_to', 'foreign_key' => 'attribute_id'],
+                ]]
+            ),
+            $this->crmBlueprint(
+                'variant_attribute_value',
+                'Valeur d’attribut variante',
+                'Valeur PIM-lite portée par une variante vendable Opérations.',
+                'business_variant_attribute_values',
+                $this->attributeValueFields('variant_id', 'Variante', 'variant'),
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [
+                    ['resource' => 'variant', 'type' => 'belongs_to', 'foreign_key' => 'variant_id'],
+                    ['resource' => 'attribute', 'type' => 'belongs_to', 'foreign_key' => 'attribute_id'],
+                ]]
+            ),
+            $this->crmBlueprint(
+                'completeness_rule',
+                'Règle de complétude PIM',
+                'Règle admin décrivant une exigence de complétude produit, variante, asset, prix, taxe ou canal.',
+                'business_product_completeness_rules',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('code', 'Code', 'text', 'identity', true, 'code', ['scope' => 'business_pim']),
+                    $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
+                    $this->enumField('scope', 'Scope', ['product', 'variant', 'asset', 'price', 'tax', 'channel'], 'rule', true, 'scope', ['scope' => 'business_pim']),
+                    $this->field('required_field', 'Champ requis', 'text', 'rule', false, 'required_field', ['scope' => 'business_pim']),
+                    $this->field('required_attribute_id', 'Attribut requis', 'relation', 'rule', false, 'required_attribute_id', ['scope' => 'business_pim']),
+                    $this->enumField('channel', 'Canal', $this->catalogChannels(), 'rule', true, 'channel', ['scope' => 'business_pim']),
+                    $this->field('weight', 'Poids', 'number', 'rule', true, 'weight', ['scope' => 'business_pim']),
+                    $this->field('is_active', 'Actif', 'boolean', 'rule', true, 'is_active', ['scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['validation' => ['any_required' => ['required_field', 'required_attribute_id']]]
+            ),
+            $this->crmBlueprint(
+                'completeness_score',
+                'Score de complétude PIM',
+                'Résultat calculé de complétude, utilisé pour décider si un produit ou une variante est vendable par canal.',
+                'business_product_completeness_scores',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('product_id', 'Produit', 'relation', 'identity', true, 'product_id', ['scope' => 'business_pim']),
+                    $this->field('variant_id', 'Variante', 'relation', 'identity', false, 'variant_id', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->enumField('channel', 'Canal', $this->catalogChannels(), 'score', true, 'channel', ['scope' => 'business_pim']),
+                    $this->field('score', 'Score', 'number', 'score', true, 'score', ['scope' => 'business_pim']),
+                    $this->field('is_sellable', 'Vendable', 'boolean', 'score', true, 'is_sellable', ['scope' => 'business_pim']),
+                    $this->field('missing_json', 'Exigences manquantes', 'json', 'score', true, 'missing_json', ['scope' => 'business_pim']),
+                    $this->field('calculated_at', 'Calculé le', 'datetime', 'audit', false, 'calculated_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'update' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [
+                    ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'product_id'],
+                    ['resource' => 'variant', 'type' => 'belongs_to', 'foreign_key' => 'variant_id'],
+                ], 'ai' => [
+                    'discoverable' => true,
+                    'default_prompt_safe' => true,
+                    'allowed_actions' => ['catalog.explain_missing_requirements', 'catalog.check_ecommerce_readiness'],
+                ]]
+            ),
+            $this->crmBlueprint(
+                'product_relation',
+                'Relation entre produits',
+                'Relation admin entre produits Opérations pour accessoires, alternatives, upsell, cross-sell ou similaires.',
+                'business_product_relations',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('product_id', 'Produit', 'relation', 'identity', true, 'product_id', ['scope' => 'business_pim']),
+                    $this->field('related_product_id', 'Produit lié', 'relation', 'identity', true, 'related_product_id', ['scope' => 'business_pim']),
+                    $this->enumField('relation_type', 'Type', ['accessory', 'alternative', 'bundle_candidate', 'replacement', 'upsell', 'cross_sell', 'similar'], 'identity', true, 'relation_type', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'identity', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                ['relations' => [
+                    ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'product_id'],
+                    ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'related_product_id'],
+                ]]
+            ),
+            $this->crmBlueprint(
+                'product_bundle',
+                'Offre composée',
+                'Composition vendable admin-only portée par un produit ou une variante. Vente fige cette composition dans ses snapshots sans écrire de stock catalogue.',
+                'business_product_bundles',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('bundle_product_id', 'Produit bundle', 'relation', 'identity', true, 'bundle_product_id', ['source_resource' => 'product', 'scope' => 'business_pim']),
+                    $this->field('bundle_variant_id', 'Variante bundle', 'relation', 'identity', false, 'bundle_variant_id', ['nullable' => true, 'source_resource' => 'variant', 'scope' => 'business_pim']),
+                    $this->enumField('pricing_mode', 'Mode de prix', ['fixed', 'sum_components', 'discount_components'], 'pricing', true, 'pricing_mode', ['scope' => 'business_pim']),
+                    $this->enumField('stock_mode', 'Mode de disponibilité', ['components', 'virtual', 'none'], 'stock', true, 'stock_mode', ['scope' => 'business_pim']),
+                    $this->field('is_active', 'Actif', 'boolean', 'status', true, 'is_active', ['scope' => 'business_pim']),
+                    $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'archive' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                [
+                    'admin_only' => true,
+                    'headless_public' => false,
+                    'relations' => [
+                        ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'bundle_product_id'],
+                        ['resource' => 'variant', 'type' => 'belongs_to', 'foreign_key' => 'bundle_variant_id'],
+                        ['resource' => 'bundle_component', 'type' => 'has_many', 'foreign_key' => 'bundle_id'],
+                    ],
+                ]
+            ),
+            $this->crmBlueprint(
+                'bundle_component',
+                'Composant d’offre composée',
+                'Produit ou variante sous-jacent à une offre composée. Les quantités restent descriptives ; le stock transactionnel reste dans Vente.',
+                'business_bundle_components',
+                [
+                    $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('bundle_id', 'Bundle', 'relation', 'identity', true, 'bundle_id', ['source_resource' => 'product_bundle', 'scope' => 'business_pim']),
+                    $this->field('component_product_id', 'Produit composant', 'relation', 'component', true, 'component_product_id', ['source_resource' => 'product', 'scope' => 'business_pim']),
+                    $this->field('component_variant_id', 'Variante composant', 'relation', 'component', false, 'component_variant_id', ['nullable' => true, 'source_resource' => 'variant', 'scope' => 'business_pim']),
+                    $this->field('quantity', 'Quantité', 'decimal', 'component', true, 'quantity', ['min' => 0.0001, 'scope' => 'business_pim']),
+                    $this->field('is_required', 'Requis', 'boolean', 'component', true, 'is_required', ['scope' => 'business_pim']),
+                    $this->field('sort_order', 'Ordre', 'number', 'component', true, 'sort_order', ['scope' => 'business_pim']),
+                    $this->field('metadata_json', 'Métadonnées JSON', 'json', 'component', true, 'metadata_json', ['scope' => 'business_pim']),
+                    $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+                    $this->field('archived_at', 'Archivé le', 'datetime', 'audit', false, 'archived_at', ['system' => true, 'scope' => 'business_pim']),
+                ],
+                ['read' => $catalogRead, 'create' => $catalogWrite, 'update' => $catalogWrite, 'delete' => $catalogWrite, 'export' => $catalogRead],
+                [
+                    'admin_only' => true,
+                    'headless_public' => false,
+                    'validation' => ['quantity' => 'positive', 'forbid_cycles' => true],
+                    'relations' => [
+                        ['resource' => 'product_bundle', 'type' => 'belongs_to', 'foreign_key' => 'bundle_id'],
+                        ['resource' => 'product', 'type' => 'belongs_to', 'foreign_key' => 'component_product_id'],
+                        ['resource' => 'variant', 'type' => 'belongs_to', 'foreign_key' => 'component_variant_id'],
+                    ],
+                ]
+            ),
+            $this->crmBlueprint(
+                'sellable_variant_snapshot',
+                'Snapshot variante vendable',
+                'Agrégat de lecture admin et IA interne pour Vente : variante, prix, taxes, image principale et complétude.',
+                'business_sellable_variant_snapshot',
+                $this->sellableVariantSnapshotFields(),
+                ['read' => $catalogRead, 'export' => $catalogRead, 'purchase_prices' => 'business.catalog.purchase_prices.read'],
+                [
+                    'aggregate' => true,
+                    'primary_key' => 'variant_id',
+                    'create' => false,
+                    'update' => false,
+                    'delete' => false,
+                    'ai' => [
+                        'discoverable' => true,
+                        'default_prompt_safe' => true,
+                        'allowed_actions' => ['catalog.find_products', 'catalog.prepare_sale_snapshot', 'catalog.check_ecommerce_readiness'],
+                        'sensitive_fields' => ['purchase_price_minor', 'unit_purchase_price_minor', 'margin_minor', 'margin_percent_basis_points', 'snapshot_json'],
+                        'excluded_by_default' => ['purchase_price_minor', 'unit_purchase_price_minor', 'margin_minor', 'margin_percent_basis_points', 'snapshot_json'],
+                    ],
+                    'sources' => [
+                        'business_products',
+                        'business_product_variants',
+                        'business_product_brands',
+                        'business_product_categories',
+                        'business_product_assets',
+                        'business_product_completeness_scores',
+                        'business_product_base_prices',
+                        'business_product_variant_price_adjustments',
+                        'business_catalog_discounts',
+                        'business_product_bundles',
+                        'business_bundle_components',
+                        'business_tax_classes',
+                    ],
+                ]
+            ),
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function attributeValueFields(string $ownerKey, string $ownerLabel, string $ownerResource): array
+    {
+        return [
+            $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
+            $this->field($ownerKey, $ownerLabel, 'relation', 'identity', true, $ownerKey, ['source_resource' => $ownerResource, 'scope' => 'business_pim']),
+            $this->field('attribute_id', 'Attribut', 'relation', 'identity', true, 'attribute_id', ['scope' => 'business_pim']),
+            $this->field('language', 'Langue', 'text', 'value', true, 'language', ['scope' => 'business_pim']),
+            $this->field('value_text', 'Valeur texte', 'textarea', 'value', false, 'value_text', ['scope' => 'business_pim']),
+            $this->field('value_number', 'Valeur numérique', 'decimal', 'value', false, 'value_number', ['scope' => 'business_pim']),
+            $this->field('value_json', 'Valeur JSON', 'json', 'value', false, 'value_json', ['scope' => 'business_pim']),
+            $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
+            $this->field('updated_at', 'Modifié le', 'datetime', 'audit', false, 'updated_at', ['system' => true, 'scope' => 'business_pim']),
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function sellableVariantSnapshotFields(): array
+    {
+        $purchasePriceOptions = ['sensitive' => true, 'admin_only' => true, 'permission' => 'business.catalog.purchase_prices.read', 'scope' => 'business_pim'];
+
+        return [
+            $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
+            $this->field('product_id', 'Produit', 'relation', 'identity', true, 'product_id', ['scope' => 'business_pim']),
+            $this->field('variant_id', 'Variante', 'relation', 'identity', true, 'variant_id', ['scope' => 'business_pim']),
+            $this->field('sku', 'SKU', 'text', 'identity', true, 'sku', ['scope' => 'business_pim']),
+            $this->field('barcode', 'Code-barres', 'text', 'identity', false, 'barcode', ['scope' => 'business_pim']),
+            $this->field('product_name', 'Nom produit', 'text', 'identity', true, 'product_name', ['scope' => 'business_pim']),
+            $this->field('variant_name', 'Nom variante', 'text', 'identity', false, 'variant_name', ['scope' => 'business_pim']),
+            $this->field('brand_name', 'Marque', 'text', 'identity', false, 'brand_name', ['scope' => 'business_pim']),
+            $this->field('category_name', 'Catégorie', 'text', 'identity', false, 'category_name', ['scope' => 'business_pim']),
+            $this->field('product_type', 'Type produit', 'text', 'identity', true, 'product_type', ['scope' => 'business_pim']),
+            $this->field('unit', 'Unité', 'text', 'identity', true, 'unit', ['scope' => 'business_pim']),
+            $this->field('currency', 'Devise', 'text', 'pricing', true, 'currency', ['scope' => 'business_pim']),
+            $this->field('sale_price_minor', 'Prix vente', 'number', 'pricing', false, 'sale_price_minor', ['scope' => 'business_pim']),
+            $this->field('regular_sale_price_minor', 'Prix vente régulier', 'number', 'pricing', false, 'regular_sale_price_minor', ['scope' => 'business_pim']),
+            $this->field('purchase_price_minor', 'Prix achat', 'number', 'pricing', false, 'purchase_price_minor', $purchasePriceOptions),
+            $this->field('purchase_price_visible', 'Prix achat visible', 'boolean', 'pricing', true, 'purchase_price_visible', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('margin_minor', 'Marge', 'number', 'pricing', false, 'margin_minor', $purchasePriceOptions),
+            $this->field('margin_percent_basis_points', 'Marge %', 'number', 'pricing', false, 'margin_percent_basis_points', $purchasePriceOptions),
+            $this->field('tax_class_id', 'Classe TVA', 'relation', 'tax', false, 'tax_class_id', ['scope' => 'business_pim']),
+            $this->field('tax_rate_basis_points', 'Taux TVA', 'number', 'tax', false, 'tax_rate_basis_points', ['scope' => 'business_pim']),
+            $this->field('tax_included', 'TVA incluse', 'boolean', 'tax', false, 'tax_included', ['scope' => 'business_pim']),
+            $this->field('main_asset_id', 'Asset principal', 'relation', 'media', false, 'main_asset_id', ['scope' => 'business_pim']),
+            $this->field('main_media_id', 'Média principal', 'relation', 'media', false, 'main_media_id', ['scope' => 'business_pim']),
+            $this->field('main_media_url', 'URL média principal', 'url', 'media', false, 'main_media_url', ['scope' => 'business_pim']),
+            $this->field('track_stock', 'Stock suivi', 'boolean', 'availability', true, 'track_stock', ['scope' => 'business_pim']),
+            $this->field('is_public', 'Public', 'boolean', 'availability', true, 'is_public', ['scope' => 'business_pim']),
+            $this->field('is_ecommerce_enabled', 'E-commerce', 'boolean', 'availability', true, 'is_ecommerce_enabled', ['scope' => 'business_pim']),
+            $this->field('is_pos_enabled', 'POS', 'boolean', 'availability', true, 'is_pos_enabled', ['scope' => 'business_pim']),
+            $this->field('is_sellable', 'Vendable', 'boolean', 'availability', true, 'is_sellable', ['scope' => 'business_pim']),
+            $this->field('missing_requirements', 'Exigences manquantes', 'json', 'availability', false, 'missing_requirements', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('is_bundle', 'Offre composée', 'boolean', 'bundle', true, 'is_bundle', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('bundle_components', 'Composants bundle', 'json', 'bundle', false, 'bundle_components', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('bundle_pricing_mode', 'Mode prix bundle', 'text', 'bundle', false, 'bundle_pricing_mode', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('bundle_stock_mode', 'Mode stock bundle', 'text', 'bundle', false, 'bundle_stock_mode', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('bundle_available_quantity', 'Disponibilité bundle', 'decimal', 'bundle', false, 'bundle_available_quantity', ['computed' => true, 'scope' => 'business_pim']),
+            $this->field('snapshot_json', 'Snapshot JSON', 'json', 'technical', true, 'snapshot_json', ['sensitive' => true, 'admin_only' => true, 'scope' => 'business_pim']),
         ];
     }
 
@@ -714,7 +1281,7 @@ final class BusinessModuleProvider implements ModuleProvider
             'column' => $column,
             'is_system' => $system,
             'is_deletable' => false,
-            'field_scope' => $system ? 'system_context' : 'business_crm',
+            'field_scope' => $options['scope'] ?? ($system ? 'system_context' : 'business_crm'),
             'ui_visibility' => $system ? 'summary' : 'form',
             'validation' => array_filter([
                 'required' => $required ?: null,
@@ -723,8 +1290,11 @@ final class BusinessModuleProvider implements ModuleProvider
                 'unique_active' => $options['unique_active'] ?? null,
             ], static fn(mixed $value): bool => $value !== null),
             'sensitive' => (bool) ($options['sensitive'] ?? false),
+            'admin_only' => (bool) ($options['admin_only'] ?? false),
             'exportable' => (bool) ($options['exportable'] ?? true),
             'computed' => (bool) ($options['computed'] ?? false),
+            'permission' => $options['permission'] ?? null,
+            'source_resource' => $options['source_resource'] ?? null,
             'source_endpoint' => $options['source_endpoint'] ?? null,
         ];
     }
@@ -751,5 +1321,23 @@ final class BusinessModuleProvider implements ModuleProvider
     private function channels(): array
     {
         return ['email', 'whatsapp', 'telegram'];
+    }
+
+    /** @return list<string> */
+    private function catalogChannels(): array
+    {
+        return ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'];
+    }
+
+    /** @return list<string> */
+    private function productAssetRoles(): array
+    {
+        return ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'brand_logo', 'packaging', 'seo', 'internal'];
+    }
+
+    /** @return list<string> */
+    private function attributeDataTypes(): array
+    {
+        return ['text', 'textarea', 'rich_text', 'number', 'decimal', 'boolean', 'select', 'multi_select', 'date', 'url', 'file', 'dimension', 'weight', 'color'];
     }
 }

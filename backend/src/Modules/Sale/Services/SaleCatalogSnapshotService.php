@@ -19,7 +19,11 @@ final class SaleCatalogSnapshotService
     /** @return array<string,mixed> */
     public function snapshotForVariant(int $siteId, int $businessVariantId, string $channel = 'admin', bool $requireSellable = true): array
     {
-        $snapshot = $this->sellables->variantSnapshot($siteId, $businessVariantId, $channel, true);
+        $snapshot = $this->sellables->getSellableVariantSnapshot($siteId, $businessVariantId, [
+            'channel' => $channel,
+            'include_purchase_price' => true,
+            'include_internal_fields' => true,
+        ]);
         if ($requireSellable && !((bool) ($snapshot['is_sellable'] ?? false))) {
             throw new InvalidArgumentException('sale.catalog.variant_not_sellable');
         }

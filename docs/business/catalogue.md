@@ -21,6 +21,12 @@ generated: false
 
 Le catalogue Opérations permet de préparer un petit catalogue produits, services ou bons cadeaux depuis le back-office. Il couvre les marques, catégories, produits, variantes, prix, réductions simples, stock et import/export CSV.
 
+Pour un parcours utilisateur court, commencez par :
+
+- [Guide utilisateur Catalogue+](catalogue-plus-guide-utilisateur.md) ;
+- [Medias produits Catalogue+](catalogue-medias-produits.md) ;
+- [Qualite et vendabilite Catalogue+](catalogue-qualite-vendabilite.md).
+
 ## Accès
 
 Ouvrez **Modules > Opérations**, puis utilisez les onglets **Produits** et **Offres**.

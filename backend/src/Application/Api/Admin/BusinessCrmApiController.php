@@ -70,6 +70,15 @@ final class BusinessCrmApiController
                 'memo' => ['fields' => ['id', 'company_id', 'contact_id', 'title', 'body', 'visibility', 'created_at', 'updated_at']],
                 'activity' => ['fields' => ['id', 'kind', 'entity_type', 'entity_id', 'action', 'summary', 'created_at']],
                 'message' => ['fields' => ['id', 'contact_id', 'channel', 'subject', 'status', 'created_at', 'sent_at']],
+                'product' => ['fields' => ['id', 'site_id', 'sku_base', 'name', 'slug', 'type', 'status', 'brand_id', 'category_id', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'updated_at']],
+                'variant' => ['fields' => ['id', 'product_id', 'sku', 'barcode', 'name', 'status', 'stock_quantity', 'stock_reserved', 'track_stock', 'updated_at']],
+                'product_asset' => ['fields' => ['id', 'product_id', 'variant_id', 'media_id', 'role', 'title', 'alt_text', 'is_public', 'channel_scope']],
+                'attribute' => ['fields' => ['id', 'group_id', 'code', 'name', 'data_type', 'is_required', 'is_filterable', 'is_searchable', 'is_public']],
+                'completeness_score' => ['fields' => ['product_id', 'variant_id', 'channel', 'score', 'is_sellable', 'missing_json', 'calculated_at']],
+                'sellable_variant_snapshot' => [
+                    'fields' => ['site_id', 'product_id', 'variant_id', 'sku', 'product_name', 'variant_name', 'sale_price_minor', 'tax_class_id', 'main_media_url', 'is_sellable', 'missing_requirements'],
+                    'sensitive_fields' => ['purchase_price_minor', 'unit_purchase_price_minor', 'margin_minor', 'margin_percent_basis_points', 'snapshot_json'],
+                ],
             ],
             'relations' => [
                 ['from' => 'contact', 'to' => 'company', 'type' => 'belongs_to'],
@@ -77,6 +86,10 @@ final class BusinessCrmApiController
                 ['from' => 'memo', 'to' => 'contact', 'type' => 'about_contact'],
                 ['from' => 'activity', 'to' => 'relation', 'type' => 'tracks'],
                 ['from' => 'message', 'to' => 'contact', 'type' => 'targets'],
+                ['from' => 'variant', 'to' => 'product', 'type' => 'belongs_to'],
+                ['from' => 'product_asset', 'to' => 'product', 'type' => 'belongs_to'],
+                ['from' => 'product_asset', 'to' => 'variant', 'type' => 'optional_variant_asset'],
+                ['from' => 'sellable_variant_snapshot', 'to' => 'variant', 'type' => 'read_model_for'],
             ],
             'actions' => [
                 ['key' => 'relations.index', 'method' => 'GET', 'path' => '/admin/api/business/relations', 'permission' => 'business.crm.read'],
@@ -85,6 +98,11 @@ final class BusinessCrmApiController
                 ['key' => 'relations.memos', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/memos', 'permission' => 'business.memo.read'],
                 ['key' => 'relations.summary', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/summary', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.restore', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/restore', 'permission' => 'business.crm.manage'],
+                ['key' => 'catalog.products.index', 'method' => 'GET', 'path' => '/admin/api/business/catalog/products', 'permission' => 'business.catalog.read'],
+                ['key' => 'catalog.products.show', 'method' => 'GET', 'path' => '/admin/api/business/catalog/products/{id}', 'permission' => 'business.catalog.read'],
+                ['key' => 'pim.product_assets.index', 'method' => 'GET', 'path' => '/admin/api/business/pim/products/{id}/assets', 'permission' => 'business.catalog.read'],
+                ['key' => 'pim.completeness.show', 'method' => 'GET', 'path' => '/admin/api/business/pim/products/{id}/completeness', 'permission' => 'business.catalog.read'],
+                ['key' => 'pim.sellable_snapshot.show', 'method' => 'GET', 'path' => '/admin/api/business/pim/variants/{id}/sellable-snapshot', 'permission' => 'business.catalog.read'],
             ],
             'permissions' => [
                 'business.crm.read',
@@ -96,6 +114,10 @@ final class BusinessCrmApiController
                 'business.messaging.admin',
                 'business.mailing.read',
                 'business.mailing.manage',
+                'business.catalog.read',
+                'business.catalog.write',
+                'business.catalog.prices.read',
+                'business.catalog.purchase_prices.read',
             ],
             'ai' => [
                 'summary' => [
@@ -103,6 +125,22 @@ final class BusinessCrmApiController
                     'provider' => 'local_summary',
                     'external_call_by_default' => false,
                     'external_provider_configured' => false,
+                ],
+                'catalog_actions' => [
+                    'catalog.find_products',
+                    'catalog.explain_missing_requirements',
+                    'catalog.suggest_product_description',
+                    'catalog.suggest_alt_text',
+                    'catalog.summarize_product',
+                    'catalog.prepare_sale_snapshot',
+                    'catalog.check_ecommerce_readiness',
+                ],
+                'security' => [
+                    'site_scoped' => true,
+                    'permission_scoped' => true,
+                    'purchase_price_permission' => 'business.catalog.purchase_prices.read',
+                    'default_sensitive_fields_excluded' => ['purchase_price_minor', 'unit_purchase_price_minor', 'margin_minor', 'margin_percent_basis_points', 'snapshot_json'],
+                    'external_call_by_default' => false,
                 ],
             ],
         ], 'admin.business.schema.v1', $this->meta($site, $languageCode));
@@ -1268,6 +1306,9 @@ final class BusinessCrmApiController
 
     private function limit(): int
     {
+        if (($this->request->query['limit'] ?? null) === 'all') {
+            return 10000;
+        }
         return max(1, min(200, (int) ($this->request->query['limit'] ?? 50)));
     }
 

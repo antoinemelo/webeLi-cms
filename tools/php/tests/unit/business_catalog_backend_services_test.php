@@ -19,7 +19,12 @@ use App\Modules\Business\Services\CatalogVariantService;
 use App\Modules\Business\Services\CatalogVisibilityService;
 
 $h = new TestHarness();
-[$dir, $dbPath, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql');
+[$dir, $dbPath, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/migrations/business/0001_init.sql');
+$catalogSchema = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0003_catalog_schema.sql');
+if ($catalogSchema === false) {
+    throw new RuntimeException('Unable to read business catalog schema.');
+}
+$db->pdo()->exec($catalogSchema);
 
 try {
     $brands = new CatalogBrandRepository($db);
@@ -65,6 +70,25 @@ try {
         'stock_enabled' => true,
     ], 1);
     $h->assertSame('Backend Hoodie', $product['name'], 'catalog product is created');
+
+    $bundleWithoutPrices = $productService->create(1, [
+        'name' => 'Bundle sans prix',
+        'slug' => 'bundle-sans-prix',
+        'type' => 'bundle',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce', 'pos'],
+    ], 1);
+    $h->assertSame('bundle', $bundleWithoutPrices['type'], 'bundle product can be created without base prices');
+    $h->assertSame([], $products->prices(1, (int) $bundleWithoutPrices['id']), 'empty bundle prices are not persisted as invalid base prices');
+    $variantService->create(1, (int) $bundleWithoutPrices['id'], [
+        'sku' => 'BUNDLE-SANS-PRIX-STANDARD',
+        'name' => 'Standard',
+        'status' => 'active',
+        'stock_quantity' => 0,
+        'track_stock' => false,
+    ], 1);
+    $activatedBundle = $productService->update(1, (int) $bundleWithoutPrices['id'], ['status' => 'active'], 1);
+    $h->assertSame('active', $activatedBundle['status'] ?? null, 'bundle product can become active before a fixed sale price is defined');
 
     $db->run("INSERT INTO business_product_options(site_id, code, name, type) VALUES(1, 'model', 'Model', 'select'), (1, 'size', 'Size', 'select')");
     $db->run("INSERT INTO business_product_option_values(option_id, code, label, value) SELECT id, 'classic', 'Classic', 'classic' FROM business_product_options WHERE code = 'model'");

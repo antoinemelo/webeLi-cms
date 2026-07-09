@@ -22,6 +22,7 @@ use App\Modules\Business\Services\CatalogDiscountService;
 use App\Modules\Business\Services\CatalogProductService;
 use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
+use App\Modules\Business\Services\BusinessProductCompletenessService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -100,25 +101,34 @@ try {
     $stockService = new CatalogStockService($stock);
     $pricing = new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb));
     $csv = new CatalogCsvService($businessDb, $brands, $categories, $products, $variants, $options, $pricing);
+    $completeness = new BusinessProductCompletenessService($businessDb);
     $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
 
-    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing): BusinessCatalogApiController {
+    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing, $completeness): BusinessCatalogApiController {
         $token = 'business-catalog-api-test-token-' . $userId;
         $_SESSION['admin_user'] = ['id' => $userId, 'email' => 'catalog-' . $userId . '@example.test', 'session_secret' => $token];
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
         $auth = new AuthRepository($iam);
-        return new BusinessCatalogApiController($request, $sites, $auth, new Authorization($auth), $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing);
+        return new BusinessCatalogApiController($request, $sites, $auth, new Authorization($auth), $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing, $completeness);
     };
 
-    $brandResponse = $controllerFor(1, 'POST', '/admin/api/business/catalog/brands', [], ['name' => 'API Brand'])->storeBrand();
+    $businessDb->run("INSERT INTO business_companies(id, site_id, name, normalized_name, status, email) VALUES(10, 1, 'API Supplier', 'api supplier', 'supplier', 'supplier@example.test')");
+
+    $brandResponse = $controllerFor(1, 'POST', '/admin/api/business/catalog/brands', [], ['name' => 'API Brand', 'company_id' => 10])->storeBrand();
     $h->assertSame(201, $brandResponse->status(), 'catalog admin can create brand');
     $brandPayload = json_decode($brandResponse->body(), true);
     $brandId = (int) ($brandPayload['data']['brand']['id'] ?? 0);
     $h->assertTrue($brandId > 0, 'brand id is returned');
+    $h->assertSame(10, $brandPayload['data']['brand']['company_id'] ?? null, 'brand can be linked to a CRM company');
+    $h->assertSame('API Supplier', $brandPayload['data']['brand']['company_name'] ?? null, 'brand response exposes linked CRM company name');
     $h->assertSame(200, $controllerFor(1, 'PATCH', '/admin/api/business/catalog/brands/' . $brandId, [], ['name' => 'API Brand Updated'])->updateBrand($brandId)->status(), 'catalog admin can update brand');
+    $invalidBrandResponse = $controllerFor(1, 'POST', '/admin/api/business/catalog/brands', [], ['name' => 'Invalid Company Brand', 'company_id' => 9999])->storeBrand();
+    $h->assertSame(422, $invalidBrandResponse->status(), 'brand rejects an unknown CRM company link');
     $h->assertSame(200, $controllerFor(1, 'GET', '/admin/api/business/catalog/brands')->brands()->status(), 'catalog admin can list brands');
 
     $category = $categories->create(1, ['name' => 'API Category'], 1);
+    $temporaryCategory = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/categories', [], ['name' => 'API Temporary Category'])->storeCategory()->body(), true)['data']['category'];
+    $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/categories/' . $temporaryCategory['id'])->deleteCategory((int) $temporaryCategory['id'])->status(), 'catalog admin can archive category');
     $size = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options', [], ['code' => 'size_api', 'name' => 'Size', 'type' => 'select'])->storeOption()->body(), true)['data']['option'];
     $color = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options', [], ['code' => 'color_api', 'name' => 'Color', 'type' => 'color'])->storeOption()->body(), true)['data']['option'];
     $model = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options', [], ['code' => 'model_api', 'name' => 'Model', 'type' => 'select'])->storeOption()->body(), true)['data']['option'];
@@ -129,6 +139,7 @@ try {
 
     $productResponse = $controllerFor(1, 'POST', '/admin/api/business/catalog/products', [], [
         'name' => 'API Product',
+        'sku_base' => 'api product',
         'slug' => 'api-product',
         'brand_id' => $brandId,
         'category_id' => $category['id'],
@@ -144,7 +155,36 @@ try {
     $productPayload = json_decode($productResponse->body(), true);
     $productId = (int) ($productPayload['data']['product']['data']['id'] ?? 0);
     $h->assertTrue(str_contains($productResponse->body(), 'purchase'), 'base purchase price path is present for privileged user');
-    $h->assertSame(200, $controllerFor(1, 'PATCH', '/admin/api/business/catalog/products/' . $productId, [], ['name' => 'API Product Updated'])->updateProduct($productId)->status(), 'catalog admin can update product');
+    $h->assertSame('APIPRODUCT', $productPayload['data']['product']['data']['sku_base'] ?? null, 'product create normalizes SKU base');
+    $updateProductResponse = $controllerFor(1, 'PATCH', '/admin/api/business/catalog/products/' . $productId, [], [
+        'name' => 'API Product Updated',
+        'sku_base' => 'api product upd',
+        'slug' => 'api-product-updated',
+        'brand_id' => $brandId,
+        'category_id' => $category['id'],
+        'type' => 'physical',
+        'status' => 'draft',
+        'is_public' => false,
+        'is_ecommerce_enabled' => false,
+        'is_pos_enabled' => true,
+        'unit' => 'piece',
+        'track_stock' => true,
+        'allow_backorder' => true,
+        'option_ids' => [$size['id'], $color['id'], $model['id']],
+    ])->updateProduct($productId);
+    $h->assertSame(200, $updateProductResponse->status(), 'catalog admin can update product fields');
+    $updatedProductPayload = json_decode($updateProductResponse->body(), true);
+    $h->assertSame('API Product Updated', $updatedProductPayload['data']['product']['data']['name'] ?? null, 'product update persists name');
+    $h->assertSame('APIPRODUCTUPD', $updatedProductPayload['data']['product']['data']['sku_base'] ?? null, 'product update normalizes SKU base');
+    $h->assertSame('api-product-updated', $updatedProductPayload['data']['product']['data']['slug'] ?? null, 'product update persists slug');
+    $h->assertSame(true, (bool) ($updatedProductPayload['data']['product']['data']['is_pos_enabled'] ?? false), 'product update persists POS channel');
+    $h->assertSame(false, (bool) ($updatedProductPayload['data']['product']['data']['is_ecommerce_enabled'] ?? true), 'product update persists ecommerce channel');
+    $h->assertSame('piece', $updatedProductPayload['data']['product']['data']['unit'] ?? null, 'product update persists unit');
+    $h->assertSame(true, (bool) ($updatedProductPayload['data']['product']['data']['track_stock'] ?? false), 'product update persists stock tracking');
+    $h->assertSame(true, (bool) ($updatedProductPayload['data']['product']['data']['allow_backorder'] ?? false), 'product update persists backorder setting');
+    $h->assertSame(3, count($updatedProductPayload['data']['product']['options'] ?? []), 'product update can persist all linked options');
+    $autoScores = (int) ($businessDb->one('SELECT COUNT(*) AS count FROM business_product_completeness_scores WHERE product_id = ?', [$productId])['count'] ?? 0);
+    $h->assertTrue($autoScores > 0, 'product save recalculates completeness scores');
 
     $h->assertSame(200, $controllerFor(1, 'PUT', '/admin/api/business/catalog/products/' . $productId . '/base-prices', [], ['base_purchase_price' => 42, 'base_sale_price' => 120, 'currency' => 'CHF'])->setProductBasePrices($productId)->status(), 'catalog admin can update base prices');
 
@@ -163,6 +203,95 @@ try {
     $variantPayload = json_decode($variantResponse->body(), true);
     $variantId = (int) ($variantPayload['data']['variant']['id'] ?? 0);
     $h->assertSame(3, count($variantPayload['data']['variant']['option_values'] ?? []), 'variant exposes its option values');
+
+    $businessDb->run(
+        'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, is_public, channel_scope)
+         VALUES(1, ?, 1001, "main", "API product image", "API product image", 1, "all")',
+        [$productId]
+    );
+    $businessDb->run(
+        'INSERT OR REPLACE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+         VALUES(?, "all", 90, 1, "[]")',
+        [$productId]
+    );
+    $productsResponse = $controllerFor(1, 'GET', '/admin/api/business/catalog/products')->products();
+    $h->assertSame(200, $productsResponse->status(), 'catalog admin can list product UX indicators');
+    $productsPayload = json_decode($productsResponse->body(), true);
+    $listedProduct = $productsPayload['data']['products'][0] ?? [];
+    $h->assertSame(1, (int) ($listedProduct['variant_count'] ?? 0), 'product list exposes variant count');
+    $h->assertSame(1, (int) ($listedProduct['active_variant_count'] ?? 0), 'product list exposes active variant count');
+    $h->assertSame(8, (int) ($listedProduct['stock_quantity_total'] ?? 0), 'product list exposes total stock quantity');
+    $h->assertSame(0, (int) ($listedProduct['stock_reserved_total'] ?? 0), 'product list exposes total reserved stock');
+    $h->assertSame(1, (int) ($listedProduct['stock_tracked_variant_count'] ?? 0), 'product list exposes tracked stock variant count');
+    $h->assertSame(120.0, (float) ($listedProduct['sale_price_min'] ?? 0), 'product list exposes sale price floor');
+    $h->assertSame(1, (int) ($listedProduct['image_count'] ?? 0), 'product list exposes image availability');
+    $h->assertSame(90, (int) ($listedProduct['completeness_score'] ?? 0), 'product list exposes completeness score');
+    $h->assertSame(true, (bool) ($listedProduct['is_sellable_summary'] ?? false), 'product list exposes sellable summary');
+    $shownProductPayload = json_decode($controllerFor(1, 'GET', '/admin/api/business/catalog/products/' . $productId)->showProduct($productId)->body(), true);
+    $shownProductData = $shownProductPayload['data']['product']['data'] ?? [];
+    $h->assertSame(1, (int) ($shownProductData['image_count'] ?? 0), 'product detail exposes image availability');
+    $h->assertSame(90, (int) ($shownProductData['completeness_score'] ?? 0), 'product detail exposes completeness score');
+
+    $missingProduct = $products->create(1, [
+        'name' => 'API Filter Missing',
+        'sku_base' => 'filter missing',
+        'slug' => 'api-filter-missing',
+        'type' => 'physical',
+        'status' => 'draft',
+        'channels' => [],
+    ], 1);
+    $missingProductId = (int) ($missingProduct['id'] ?? 0);
+    $businessDb->run(
+        'INSERT OR REPLACE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+         VALUES(?, "all", 25, 0, ?)',
+        [$missingProductId, json_encode(['image', 'sale_price', 'tax_class'], JSON_THROW_ON_ERROR)]
+    );
+    $readyProduct = $products->create(1, [
+        'name' => 'API POS Ready',
+        'sku_base' => 'pos ready',
+        'slug' => 'api-pos-ready',
+        'type' => 'physical',
+        'status' => 'active',
+        'channels' => ['public', 'ecommerce', 'pos'],
+        'base_purchase_price' => 12,
+        'base_sale_price' => 30,
+        'currency' => 'CHF',
+    ], 1);
+    $readyProductId = (int) ($readyProduct['id'] ?? 0);
+    $businessDb->run(
+        'INSERT INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, allow_backorder, created_by_iam_user_id, updated_by_iam_user_id)
+         VALUES(?, "active", "API-POS-READY-ONE", "API POS Ready One", 1, 3, 0, 1, 1)',
+        [$readyProductId]
+    );
+    $businessDb->run(
+        'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, is_public, channel_scope)
+         VALUES(1, ?, 1002, "main", "API POS ready image", "API POS ready image", 1, "all")',
+        [$readyProductId]
+    );
+    foreach (['all', 'pos', 'ecommerce'] as $channel) {
+        $businessDb->run(
+            'INSERT OR REPLACE INTO business_product_completeness_scores(product_id, channel, score, is_sellable, missing_json)
+             VALUES(?, ?, 100, 1, "[]")',
+            [$readyProductId, $channel]
+        );
+    }
+    $productIdsFor = static function (array $query) use ($controllerFor): array {
+        $payload = json_decode($controllerFor(1, 'GET', '/admin/api/business/catalog/products', $query)->products()->body(), true);
+        return array_map(static fn(array $product): int => (int) ($product['id'] ?? 0), $payload['data']['products'] ?? []);
+    };
+    $h->assertTrue(in_array($productId, $productIdsFor(['image' => 'with']), true), 'image=with includes products with catalogue media');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['image' => 'without']), true), 'image=without includes products without catalogue media');
+    $h->assertTrue(in_array($productId, $productIdsFor(['price' => 'with']), true), 'price=with includes products with sale price');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['price' => 'without']), true), 'price=without includes products without sale price');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['purchase_price' => 'missing']), true), 'purchase_price=missing includes products without purchase price');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['tax' => 'missing']), true), 'tax=missing includes products without tax class');
+    $h->assertTrue(in_array($readyProductId, $productIdsFor(['completeness' => 'complete']), true), 'completeness=complete includes complete products');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['completeness' => 'incomplete']), true), 'completeness=incomplete includes incomplete products');
+    $h->assertTrue(in_array($readyProductId, $productIdsFor(['sellable' => 'pos']), true), 'sellable=pos includes POS-ready products');
+    $h->assertTrue(in_array($readyProductId, $productIdsFor(['view' => 'ready_pos']), true), 'ready_pos system view maps to POS-ready products');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['view' => 'to_complete']), true), 'to_complete system view maps to incomplete products');
+    $h->assertTrue(in_array($missingProductId, $productIdsFor(['view' => 'without_image']), true), 'without_image system view maps to products without media');
+    $h->assertTrue(in_array($productId, $productIdsFor(['q' => 'API Category']), true), 'product search includes category names');
 
     $stockResponse = $controllerFor(1, 'GET', '/admin/api/business/catalog/variants/' . $variantId . '/stock')->variantStock($variantId);
     $h->assertSame(200, $stockResponse->status(), 'catalog admin can read variant stock');
@@ -242,7 +371,19 @@ try {
     );
 
     $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/products/' . $productId)->deleteProduct($productId)->status(), 'catalog admin can archive product');
-    $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/brands/' . $brandId)->deleteBrand($brandId)->status(), 'catalog admin can archive brand');
+    $archivedProduct = $businessDb->one('SELECT status, archived_at FROM business_products WHERE id = ?', [$productId]);
+    $h->assertSame('archived', $archivedProduct['status'] ?? null, 'product archive updates status');
+    $h->assertTrue(!empty($archivedProduct['archived_at'] ?? null), 'product archive keeps the product with archived_at');
+    $h->assertSame(422, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/brands/' . $brandId)->deleteBrand($brandId)->status(), 'catalog admin cannot delete a brand linked to a product');
+    $h->assertSame(200, $controllerFor(1, 'POST', '/admin/api/business/catalog/products/' . $productId . '/restore')->restoreProduct($productId)->status(), 'catalog admin can restore archived product');
+    $restoredProduct = $businessDb->one('SELECT status, archived_at FROM business_products WHERE id = ?', [$productId]);
+    $h->assertSame('draft', $restoredProduct['status'] ?? null, 'product restore returns to draft');
+    $h->assertSame(null, $restoredProduct['archived_at'] ?? null, 'product restore clears archived_at');
+    $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/products/' . $productId)->deleteProduct($productId)->status(), 'catalog admin can archive product before permanent delete');
+    $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/products/' . $productId . '/permanent')->purgeProduct($productId)->status(), 'catalog admin can permanently delete archived product');
+    $h->assertSame(null, $businessDb->one('SELECT id FROM business_products WHERE id = ?', [$productId]), 'permanent delete removes archived product');
+    $h->assertSame(200, $controllerFor(1, 'DELETE', '/admin/api/business/catalog/brands/' . $brandId)->deleteBrand($brandId)->status(), 'catalog admin can delete an unused brand');
+    $h->assertSame(null, $businessDb->one('SELECT id FROM business_product_brands WHERE id = ?', [$brandId]), 'unused brand is physically deleted');
 } finally {
     $_SESSION = [];
     $businessDb = null;

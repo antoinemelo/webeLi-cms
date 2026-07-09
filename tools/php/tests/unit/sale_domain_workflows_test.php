@@ -67,6 +67,9 @@ try {
     $h->assertSame(2, (int) $added['line']['quantity'], 'cart line quantity is stored');
     $h->assertSame(5800, (int) $added['cart']['grand_total_minor'], 'cart total uses stable sellable snapshot');
     $h->assertSame('DEMO-GOURDE-BLEU', $added['line']['sku'], 'cart line keeps SKU snapshot');
+    $cartLineSnapshot = json_decode((string) $added['line']['metadata_json'], true);
+    $h->assertSame('DEMO-GOURDE-BLEU', $cartLineSnapshot['snapshot']['sku'] ?? null, 'cart line stores sellable snapshot');
+    $h->assertSame(2900, (int) ($cartLineSnapshot['snapshot']['unit_price_minor'] ?? 0), 'cart line snapshot freezes unit price');
 
     $replayed = $cartService->addLine((int) $cart['id'], (int) $variant['id'], 2, ['idempotency_key' => 'cart-line-demo']);
     $linesAfterReplay = $saleDb->one('SELECT quantity FROM sale_cart_lines WHERE cart_id = ?', [(int) $cart['id']]);
@@ -83,6 +86,17 @@ try {
     $h->assertSame(5800, (int) $order['grand_total_minor'], 'order copies cart total');
     $h->assertSame('converted', $carts->requireCart((int) $cart['id'])['status'], 'checkout converts cart');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_order_lines WHERE order_id = ?', [(int) $order['id']])['count'] ?? 0), 'checkout copies order lines');
+    $orderLine = $saleDb->one('SELECT * FROM sale_order_lines WHERE order_id = ? LIMIT 1', [(int) $order['id']]);
+    $orderLineSnapshot = json_decode((string) ($orderLine['snapshot_json'] ?? '{}'), true);
+    $h->assertSame('DEMO-GOURDE-BLEU', $orderLine['sku'] ?? null, 'order line keeps SKU snapshot');
+    $h->assertSame('Gourde demo', $orderLine['product_name'] ?? null, 'order line freezes product name');
+    $h->assertSame(2900, (int) ($orderLine['unit_price_minor'] ?? 0), 'order line freezes unit price');
+    $h->assertSame(2900, (int) ($orderLineSnapshot['snapshot']['unit_price_minor'] ?? 0), 'order line snapshot JSON freezes unit price');
+    $businessDb->run("UPDATE business_products SET name = 'Gourde modifiée après commande' WHERE id = ?", [(int) $orderLine['business_product_id']]);
+    $businessDb->run('UPDATE business_product_base_prices SET amount = 99 WHERE product_id = ? AND price_kind = "sale"', [(int) $orderLine['business_product_id']]);
+    $frozenOrderLine = $saleDb->one('SELECT * FROM sale_order_lines WHERE id = ? LIMIT 1', [(int) $orderLine['id']]);
+    $h->assertSame('Gourde demo', $frozenOrderLine['product_name'] ?? null, 'product edit after checkout does not mutate order line name');
+    $h->assertSame(2900, (int) ($frozenOrderLine['unit_price_minor'] ?? 0), 'product price edit after checkout does not mutate order line price');
     $h->assertSame('consumed', (string) ($saleDb->one('SELECT status FROM sale_stock_reservations WHERE id = ?', [(int) $reservation['id']])['status'] ?? ''), 'checkout consumes stock reservation');
     $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
     $h->assertSame(23, (int) $inventoryItem['on_hand_quantity'], 'checkout decreases on-hand stock through movement');
@@ -92,6 +106,14 @@ try {
         fn() => $checkout->placeOrder((int) $cart['id']),
         SaleValidationException::class,
         'cart cannot be converted twice'
+    );
+
+    $blockedCart = $cartService->createCart(1, (int) $channel['id'], ['iam_user_id' => 1]);
+    $businessDb->run('UPDATE business_product_variants SET status = "draft" WHERE id = ?', [(int) $variant['id']]);
+    $h->expectException(
+        fn() => $cartService->addLine((int) $blockedCart['id'], (int) $variant['id'], 1),
+        InvalidArgumentException::class,
+        'Sale refuses a non sellable catalog variant'
     );
 
     $payment = $paymentService->recordManualPayment((int) $order['id'], 2000, 1);

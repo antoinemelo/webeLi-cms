@@ -78,6 +78,27 @@ try {
         'sale_adjustment_value' => 20,
     ], 1);
     $products->update(1, (int) $product['id'], ['status' => 'active'], 1);
+    $businessDb->run(
+        'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+         VALUES(1, ?, 101, "main", "Image publique principale", "Produit public", "Image visible publiquement.", 10, 1, "ecommerce")',
+        [(int) $product['id']]
+    );
+    $businessDb->run(
+        'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+         VALUES(1, ?, 102, "gallery", "Image publique galerie", "Produit public galerie", "Image galerie visible.", 20, 1, "ecommerce")',
+        [(int) $product['id']]
+    );
+    $businessDb->run(
+        'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope)
+         VALUES(1, ?, 103, "internal", "Image interne", "Ne doit pas sortir", "Asset interne.", 30, 1, "ecommerce")',
+        [(int) $product['id']]
+    );
+    $businessDb->run("INSERT INTO business_attribute_groups(site_id, code, name, sort_order) VALUES(1, 'api_public', 'API publique', 10)");
+    $businessDb->run("INSERT INTO business_attributes(site_id, group_id, code, name, data_type, is_public, is_filterable, is_searchable, sort_order) SELECT 1, id, 'matiere_publique', 'Matière publique', 'text', 1, 1, 1, 10 FROM business_attribute_groups WHERE code = 'api_public'");
+    $businessDb->run("INSERT INTO business_attributes(site_id, group_id, code, name, data_type, is_public, is_filterable, is_searchable, sort_order) SELECT 1, id, 'note_interne', 'Note interne', 'text', 0, 0, 0, 20 FROM business_attribute_groups WHERE code = 'api_public'");
+    $businessDb->run("INSERT INTO business_product_attribute_values(product_id, attribute_id, language, value_text) SELECT ?, id, 'fr', 'Coton public' FROM business_attributes WHERE code = 'matiere_publique'", [(int) $product['id']]);
+    $businessDb->run("INSERT INTO business_product_attribute_values(product_id, attribute_id, language, value_text) SELECT ?, id, 'fr', 'Coût fournisseur interne' FROM business_attributes WHERE code = 'note_interne'", [(int) $product['id']]);
+    $businessDb->run("INSERT INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text) SELECT ?, id, 'fr', 'Bleu public' FROM business_attributes WHERE code = 'matiere_publique'", [(int) $variant['id']]);
     $discounts->create(1, [
         'name' => 'Offre spéciale',
         'type' => 'percent',
@@ -89,7 +110,13 @@ try {
     ], 1);
 
     $hidden = $products->create(1, ['name' => 'Hidden Product', 'slug' => 'hidden-product', 'status' => 'active', 'channels' => ['ecommerce'], 'base_sale_price' => 50], 1);
-    $products->create(1, ['name' => 'Internal Product', 'slug' => 'internal-product', 'status' => 'active', 'channels' => ['public'], 'base_sale_price' => 60], 1);
+    $internal = $products->create(1, ['name' => 'Internal Product', 'slug' => 'internal-product', 'status' => 'active', 'channels' => ['public'], 'base_sale_price' => 60], 1);
+    $internalVariant = $variants->create(1, (int) $internal['id'], [
+        'sku' => 'INTERNAL-M',
+        'name' => 'Internal M',
+        'status' => 'active',
+        'stock_quantity' => 3,
+    ], 1);
     $archived = $products->create(1, ['name' => 'Archived Product', 'slug' => 'archived-product', 'status' => 'active', 'channels' => ['public', 'ecommerce'], 'base_sale_price' => 70], 1);
     $products->archive(1, (int) $archived['id'], 1);
     $privateProduct = $products->create(1, ['brand_id' => $privateBrand['id'], 'name' => 'Private Brand Product', 'slug' => 'private-brand-product', 'status' => 'active', 'channels' => ['public', 'ecommerce'], 'base_sale_price' => 80], 1);
@@ -123,14 +150,29 @@ try {
     $h->assertSame('120.00', $pricing['regular_sale_price'] ?? null, 'public regular sale price includes variant adjustment');
     $h->assertSame('108.00', $pricing['final_sale_price'] ?? null, 'public final sale price includes active discount');
     $h->assertSame('Offre spéciale', $pricing['discount']['label'] ?? null, 'public discount label is exposed');
+    $h->assertSame(101, $publicItem['main_asset']['media_id'] ?? null, 'public catalog list exposes main asset');
+    $h->assertSame(1, count($publicItem['gallery_assets'] ?? []), 'public catalog list exposes public gallery assets');
+    $h->assertTrue(str_contains($body, 'Coton public'), 'public catalog list exposes public PIM attributes');
+    $h->assertTrue(!str_contains($body, 'Coût fournisseur interne'), 'public catalog list hides non-public PIM attributes');
+    $h->assertTrue(!str_contains($body, 'Image interne'), 'public catalog list hides internal assets');
+    $h->assertSame(true, $publicItem['is_sellable_public'] ?? null, 'public catalog list exposes public sellability verdict');
 
     $show = $handlerFor([], '/api/v1/catalog/products/public-product')->product('public-product');
     $h->assertSame(200, $show->status(), 'public product show works');
     $h->assertTrue(str_contains($show->body(), 'public.catalog.products.show.v1'), 'public product show contract is returned');
+    $showPayload = json_decode($show->body(), true)['data']['product'] ?? [];
+    $h->assertSame(101, $showPayload['main_asset']['media_id'] ?? null, 'public product show exposes main asset');
+    $h->assertSame(102, $showPayload['gallery_assets'][0]['media_id'] ?? null, 'public product show exposes gallery asset');
+    $h->assertSame('matiere_publique', $showPayload['public_attributes'][0]['code'] ?? null, 'public product show exposes public attribute code');
+    $h->assertTrue(!array_key_exists('usage_rights', $showPayload['main_asset'] ?? []), 'public product show does not expose asset usage rights');
+    $h->assertTrue(!array_key_exists('source', $showPayload['main_asset'] ?? []), 'public product show does not expose asset source');
 
     $variantResponse = $handlerFor([], '/api/v1/catalog/variants/' . $variant['id'])->variant((int) $variant['id']);
     $h->assertSame(200, $variantResponse->status(), 'public active variant show works');
     $h->assertTrue(!str_contains($variantResponse->body(), 'purchase'), 'public variant payload does not expose purchase price');
+    $variantPayload = json_decode($variantResponse->body(), true)['data']['variant'] ?? [];
+    $h->assertSame('Bleu public', $variantPayload['public_attributes'][0]['value'] ?? null, 'public variant show exposes public variant attributes');
+    $h->assertSame(true, $variantPayload['is_sellable_public'] ?? null, 'public variant show exposes public sellability verdict');
 
     $brandFiltered = $handlerFor(['brand' => 'public-brand'])->products();
     $h->assertTrue(str_contains($brandFiltered->body(), 'Public Product'), 'public products are filterable by brand');
@@ -145,6 +187,7 @@ try {
     $h->assertSame(200, $handlerFor([], '/api/v1/catalog/categories')->categories()->status(), 'public categories endpoint responds');
     $h->assertSame(404, $handlerFor([], '/api/v1/catalog/products/hidden-product')->product('hidden-product')->status(), 'non public product show is refused');
     $h->assertSame(404, $handlerFor([], '/api/v1/catalog/products/archived-product')->product('archived-product')->status(), 'archived product show is refused');
+    $h->assertSame(404, $handlerFor([], '/api/v1/catalog/variants/' . $internalVariant['id'])->variant((int) $internalVariant['id'])->status(), 'variant attached to non ecommerce product is refused publicly');
     $h->assertSame(0, count(json_decode($handlerFor(['brand' => 'private-brand'])->products()->body(), true)['data']['items'] ?? []), 'private brands are not filterable in public catalog');
 
     unset($hidden, $otherBrand, $otherCategory, $privateProduct);

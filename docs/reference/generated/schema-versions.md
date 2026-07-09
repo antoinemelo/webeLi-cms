@@ -23,6 +23,7 @@ generated: true
 | `database/migrations/business/0003_catalog_schema.sql` | `0003_catalog_schema` |
 | `database/migrations/business/0004_catalog_demo_seed.sql` | `0004_catalog_demo_seed` |
 | `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
+| `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
 | `database/migrations/core/072_action_runs.sql` | `072_action_runs` |

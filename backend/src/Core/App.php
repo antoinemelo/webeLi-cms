@@ -15,6 +15,7 @@ use App\Application\Api\Admin\BusinessCatalogApiController;
 use App\Application\Api\Admin\BusinessCrmApiController;
 use App\Application\Api\Admin\BusinessMessagingApiController;
 use App\Application\Api\Admin\BusinessMailingApiController;
+use App\Application\Api\Admin\BusinessPimApiController;
 use App\Application\Api\Admin\ContentEntryApiController;
 use App\Application\Api\Admin\ContentRevisionApiController;
 use App\Application\Api\Admin\ConfigurationApiController;
@@ -370,6 +371,17 @@ final class App
                 $services->businessCatalogStockService(),
                 $services->businessCatalogCsv(),
                 $services->businessCatalogPricing(),
+                $services->businessProductCompleteness(),
+            ),
+            BusinessPimApiController::class => new BusinessPimApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessPimAdmin(),
+                $services->businessProductAssets(),
+                $services->businessProductBundles(),
+                $services->businessCatalogSellables(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,
