@@ -294,7 +294,7 @@ final class SaleImportExportReportService
                     COALESCE(SUM(paid_total_minor), 0) AS paid_minor,
                     COALESCE(SUM(refunded_total_minor), 0) AS refunded_minor
              FROM sale_orders
-             WHERE site_id = ? AND date(COALESCE(placed_at, created_at)) = ? AND status <> "cancelled"',
+             WHERE site_id = ? AND date(COALESCE(placed_at, created_at)) = ? AND status <> \'cancelled\'',
             [$siteId, $date]
         ) ?? [];
         return [
@@ -332,7 +332,7 @@ final class SaleImportExportReportService
     {
         [$where, $params] = $this->orderWhere($siteId, $filters, 'o');
         return $this->db()->all(
-            'SELECT COALESCE(json_extract(t.provider_payload_json, "$.provider"), "unknown") AS provider_key,
+            'SELECT COALESCE(json_extract(t.provider_payload_json, \'$.provider\'), \'unknown\') AS provider_key,
                     t.transaction_type, t.status,
                     COUNT(t.id) AS transactions_count,
                     COALESCE(SUM(t.amount_minor), 0) AS amount_minor,

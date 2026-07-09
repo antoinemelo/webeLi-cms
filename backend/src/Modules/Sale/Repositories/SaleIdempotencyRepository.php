@@ -18,7 +18,7 @@ final class SaleIdempotencyRepository extends SaleRepositoryBase
         if ($row === null) {
             $this->rawDatabase()->run(
                 'INSERT INTO sale_idempotency_keys(site_id, key_hash, scope, request_hash, response_json, status, locked_until, updated_at)
-                 VALUES(?, ?, ?, ?, "{}", "processing", ?, CURRENT_TIMESTAMP)',
+                 VALUES(?, ?, ?, ?, \'{}\', \'processing\', ?, CURRENT_TIMESTAMP)',
                 [$siteId, $hash, $scope, $requestHash, $lockedUntil]
             );
             return ['status' => 'processing', 'response' => null];
@@ -39,7 +39,7 @@ final class SaleIdempotencyRepository extends SaleRepositoryBase
 
         $this->rawDatabase()->run(
             'UPDATE sale_idempotency_keys
-             SET status = "processing", locked_until = ?, updated_at = CURRENT_TIMESTAMP
+             SET status = \'processing\', locked_until = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
             [$lockedUntil, (int) $row['id']]
         );
@@ -70,14 +70,14 @@ final class SaleIdempotencyRepository extends SaleRepositoryBase
         if ($existing === null) {
             $this->rawDatabase()->run(
                 'INSERT INTO sale_idempotency_keys(site_id, key_hash, scope, request_hash, response_json, status, updated_at)
-                 VALUES(?, ?, ?, ?, ?, "completed", CURRENT_TIMESTAMP)',
+                 VALUES(?, ?, ?, ?, ?, \'completed\', CURRENT_TIMESTAMP)',
                 [$siteId, $hash, $scope, $requestHash, $this->json($response)]
             );
             return;
         }
         $this->rawDatabase()->run(
             'UPDATE sale_idempotency_keys
-             SET request_hash = ?, response_json = ?, status = "completed", locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+             SET request_hash = ?, response_json = ?, status = \'completed\', locked_until = NULL, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
             [$requestHash, $this->json($response), (int) $existing['id']]
         );
@@ -94,14 +94,14 @@ final class SaleIdempotencyRepository extends SaleRepositoryBase
         if ($existing === null) {
             $this->rawDatabase()->run(
                 'INSERT INTO sale_idempotency_keys(site_id, key_hash, scope, request_hash, response_json, status, locked_until, updated_at)
-                 VALUES(?, ?, ?, ?, ?, "failed", NULL, CURRENT_TIMESTAMP)',
+                 VALUES(?, ?, ?, ?, ?, \'failed\', NULL, CURRENT_TIMESTAMP)',
                 [$siteId, $hash, $scope, $requestHash, $this->json($response)]
             );
             return;
         }
         $this->rawDatabase()->run(
             'UPDATE sale_idempotency_keys
-             SET request_hash = ?, response_json = ?, status = "failed", locked_until = NULL, updated_at = CURRENT_TIMESTAMP
+             SET request_hash = ?, response_json = ?, status = \'failed\', locked_until = NULL, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
             [$requestHash, $this->json($response), (int) $existing['id']]
         );

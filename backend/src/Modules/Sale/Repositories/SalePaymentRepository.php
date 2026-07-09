@@ -42,7 +42,7 @@ final class SalePaymentRepository extends SaleRepositoryBase
     {
         $this->rawDatabase()->run(
             'INSERT INTO sale_payment_intents(site_id, channel_id, order_id, provider_key, intent_reference, status, amount_minor, currency, idempotency_key, metadata_json)
-             VALUES(?, ?, ?, ?, ?, "requires_payment", ?, ?, ?, ?)',
+             VALUES(?, ?, ?, ?, ?, \'requires_payment\', ?, ?, ?, ?)',
             [
                 $siteId,
                 $channelId,
@@ -137,7 +137,7 @@ final class SalePaymentRepository extends SaleRepositoryBase
         $row = $this->rawDatabase()->one(
             'SELECT COALESCE(SUM(amount_minor), 0) AS total
              FROM sale_refunds
-             WHERE payment_transaction_id = ? AND status IN ("pending","succeeded")',
+             WHERE payment_transaction_id = ? AND status IN (\'pending\',\'succeeded\')',
             [$transactionId]
         );
         return (int) ($row['total'] ?? 0);

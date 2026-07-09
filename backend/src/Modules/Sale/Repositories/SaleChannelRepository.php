@@ -91,7 +91,7 @@ final class SaleChannelRepository extends SaleRepositoryBase
         $this->requireChannel($siteId, $channelId);
         $this->rawDatabase()->run(
             'UPDATE sale_channels
-             SET status = "archived", archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP
+             SET status = \'archived\', archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP
              WHERE site_id = ? AND id = ?',
             [$actorId, $siteId, $channelId]
         );

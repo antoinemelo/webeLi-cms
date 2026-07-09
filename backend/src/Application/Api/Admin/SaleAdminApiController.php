@@ -75,10 +75,10 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.pos.use');
         $siteId = (int) $site['id'];
-        $registers = $this->db()->all('SELECT * FROM sale_pos_registers WHERE site_id = ? AND status = "active" ORDER BY code ASC', [$siteId]);
-        $channels = $this->db()->all('SELECT * FROM sale_channels WHERE site_id = ? AND channel_type = "pos" ORDER BY code ASC', [$siteId]);
+        $registers = $this->db()->all('SELECT * FROM sale_pos_registers WHERE site_id = ? AND status = \'active\' ORDER BY code ASC', [$siteId]);
+        $channels = $this->db()->all('SELECT * FROM sale_channels WHERE site_id = ? AND channel_type = \'pos\' ORDER BY code ASC', [$siteId]);
         $session = $this->db()->one(
-            'SELECT s.* FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id = s.register_id WHERE r.site_id = ? AND s.status IN ("open","closing") ORDER BY s.id DESC LIMIT 1',
+            'SELECT s.* FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id = s.register_id WHERE r.site_id = ? AND s.status IN (\'open\',\'closing\') ORDER BY s.id DESC LIMIT 1',
             [$siteId]
         );
         return $this->ok([
@@ -198,9 +198,9 @@ final class SaleAdminApiController
         $siteId = (int) $site['id'];
         return $this->ok([
             'orders' => $this->count('sale_orders', $siteId),
-            'active_carts' => (int) ($db->one('SELECT COUNT(*) AS count FROM sale_carts WHERE site_id = ? AND status = "active"', [$siteId])['count'] ?? 0),
+            'active_carts' => (int) ($db->one('SELECT COUNT(*) AS count FROM sale_carts WHERE site_id = ? AND status = \'active\'', [$siteId])['count'] ?? 0),
             'paid_total_minor' => (int) ($db->one('SELECT COALESCE(SUM(paid_total_minor), 0) AS total FROM sale_orders WHERE site_id = ?', [$siteId])['total'] ?? 0),
-            'today_sales_minor' => (int) ($db->one('SELECT COALESCE(SUM(grand_total_minor), 0) AS total FROM sale_orders WHERE site_id = ? AND date(placed_at) = date("now") AND status <> "cancelled"', [$siteId])['total'] ?? 0),
+            'today_sales_minor' => (int) ($db->one('SELECT COALESCE(SUM(grand_total_minor), 0) AS total FROM sale_orders WHERE site_id = ? AND date(placed_at) = date(\'now\') AND status <> \'cancelled\'', [$siteId])['total'] ?? 0),
             'recent_orders' => $db->all('SELECT * FROM sale_orders WHERE site_id = ? ORDER BY placed_at DESC, id DESC LIMIT 6', [$siteId]),
             'recent_payments' => $db->all(
                 'SELECT t.*, o.order_number
@@ -215,7 +215,7 @@ final class SaleAdminApiController
                 'SELECT s.*, r.name AS register_name, r.code AS register_code
                  FROM sale_cash_sessions s
                  INNER JOIN sale_pos_registers r ON r.id = s.register_id
-                 WHERE r.site_id = ? AND s.status IN ("open","closing")
+                 WHERE r.site_id = ? AND s.status IN (\'open\',\'closing\')
                  ORDER BY s.opened_at DESC, s.id DESC',
                 [$siteId]
             ),
@@ -548,7 +548,7 @@ final class SaleAdminApiController
         try {
             $payload = $this->payload();
             $registerId = (int) ($payload['register_id'] ?? $this->defaultRegisterId((int) $site['id']));
-            $register = $this->db()->one('SELECT * FROM sale_pos_registers WHERE id = ? AND site_id = ? AND status = "active"', [$registerId, (int) $site['id']]);
+            $register = $this->db()->one('SELECT * FROM sale_pos_registers WHERE id = ? AND site_id = ? AND status = \'active\'', [$registerId, (int) $site['id']]);
             if ($register === null) {
                 throw new SaleValidationException('sale.pos_register_not_found');
             }
@@ -560,7 +560,7 @@ final class SaleAdminApiController
             $sessionId = (int) $this->db()->lastInsertId();
             $this->db()->run(
                 'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, reason, created_by_iam_user_id)
-                 VALUES(?, "opening", ?, ?, "session opening", ?)',
+                 VALUES(?, \'opening\', ?, ?, \'session opening\', ?)',
                 [$sessionId, max(0, (int) ($payload['opening_cash_minor'] ?? 0)), (string) ($register['currency'] ?? 'CHF'), $this->actorId()]
             );
             $session = $this->cashSession($sessionId);
@@ -592,14 +592,14 @@ final class SaleAdminApiController
             $difference = $counted - (int) $session['expected_cash_minor'];
             $this->db()->run(
                 'UPDATE sale_cash_sessions
-                 SET status = "closed", closed_by_iam_user_id = ?, counted_cash_minor = ?,
+                 SET status = \'closed\', closed_by_iam_user_id = ?, counted_cash_minor = ?,
                      difference_minor = ?, closed_at = CURRENT_TIMESTAMP, notes = ?
                  WHERE id = ?',
                 [$this->actorId(), $counted, $difference, $payload['notes'] ?? null, (int) $session['id']]
             );
             $this->db()->run(
                 'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, reason, created_by_iam_user_id)
-                 VALUES(?, "closing", ?, ?, "session closing", ?)',
+                 VALUES(?, \'closing\', ?, ?, \'session closing\', ?)',
                 [(int) $session['id'], $counted, (string) $session['currency'], $this->actorId()]
             );
             $closedSession = $this->cashSession((int) $session['id']);
@@ -738,7 +738,7 @@ final class SaleAdminApiController
                         );
                         $this->db()->run(
                             'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, order_id, reason, created_by_iam_user_id)
-                             VALUES(?, "cash_sale", ?, ?, ?, "POS checkout", ?)',
+                             VALUES(?, \'cash_sale\', ?, ?, ?, \'POS checkout\', ?)',
                             [$sessionId, $paymentMinor, (string) $order['currency'], (int) $order['id'], $this->actorId()]
                         );
                     }
@@ -910,7 +910,7 @@ final class SaleAdminApiController
                 ),
                 'payments' => $this->aiOrderPayments($orderId),
                 'refunds' => $this->db()->all('SELECT id, refund_number, status, amount_minor, currency, reason, created_at, processed_at FROM sale_refunds WHERE order_id = ? ORDER BY id ASC', [$orderId]),
-                'events' => $this->db()->all('SELECT event_type, payload_json, created_at FROM sale_events WHERE aggregate_type = "order" AND aggregate_id = ? ORDER BY id ASC', [$orderId]),
+                'events' => $this->db()->all('SELECT event_type, payload_json, created_at FROM sale_events WHERE aggregate_type = \'order\' AND aggregate_id = ? ORDER BY id ASC', [$orderId]),
             ], 'admin.sale.ai.order_summary_context.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -937,7 +937,7 @@ final class SaleAdminApiController
             'SELECT o.id, o.order_number, o.channel_id, o.status, o.payment_status, o.currency,
                     o.grand_total_minor, o.paid_total_minor, o.refunded_total_minor, o.placed_at
              FROM sale_orders o
-             WHERE o.site_id = :site_id AND o.source = "pos" AND date(o.placed_at) = :date
+             WHERE o.site_id = :site_id AND o.source = \'pos\' AND date(o.placed_at) = :date
              ORDER BY o.placed_at ASC, o.id ASC',
             ['site_id' => $siteId, 'date' => $date]
         );
@@ -945,7 +945,7 @@ final class SaleAdminApiController
             'SELECT t.id, t.order_id, t.transaction_type, t.status, t.amount_minor, t.currency, t.created_at, o.order_number
              FROM sale_payment_transactions t
              INNER JOIN sale_orders o ON o.id = t.order_id
-             WHERE o.site_id = :site_id AND o.source = "pos" AND date(t.created_at) = :date
+             WHERE o.site_id = :site_id AND o.source = \'pos\' AND date(t.created_at) = :date
              ORDER BY t.created_at ASC, t.id ASC',
             ['site_id' => $siteId, 'date' => $date]
         );
@@ -1018,7 +1018,7 @@ final class SaleAdminApiController
                     paid_total_minor, refunded_total_minor, placed_at
              FROM sale_orders
              WHERE site_id = :site_id
-               AND status <> "cancelled"
+               AND status <> \'cancelled\'
                AND grand_total_minor > paid_total_minor
                AND date(COALESCE(placed_at, created_at)) <= :date_limit' . $channelSql . '
              ORDER BY placed_at ASC, id ASC LIMIT 200',
@@ -1222,7 +1222,7 @@ final class SaleAdminApiController
 
     private function defaultPosChannelId(int $siteId): int
     {
-        $row = $this->db()->one('SELECT id FROM sale_channels WHERE site_id = ? AND channel_type = "pos" ORDER BY status = "active" DESC, id ASC LIMIT 1', [$siteId]);
+        $row = $this->db()->one('SELECT id FROM sale_channels WHERE site_id = ? AND channel_type = \'pos\' ORDER BY status = \'active\' DESC, id ASC LIMIT 1', [$siteId]);
         if ($row === null) {
             throw new SaleValidationException('sale.pos_channel_not_found');
         }
@@ -1231,14 +1231,14 @@ final class SaleAdminApiController
 
     private function defaultRegisterId(int $siteId): int
     {
-        $register = $this->db()->one('SELECT id FROM sale_pos_registers WHERE site_id = ? AND status = "active" ORDER BY id ASC LIMIT 1', [$siteId]);
+        $register = $this->db()->one('SELECT id FROM sale_pos_registers WHERE site_id = ? AND status = \'active\' ORDER BY id ASC LIMIT 1', [$siteId]);
         if ($register !== null) {
             return (int) $register['id'];
         }
         $channelId = $this->defaultPosChannelId($siteId);
         $this->db()->run(
             'INSERT INTO sale_pos_registers(site_id, channel_id, code, name, status, location_name)
-             VALUES(?, ?, "main", "Caisse principale", "active", "Principal")',
+             VALUES(?, ?, \'main\', \'Caisse principale\', \'active\', \'Principal\')',
             [$siteId, $channelId]
         );
         return (int) $this->db()->lastInsertId();

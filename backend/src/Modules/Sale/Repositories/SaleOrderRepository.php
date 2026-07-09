@@ -45,7 +45,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 customer_company_id, customer_contact_id, customer_snapshot_json,
                 billing_address_json, shipping_address_json, subtotal_minor, discount_total_minor,
                 tax_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
-             ) VALUES(?, ?, ?, ?, "placed", "unpaid", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
             [
                 (int) $cart['site_id'],
                 (int) $cart['channel_id'],
@@ -120,7 +120,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
         }
         $this->rawDatabase()->run(
             'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason)
-             VALUES(?, NULL, "placed", ?, "checkout")',
+             VALUES(?, NULL, \'placed\', ?, \'checkout\')',
             [$orderId, $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null]
         );
         return $this->requireOrder($orderId);
@@ -146,7 +146,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
 
     public function events(int $orderId): array
     {
-        return $this->rawDatabase()->all('SELECT * FROM sale_events WHERE aggregate_type = "order" AND aggregate_id = ? ORDER BY id ASC', [$orderId]);
+        return $this->rawDatabase()->all('SELECT * FROM sale_events WHERE aggregate_type = \'order\' AND aggregate_id = ? ORDER BY id ASC', [$orderId]);
     }
 
     public function updatePaidTotal(int $orderId, int $paidTotalMinor): array
@@ -184,12 +184,12 @@ final class SaleOrderRepository extends SaleRepositoryBase
             throw new SaleValidationException('sale.order_status_not_cancellable');
         }
         $this->rawDatabase()->run(
-            'UPDATE sale_orders SET status = "cancelled", cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            'UPDATE sale_orders SET status = \'cancelled\', cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [$orderId]
         );
         $this->rawDatabase()->run(
             'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason)
-             VALUES(?, ?, "cancelled", ?, ?)',
+             VALUES(?, ?, \'cancelled\', ?, ?)',
             [$orderId, (string) $order['status'], $iamUserId, $reason]
         );
         return $this->requireOrder($orderId);

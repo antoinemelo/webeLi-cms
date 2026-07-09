@@ -179,7 +179,7 @@ final class SaleInventoryService
             'SELECT r.*, i.site_id, i.business_variant_id, i.sku
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.cart_id = ? AND r.status = "active"' . $variantSql,
+             WHERE r.cart_id = ? AND r.status = \'active\'' . $variantSql,
             $params
         );
     }
@@ -190,7 +190,7 @@ final class SaleInventoryService
             'SELECT COALESCE(SUM(r.quantity), 0) AS total
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status = "active"',
+             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status = \'active\'',
             [$cartId, $businessVariantId]
         );
         return (int) ($row['total'] ?? 0);
@@ -209,7 +209,7 @@ final class SaleInventoryService
             'SELECT r.*, i.site_id, i.business_variant_id, i.sku
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.status = "active" AND r.expires_at IS NOT NULL AND r.expires_at <= ?' . $siteSql,
+             WHERE r.status = \'active\' AND r.expires_at IS NOT NULL AND r.expires_at <= ?' . $siteSql,
             $params
         );
     }

@@ -71,7 +71,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         );
         $this->rawDatabase()->run(
             'INSERT INTO sale_stock_movements(inventory_item_id, movement_type, quantity, reference_type, reason, created_by_iam_user_id)
-             VALUES(?, "adjustment", ?, "manual_adjustment", ?, ?)',
+             VALUES(?, \'adjustment\', ?, \'manual_adjustment\', ?, ?)',
             [$itemId, $quantityDelta, $reason, $actorId]
         );
         return $this->rawDatabase()->one('SELECT * FROM sale_inventory_items WHERE id = ?', [$itemId]) ?? [];
@@ -156,7 +156,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         $current = (int) ($this->rawDatabase()->one(
             'SELECT COALESCE(SUM(r.quantity), 0) AS total
              FROM sale_stock_reservations r
-             WHERE r.cart_id = ? AND r.inventory_item_id = ? AND r.status = "active"',
+             WHERE r.cart_id = ? AND r.inventory_item_id = ? AND r.status = \'active\'',
             [$cartId, (int) $item['id']]
         )['total'] ?? 0);
         $targetQuantity = max(0, $targetQuantity);
@@ -182,7 +182,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
 
     public function consumeCartReservations(int $cartId, int $orderId): void
     {
-        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = "active"', [$cartId]) as $reservation) {
+        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = \'active\'', [$cartId]) as $reservation) {
             $quantity = (int) $reservation['quantity'];
             $itemId = (int) $reservation['inventory_item_id'];
             $this->rawDatabase()->run(
@@ -196,7 +196,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             );
             $this->rawDatabase()->run(
                 'UPDATE sale_stock_reservations
-                 SET status = "consumed", order_id = ?, consumed_at = CURRENT_TIMESTAMP
+                 SET status = \'consumed\', order_id = ?, consumed_at = CURRENT_TIMESTAMP
                  WHERE id = ?',
                 [$orderId, (int) $reservation['id']]
             );
@@ -206,7 +206,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
 
     public function releaseCartReservations(int $cartId, ?string $reason = null): void
     {
-        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = "active"', [$cartId]) as $reservation) {
+        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = \'active\'', [$cartId]) as $reservation) {
             $this->releaseReservation($reservation, 'released', $reason ?? 'reservation release');
         }
     }
@@ -217,7 +217,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             'SELECT r.*
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status = "active"',
+             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status = \'active\'',
             [$cartId, $businessVariantId]
         );
         foreach ($rows as $reservation) {
@@ -237,7 +237,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             'SELECT r.*
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.status = "active" AND r.expires_at IS NOT NULL AND r.expires_at <= ?' . $siteSql,
+             WHERE r.status = \'active\' AND r.expires_at IS NOT NULL AND r.expires_at <= ?' . $siteSql,
             $params
         );
         foreach ($rows as $reservation) {
@@ -267,7 +267,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
     private function defaultLocationId(int $siteId): int
     {
         $row = $this->rawDatabase()->one(
-            'SELECT id FROM sale_stock_locations WHERE site_id = ? AND code = "main" LIMIT 1',
+            'SELECT id FROM sale_stock_locations WHERE site_id = ? AND code = \'main\' LIMIT 1',
             [$siteId]
         );
         if ($row !== null) {
@@ -275,7 +275,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         }
         $this->rawDatabase()->run(
             'INSERT INTO sale_stock_locations(site_id, code, name, location_type, status)
-             VALUES(?, "main", "Stock principal", "main", "active")',
+             VALUES(?, \'main\', \'Stock principal\', \'main\', \'active\')',
             [$siteId]
         );
         return (int) $this->rawDatabase()->lastInsertId();
@@ -303,7 +303,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
 
     private function releaseCartVariantQuantity(int $cartId, int $itemId, int $quantityToRelease, string $reason): void
     {
-        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND inventory_item_id = ? AND status = "active" ORDER BY id DESC', [$cartId, $itemId]) as $reservation) {
+        foreach ($this->rawDatabase()->all('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND inventory_item_id = ? AND status = \'active\' ORDER BY id DESC', [$cartId, $itemId]) as $reservation) {
             if ($quantityToRelease <= 0) {
                 return;
             }

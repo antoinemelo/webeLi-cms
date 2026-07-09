@@ -68,7 +68,7 @@ final class PublicSaleApiHandler
                 'shipping_address' => [],
             ]);
             $this->db()->run(
-                'UPDATE sale_carts SET cart_token_hash = ?, expires_at = datetime("now", "+30 days"), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                'UPDATE sale_carts SET cart_token_hash = ?, expires_at = datetime(\'now\', \'+30 days\'), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
                 [$this->tokenHash($token), (int) $cart['id']]
             );
             return $this->json(['cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true, $token)], 'public.sale.cart.show.v1', $site, $languageCode, 201);
@@ -189,7 +189,7 @@ final class PublicSaleApiHandler
     {
         $code = $this->code($code);
         $channel = $this->db()->one(
-            'SELECT * FROM sale_channels WHERE site_id = ? AND code = ? AND channel_type = "ecommerce" AND status = "active" AND is_public = 1 LIMIT 1',
+            'SELECT * FROM sale_channels WHERE site_id = ? AND code = ? AND channel_type = \'ecommerce\' AND status = \'active\' AND is_public = 1 LIMIT 1',
             [$siteId, $code]
         );
         if ($channel === null) {
@@ -205,7 +205,7 @@ final class PublicSaleApiHandler
         if (!preg_match('/^[A-Za-z0-9_-]{32,128}$/', $token)) {
             throw new SaleValidationException('sale.cart_token_invalid');
         }
-        $statuses = $allowConverted ? '("active","converted")' : '("active")';
+        $statuses = $allowConverted ? '(\'active\',\'converted\')' : '(\'active\')';
         $cart = $this->db()->one(
             'SELECT * FROM sale_carts
              WHERE channel_id = ? AND cart_token_hash = ? AND status IN ' . $statuses . '

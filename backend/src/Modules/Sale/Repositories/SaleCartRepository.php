@@ -47,7 +47,7 @@ final class SaleCartRepository extends SaleRepositoryBase
             'INSERT INTO sale_carts(
                 site_id, channel_id, status, currency, customer_company_id, customer_contact_id,
                 customer_snapshot_json, billing_address_json, shipping_address_json, created_by_iam_user_id
-             ) VALUES(?, ?, "active", ?, ?, ?, ?, ?, ?, ?)',
+             ) VALUES(?, ?, \'active\', ?, ?, ?, ?, ?, ?, ?)',
             [
                 $siteId,
                 $channelId,
@@ -200,7 +200,7 @@ final class SaleCartRepository extends SaleRepositoryBase
         $value = abs($rawValue);
 
         $this->rawDatabase()->run(
-            'DELETE FROM sale_cart_adjustments WHERE cart_id = ? AND cart_line_id IS NULL AND source_type = "manual"',
+            'DELETE FROM sale_cart_adjustments WHERE cart_id = ? AND cart_line_id IS NULL AND source_type = \'manual\'',
             [$cartId]
         );
 
@@ -212,7 +212,7 @@ final class SaleCartRepository extends SaleRepositoryBase
             if ($amountMinor > 0) {
                 $this->rawDatabase()->run(
                     'INSERT INTO sale_cart_adjustments(cart_id, cart_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json)
-                     VALUES(?, NULL, ?, "manual", NULL, ?, ?, ?, ?)',
+                     VALUES(?, NULL, ?, \'manual\', NULL, ?, ?, ?, ?)',
                     [
                         $cartId,
                         $kind,
@@ -237,7 +237,7 @@ final class SaleCartRepository extends SaleRepositoryBase
     public function markConverted(int $cartId, int $orderId): void
     {
         $this->rawDatabase()->run(
-            'UPDATE sale_carts SET status = "converted", converted_order_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            'UPDATE sale_carts SET status = \'converted\', converted_order_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [$orderId, $cartId]
         );
     }
