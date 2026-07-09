@@ -120,7 +120,7 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
             return false;
         }
         $this->database()->run(
-            'UPDATE business_product_variants SET status = "archived", archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            'UPDATE business_product_variants SET status = \'archived\', archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [$actorId, $id]
         );
         return true;

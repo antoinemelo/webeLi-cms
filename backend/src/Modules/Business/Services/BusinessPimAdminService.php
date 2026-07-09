@@ -491,7 +491,7 @@ final class BusinessPimAdminService
         }
 
         if ($type === '' || $type === 'bundle') {
-            $bundleWhere = ['p.site_id = ?', 'p.type = "bundle"', 'p.archived_at IS NULL'];
+            $bundleWhere = ['p.site_id = ?', 'p.type = \'bundle\'', 'p.archived_at IS NULL'];
             $bundleParams = [$this->siteId($siteId)];
             if ($status !== '') {
                 $bundleWhere[] = 'p.status = ?';
@@ -648,19 +648,19 @@ final class BusinessPimAdminService
         $this->db->transaction(function () use ($params): void {
             $this->db->run(
                 'UPDATE business_product_assets
-                 SET role = "gallery", updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
+                 SET role = \'gallery\', updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
                  WHERE site_id = :site_id
                    AND product_id = :product_id
                    AND channel_scope = :channel_scope
                    AND COALESCE(variant_id, 0) = COALESCE(:variant_id, 0)
-                   AND role = "main"
+                   AND role = \'main\'
                    AND id <> :asset_id
                    AND archived_at IS NULL',
                 $params
             );
             $this->db->run(
                 'UPDATE business_product_assets
-                 SET role = "main", updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
+                 SET role = \'main\', updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
                  WHERE id = :asset_id',
                 [
                     'asset_id' => $params['asset_id'],
@@ -844,7 +844,7 @@ final class BusinessPimAdminService
         if ($plan['action'] === 'create_bundle') {
             $this->db->run(
                 'INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, unit, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, archived_at)
-                 VALUES(:site_id, "bundle", :status, :visibility, :sku, :name, :slug, "unit", :is_public, :is_ecommerce, :is_pos, :is_catalogue, :actor, :actor, ' . $archivedAt . ')',
+                 VALUES(:site_id, \'bundle\', :status, :visibility, :sku, :name, :slug, \'unit\', :is_public, :is_ecommerce, :is_pos, :is_catalogue, :actor, :actor, ' . $archivedAt . ')',
                 [
                     'site_id' => $siteId,
                     'status' => $status,
@@ -867,7 +867,7 @@ final class BusinessPimAdminService
              SET status = :status, visibility = :visibility, sku_base = :sku, name = :name, slug = :slug,
                  is_public = :is_public, is_ecommerce_enabled = :is_ecommerce, is_pos_enabled = :is_pos, is_catalogue_enabled = :is_catalogue,
                  archived_at = ' . $archivedAt . ', updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
-             WHERE site_id = :site_id AND id = :id AND type = "bundle"',
+             WHERE site_id = :site_id AND id = :id AND type = \'bundle\'',
             [
                 'site_id' => $siteId,
                 'id' => $id,
@@ -1525,7 +1525,7 @@ final class BusinessPimAdminService
     private function requireBundleProduct(int $siteId, int $productId): array
     {
         $row = $this->db->one(
-            'SELECT * FROM business_products WHERE site_id = ? AND id = ? AND type = "bundle" AND archived_at IS NULL LIMIT 1',
+            'SELECT * FROM business_products WHERE site_id = ? AND id = ? AND type = \'bundle\' AND archived_at IS NULL LIMIT 1',
             [$this->siteId($siteId), $this->id($productId, 'product_id')]
         );
         if ($row === null) {
@@ -1553,13 +1553,13 @@ final class BusinessPimAdminService
         foreach ($changes as $field => $value) {
             if ($field === 'archive') {
                 $this->db->run(
-                    'UPDATE business_products SET status = ?, archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND type = "bundle"',
+                    'UPDATE business_products SET status = ?, archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND type = \'bundle\'',
                     ['archived', $actorId > 0 ? $actorId : null, $siteId, $productId]
                 );
                 continue;
             }
             $this->db->run(
-                'UPDATE business_products SET ' . $field . ' = ?, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND type = "bundle"',
+                'UPDATE business_products SET ' . $field . ' = ?, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND type = \'bundle\'',
                 [$value, $actorId > 0 ? $actorId : null, $siteId, $productId]
             );
         }
@@ -1571,7 +1571,7 @@ final class BusinessPimAdminService
         foreach ($changes as $field => $value) {
             if ($field === 'archive') {
                 $this->db->run(
-                    'UPDATE business_catalog_discounts SET status = "archived", archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
+                    'UPDATE business_catalog_discounts SET status = \'archived\', archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
                     [$actorId > 0 ? $actorId : null, $siteId, $discountId]
                 );
                 continue;

@@ -115,7 +115,7 @@ final class CatalogBrandRepository extends BusinessRepositoryBase
     {
         $this->ensureBrandCompanyColumn();
         $this->database()->run(
-            'UPDATE business_product_brands SET status = "archived", archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
+            'UPDATE business_product_brands SET status = \'archived\', archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
             [$actorId, $this->requireSiteId($siteId), $id]
         );
         return true;

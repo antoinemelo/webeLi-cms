@@ -54,10 +54,10 @@ final class CatalogCsvService
              LEFT JOIN business_product_brands b ON b.id = p.brand_id
              LEFT JOIN business_product_categories c ON c.id = p.category_id
              LEFT JOIN business_product_variants v ON v.product_id = p.id AND v.archived_at IS NULL
-             LEFT JOIN business_product_base_prices bp_purchase ON bp_purchase.product_id = p.id AND bp_purchase.price_kind = "purchase" AND bp_purchase.valid_from IS NULL
-             LEFT JOIN business_product_base_prices bp_sale ON bp_sale.product_id = p.id AND bp_sale.price_kind = "sale" AND bp_sale.valid_from IS NULL
-             LEFT JOIN business_product_variant_price_adjustments adj_purchase ON adj_purchase.variant_id = v.id AND adj_purchase.price_kind = "purchase" AND adj_purchase.valid_from IS NULL
-             LEFT JOIN business_product_variant_price_adjustments adj_sale ON adj_sale.variant_id = v.id AND adj_sale.price_kind = "sale" AND adj_sale.valid_from IS NULL
+             LEFT JOIN business_product_base_prices bp_purchase ON bp_purchase.product_id = p.id AND bp_purchase.price_kind = \'purchase\' AND bp_purchase.valid_from IS NULL
+             LEFT JOIN business_product_base_prices bp_sale ON bp_sale.product_id = p.id AND bp_sale.price_kind = \'sale\' AND bp_sale.valid_from IS NULL
+             LEFT JOIN business_product_variant_price_adjustments adj_purchase ON adj_purchase.variant_id = v.id AND adj_purchase.price_kind = \'purchase\' AND adj_purchase.valid_from IS NULL
+             LEFT JOIN business_product_variant_price_adjustments adj_sale ON adj_sale.variant_id = v.id AND adj_sale.price_kind = \'sale\' AND adj_sale.valid_from IS NULL
              ' . $where . '
              ORDER BY p.updated_at DESC, p.id DESC, v.sort_order ASC, v.id ASC',
             $params

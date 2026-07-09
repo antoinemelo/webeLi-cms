@@ -74,7 +74,7 @@ final class BusinessProductAssetService
              FROM business_product_assets
              WHERE ' . implode(' AND ', $where) . '
              ORDER BY CASE WHEN variant_id IS NULL THEN 1 ELSE 0 END,
-                      CASE role WHEN "main" THEN 0 WHEN "variant" THEN 1 WHEN "thumbnail" THEN 2 ELSE 3 END,
+                      CASE role WHEN \'main\' THEN 0 WHEN \'variant\' THEN 1 WHEN \'thumbnail\' THEN 2 ELSE 3 END,
                       sort_order ASC, id ASC',
             $params
         );
@@ -192,11 +192,11 @@ final class BusinessProductAssetService
              FROM business_product_assets
              WHERE product_id = :product_id
                AND ' . $variantSql . '
-               AND role IN ("main", "variant", "thumbnail")
+               AND role IN (\'main\', \'variant\', \'thumbnail\')
                AND channel_scope IN (' . $this->placeholders($scopes) . ')
                AND archived_at IS NULL
-             ORDER BY CASE role WHEN "main" THEN 0 WHEN "variant" THEN 1 WHEN "thumbnail" THEN 2 ELSE 3 END,
-                      CASE channel_scope WHEN :exact_channel THEN 0 WHEN "all" THEN 1 WHEN "public" THEN 2 ELSE 3 END,
+             ORDER BY CASE role WHEN \'main\' THEN 0 WHEN \'variant\' THEN 1 WHEN \'thumbnail\' THEN 2 ELSE 3 END,
+                      CASE channel_scope WHEN :exact_channel THEN 0 WHEN \'all\' THEN 1 WHEN \'public\' THEN 2 ELSE 3 END,
                       sort_order ASC,
                       id ASC
              LIMIT 1',

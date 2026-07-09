@@ -14,7 +14,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
         return array_map(fn(array $row): array => $this->castRow($row), $this->database()->all(
             'SELECT id, name, slug, description, website_url, logo_media_id
              FROM business_product_brands
-             WHERE site_id = ? AND status = "active" AND is_public = 1 AND archived_at IS NULL
+             WHERE site_id = ? AND status = \'active\' AND is_public = 1 AND archived_at IS NULL
              ORDER BY sort_order ASC, name ASC',
             [$this->requireSiteId($siteId)]
         ));
@@ -91,8 +91,8 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
             'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at, p.site_id
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
-             WHERE v.id = ? AND v.status = "active" AND v.archived_at IS NULL
-               AND p.site_id = ? AND p.status = "active" AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
+             WHERE v.id = ? AND v.status = \'active\' AND v.archived_at IS NULL
+               AND p.site_id = ? AND p.status = \'active\' AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
              LIMIT 1',
             [$variantId, $this->requireSiteId($siteId)]
         );
@@ -106,8 +106,8 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
             'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
-             WHERE v.product_id = ? AND v.status = "active" AND v.archived_at IS NULL
-               AND p.site_id = ? AND p.status = "active" AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
+             WHERE v.product_id = ? AND v.status = \'active\' AND v.archived_at IS NULL
+               AND p.site_id = ? AND p.status = \'active\' AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
              ORDER BY v.sort_order ASC, v.id ASC',
             [$productId, $this->requireSiteId($siteId)]
         ));
@@ -121,7 +121,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
         $row = $this->database()->one(
             'SELECT id, name, slug, description, website_url, logo_media_id
              FROM business_product_brands
-             WHERE site_id = ? AND id = ? AND status = "active" AND is_public = 1 AND archived_at IS NULL
+             WHERE site_id = ? AND id = ? AND status = \'active\' AND is_public = 1 AND archived_at IS NULL
              LIMIT 1',
             [$this->requireSiteId($siteId), $brandId]
         );
@@ -211,7 +211,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     {
         $where = [
             'p.site_id = :site_id',
-            'p.status = "active"',
+            'p.status = \'active\'',
             'p.is_public = 1',
             'p.is_ecommerce_enabled = 1',
             'p.archived_at IS NULL',
@@ -227,10 +227,10 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
             $params['q'] = '%' . trim((string) $filters['q']) . '%';
         }
         if (trim((string) ($filters['brand'] ?? '')) !== '') {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_brands b WHERE b.id = p.brand_id AND b.site_id = p.site_id AND b.slug = :brand AND b.status = "active" AND b.is_public = 1 AND b.archived_at IS NULL)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_brands b WHERE b.id = p.brand_id AND b.site_id = p.site_id AND b.slug = :brand AND b.status = \'active\' AND b.is_public = 1 AND b.archived_at IS NULL)';
             $params['brand'] = trim((string) $filters['brand']);
         } elseif (isset($filters['brand_id']) && (int) $filters['brand_id'] > 0) {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_brands b WHERE b.id = p.brand_id AND b.site_id = p.site_id AND b.id = :brand_id AND b.status = "active" AND b.is_public = 1 AND b.archived_at IS NULL)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_brands b WHERE b.id = p.brand_id AND b.site_id = p.site_id AND b.id = :brand_id AND b.status = \'active\' AND b.is_public = 1 AND b.archived_at IS NULL)';
             $params['brand_id'] = (int) $filters['brand_id'];
         }
         if (trim((string) ($filters['category'] ?? '')) !== '') {

@@ -55,25 +55,25 @@ final class CatalogProductRepository extends BusinessRepositoryBase
             $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1)';
         }
         if ($imageFilter === 'with') {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> "internal")';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\')';
         } elseif ($imageFilter === 'without') {
-            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> "internal")';
+            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\')';
         }
         if ($priceFilter === 'with') {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
         } elseif ($priceFilter === 'without') {
-            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
+            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
         }
         if ($purchasePriceFilter === 'missing') {
-            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "purchase" AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
+            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'purchase\' AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
         }
         if ($taxFilter === 'missing') {
             $where[] = 'tax_class_id IS NULL';
         }
         if ($completenessFilter === 'complete') {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" AND s.score >= 100)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' AND s.score >= 100)';
         } elseif ($completenessFilter === 'incomplete') {
-            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" AND s.score >= 100)';
+            $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' AND s.score >= 100)';
         }
         if (in_array($sellableFilter, ['pos', 'ecommerce', 'catalogue'], true)) {
             $where[] = match ($sellableFilter) {
@@ -81,9 +81,9 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                 'ecommerce' => 'is_ecommerce_enabled = 1',
                 default => 'is_catalogue_enabled = 1',
             };
-            $where[] = 'status = "active"';
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = "active" AND v.archived_at IS NULL)';
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
+            $where[] = 'status = \'active\'';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = \'active\' AND v.archived_at IS NULL)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
             $where[] = 'EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = :sellable_channel AND s.is_sellable = 1 AND s.score >= 100)';
             $params['sellable_channel'] = $sellableFilter;
         }
@@ -107,9 +107,9 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         $rows = $this->database()->all(
             'SELECT business_products.*,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS variant_count,
-                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = "active" AND v.archived_at IS NULL) AS active_variant_count,
-                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL) AS sale_price_min,
-                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "purchase" AND p.valid_from IS NULL) AS purchase_price_min,
+                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = \'active\' AND v.archived_at IS NULL) AS active_variant_count,
+                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL) AS sale_price_min,
+                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'purchase\' AND p.valid_from IS NULL) AS purchase_price_min,
                     (SELECT COALESCE(SUM(v.stock_quantity), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
                     (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
@@ -239,9 +239,9 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         $row = $this->database()->one(
             'SELECT business_products.*,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS variant_count,
-                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = "active" AND v.archived_at IS NULL) AS active_variant_count,
-                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL) AS sale_price_min,
-                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "purchase" AND p.valid_from IS NULL) AS purchase_price_min,
+                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = \'active\' AND v.archived_at IS NULL) AS active_variant_count,
+                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL) AS sale_price_min,
+                    (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'purchase\' AND p.valid_from IS NULL) AS purchase_price_min,
                     (SELECT COALESCE(SUM(v.stock_quantity), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
                     (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
@@ -373,7 +373,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
     public function archive(int $siteId, int $id, ?int $actorId = null): bool
     {
         $this->database()->run(
-            'UPDATE business_products SET status = "archived", archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
+            'UPDATE business_products SET status = \'archived\', archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
             [$actorId, $this->requireSiteId($siteId), $id]
         );
         return true;
@@ -382,7 +382,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
     public function restore(int $siteId, int $id, ?int $actorId = null): bool
     {
         $this->database()->run(
-            'UPDATE business_products SET status = "draft", archived_at = NULL, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND archived_at IS NOT NULL',
+            'UPDATE business_products SET status = \'draft\', archived_at = NULL, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ? AND archived_at IS NOT NULL',
             [$actorId, $this->requireSiteId($siteId), $id]
         );
         return true;
@@ -407,13 +407,13 @@ final class CatalogProductRepository extends BusinessRepositoryBase
 
     public function activeVariantCount(int $productId): int
     {
-        $row = $this->database()->one('SELECT COUNT(*) AS c FROM business_product_variants WHERE product_id = ? AND status = "active" AND archived_at IS NULL', [$productId]);
+        $row = $this->database()->one('SELECT COUNT(*) AS c FROM business_product_variants WHERE product_id = ? AND status = \'active\' AND archived_at IS NULL', [$productId]);
         return (int) ($row['c'] ?? 0);
     }
 
     public function hasSaleBasePrice(int $productId): bool
     {
-        return $this->database()->one('SELECT 1 FROM business_product_base_prices WHERE product_id = ? AND price_kind = "sale" LIMIT 1', [$productId]) !== null;
+        return $this->database()->one('SELECT 1 FROM business_product_base_prices WHERE product_id = ? AND price_kind = \'sale\' LIMIT 1', [$productId]) !== null;
     }
 
     public function setBasePrice(int $productId, string $priceKind, mixed $amount, string $currency = 'CHF', bool $taxIncluded = true, ?int $actorId = null): void

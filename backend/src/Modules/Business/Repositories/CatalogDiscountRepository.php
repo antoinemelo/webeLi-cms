@@ -135,18 +135,18 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
         return array_map(fn(array $row): array => $this->castRow($row), $this->database()->all(
             'SELECT * FROM business_catalog_discounts
              WHERE site_id = ?
-               AND status = "active"
+               AND status = \'active\'
                AND archived_at IS NULL
-               AND (channel = "all" OR channel = ?)
+               AND (channel = \'all\' OR channel = ?)
                AND (starts_at IS NULL OR starts_at <= ?)
                AND (ends_at IS NULL OR ends_at >= ?)
                AND (
-                    (scope_type = "variant" AND scope_id = ?)
-                 OR (scope_type = "product" AND scope_id = ?)
-                 OR (scope_type = "category" AND scope_id = ?)
-                 OR (scope_type = "brand" AND scope_id = ?)
+                    (scope_type = \'variant\' AND scope_id = ?)
+                 OR (scope_type = \'product\' AND scope_id = ?)
+                 OR (scope_type = \'category\' AND scope_id = ?)
+                 OR (scope_type = \'brand\' AND scope_id = ?)
                )
-             ORDER BY CASE scope_type WHEN "variant" THEN 0 WHEN "product" THEN 1 WHEN "category" THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
+             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
             [$this->requireSiteId($siteId), $channel ?? 'all', $now, $now, $variantId, $productId, (int) ($product['category_id'] ?? 0), (int) ($product['brand_id'] ?? 0)]
         ));
     }
@@ -154,7 +154,7 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
     public function archive(int $siteId, int $id, ?int $actorId = null): bool
     {
         $this->database()->run(
-            'UPDATE business_catalog_discounts SET status = "archived", archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
+            'UPDATE business_catalog_discounts SET status = \'archived\', archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP), updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
             [$actorId, $this->requireSiteId($siteId), $id]
         );
         return true;

@@ -67,8 +67,8 @@ final class PosCatalogRepository extends BusinessRepositoryBase
             'SELECT DISTINCT b.id, b.name, b.slug
              FROM business_product_brands b
              INNER JOIN business_products p ON p.brand_id = b.id
-             WHERE p.site_id = ? AND p.status = "active" AND p.is_pos_enabled = 1 AND p.archived_at IS NULL
-               AND b.site_id = p.site_id AND b.status = "active" AND b.archived_at IS NULL
+             WHERE p.site_id = ? AND p.status = \'active\' AND p.is_pos_enabled = 1 AND p.archived_at IS NULL
+               AND b.site_id = p.site_id AND b.status = \'active\' AND b.archived_at IS NULL
              ORDER BY b.name ASC',
             [$this->requireSiteId($siteId)]
         ));
@@ -81,7 +81,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
             'SELECT DISTINCT c.id, c.parent_id, c.name, c.slug
              FROM business_product_categories c
              INNER JOIN business_products p ON p.category_id = c.id
-             WHERE p.site_id = ? AND p.status = "active" AND p.is_pos_enabled = 1 AND p.archived_at IS NULL
+             WHERE p.site_id = ? AND p.status = \'active\' AND p.is_pos_enabled = 1 AND p.archived_at IS NULL
                AND c.site_id = p.site_id AND c.archived_at IS NULL
              ORDER BY c.name ASC',
             [$this->requireSiteId($siteId)]
@@ -100,7 +100,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
             return null;
         }
         $row = $this->database()->one(
-            'SELECT id, name, slug FROM business_product_brands WHERE site_id = ? AND id = ? AND status = "active" AND archived_at IS NULL LIMIT 1',
+            'SELECT id, name, slug FROM business_product_brands WHERE site_id = ? AND id = ? AND status = \'active\' AND archived_at IS NULL LIMIT 1',
             [$this->requireSiteId($siteId), $brandId]
         );
         return $row ? $this->castRow($row) : null;
@@ -149,7 +149,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
     /** @param array<string,mixed> $filters @return array{0:list<string>,1:array<string,mixed>} */
     private function productWhere(int $siteId, array $filters): array
     {
-        $where = ['p.site_id = :site_id', 'p.status = "active"', 'p.is_pos_enabled = 1', 'p.archived_at IS NULL'];
+        $where = ['p.site_id = :site_id', 'p.status = \'active\'', 'p.is_pos_enabled = 1', 'p.archived_at IS NULL'];
         $params = ['site_id' => $this->requireSiteId($siteId)];
         if (trim((string) ($filters['updated_since'] ?? '')) !== '') {
             $where[] = 'p.updated_at >= :updated_since';
@@ -165,7 +165,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
     /** @param array<string,mixed> $filters @return array{0:list<string>,1:array<string,mixed>} */
     private function variantWhere(int $siteId, array $filters): array
     {
-        $where = ['p.site_id = :site_id', 'p.status = "active"', 'p.is_pos_enabled = 1', 'p.archived_at IS NULL', 'v.status = "active"', 'v.archived_at IS NULL'];
+        $where = ['p.site_id = :site_id', 'p.status = \'active\'', 'p.is_pos_enabled = 1', 'p.archived_at IS NULL', 'v.status = \'active\'', 'v.archived_at IS NULL'];
         $params = ['site_id' => $this->requireSiteId($siteId)];
         if (isset($filters['product_id']) && (int) $filters['product_id'] > 0) {
             $where[] = 'v.product_id = :product_id';

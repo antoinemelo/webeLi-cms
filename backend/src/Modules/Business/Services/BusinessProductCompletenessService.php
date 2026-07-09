@@ -305,14 +305,14 @@ final class BusinessProductCompletenessService
     private function hasSalePrice(int $productId, int $variantId): bool
     {
         $base = $this->db->one(
-            'SELECT amount FROM business_product_base_prices WHERE product_id = ? AND price_kind = "sale" AND amount > 0 AND (valid_from IS NULL OR valid_from <= CURRENT_TIMESTAMP) AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) LIMIT 1',
+            'SELECT amount FROM business_product_base_prices WHERE product_id = ? AND price_kind = \'sale\' AND amount > 0 AND (valid_from IS NULL OR valid_from <= CURRENT_TIMESTAMP) AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) LIMIT 1',
             [$productId]
         );
         if ($base !== null) {
             return true;
         }
         return $this->db->one(
-            'SELECT 1 FROM business_product_variant_price_adjustments WHERE variant_id = ? AND price_kind = "sale" AND adjustment_type = "fixed_override" AND adjustment_value > 0 AND (valid_from IS NULL OR valid_from <= CURRENT_TIMESTAMP) AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) LIMIT 1',
+            'SELECT 1 FROM business_product_variant_price_adjustments WHERE variant_id = ? AND price_kind = \'sale\' AND adjustment_type = \'fixed_override\' AND adjustment_value > 0 AND (valid_from IS NULL OR valid_from <= CURRENT_TIMESTAMP) AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) LIMIT 1',
             [$variantId]
         ) !== null;
     }
@@ -333,13 +333,13 @@ final class BusinessProductCompletenessService
             $variantClause = ' AND variant_id IS NULL';
         }
         return $this->db->one(
-            'SELECT 1 FROM business_product_assets
+            "SELECT 1 FROM business_product_assets
              WHERE product_id = :product_id
-               AND role = "main"
+               AND role = 'main'
                AND archived_at IS NULL
                AND is_public = 1
-               AND channel_scope IN ("all", :channel)' . $variantClause . '
-             LIMIT 1',
+               AND channel_scope IN ('all', :channel)" . $variantClause . "
+             LIMIT 1",
             $params
         ) !== null;
     }

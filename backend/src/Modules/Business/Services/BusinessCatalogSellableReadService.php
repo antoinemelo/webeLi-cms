@@ -451,10 +451,10 @@ final class BusinessCatalogSellableReadService
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              LEFT JOIN business_product_base_prices purchase
-                ON purchase.product_id = p.id AND purchase.price_kind = "purchase"
+                ON purchase.product_id = p.id AND purchase.price_kind = \'purchase\'
                    AND purchase.valid_from IS NULL AND purchase.valid_until IS NULL
              LEFT JOIN business_product_base_prices sale
-                ON sale.product_id = p.id AND sale.price_kind = "sale"
+                ON sale.product_id = p.id AND sale.price_kind = \'sale\'
                    AND sale.valid_from IS NULL AND sale.valid_until IS NULL
              WHERE p.site_id = ? AND v.id = ? AND p.archived_at IS NULL AND v.archived_at IS NULL
              LIMIT 1',
@@ -661,8 +661,8 @@ final class BusinessCatalogSellableReadService
         $where = ['p.site_id = :site_id', 'p.archived_at IS NULL', 'v.archived_at IS NULL'];
         $params = ['site_id' => $siteId];
         if (!(bool) ($filters['include_inactive'] ?? false)) {
-            $where[] = 'p.status = "active"';
-            $where[] = 'v.status = "active"';
+            $where[] = 'p.status = \'active\'';
+            $where[] = 'v.status = \'active\'';
         }
         if ($channel === 'pos') {
             $where[] = 'p.is_pos_enabled = 1';
@@ -671,7 +671,7 @@ final class BusinessCatalogSellableReadService
         } elseif (in_array($channel, ['ecommerce', 'public'], true)) {
             $where[] = 'p.is_ecommerce_enabled = 1';
             $where[] = 'p.is_public = 1';
-            $where[] = 'p.visibility = "public"';
+            $where[] = 'p.visibility = \'public\'';
         }
         if (trim((string) ($filters['product_type'] ?? '')) !== '') {
             $where[] = 'p.type = :product_type';

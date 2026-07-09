@@ -157,11 +157,11 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              LEFT JOIN business_product_base_prices purchase
-                ON purchase.product_id = p.id AND purchase.price_kind = "purchase"
+                ON purchase.product_id = p.id AND purchase.price_kind = \'purchase\'
                    AND purchase.valid_from IS NULL
                    AND purchase.valid_until IS NULL
              LEFT JOIN business_product_base_prices sale
-                ON sale.product_id = p.id AND sale.price_kind = "sale"
+                ON sale.product_id = p.id AND sale.price_kind = \'sale\'
                    AND sale.valid_from IS NULL
                    AND sale.valid_until IS NULL
              WHERE v.id = ? AND v.archived_at IS NULL AND p.archived_at IS NULL',
@@ -237,18 +237,18 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
             'SELECT *
              FROM business_catalog_discounts
              WHERE site_id = ?
-               AND status = "active"
+               AND status = \'active\'
                AND archived_at IS NULL
-               AND (channel = "all" OR channel = ?)
+               AND (channel = \'all\' OR channel = ?)
                AND (starts_at IS NULL OR starts_at <= ?)
                AND (ends_at IS NULL OR ends_at >= ?)
                AND (
-                    (scope_type = "product" AND scope_id = ?)
-                 OR (scope_type = "variant" AND scope_id = ?)
-                 OR (scope_type = "category" AND scope_id = ?)
-                 OR (scope_type = "brand" AND scope_id = ?)
+                    (scope_type = \'product\' AND scope_id = ?)
+                 OR (scope_type = \'variant\' AND scope_id = ?)
+                 OR (scope_type = \'category\' AND scope_id = ?)
+                 OR (scope_type = \'brand\' AND scope_id = ?)
                )
-             ORDER BY CASE scope_type WHEN "variant" THEN 0 WHEN "product" THEN 1 WHEN "category" THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
+             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
             [$siteId, $channel ?? 'all', $now, $now, $productId, $variantId, $categoryId ?? 0, $brandId ?? 0]
         );
         return array_map(fn(array $row): array => $this->castPricingRow($row), $rows);
