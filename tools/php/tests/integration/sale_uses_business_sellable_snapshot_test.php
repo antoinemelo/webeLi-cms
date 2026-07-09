@@ -8,8 +8,19 @@ use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
+use App\Modules\Sale\Pricing\SalePricingService;
+use App\Modules\Sale\Repositories\SaleCartRepository;
+use App\Modules\Sale\Repositories\SaleChannelRepository;
+use App\Modules\Sale\Repositories\SaleEventRepository;
+use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
+use App\Modules\Sale\Repositories\SaleInventoryRepository;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
+use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
+use App\Modules\Sale\Services\SaleEventService;
+use App\Modules\Sale\Services\SaleIdempotencyService;
+use App\Modules\Sale\Services\SaleInventoryService;
 
 $h = new TestHarness();
 [$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/business.sql');
@@ -22,7 +33,7 @@ try {
         new CatalogPricingService($pricingRepository),
         new PosCatalogRepository($businessDb)
     );
-    $saleCatalog = new SaleCatalogSnapshotService(new SaleDatabaseConnection($salePath), $sellables);
+    $saleCatalog = new SaleCatalogSnapshotService(new SaleDatabaseConnection($salePath), new BusinessSellableCatalogAdapter($sellables));
     $variantId = (int) ($businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1")['id'] ?? 0);
     $h->assertTrue($variantId > 0, 'demo variant exists for Sale snapshot integration');
 
@@ -34,6 +45,28 @@ try {
 
     $public = $saleCatalog->publicPayload($snapshot);
     $h->assertTrue(!array_key_exists('unit_purchase_price_minor', $public), 'Sale public payload hides purchase price');
+
+    $saleConnection = new SaleDatabaseConnection($salePath);
+    $cartRepository = new SaleCartRepository($saleConnection);
+    $channelRepository = new SaleChannelRepository($saleConnection);
+    $cartService = new SaleCartService(
+        $cartRepository,
+        $channelRepository,
+        $saleCatalog,
+        new SalePricingService(),
+        new SaleInventoryService(new SaleInventoryRepository($saleConnection)),
+        new SaleEventService(new SaleEventRepository($saleConnection)),
+        new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection))
+    );
+    $posChannelId = (int) ($saleDb->one("SELECT id FROM sale_channels WHERE site_id = 1 AND code = 'pos-main' LIMIT 1")['id'] ?? 0);
+    $cart = $cartService->createCart(1, $posChannelId, ['iam_user_id' => 1]);
+    $simpleLine = $cartService->addLine((int) $cart['id'], $variantId, 1, ['idempotency_key' => 'simple-line']);
+    $h->assertSame(1, count($simpleLine['cart']['lines'] ?? []), 'Sale cart addLine returns cart with simple line');
+
+    $bundleVariantId = (int) ($businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'BUNDLE-DEMO-STANDARD' LIMIT 1")['id'] ?? 0);
+    $h->assertTrue($bundleVariantId > 0, 'demo bundle variant exists for Sale cart integration');
+    $bundleLine = $cartService->addLine((int) $cart['id'], $bundleVariantId, 1, ['idempotency_key' => 'bundle-line']);
+    $h->assertSame(2, count($bundleLine['cart']['lines'] ?? []), 'Sale cart addLine returns cart with bundle line');
 
     $businessDb->run('UPDATE business_product_variants SET status = "draft" WHERE id = ?', [$variantId]);
     $h->expectException(

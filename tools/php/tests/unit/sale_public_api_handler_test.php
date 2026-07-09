@@ -12,6 +12,7 @@ use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
@@ -56,7 +57,7 @@ try {
     $inventory = new SaleInventoryService(new SaleInventoryRepository($saleConnection));
     $events = new SaleEventService(new SaleEventRepository($saleConnection));
     $idempotency = new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection));
-    $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, $sellables);
+    $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, new BusinessSellableCatalogAdapter($sellables));
     $cartService = new SaleCartService($carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, $events, $idempotency);
     $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
 

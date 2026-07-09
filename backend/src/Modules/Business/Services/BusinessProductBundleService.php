@@ -179,6 +179,7 @@ final class BusinessProductBundleService
         }
 
         $missing = [];
+        $availability = $this->availabilitySummary($bundle);
         foreach ($bundle['components'] as $component) {
             if (($component['component_status'] ?? '') !== 'active' || ($component['component_variant_status'] ?? 'active') !== 'active') {
                 $missing[] = 'bundle_component_not_sellable';
@@ -186,6 +187,9 @@ final class BusinessProductBundleService
             if (($component['component_archived_at'] ?? null) !== null || ($component['component_variant_archived_at'] ?? null) !== null) {
                 $missing[] = 'bundle_component_archived';
             }
+        }
+        if ($availability['status'] === 'contact_us') {
+            $missing[] = 'bundle_stock_unavailable';
         }
 
         return [
@@ -195,6 +199,8 @@ final class BusinessProductBundleService
             'bundle_pricing_mode' => (string) $bundle['pricing_mode'],
             'bundle_stock_mode' => (string) $bundle['stock_mode'],
             'bundle_available_quantity' => $this->availableQuantity($bundle),
+            'bundle_availability_status' => $availability['status'],
+            'bundle_backorder_delivery_days' => $availability['delivery_lead_time_days'],
             'bundle_missing_requirements' => array_values(array_unique($missing)),
         ];
     }
@@ -314,7 +320,8 @@ final class BusinessProductBundleService
                     v.stock_quantity,
                     v.stock_reserved,
                     COALESCE(v.track_stock, p.track_stock) AS effective_track_stock,
-                    COALESCE(v.allow_backorder, p.allow_backorder) AS effective_allow_backorder
+                    COALESCE(v.allow_backorder, p.allow_backorder) AS effective_allow_backorder,
+                    COALESCE(v.backorder_delivery_days, p.backorder_delivery_days) AS effective_backorder_delivery_days
              FROM business_bundle_components c
              INNER JOIN business_products p ON p.id = c.component_product_id
              LEFT JOIN business_product_variants v ON v.id = c.component_variant_id
@@ -354,6 +361,33 @@ final class BusinessProductBundleService
             $available = $available === null ? $possible : min($available, $possible);
         }
         return $available === null ? null : (float) $available;
+    }
+
+    /** @param array<string,mixed> $bundle @return array{status:string,delivery_lead_time_days:int|null} */
+    private function availabilitySummary(array $bundle): array
+    {
+        if (($bundle['stock_mode'] ?? 'components') !== 'components') {
+            return ['status' => 'in_stock', 'delivery_lead_time_days' => null];
+        }
+        $hasBackorder = false;
+        $leadTimeDays = 0;
+        foreach ($bundle['components'] as $component) {
+            if (!((bool) ($component['is_required'] ?? true)) || !((bool) ($component['effective_track_stock'] ?? false))) {
+                continue;
+            }
+            $available = max(0.0, (float) ($component['stock_quantity'] ?? 0) - (float) ($component['stock_reserved'] ?? 0));
+            if ($available > 0.0) {
+                continue;
+            }
+            if (!((bool) ($component['effective_allow_backorder'] ?? false))) {
+                return ['status' => 'contact_us', 'delivery_lead_time_days' => null];
+            }
+            $hasBackorder = true;
+            $leadTimeDays = max($leadTimeDays, max(1, (int) ($component['effective_backorder_delivery_days'] ?? 7)));
+        }
+        return $hasBackorder
+            ? ['status' => 'backorder', 'delivery_lead_time_days' => $leadTimeDays]
+            : ['status' => 'in_stock', 'delivery_lead_time_days' => null];
     }
 
     /** @param array<string,mixed> $bundle */

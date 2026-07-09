@@ -16,6 +16,7 @@ use App\Modules\Business\Repositories\CatalogOptionRepository;
 use App\Modules\Business\Repositories\CatalogProductRepository;
 use App\Modules\Business\Repositories\CatalogVariantRepository;
 use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Repository\SiteRepository;
 
 $h = new TestHarness();
@@ -45,6 +46,7 @@ try {
     $variants = new CatalogVariantRepository($businessDb);
     $options = new CatalogOptionRepository($businessDb);
     $discounts = new CatalogDiscountRepository($businessDb);
+    $bundles = new BusinessProductBundleService($businessDb);
 
     $brand = $brands->create(1, ['name' => 'Public Brand', 'slug' => 'public-brand', 'is_public' => true], 1);
     $otherBrand = $brands->create(1, ['name' => 'Other Brand', 'slug' => 'other-brand', 'is_public' => true], 1);
@@ -109,6 +111,105 @@ try {
         'status' => 'active',
     ], 1);
 
+    $bundleComponent = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'name' => 'Public Bundle Component',
+        'slug' => 'public-bundle-component',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce'],
+        'base_sale_price' => 20,
+        'track_stock' => true,
+        'allow_backorder' => true,
+        'backorder_delivery_days' => 6,
+    ], 1);
+    $bundleComponentVariant = $variants->create(1, (int) $bundleComponent['id'], [
+        'sku' => 'PUBLIC-BUNDLE-COMPONENT',
+        'name' => 'Composant différé',
+        'status' => 'active',
+        'stock_quantity' => 0,
+    ], 1);
+    $products->update(1, (int) $bundleComponent['id'], ['status' => 'active'], 1);
+    $bundleProduct = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'name' => 'Public Backorder Pack',
+        'slug' => 'public-backorder-pack',
+        'type' => 'bundle',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce'],
+        'base_sale_price' => 60,
+        'track_stock' => false,
+    ], 1);
+    $bundleVariant = $variants->create(1, (int) $bundleProduct['id'], [
+        'sku' => 'PUBLIC-BACKORDER-PACK',
+        'name' => 'Pack différé',
+        'status' => 'active',
+        'track_stock' => false,
+    ], 1);
+    $bundles->replaceProductBundle(1, (int) $bundleProduct['id'], [
+        'bundle_variant_id' => $bundleVariant['id'],
+        'pricing_mode' => 'fixed',
+        'stock_mode' => 'components',
+        'is_active' => true,
+        'components' => [[
+            'component_product_id' => $bundleComponent['id'],
+            'component_variant_id' => $bundleComponentVariant['id'],
+            'quantity' => 1,
+            'is_required' => true,
+        ]],
+    ], 1);
+    $products->update(1, (int) $bundleProduct['id'], ['status' => 'active'], 1);
+
+    $contactComponent = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'name' => 'Public Contact Component',
+        'slug' => 'public-contact-component',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce'],
+        'base_sale_price' => 15,
+        'track_stock' => true,
+        'allow_backorder' => false,
+    ], 1);
+    $contactComponentVariant = $variants->create(1, (int) $contactComponent['id'], [
+        'sku' => 'PUBLIC-CONTACT-COMPONENT',
+        'name' => 'Composant contact',
+        'status' => 'active',
+        'stock_quantity' => 0,
+    ], 1);
+    $products->update(1, (int) $contactComponent['id'], ['status' => 'active'], 1);
+    $contactBundleProduct = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'name' => 'Public Contact Pack',
+        'slug' => 'public-contact-pack',
+        'type' => 'bundle',
+        'status' => 'draft',
+        'channels' => ['public', 'ecommerce'],
+        'base_sale_price' => 45,
+        'track_stock' => false,
+    ], 1);
+    $contactBundleVariant = $variants->create(1, (int) $contactBundleProduct['id'], [
+        'sku' => 'PUBLIC-CONTACT-PACK',
+        'name' => 'Pack contact',
+        'status' => 'active',
+        'track_stock' => false,
+    ], 1);
+    $bundles->replaceProductBundle(1, (int) $contactBundleProduct['id'], [
+        'bundle_variant_id' => $contactBundleVariant['id'],
+        'pricing_mode' => 'fixed',
+        'stock_mode' => 'components',
+        'is_active' => true,
+        'components' => [[
+            'component_product_id' => $contactComponent['id'],
+            'component_variant_id' => $contactComponentVariant['id'],
+            'quantity' => 1,
+            'is_required' => true,
+        ]],
+    ], 1);
+    $products->update(1, (int) $contactBundleProduct['id'], ['status' => 'active'], 1);
+
     $hidden = $products->create(1, ['name' => 'Hidden Product', 'slug' => 'hidden-product', 'status' => 'active', 'channels' => ['ecommerce'], 'base_sale_price' => 50], 1);
     $internal = $products->create(1, ['name' => 'Internal Product', 'slug' => 'internal-product', 'status' => 'active', 'channels' => ['public'], 'base_sale_price' => 60], 1);
     $internalVariant = $variants->create(1, (int) $internal['id'], [
@@ -122,9 +223,9 @@ try {
     $privateProduct = $products->create(1, ['brand_id' => $privateBrand['id'], 'name' => 'Private Brand Product', 'slug' => 'private-brand-product', 'status' => 'active', 'channels' => ['public', 'ecommerce'], 'base_sale_price' => 80], 1);
 
     $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
-    $handlerFor = static function (array $query = [], string $path = '/api/v1/catalog/products') use ($sites, $businessDb): PublicCatalogApiHandler {
+    $handlerFor = static function (array $query = [], string $path = '/api/v1/catalog/products') use ($sites, $businessDb, $bundles): PublicCatalogApiHandler {
         $request = new Request('GET', $path, $query, [], ['HTTP_HOST' => 'example.test'], [], []);
-        return new PublicCatalogApiHandler($request, $sites, new PublicCatalogRepository($businessDb), new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb)));
+        return new PublicCatalogApiHandler($request, $sites, new PublicCatalogRepository($businessDb), new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb)), $bundles);
     };
 
     $list = $handlerFor()->products();
@@ -156,6 +257,21 @@ try {
     $h->assertTrue(!str_contains($body, 'Coût fournisseur interne'), 'public catalog list hides non-public PIM attributes');
     $h->assertTrue(!str_contains($body, 'Image interne'), 'public catalog list hides internal assets');
     $h->assertSame(true, $publicItem['is_sellable_public'] ?? null, 'public catalog list exposes public sellability verdict');
+    $bundleItem = null;
+    $contactBundleItem = null;
+    foreach (($decoded['data']['items'] ?? []) as $item) {
+        if (($item['slug'] ?? '') === 'public-backorder-pack') {
+            $bundleItem = $item;
+        }
+        if (($item['slug'] ?? '') === 'public-contact-pack') {
+            $contactBundleItem = $item;
+        }
+    }
+    $h->assertSame('backorder', $bundleItem['availability']['status'] ?? null, 'public bundle inherits backorder availability from components');
+    $h->assertSame(6, $bundleItem['availability']['delivery_lead_time_days'] ?? null, 'public bundle exposes component backorder delay');
+    $h->assertSame(true, $bundleItem['is_sellable_public'] ?? null, 'public backorder bundle remains sellable');
+    $h->assertSame('contact_us', $contactBundleItem['availability']['status'] ?? null, 'public bundle switches to contact when a required component is not deliverable');
+    $h->assertSame(false, $contactBundleItem['is_sellable_public'] ?? null, 'public contact bundle is not directly sellable');
 
     $show = $handlerFor([], '/api/v1/catalog/products/public-product')->product('public-product');
     $h->assertSame(200, $show->status(), 'public product show works');

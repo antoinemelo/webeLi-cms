@@ -9,13 +9,13 @@ final class BusinessCatalogDefinitions
     public const PRODUCT_TYPES = ['physical', 'service', 'gift_card', 'bundle'];
     public const PRODUCT_STATUSES = ['draft', 'active', 'archived'];
     public const VARIANT_STATUSES = ['draft', 'active', 'archived'];
-    public const CHANNELS = ['public', 'ecommerce', 'pos', 'internal'];
+    public const CHANNELS = ['public', 'ecommerce', 'pos', 'catalogue', 'internal'];
     public const PRICE_KINDS = ['purchase', 'sale'];
     public const PRICE_ADJUSTMENT_TYPES = ['amount_delta', 'percent_delta', 'fixed_override'];
     public const PRICE_ADJUSTMENT_MODES = ['none', 'amount_delta', 'percent_delta', 'fixed_override'];
     public const OFFER_TYPES = ['percent', 'amount'];
     public const OFFER_SCOPES = ['product', 'variant', 'category', 'brand'];
-    public const OFFER_CHANNELS = ['all', 'ecommerce', 'pos', 'admin'];
+    public const OFFER_CHANNELS = ['all', 'ecommerce', 'pos', 'catalogue', 'admin'];
     public const CURRENCIES = ['CHF', 'EUR', 'USD'];
     public const TAX_CLASSES = ['standard', 'reduced', 'zero', 'exempt'];
 

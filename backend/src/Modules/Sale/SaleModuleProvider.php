@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Sale;
 
 use App\Module\ModuleProvider;
+use App\Modules\Sale\Contracts\SaleAiContextContracts;
+use App\Modules\Sale\Contracts\SaleIntegrationEventContracts;
 
 /**
  * Module systeme Vente.
@@ -27,7 +29,7 @@ final class SaleModuleProvider implements ModuleProvider
     }
 
     /** @return list<string> */
-    public function dependencies(): array { return ['business']; }
+    public function dependencies(): array { return []; }
 
     /** @return list<array<string,mixed>> */
     public function databases(): array
@@ -68,11 +70,17 @@ final class SaleModuleProvider implements ModuleProvider
         return [
             'schema_version' => 1,
             'database' => ['key' => 'sale', 'path' => 'storage/database/sale.sqlite'],
-            'dependencies' => ['business'],
+            'integrations' => [
+                'sellable_catalog' => 'optional_port',
+                'customer_snapshot' => 'optional_port',
+                'crm_activity_sink' => 'planned_optional_port',
+                'cms_account_bridge' => 'planned_optional_port',
+            ],
             'defaults' => [
                 'currency' => 'CHF',
                 'default_language' => 'fr',
                 'public_ecommerce_enabled' => false,
+                'payment_providers' => ['cash', 'manual_card', 'external_terminal', 'bank_transfer', 'test'],
             ],
         ];
     }
@@ -196,6 +204,15 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/sale/payments/{transaction_id}/refund', $c . 'refundPayment'),
             $this->route('GET', '/admin/api/sale/pos/bootstrap', $c . 'posBootstrap'),
             $this->route('GET', '/admin/api/sale/pos/catalog', $c . 'posCatalog'),
+            $this->route('GET', '/admin/api/sale/catalog/export.pdf', $c . 'exportCatalogPdf'),
+            $this->route('GET', '/admin/api/sale/export/orders.csv', $c . 'exportOrdersCsv'),
+            $this->route('GET', '/admin/api/sale/export/order-lines.csv', $c . 'exportOrderLinesCsv'),
+            $this->route('GET', '/admin/api/sale/export/payments.csv', $c . 'exportPaymentsCsv'),
+            $this->route('GET', '/admin/api/sale/export/pos-sessions.csv', $c . 'exportPosSessionsCsv'),
+            $this->route('GET', '/admin/api/sale/export/stock-movements.csv', $c . 'exportStockMovementsCsv'),
+            $this->route('GET', '/admin/api/sale/export/returns-refunds.csv', $c . 'exportReturnsRefundsCsv'),
+            $this->route('POST', '/admin/api/sale/import/stock/preview', $c . 'previewStockImport'),
+            $this->route('POST', '/admin/api/sale/import/stock/apply', $c . 'applyStockImport'),
             $this->route('GET', '/admin/api/sale/pos/variants', $c . 'posVariants'),
             $this->route('GET', '/admin/api/sale/pos/registers', $c . 'posRegisters'),
             $this->route('POST', '/admin/api/sale/pos/sessions/open', $c . 'openCashSession'),
@@ -203,8 +220,16 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/sale/pos/carts', $c . 'posStoreCart'),
             $this->route('POST', '/admin/api/sale/pos/carts/{id}/lines', $c . 'posAddCartLine'),
             $this->route('PATCH', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', $c . 'posUpdateCartLine'),
+            $this->route('DELETE', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', $c . 'posDeleteCartLine'),
+            $this->route('POST', '/admin/api/sale/pos/carts/{id}/adjustments', $c . 'posSetCartAdjustment'),
             $this->route('POST', '/admin/api/sale/pos/checkout', $c . 'posCheckout'),
             $this->route('GET', '/admin/api/sale/pos/orders/{id}/receipt', $c . 'posOrderReceipt'),
+            $this->route('POST', '/admin/api/sale/pos/orders/{id}/receipt/email', $c . 'posEmailReceipt'),
+            $this->route('GET', '/admin/api/sale/ai/schema', $c . 'aiSchema'),
+            $this->route('GET', '/admin/api/sale/ai/orders/{id}/summary-context', $c . 'aiOrderSummaryContext'),
+            $this->route('GET', '/admin/api/sale/ai/pos/day-summary-context', $c . 'aiPosDaySummaryContext'),
+            $this->route('GET', '/admin/api/sale/ai/customers/{type}/{id}/analysis-context', $c . 'aiCustomerSalesAnalysisContext'),
+            $this->route('GET', '/admin/api/sale/ai/unpaid-orders-context', $c . 'aiUnpaidOrdersContext'),
             $this->route('GET', '/admin/api/sale/stock', $c . 'stock'),
             $this->route('GET', '/admin/api/sale/stock/items', $c . 'stockItems'),
             $this->route('POST', '/admin/api/sale/stock/adjustments', $c . 'stockAdjustments'),
@@ -212,7 +237,11 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('GET', '/admin/api/sale/returns', $c . 'returns'),
             $this->route('GET', '/admin/api/sale/reports/daily', $c . 'dailyReport'),
             $this->route('GET', '/admin/api/sale/reports/orders', $c . 'ordersReport'),
+            $this->route('GET', '/admin/api/sale/reports/channels', $c . 'channelsReport'),
+            $this->route('GET', '/admin/api/sale/reports/payment-methods', $c . 'paymentMethodsReport'),
             $this->route('GET', '/admin/api/sale/reports/pos-sessions', $c . 'posSessionsReport'),
+            $this->route('GET', '/admin/api/sale/reports/stock', $c . 'stockReport'),
+            $this->route('GET', '/admin/api/sale/reports/refunds', $c . 'refundsReport'),
             $this->route('GET', '/admin/api/sale/settings', $c . 'settings'),
         ];
     }
@@ -278,6 +307,15 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.payments.refund.v1', 'POST', '/admin/api/sale/payments/{transaction_id}/refund', 'sale.refunds.manage'),
             $this->contract('admin.sale.pos.bootstrap.v1', 'GET', '/admin/api/sale/pos/bootstrap', 'sale.pos.use'),
             $this->contract('admin.sale.pos.catalog.v1', 'GET', '/admin/api/sale/pos/catalog', 'sale.pos.use'),
+            $this->contract('admin.sale.catalog.export_pdf.v1', 'GET', '/admin/api/sale/catalog/export.pdf', 'sale.read'),
+            $this->contract('admin.sale.export.orders.v1', 'GET', '/admin/api/sale/export/orders.csv', 'sale.reports.read'),
+            $this->contract('admin.sale.export.order_lines.v1', 'GET', '/admin/api/sale/export/order-lines.csv', 'sale.reports.read'),
+            $this->contract('admin.sale.export.payments.v1', 'GET', '/admin/api/sale/export/payments.csv', 'sale.reports.read'),
+            $this->contract('admin.sale.export.pos_sessions.v1', 'GET', '/admin/api/sale/export/pos-sessions.csv', 'sale.reports.read'),
+            $this->contract('admin.sale.export.stock_movements.v1', 'GET', '/admin/api/sale/export/stock-movements.csv', 'sale.stock.read'),
+            $this->contract('admin.sale.export.returns_refunds.v1', 'GET', '/admin/api/sale/export/returns-refunds.csv', 'sale.reports.read'),
+            $this->contract('admin.sale.import.stock.preview.v1', 'POST', '/admin/api/sale/import/stock/preview', 'sale.stock.manage'),
+            $this->contract('admin.sale.import.stock.apply.v1', 'POST', '/admin/api/sale/import/stock/apply', 'sale.stock.manage'),
             $this->contract('admin.sale.pos.variants.v1', 'GET', '/admin/api/sale/pos/variants', 'sale.pos.use'),
             $this->contract('admin.sale.pos.registers.v1', 'GET', '/admin/api/sale/pos/registers', 'sale.pos.use'),
             $this->contract('admin.sale.pos.sessions.open.v1', 'POST', '/admin/api/sale/pos/sessions/open', 'sale.cash.manage'),
@@ -285,8 +323,16 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.pos.carts.store.v1', 'POST', '/admin/api/sale/pos/carts', 'sale.pos.use'),
             $this->contract('admin.sale.pos.carts.lines.store.v1', 'POST', '/admin/api/sale/pos/carts/{id}/lines', 'sale.pos.use'),
             $this->contract('admin.sale.pos.carts.lines.update.v1', 'PATCH', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.carts.lines.delete.v1', 'DELETE', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.carts.adjustments.store.v1', 'POST', '/admin/api/sale/pos/carts/{id}/adjustments', 'sale.pos.use'),
             $this->contract('admin.sale.pos.checkout.v1', 'POST', '/admin/api/sale/pos/checkout', 'sale.pos.use'),
             $this->contract('admin.sale.pos.receipt.v1', 'GET', '/admin/api/sale/pos/orders/{id}/receipt', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.receipt.email.v1', 'POST', '/admin/api/sale/pos/orders/{id}/receipt/email', 'sale.pos.use'),
+            $this->contract('admin.sale.ai.schema.v1', 'GET', '/admin/api/sale/ai/schema', 'sale.reports.read'),
+            $this->contract('admin.sale.ai.order_summary_context.v1', 'GET', '/admin/api/sale/ai/orders/{id}/summary-context', 'sale.orders.read'),
+            $this->contract('admin.sale.ai.pos_day_summary_context.v1', 'GET', '/admin/api/sale/ai/pos/day-summary-context', 'sale.reports.read'),
+            $this->contract('admin.sale.ai.customer_sales_analysis_context.v1', 'GET', '/admin/api/sale/ai/customers/{type}/{id}/analysis-context', 'sale.orders.read'),
+            $this->contract('admin.sale.ai.unpaid_orders_context.v1', 'GET', '/admin/api/sale/ai/unpaid-orders-context', 'sale.reports.read'),
             $this->contract('admin.sale.stock.index.v1', 'GET', '/admin/api/sale/stock', 'sale.stock.read'),
             $this->contract('admin.sale.stock.items.v1', 'GET', '/admin/api/sale/stock/items', 'sale.stock.read'),
             $this->contract('admin.sale.stock.adjustments.v1', 'POST', '/admin/api/sale/stock/adjustments', 'sale.stock.manage'),
@@ -294,7 +340,11 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.returns.index.v1', 'GET', '/admin/api/sale/returns', 'sale.orders.read'),
             $this->contract('admin.sale.reports.daily.v1', 'GET', '/admin/api/sale/reports/daily', 'sale.reports.read'),
             $this->contract('admin.sale.reports.orders.v1', 'GET', '/admin/api/sale/reports/orders', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.channels.v1', 'GET', '/admin/api/sale/reports/channels', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.payment_methods.v1', 'GET', '/admin/api/sale/reports/payment-methods', 'sale.reports.read'),
             $this->contract('admin.sale.reports.pos_sessions.v1', 'GET', '/admin/api/sale/reports/pos-sessions', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.stock.v1', 'GET', '/admin/api/sale/reports/stock', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.refunds.v1', 'GET', '/admin/api/sale/reports/refunds', 'sale.reports.read'),
             $this->contract('admin.sale.settings.v1', 'GET', '/admin/api/sale/settings', 'sale.settings.manage'),
             $this->contract('public.sale.channels.bootstrap.v1', 'GET', '/api/v1/sale/channels/{code}/bootstrap', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart', 'anonymous', 'headless'),
@@ -303,6 +353,8 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('public.sale.cart.lines.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.delete.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
             $this->contract('public.sale.checkout.v1', 'POST', '/api/v1/sale/channels/{code}/checkout', 'anonymous', 'headless'),
+            $this->integrationContract('integration.sale.events.v1', SaleIntegrationEventContracts::payloads()),
+            $this->integrationContract('integration.sale.ai_contexts.v1', SaleAiContextContracts::contexts()),
         ];
     }
 
@@ -323,6 +375,20 @@ final class SaleModuleProvider implements ModuleProvider
             'path' => $path,
             'permission' => $permission,
             'module' => 'sale',
+        ];
+    }
+
+    /** @param array<string,array<string,mixed>> $events @return array<string,mixed> */
+    private function integrationContract(string $key, array $events): array
+    {
+        return [
+            'key' => $key,
+            'version' => '1',
+            'scope' => 'integration',
+            'module' => 'sale',
+            'transport' => 'event',
+            'events' => $events,
+            'status' => 'declared',
         ];
     }
 

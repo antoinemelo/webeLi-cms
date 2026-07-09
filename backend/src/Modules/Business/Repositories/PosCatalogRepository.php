@@ -17,7 +17,7 @@ final class PosCatalogRepository extends BusinessRepositoryBase
         $limit = $this->limit($limit, 500);
         $offset = $this->offset($offset);
         $rows = $this->database()->all(
-            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.tax_class_id, p.name, p.slug, p.short_description, p.track_stock, p.allow_backorder, p.updated_at
+            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.tax_class_id, p.type, p.name, p.slug, p.short_description, p.track_stock, p.allow_backorder, p.backorder_delivery_days, p.updated_at
              FROM business_products p
              WHERE ' . $sqlWhere . '
              ORDER BY p.name ASC, p.id ASC
@@ -42,8 +42,8 @@ final class PosCatalogRepository extends BusinessRepositoryBase
         $limit = $this->limit($limit, 1000);
         $offset = $this->offset($offset);
         $rows = $this->database()->all(
-            'SELECT v.id, v.product_id, v.sku, v.barcode, v.name, v.track_stock, v.stock_quantity, v.stock_reserved, v.allow_backorder, v.updated_at,
-                    p.site_id, p.brand_id, p.category_id, p.tax_class_id, p.name AS product_name, p.slug AS product_slug, p.track_stock AS product_track_stock, p.allow_backorder AS product_allow_backorder
+            'SELECT v.id, v.product_id, v.sku, v.barcode, v.name, v.track_stock, v.stock_quantity, v.stock_reserved, v.allow_backorder, v.backorder_delivery_days, v.updated_at,
+                    p.site_id, p.brand_id, p.category_id, p.tax_class_id, p.type AS product_type, p.name AS product_name, p.slug AS product_slug, p.track_stock AS product_track_stock, p.allow_backorder AS product_allow_backorder, p.backorder_delivery_days AS product_backorder_delivery_days
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              WHERE ' . $sqlWhere . '

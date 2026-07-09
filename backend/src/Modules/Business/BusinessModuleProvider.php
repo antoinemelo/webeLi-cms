@@ -429,6 +429,10 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/business/pim/bundles/{id}/components', 'BusinessPimApiController@storeBundleComponent'),
             $this->route('PATCH', '/admin/api/business/pim/bundle-components/{id}', 'BusinessPimApiController@updateBundleComponent'),
             $this->route('DELETE', '/admin/api/business/pim/bundle-components/{id}', 'BusinessPimApiController@deleteBundleComponent'),
+            $this->route('GET', '/admin/api/business/pim/tax-classes', 'BusinessPimApiController@taxClasses'),
+            $this->route('POST', '/admin/api/business/pim/tax-classes', 'BusinessPimApiController@storeTaxClass'),
+            $this->route('PATCH', '/admin/api/business/pim/tax-classes/{id}', 'BusinessPimApiController@updateTaxClass'),
+            $this->route('DELETE', '/admin/api/business/pim/tax-classes/{id}', 'BusinessPimApiController@deleteTaxClass'),
             $this->route('GET', '/admin/api/business/pim/attribute-groups', 'BusinessPimApiController@attributeGroups'),
             $this->route('POST', '/admin/api/business/pim/attribute-groups', 'BusinessPimApiController@storeAttributeGroup'),
             $this->route('PATCH', '/admin/api/business/pim/attribute-groups/{id}', 'BusinessPimApiController@updateAttributeGroup'),
@@ -576,6 +580,7 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->contract('admin.business.mailing.campaigns.enqueue.v1', 'POST', '/admin/api/business/mailing/campaigns/{id}/enqueue', 'business.mailing.manage'),
             $this->contract('admin.business.mailing.campaigns.cancel.v1', 'POST', '/admin/api/business/mailing/campaigns/{id}/cancel', 'business.mailing.manage'),
             $this->contract('admin.business.catalog.export.v1', 'GET', '/admin/api/business/catalog/export.csv', 'business.catalog.read'),
+            $this->contract('admin.business.catalog.export_pdf.v1', 'GET', '/admin/api/business/catalog/export.pdf', 'business.catalog.read'),
             $this->contract('admin.business.catalog.import.preview.v1', 'POST', '/admin/api/business/catalog/import/preview', 'business.catalog.write'),
             $this->contract('admin.business.catalog.import.apply.v1', 'POST', '/admin/api/business/catalog/import/apply', 'business.catalog.write'),
             $this->contract('admin.business.catalog.brands.index.v1', 'GET', '/admin/api/business/catalog/brands', 'business.catalog.read'),
@@ -631,6 +636,10 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->contract('admin.business.pim.bundle_components.store.v1', 'POST', '/admin/api/business/pim/bundles/{id}/components', 'business.catalog.write'),
             $this->contract('admin.business.pim.bundle_components.update.v1', 'PATCH', '/admin/api/business/pim/bundle-components/{id}', 'business.catalog.write'),
             $this->contract('admin.business.pim.bundle_components.delete.v1', 'DELETE', '/admin/api/business/pim/bundle-components/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.tax_classes.index.v1', 'GET', '/admin/api/business/pim/tax-classes', 'business.catalog.read'),
+            $this->contract('admin.business.pim.tax_classes.store.v1', 'POST', '/admin/api/business/pim/tax-classes', 'business.catalog.write'),
+            $this->contract('admin.business.pim.tax_classes.show.v1', 'PATCH', '/admin/api/business/pim/tax-classes/{id}', 'business.catalog.write'),
+            $this->contract('admin.business.pim.tax_classes.delete.v1', 'DELETE', '/admin/api/business/pim/tax-classes/{id}', 'business.catalog.write'),
             $this->contract('admin.business.pim.attribute_groups.index.v1', 'GET', '/admin/api/business/pim/attribute-groups', 'business.catalog.read'),
             $this->contract('admin.business.pim.attribute_groups.store.v1', 'POST', '/admin/api/business/pim/attribute-groups', 'business.catalog.write'),
             $this->contract('admin.business.pim.attribute_groups.update.v1', 'PATCH', '/admin/api/business/pim/attribute-groups/{id}', 'business.catalog.write'),
@@ -789,9 +798,11 @@ final class BusinessModuleProvider implements ModuleProvider
                     $this->field('tax_class_id', 'Classe TVA', 'relation', 'tax', false, 'tax_class_id', ['nullable' => true, 'scope' => 'business_pim']),
                     $this->field('track_stock', 'Stock suivi', 'boolean', 'stock', true, 'track_stock', ['scope' => 'business_pim']),
                     $this->field('allow_backorder', 'Vente hors stock', 'boolean', 'stock', true, 'allow_backorder', ['scope' => 'business_pim']),
+                    $this->field('backorder_delivery_days', 'Délai livraison hors stock', 'number', 'stock', true, 'backorder_delivery_days', ['scope' => 'business_pim']),
                     $this->field('is_public', 'Public', 'boolean', 'channels', true, 'is_public', ['scope' => 'business_pim']),
                     $this->field('is_ecommerce_enabled', 'E-commerce', 'boolean', 'channels', true, 'is_ecommerce_enabled', ['scope' => 'business_pim']),
                     $this->field('is_pos_enabled', 'POS', 'boolean', 'channels', true, 'is_pos_enabled', ['scope' => 'business_pim']),
+                    $this->field('is_catalogue_enabled', 'Catalogue', 'boolean', 'channels', true, 'is_catalogue_enabled', ['scope' => 'business_pim']),
                     $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
                     $this->field('updated_by_iam_user_id', 'Modifié par', 'number', 'audit', false, 'updated_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
                     $this->field('created_at', 'Créé le', 'datetime', 'audit', false, 'created_at', ['system' => true, 'scope' => 'business_pim']),
@@ -829,6 +840,7 @@ final class BusinessModuleProvider implements ModuleProvider
                     $this->field('stock_quantity', 'Stock', 'decimal', 'stock', true, 'stock_quantity', ['scope' => 'business_pim']),
                     $this->field('stock_reserved', 'Stock réservé', 'decimal', 'stock', true, 'stock_reserved', ['scope' => 'business_pim']),
                     $this->field('allow_backorder', 'Vente hors stock', 'boolean', 'stock', false, 'allow_backorder', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('backorder_delivery_days', 'Délai livraison hors stock', 'number', 'stock', false, 'backorder_delivery_days', ['nullable' => true, 'scope' => 'business_pim']),
                     $this->field('weight_grams', 'Poids grammes', 'number', 'logistics', false, 'weight_grams', ['nullable' => true, 'scope' => 'business_pim']),
                     $this->field('sort_order', 'Ordre', 'number', 'identity', true, 'sort_order', ['scope' => 'business_pim']),
                     $this->field('created_by_iam_user_id', 'Créé par', 'number', 'audit', false, 'created_by_iam_user_id', ['system' => true, 'scope' => 'business_pim']),
@@ -940,7 +952,7 @@ final class BusinessModuleProvider implements ModuleProvider
                 [
                     $this->field('id', 'ID', 'number', 'identity', false, 'id', ['system' => true, 'scope' => 'business_pim']),
                     $this->field('site_id', 'Site', 'number', 'identity', true, 'site_id', ['system' => true, 'scope' => 'business_pim']),
-                    $this->field('group_id', 'Groupe', 'relation', 'identity', false, 'group_id', ['nullable' => true, 'scope' => 'business_pim']),
+                    $this->field('group_id', 'Groupe', 'relation', 'identity', true, 'group_id', ['scope' => 'business_pim']),
                     $this->field('code', 'Code', 'text', 'identity', true, 'code', ['scope' => 'business_pim']),
                     $this->field('name', 'Nom', 'text', 'identity', true, 'name', ['scope' => 'business_pim']),
                     $this->enumField('data_type', 'Type de donnée', $this->attributeDataTypes(), 'typing', true, 'data_type', ['scope' => 'business_pim']),
@@ -1217,9 +1229,13 @@ final class BusinessModuleProvider implements ModuleProvider
             $this->field('main_media_id', 'Média principal', 'relation', 'media', false, 'main_media_id', ['scope' => 'business_pim']),
             $this->field('main_media_url', 'URL média principal', 'url', 'media', false, 'main_media_url', ['scope' => 'business_pim']),
             $this->field('track_stock', 'Stock suivi', 'boolean', 'availability', true, 'track_stock', ['scope' => 'business_pim']),
+            $this->field('allow_backorder', 'Livraison différée', 'boolean', 'availability', true, 'allow_backorder', ['scope' => 'business_pim']),
+            $this->field('backorder_delivery_days', 'Délai livraison différée', 'number', 'availability', false, 'backorder_delivery_days', ['scope' => 'business_pim']),
+            $this->field('availability', 'Disponibilité', 'json', 'availability', false, 'availability', ['computed' => true, 'scope' => 'business_pim']),
             $this->field('is_public', 'Public', 'boolean', 'availability', true, 'is_public', ['scope' => 'business_pim']),
             $this->field('is_ecommerce_enabled', 'E-commerce', 'boolean', 'availability', true, 'is_ecommerce_enabled', ['scope' => 'business_pim']),
             $this->field('is_pos_enabled', 'POS', 'boolean', 'availability', true, 'is_pos_enabled', ['scope' => 'business_pim']),
+            $this->field('is_catalogue_enabled', 'Catalogue', 'boolean', 'availability', true, 'is_catalogue_enabled', ['scope' => 'business_pim']),
             $this->field('is_sellable', 'Vendable', 'boolean', 'availability', true, 'is_sellable', ['scope' => 'business_pim']),
             $this->field('missing_requirements', 'Exigences manquantes', 'json', 'availability', false, 'missing_requirements', ['computed' => true, 'scope' => 'business_pim']),
             $this->field('is_bundle', 'Offre composée', 'boolean', 'bundle', true, 'is_bundle', ['computed' => true, 'scope' => 'business_pim']),
@@ -1326,7 +1342,7 @@ final class BusinessModuleProvider implements ModuleProvider
     /** @return list<string> */
     private function catalogChannels(): array
     {
-        return ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'];
+        return ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
     }
 
     /** @return list<string> */

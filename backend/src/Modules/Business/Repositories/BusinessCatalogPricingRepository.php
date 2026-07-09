@@ -21,8 +21,8 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
         $db = $this->database();
         $db->run(
             'INSERT INTO business_products
-                (site_id, brand_id, category_id, name, slug, type, status, visibility, sku_base, unit, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (site_id, brand_id, category_id, name, slug, type, status, visibility, sku_base, unit, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $this->requireSiteId($siteId),
                 $payload['brand_id'] ?? null,
@@ -35,10 +35,12 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                 $payload['sku_base'] ?? null,
                 $payload['unit'] ?? 'unit',
                 (int) ($payload['stock_enabled'] ?? $payload['track_stock'] ?? false),
-                (int) ($payload['allow_backorder'] ?? false),
+                (int) ($payload['allow_backorder'] ?? true),
+                max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 7)),
                 (int) in_array('public', $payload['channels'] ?? [], true),
                 (int) in_array('ecommerce', $payload['channels'] ?? [], true),
                 (int) in_array('pos', $payload['channels'] ?? [], true),
+                (int) (in_array('catalogue', $payload['channels'] ?? [], true) || !in_array('internal', $payload['channels'] ?? [], true)),
             ]
         );
         $product = $this->product((int) $db->lastInsertId());
@@ -54,8 +56,8 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
         $product = $this->product($productId);
         $db->run(
             'INSERT INTO business_product_variants
-                (product_id, sku, barcode, name, status, stock_quantity, stock_reserved, track_stock, allow_backorder)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (product_id, sku, barcode, name, status, stock_quantity, stock_reserved, track_stock, allow_backorder, backorder_delivery_days)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $product['id'],
                 $payload['sku'],
@@ -66,6 +68,7 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                 max(0, (int) ($payload['stock_reserved'] ?? 0)),
                 $payload['track_stock'] ?? null,
                 $payload['allow_backorder'] ?? null,
+                array_key_exists('backorder_delivery_days', $payload) || array_key_exists('delivery_lead_time_days', $payload) ? max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 0)) : null,
             ]
         );
         $variantId = (int) $db->lastInsertId();

@@ -35,14 +35,13 @@ try {
 
     $missingRequiredAttribute = $service->calculateProductScore($gourdeProductId, 'pos');
     $missingCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $missingRequiredAttribute['missing']);
-    $h->assertTrue(in_array('required_product_attribute_missing_required_material', $missingCodes, true), 'required product attribute missing is part of completeness');
     $h->assertTrue(in_array('required_variant_attribute_missing_required_material', $missingCodes, true), 'required variant attribute missing is part of completeness');
     $h->assertTrue((int) $missingRequiredAttribute['score'] < 100, 'product score is lowered when a variant required attribute is missing');
 
     $db->run("INSERT INTO business_product_attribute_values(product_id, attribute_id, language, value_text) VALUES(?, ?, 'und', 'steel')", [$gourdeProductId, $requiredAttributeId]);
     $productValueOnly = $service->calculateVariantSellability($gourdeVariantId, 'pos');
     $missingCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $productValueOnly['missing']);
-    $h->assertTrue(in_array('required_variant_attribute_missing_required_material', $missingCodes, true), 'required variant attribute still blocks variant until variant value exists');
+    $h->assertSame(false, in_array('required_variant_attribute_missing_required_material', $missingCodes, true), 'required variant attribute can inherit product-level value');
 
     $db->run("INSERT INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text) VALUES(?, ?, 'und', 'steel')", [$gourdeVariantId, $requiredAttributeId]);
     $withRequiredAttributes = $service->calculateVariantSellability($gourdeVariantId, 'pos');
@@ -95,6 +94,39 @@ try {
     $h->assertTrue(in_array('all', $channels, true), 'recalculation stores global list summary');
     $h->assertTrue(in_array('pos', $channels, true), 'recalculation stores POS score');
     $h->assertTrue(in_array('ecommerce', $channels, true), 'recalculation stores e-commerce score');
+
+    $tshirtProductId = (int) ($db->one("SELECT id FROM business_products WHERE slug = 't-shirt-demo' LIMIT 1")['id'] ?? 0);
+    $service->recalculateProduct($tshirtProductId);
+    $tshirtSummary = $db->one('SELECT score, is_sellable FROM business_product_completeness_scores WHERE product_id = ? AND variant_id IS NULL AND channel = "all"', [$tshirtProductId]);
+    $h->assertSame(100, (int) ($tshirtSummary['score'] ?? 0), 'fully attributed T-shirt product has complete global score');
+    $h->assertSame(1, (int) ($tshirtSummary['is_sellable'] ?? 0), 'fully attributed T-shirt product is globally sellable');
+    $tshirtScores = $db->all(
+        'SELECT v.sku, s.is_sellable
+         FROM business_product_completeness_scores s
+         INNER JOIN business_product_variants v ON v.id = s.variant_id
+         WHERE s.product_id = ? AND s.channel = "pos"
+         ORDER BY v.sku ASC',
+        [$tshirtProductId]
+    );
+    $h->assertSame(
+        ['TSHIRT-DEMO-L-BLUE', 'TSHIRT-DEMO-M-BLACK', 'TSHIRT-DEMO-M-BLUE'],
+        array_map(static fn(array $row): string => (string) $row['sku'], $tshirtScores),
+        'recalculation stores all T-shirt POS variant scores'
+    );
+    $h->assertSame(
+        [1, 1, 1],
+        array_map(static fn(array $row): int => (int) $row['is_sellable'], $tshirtScores),
+        'T-shirt variant completeness can inherit product-level material'
+    );
+
+    $partialVariantId = (int) ($db->one("SELECT id FROM business_product_variants WHERE sku = 'TSHIRT-DEMO-L-BLUE' LIMIT 1")['id'] ?? 0);
+    $db->run('DELETE FROM business_variant_attribute_values WHERE variant_id = ? AND attribute_id IN (SELECT id FROM business_attributes WHERE code IN ("taille", "couleur"))', [$partialVariantId]);
+    $partialTshirt = $service->calculateProductScore($tshirtProductId, 'admin');
+    $partialMissingCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $partialTshirt['missing']);
+    $h->assertTrue(in_array('required_variant_attribute_missing_taille', $partialMissingCodes, true), 'partial T-shirt score identifies missing size on a variant');
+    $h->assertTrue(in_array('required_variant_attribute_missing_couleur', $partialMissingCodes, true), 'partial T-shirt score identifies missing color on a variant');
+    $h->assertTrue((int) $partialTshirt['score'] > 0, 'partial T-shirt attribution does not collapse to 0 percent');
+    $h->assertTrue((int) $partialTshirt['score'] < 100, 'partial T-shirt attribution is still incomplete');
 } finally {
     $db = null;
     gc_collect_cycles();

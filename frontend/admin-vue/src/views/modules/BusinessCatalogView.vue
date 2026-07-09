@@ -4,7 +4,7 @@ import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
-import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogVariant, type ProductDetail } from '@/api/businessCatalog';
+import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductDetail } from '@/api/businessCatalog';
 import { useAdminContextStore } from '@/stores/adminContext';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 
@@ -16,8 +16,8 @@ type ProductColumnKey = 'sku' | 'brand' | 'variants' | 'stock' | 'price' | 'imag
 type ProductFilterKey = 'type' | 'status' | 'brand_id' | 'category_id' | 'channel' | 'archived' | 'low_stock' | 'view' | 'image' | 'price' | 'purchase_price';
 type ProductEditField = 'type' | 'status' | 'brand' | 'category';
 type ProductEditFocus = ProductEditField | 'sku' | 'name' | 'slug' | 'name_type';
-type ProductModalScope = 'all' | 'identity' | 'classification' | 'stock' | 'prices' | 'media' | 'attributes' | 'channels';
-type ProductReferenceKind = ProductEditField;
+type ProductModalScope = 'all' | 'identity' | 'classification' | 'stock' | 'prices' | 'tax' | 'media' | 'attributes' | 'channels';
+type ProductReferenceKind = ProductEditField | 'tax';
 type AttributeSettingsModal = 'groups' | 'attributes' | 'options';
 type ProductSortKey = ProductColumnKey | 'product';
 type ProductPageSize = 10 | 25 | 50 | 100 | 'all';
@@ -54,7 +54,11 @@ const productModalMode = ref<'create' | 'edit'>('create');
 const productModalScope = ref<ProductModalScope>('all');
 const productModalFocus = ref<ProductEditFocus | ''>('');
 const productViewModalOpen = ref(false);
+const variantEditModalOpen = ref(false);
+const variantAttributesOnlyModal = ref(false);
 const variantPriceModalOpen = ref(false);
+const variantMenuProductId = ref(0);
+const stockMenuProductId = ref(0);
 const referenceModalOpen = ref(false);
 const referenceKind = ref<ProductReferenceKind>('type');
 const attributeSettingsModal = ref<AttributeSettingsModal | ''>('');
@@ -86,10 +90,12 @@ const bundleProductRows = ref<CatalogProduct[]>([]);
 const bundleComponentProductRows = ref<CatalogProduct[]>([]);
 const discounts = ref<CatalogDiscount[]>([]);
 const productAssets = ref<CatalogProductAsset[]>([]);
+const taxClasses = ref<CatalogTaxClass[]>([]);
 const attributeGroups = ref<CatalogAttributeGroup[]>([]);
 const attributes = ref<CatalogAttribute[]>([]);
 const productAttributeValues = ref<CatalogAttributeValue[]>([]);
 const variantAttributeValues = ref<CatalogAttributeValue[]>([]);
+const variantAttributeValuesById = ref<Record<number, CatalogAttributeValue[]>>({});
 const mediaRows = ref<CatalogRecord[]>([]);
 const selectedProduct = ref<ProductDetail | null>(null);
 const selectedVariant = ref<CatalogVariant | null>(null);
@@ -117,9 +123,11 @@ const bulkProductForm = reactive({
   status: '',
   brand_id: '',
   category_id: '',
+  tax_class_id: '',
   is_public: '' as BulkTriState,
   is_ecommerce_enabled: '' as BulkTriState,
   is_pos_enabled: '' as BulkTriState,
+  is_catalogue_enabled: '' as BulkTriState,
   archive: false,
 });
 const bulkOfferForm = reactive({
@@ -143,6 +151,7 @@ const bundleIdentityForm = reactive({
   is_public: false,
   is_ecommerce_enabled: true,
   is_pos_enabled: true,
+  is_catalogue_enabled: true,
 });
 const bundlePriceForm = reactive({
   currency: 'CHF',
@@ -193,12 +202,14 @@ const productForm = reactive({
   unit: 'unit',
   tax_class_id: '',
   track_stock: false,
-  allow_backorder: false,
+  allow_backorder: true,
+  backorder_delivery_days: '7',
   short_description: '',
   description: '',
   is_public: false,
   is_ecommerce_enabled: true,
   is_pos_enabled: false,
+  is_catalogue_enabled: true,
   base_purchase_price: '',
   base_sale_price: '',
   currency: 'CHF',
@@ -209,9 +220,12 @@ const variantForm = reactive({
   sku: '',
   barcode: '',
   name: '',
+  sales_note: '',
   status: 'active',
   stock_quantity: '0',
   track_stock: true,
+  allow_backorder: true,
+  backorder_delivery_days: '',
   purchase_adjustment_type: 'none',
   purchase_adjustment_value: '',
   sale_adjustment_type: 'none',
@@ -234,6 +248,7 @@ const discountForm = reactive({
 });
 const brandForm = reactive({ id: 0, name: '', slug: '', company_id: '', description: '', website_url: '', status: 'active', sort_order: '0' });
 const categoryForm = reactive({ id: 0, name: '', slug: '', parent_id: '', description: '', sort_order: '0' });
+const taxClassForm = reactive({ id: 0, code: '', name: '', rate: '0', country: 'CH', is_default: false, usage_count: 0 });
 const assetForm = reactive({
   id: 0,
   media_id: '',
@@ -267,14 +282,14 @@ const variantAttributeForm = reactive<Record<number, string>>({});
 
 const productTypes = ['physical', 'service', 'gift_card', 'bundle'];
 const statuses = ['draft', 'active', 'archived'];
-const channels = ['public', 'ecommerce', 'pos'];
+const channels = ['public', 'ecommerce', 'pos', 'catalogue'];
 const discountTypes = ['percent', 'amount'];
 const discountScopes = ['brand', 'category', 'product', 'variant'];
-const discountChannels = ['all', 'ecommerce', 'pos', 'admin'];
+const discountChannels = ['all', 'ecommerce', 'pos', 'catalogue', 'admin'];
 const movementTypes = ['initial', 'purchase', 'sale', 'adjustment', 'return', 'reservation', 'release'];
 const adjustmentTypes = ['none', 'amount_delta', 'percent_delta', 'fixed_override'];
 const assetRoles = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'internal'];
-const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'];
+const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
 const attributeTypes = ['text', 'textarea', 'rich_text', 'number', 'decimal', 'boolean', 'select', 'multi_select', 'date', 'url', 'file', 'dimension', 'weight', 'color'];
 const colorSwatches = ['#000000', '#334155', '#FFFFFF', '#E11D48', '#EA580C', '#F59E0B', '#16A34A', '#0EA5E9', '#2563EB', '#7C3AED', '#C026D3'];
 const attributeTypeLabels: Record<string, string> = {
@@ -307,6 +322,7 @@ const assetChannelLabels: Record<string, string> = {
   public: 'Public',
   ecommerce: 'E-commerce',
   pos: 'POS',
+  catalogue: 'Brochure',
   admin: 'Admin',
   pdf: 'PDF',
 };
@@ -314,12 +330,13 @@ const defaultProductTypeLabels: Record<string, string> = { physical: 'Produits p
 const defaultProductStatusLabels: Record<string, string> = { draft: 'Brouillons', active: 'Actifs', archived: 'Archivés' };
 const productTypeLabels = reactive<Record<string, string>>({ ...defaultProductTypeLabels });
 const productStatusLabels = reactive<Record<string, string>>({ ...defaultProductStatusLabels });
-const productChannelLabels: Record<string, string> = { public: 'Public', ecommerce: 'E-commerce', pos: 'POS' };
+const productChannelLabels: Record<string, string> = { public: 'Public', ecommerce: 'E-commerce', pos: 'POS', catalogue: 'Brochure' };
 const productViewLabels: Record<string, string> = {
   all: 'Tous les produits',
   to_complete: 'À compléter',
   ready_pos: 'POS prêts',
   ready_ecommerce: 'E-commerce prêts',
+  ready_catalogue: 'Brochure prête',
   without_image: 'Sans image',
   without_price: 'Sans prix',
   low_stock: 'Stock faible',
@@ -331,6 +348,7 @@ const quickProductFilters: Array<{ key: string; label: string }> = [
   { key: 'to_complete', label: 'À compléter' },
   { key: 'ready_pos', label: 'POS prêts' },
   { key: 'ready_ecommerce', label: 'E-commerce prêts' },
+  { key: 'ready_catalogue', label: 'Brochure prête' },
   { key: 'without_image', label: 'Sans image' },
   { key: 'without_price', label: 'Sans prix' },
   { key: 'low_stock', label: 'Stock faible' },
@@ -339,6 +357,7 @@ const quickProductFilters: Array<{ key: string; label: string }> = [
   { key: 'archived', label: 'Archivés' },
   { key: 'ecommerce', label: 'E-commerce' },
   { key: 'pos', label: 'POS' },
+  { key: 'catalogue', label: 'Brochure' },
 ];
 
 const productData = computed(() => selectedProduct.value?.data || null);
@@ -347,10 +366,11 @@ const selectedPrices = computed(() => selectedProduct.value?.prices || []);
 const selectedProductStock = computed(() => selectedProduct.value?.stock || []);
 const selectedOffers = computed(() => (selectedProduct.value?.offers || []).filter((offer) => !offer.archived_at));
 const selectedProductId = computed(() => Number(productData.value?.id || productForm.id || 0));
-const exportCsvUrl = computed(() => businessCatalogApi.exportCsvUrl());
 const exportIncompleteCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ quality: 'incomplete' }));
 const exportPosCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'pos' }));
 const exportEcommerceCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'ecommerce' }));
+const exportCatalogueCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'catalogue' }));
+const exportCataloguePdfUrl = computed(() => businessCatalogApi.exportPdfUrl({ channel: 'catalogue' }));
 const importHasErrors = computed(() => Number(importReport.value?.skipped || 0) > 0 || Number(importReport.value?.errors?.length || 0) > 0);
 const exportOffersCsvUrl = computed(() => businessCatalogApi.exportOffersCsvUrl());
 const exportBundlesCsvUrl = computed(() => businessCatalogApi.exportOffersCsvUrl({ type: 'bundle' }));
@@ -433,12 +453,15 @@ const bulkOfferChanges = computed<Record<string, unknown>>(() => {
       changes.is_public = true;
       changes.is_ecommerce_enabled = true;
       changes.is_pos_enabled = true;
+      changes.is_catalogue_enabled = true;
     } else if (bulkOfferForm.channel === 'public') {
       changes.is_public = true;
     } else if (bulkOfferForm.channel === 'ecommerce') {
       changes.is_ecommerce_enabled = true;
     } else if (bulkOfferForm.channel === 'pos') {
       changes.is_pos_enabled = true;
+    } else if (bulkOfferForm.channel === 'catalogue') {
+      changes.is_catalogue_enabled = true;
     }
   }
   if (bulkOfferForm.archive) changes.archive = true;
@@ -465,9 +488,11 @@ const bulkProductChanges = computed<Record<string, unknown>>(() => {
   if (bulkProductForm.status) changes.status = bulkProductForm.status;
   if (bulkProductForm.brand_id !== '') changes.brand_id = idOrNull(bulkProductForm.brand_id);
   if (bulkProductForm.category_id !== '') changes.category_id = idOrNull(bulkProductForm.category_id);
+  if (bulkProductForm.tax_class_id !== '') changes.tax_class_id = idOrNull(bulkProductForm.tax_class_id);
   if (bulkProductForm.is_public !== '') changes.is_public = bulkProductForm.is_public === '1';
   if (bulkProductForm.is_ecommerce_enabled !== '') changes.is_ecommerce_enabled = bulkProductForm.is_ecommerce_enabled === '1';
   if (bulkProductForm.is_pos_enabled !== '') changes.is_pos_enabled = bulkProductForm.is_pos_enabled === '1';
+  if (bulkProductForm.is_catalogue_enabled !== '') changes.is_catalogue_enabled = bulkProductForm.is_catalogue_enabled === '1';
   if (bulkProductForm.archive) changes.archive = true;
   return changes;
 });
@@ -540,6 +565,7 @@ const referenceTitle = computed(() => {
   if (referenceKind.value === 'type') return 'Types de produits';
   if (referenceKind.value === 'status') return 'Statuts produits';
   if (referenceKind.value === 'brand') return 'Marques';
+  if (referenceKind.value === 'tax') return 'TVA';
   return 'Catégories';
 });
 const activeProductFilterChips = computed<Array<{ key: ProductFilterKey; label: string }>>(() => {
@@ -783,10 +809,8 @@ function productDetailId(detail: ProductDetail | CatalogProduct | null | undefin
   return Number(nested?.id || value?.id || 0);
 }
 
-function optionLabel(option: Record<string, unknown>): string {
-  const name = text(option.name || option.option_name || option.label);
-  const value = text(option.label || option.value || option.value_code);
-  return value && name !== value ? `${name}: ${value}` : name || value || 'Option';
+function optionValues(option: Record<string, unknown>): Array<Record<string, unknown>> {
+  return Array.isArray(option.values) ? option.values as Array<Record<string, unknown>> : [];
 }
 
 function brandName(id: IdValue): string {
@@ -795,6 +819,14 @@ function brandName(id: IdValue): string {
 
 function categoryName(id: IdValue): string {
   return categories.value.find((item) => item.id === Number(id || 0))?.name || (id ? `Catégorie #${id}` : '—');
+}
+
+function taxClassLabel(id: IdValue): string {
+  const taxClass = taxClasses.value.find((item) => item.id === Number(id || 0));
+  if (!taxClass) return id ? `TVA #${id}` : 'Aucune TVA';
+  const rate = Number(taxClass.rate ?? 0);
+  const rateLabel = Number.isFinite(rate) ? `${rate.toFixed(rate % 1 === 0 ? 0 : 1)}%` : '';
+  return [taxClass.name || taxClass.code || 'TVA', rateLabel].filter(Boolean).join(' · ');
 }
 
 function productName(id: IdValue): string {
@@ -958,6 +990,37 @@ function applyAttributeValues(scope: 'product' | 'variant', rows: CatalogAttribu
   }
 }
 
+function compactAttributeValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '';
+  if (Array.isArray(value)) return value.map(compactAttributeValue).filter(Boolean).join('·');
+  return text(value).trim().toUpperCase();
+}
+
+function compactAttributeSummary(rows: CatalogAttributeValue[]): string {
+  return rows
+    .map((row) => compactAttributeValue(row.value))
+    .filter(Boolean)
+    .join('·');
+}
+
+function mergedVariantAttributeRows(variant: Partial<CatalogVariant> | null | undefined): CatalogAttributeValue[] {
+  const variantId = Number(variant?.id || 0);
+  const merged = new Map<string, CatalogAttributeValue>();
+  for (const row of productAttributeValues.value) {
+    const key = text(row.attribute_code || row.attribute_id);
+    if (key) merged.set(key, row);
+  }
+  for (const row of variantAttributeValuesById.value[variantId] || []) {
+    const key = text(row.attribute_code || row.attribute_id);
+    if (key) merged.set(key, row);
+  }
+  return Array.from(merged.values());
+}
+
+function variantCompactAttributeSummary(variant: Partial<CatalogVariant> | null | undefined): string {
+  return compactAttributeSummary(mergedVariantAttributeRows(variant));
+}
+
 function pruneAttributeForms(): void {
   const allowed = new Set(selectableAttributes.value.map((attribute) => Number(attribute.id || 0)).filter(Boolean));
   for (const key of Object.keys(productAttributeForm)) {
@@ -973,6 +1036,7 @@ function channelsFor(product: CatalogProduct): string[] {
     product.is_public ? 'public' : '',
     product.is_ecommerce_enabled ? 'e-commerce' : '',
     product.is_pos_enabled ? 'POS' : '',
+    product.is_catalogue_enabled ? 'catalogue' : '',
   ].filter(Boolean);
 }
 
@@ -981,6 +1045,7 @@ function productChannelKeys(product: CatalogProduct): string[] {
     product.is_public ? 'public' : '',
     product.is_ecommerce_enabled ? 'ecommerce' : '',
     product.is_pos_enabled ? 'pos' : '',
+    product.is_catalogue_enabled ? 'catalogue' : '',
   ].filter(Boolean);
 }
 
@@ -1029,10 +1094,10 @@ function productSignals(product: CatalogProduct, detail: ProductDetail | null = 
 
   signals.push({ label: 'POS', tone: product.is_pos_enabled && product.status === 'active' && hasSalePrice && activeVariants > 0 ? 'success' : 'danger' });
   signals.push({ label: 'E-commerce', tone: product.is_ecommerce_enabled && product.is_public && product.status === 'active' && hasSalePrice && hasImage && activeVariants > 0 ? 'success' : 'danger' });
+  signals.push({ label: 'Brochure', tone: product.is_catalogue_enabled && product.status === 'active' && hasSalePrice && activeVariants > 0 ? 'success' : 'muted' });
   if (!hasImage) signals.push({ label: 'Image manquante', tone: 'warning' });
   if (!hasSalePrice) signals.push({ label: 'Prix manquant', tone: 'danger' });
   if (!product.tax_class_id) signals.push({ label: 'TVA manquante', tone: 'warning' });
-  if (totalVariants > activeVariants) signals.push({ label: 'Variante inactive', tone: 'muted' });
   if (summary.is_sellable_summary === false) signals.push({ label: 'À compléter', tone: 'warning' });
 
   return signals.slice(0, 6);
@@ -1046,20 +1111,19 @@ function hasProductSalePrice(product: CatalogProduct): boolean {
   return product.sale_price_min !== null && product.sale_price_min !== undefined && product.sale_price_min !== '';
 }
 
-function hasInactiveVariants(product: CatalogProduct): boolean {
-  return numberValue(product.variant_count) > numberValue(product.active_variant_count);
-}
-
 function mediaCountLabel(product: CatalogProduct): string {
   const count = numberValue(product.image_count);
   return count > 1 ? `${count} médias` : `${count} média`;
 }
 
-function channelReady(product: CatalogProduct, channel: 'pos' | 'ecommerce'): boolean {
+function channelReady(product: CatalogProduct, channel: 'pos' | 'ecommerce' | 'catalogue'): boolean {
   const activeVariants = numberValue(product.active_variant_count);
   const hasSalePrice = hasProductSalePrice(product);
   if (channel === 'pos') {
     return Boolean(product.is_pos_enabled) && product.status === 'active' && hasSalePrice && activeVariants > 0;
+  }
+  if (channel === 'catalogue') {
+    return Boolean(product.is_catalogue_enabled) && product.status === 'active' && hasSalePrice && activeVariants > 0;
   }
   return Boolean(product.is_ecommerce_enabled)
     && Boolean(product.is_public)
@@ -1074,27 +1138,68 @@ function channelReadinessSignals(product: CatalogProduct): ProductSignal[] {
     { label: 'Public', tone: product.is_public ? 'success' : 'muted' },
     { label: 'POS', tone: product.is_pos_enabled ? (channelReady(product, 'pos') ? 'success' : 'danger') : 'muted' },
     { label: 'E-commerce', tone: product.is_ecommerce_enabled ? (channelReady(product, 'ecommerce') ? 'success' : 'danger') : 'muted' },
+    { label: 'Brochure', tone: product.is_catalogue_enabled ? (channelReady(product, 'catalogue') ? 'success' : 'warning') : 'muted' },
   ];
 }
 
-function stockSignal(product: CatalogProduct): ProductSignal {
+function productStockTracked(product: CatalogProduct): boolean {
   const trackedVariants = numberValue(product.stock_tracked_variant_count);
   const detailTracked = Number(product.id || 0) === selectedProductId.value
     ? selectedVariants.value.filter((variant) => variant.track_stock === true || (variant.track_stock === null && product.track_stock)).length
     : 0;
-  if (!product.track_stock && trackedVariants === 0 && detailTracked === 0) return { label: 'Non suivi', tone: 'muted' };
-  if (numberValue(product.low_stock_variant_count) > 0) return { label: 'Stock faible', tone: 'warning' };
-  return { label: 'Stock suivi', tone: 'success' };
+  return Boolean(product.track_stock) || trackedVariants > 0 || detailTracked > 0;
 }
 
-function stockSummaryLabel(product: CatalogProduct): string {
+function productStockAvailable(product: CatalogProduct): number {
   let quantity = numberValue(product.stock_quantity_total);
   let reserved = numberValue(product.stock_reserved_total);
   if (Number(product.id || 0) === selectedProductId.value && selectedVariants.value.length > 0 && quantity === 0 && reserved === 0) {
     quantity = selectedVariants.value.reduce((total, variant) => total + numberValue(variant.stock_quantity), 0);
     reserved = selectedVariants.value.reduce((total, variant) => total + numberValue(variant.stock_reserved), 0);
   }
-  const available = Math.max(0, quantity - reserved);
+  return Math.max(0, quantity - reserved);
+}
+
+function stockIndicatorTone(product: CatalogProduct): 'success' | 'warning' | 'danger' | 'muted' {
+  if (!productStockTracked(product)) return 'muted';
+  if (productStockAvailable(product) <= 0) return 'danger';
+  if (numberValue(product.low_stock_variant_count) > 0) return 'warning';
+  return 'success';
+}
+
+function stockIndicatorLabel(product: CatalogProduct): string {
+  const tone = stockIndicatorTone(product);
+  if (tone === 'muted') return 'Stock non suivi';
+  if (tone === 'danger') return 'Stock nul';
+  if (tone === 'warning') return 'Niveau faible';
+  return 'Stock suivi';
+}
+
+function stockSummaryLabel(product: CatalogProduct): string {
+  if (!productStockTracked(product)) return '--';
+  const available = productStockAvailable(product);
+  return `${available} disponible${available > 1 ? 's' : ''}`;
+}
+
+function variantStockTracked(product: CatalogProduct, variant: CatalogVariant): boolean {
+  return variant.track_stock === true || ((variant.track_stock === null || variant.track_stock === undefined) && Boolean(product.track_stock));
+}
+
+function variantStockAvailable(variant: CatalogVariant): number {
+  return Math.max(0, numberValue(variant.stock_quantity) - numberValue(variant.stock_reserved));
+}
+
+function variantStockTone(product: CatalogProduct, variant: CatalogVariant): 'success' | 'warning' | 'danger' | 'muted' {
+  if (!variantStockTracked(product, variant)) return 'muted';
+  const available = variantStockAvailable(variant);
+  if (available <= 0) return 'danger';
+  if (available <= 5) return 'warning';
+  return 'success';
+}
+
+function variantStockLabel(product: CatalogProduct, variant: CatalogVariant): string {
+  if (!variantStockTracked(product, variant)) return '--';
+  const available = variantStockAvailable(variant);
   return `${available} disponible${available > 1 ? 's' : ''}`;
 }
 
@@ -1115,18 +1220,36 @@ function variantActivityLabel(product: CatalogProduct): string {
   return `${active} / ${total} ${adjective}`;
 }
 
+function productVariantMenuRows(product: CatalogProduct): CatalogVariant[] {
+  return Number(product.id || 0) === selectedProductId.value ? selectedVariants.value : [];
+}
+
+function variantDisplayName(variant: Partial<CatalogVariant> | null | undefined): string {
+  return text(variant?.name || variant?.sku || 'Variante');
+}
+
+function variantIsArchived(variant: Partial<CatalogVariant> | null | undefined): boolean {
+  return text(variant?.status) === 'archived' || Boolean(variant?.archived_at);
+}
+
+function variantIsInactive(variant: Partial<CatalogVariant> | null | undefined): boolean {
+  return !variantIsArchived(variant) && text(variant?.status || 'active') !== 'active';
+}
+
 function setProductSection(section: ProductSection): void {
   activeProductSection.value = section;
 }
 
 function productModalTitle(): string {
   if (productModalMode.value === 'create') return 'Nouveau produit';
+  if (productModalScope.value === 'attributes' && variantAttributesOnlyModal.value) return 'Modifier les attributs de la variante';
   if (productModalScope.value === 'identity' && productModalFocus.value === 'sku') return 'Modifier le SKU';
   if (productModalScope.value === 'identity' && productModalFocus.value === 'name_type') return 'Modifier le nom et le type';
   if (productModalScope.value === 'identity') return 'Modifier l’identité';
   if (productModalScope.value === 'classification') return 'Modifier le classement';
   if (productModalScope.value === 'stock') return 'Modifier le stock';
   if (productModalScope.value === 'prices') return 'Modifier les prix';
+  if (productModalScope.value === 'tax') return 'Modifier le taux TVA';
   if (productModalScope.value === 'media') return 'Modifier les médias';
   if (productModalScope.value === 'attributes') return 'Modifier les attributs';
   if (productModalScope.value === 'channels') return 'Modifier les canaux';
@@ -1169,12 +1292,14 @@ function resetProductForm(preserveSelection = false): void {
     unit: 'unit',
     tax_class_id: '',
     track_stock: false,
-    allow_backorder: false,
+    allow_backorder: true,
+    backorder_delivery_days: '7',
     short_description: '',
     description: '',
     is_public: false,
     is_ecommerce_enabled: true,
     is_pos_enabled: false,
+    is_catalogue_enabled: true,
     base_purchase_price: '',
     base_sale_price: '',
     currency: 'CHF',
@@ -1207,12 +1332,14 @@ function fillProductForm(detail: ProductDetail): void {
     unit: text(data.unit || 'unit'),
     tax_class_id: text(data.tax_class_id || ''),
     track_stock: Boolean(data.track_stock),
-    allow_backorder: Boolean(data.allow_backorder),
+    allow_backorder: data.allow_backorder !== false,
+    backorder_delivery_days: text(data.backorder_delivery_days ?? 7),
     short_description: text(data.short_description),
     description: text(data.description),
     is_public: Boolean(data.is_public),
     is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled),
     is_pos_enabled: Boolean(data.is_pos_enabled),
+    is_catalogue_enabled: data.is_catalogue_enabled !== false,
     currency: 'CHF',
     attribute_group_ids: Array.isArray(detail.attribute_groups) ? detail.attribute_groups.map((group) => Number(group.id || 0)).filter(Boolean) : [],
     option_ids: Array.isArray(detail.options) ? detail.options.map((option) => Number(option.id || 0)).filter(Boolean) : [],
@@ -1230,6 +1357,7 @@ function productPayload(): Record<string, unknown> {
     productForm.is_public ? 'public' : '',
     productForm.is_ecommerce_enabled ? 'ecommerce' : '',
     productForm.is_pos_enabled ? 'pos' : '',
+    productForm.is_catalogue_enabled ? 'catalogue' : '',
   ].filter(Boolean);
   return {
     name: productForm.name,
@@ -1243,12 +1371,14 @@ function productPayload(): Record<string, unknown> {
     tax_class_id: idOrNull(productForm.tax_class_id),
     track_stock: productForm.track_stock,
     allow_backorder: productForm.allow_backorder,
+    backorder_delivery_days: Number(productForm.backorder_delivery_days || 0),
     short_description: productForm.short_description,
     description: productForm.description,
     channels: channelList.length > 0 ? channelList : ['internal'],
     is_public: productForm.is_public,
     is_ecommerce_enabled: productForm.is_ecommerce_enabled,
     is_pos_enabled: productForm.is_pos_enabled,
+    is_catalogue_enabled: productForm.is_catalogue_enabled,
     attribute_group_ids: productForm.attribute_group_ids,
     option_ids: productForm.option_ids,
     base_purchase_price: optionalMoneyPayload(productForm.base_purchase_price),
@@ -1318,9 +1448,11 @@ function resetBulkProductForm(): void {
     status: '',
     brand_id: '',
     category_id: '',
+    tax_class_id: '',
     is_public: '',
     is_ecommerce_enabled: '',
     is_pos_enabled: '',
+    is_catalogue_enabled: '',
     archive: false,
   });
   bulkReport.value = null;
@@ -1395,17 +1527,17 @@ function resetProductFilters(): void {
 
 function quickProductFilterActive(key: string): boolean {
   if (key === 'all') return !productFilter.view && !productFilter.status && !productFilter.channel && productFilter.archived === '1' && !productFilter.low_stock;
-  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'without_image', 'without_price', 'low_stock'].includes(key)) return productFilter.view === key;
+  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'ready_catalogue', 'without_image', 'without_price', 'low_stock'].includes(key)) return productFilter.view === key;
   if (key === 'active' || key === 'draft') return productFilter.status === key && !productFilter.view && !productFilter.channel && !productFilter.archived && !productFilter.low_stock;
   if (key === 'archived') return productFilter.archived === '1' && productFilter.status === 'archived';
-  if (key === 'ecommerce' || key === 'pos') return !productFilter.view && !productFilter.status && productFilter.channel === key && !productFilter.low_stock;
+  if (key === 'ecommerce' || key === 'pos' || key === 'catalogue') return !productFilter.view && !productFilter.status && productFilter.channel === key && !productFilter.low_stock;
   return false;
 }
 
 function applyQuickProductFilter(key: string): void {
   productPage.value = 1;
   resetQuickProductFilters();
-  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'without_image', 'without_price', 'low_stock'].includes(key)) {
+  if (['to_complete', 'ready_pos', 'ready_ecommerce', 'ready_catalogue', 'without_image', 'without_price', 'low_stock'].includes(key)) {
     productFilter.view = key;
   }
   else if (key === 'active' || key === 'draft') {
@@ -1416,7 +1548,7 @@ function applyQuickProductFilter(key: string): void {
     productFilter.status = 'archived';
     productFilter.archived = '1';
   }
-  else if (key === 'ecommerce' || key === 'pos') productFilter.channel = key;
+  else if (key === 'ecommerce' || key === 'pos' || key === 'catalogue') productFilter.channel = key;
   clearAppliedProductFilters();
   void loadCatalog();
 }
@@ -1465,6 +1597,7 @@ function openCreateProduct(): void {
 
 async function openEditProduct(product?: CatalogProduct, scope: ProductModalScope = 'all', focus: ProductEditFocus | '' = ''): Promise<void> {
   closeCatalogMenus();
+  variantAttributesOnlyModal.value = false;
   if (product && Number(product.id) !== selectedProductId.value) {
     await selectProduct(product);
   } else if (selectedProduct.value) {
@@ -1489,6 +1622,135 @@ async function openProductAttributes(product?: CatalogProduct): Promise<void> {
   await openEditProduct(product, 'attributes');
 }
 
+async function openProductTax(product?: CatalogProduct): Promise<void> {
+  await openEditProduct(product, 'tax');
+}
+
+async function openVariantEditor(variant: CatalogVariant): Promise<void> {
+  productViewModalOpen.value = false;
+  await openProductAttributes();
+  await selectVariant(variant);
+}
+
+async function toggleProductVariantMenu(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (productId < 1 || productIsArchived(product)) return;
+  stockMenuProductId.value = 0;
+  if (variantMenuProductId.value === productId) {
+    variantMenuProductId.value = 0;
+    return;
+  }
+  if (productId !== selectedProductId.value) {
+    await selectProduct(product);
+  }
+  await loadVariantMenuAttributes();
+  variantMenuProductId.value = productId;
+}
+
+async function toggleProductStockMenu(product: CatalogProduct): Promise<void> {
+  const productId = Number(product.id || 0);
+  if (productId < 1 || productIsArchived(product) || numberValue(product.variant_count) <= 1) return;
+  variantMenuProductId.value = 0;
+  if (stockMenuProductId.value === productId) {
+    stockMenuProductId.value = 0;
+    return;
+  }
+  if (productId !== selectedProductId.value) {
+    await selectProduct(product);
+  }
+  stockMenuProductId.value = productId;
+}
+
+async function loadVariantMenuAttributes(): Promise<void> {
+  const missingVariantIds = selectedVariants.value
+    .map((variant) => Number(variant.id || 0))
+    .filter((id) => id > 0 && !variantAttributeValuesById.value[id]);
+  if (missingVariantIds.length === 0) return;
+  const entries = await Promise.all(missingVariantIds.map(async (id) => {
+    try {
+      const response = await businessCatalogApi.variantAttributes(id);
+      return [id, response.data.attributes || []] as const;
+    } catch {
+      return [id, []] as const;
+    }
+  }));
+  variantAttributeValuesById.value = {
+    ...variantAttributeValuesById.value,
+    ...Object.fromEntries(entries),
+  };
+}
+
+async function openVariantEditModal(product?: CatalogProduct, variant?: CatalogVariant): Promise<void> {
+  if (product && Number(product.id || 0) !== selectedProductId.value) {
+    await selectProduct(product);
+  }
+  const targetVariant = variant || selectedVariant.value || selectedVariants.value[0] || null;
+  if (targetVariant) {
+    await selectVariant(targetVariant);
+  }
+  variantMenuProductId.value = 0;
+  productViewModalOpen.value = false;
+  productModalOpen.value = false;
+  variantEditModalOpen.value = true;
+}
+
+function closeVariantEditModal(): void {
+  variantEditModalOpen.value = false;
+}
+
+async function openVariantAttributesModal(product?: CatalogProduct, variant?: CatalogVariant): Promise<void> {
+  if (product && Number(product.id || 0) !== selectedProductId.value) {
+    await selectProduct(product);
+  }
+  const targetVariant = variant || selectedVariant.value || selectedVariants.value[0] || null;
+  if (targetVariant) {
+    await selectVariant(targetVariant);
+  }
+  variantMenuProductId.value = 0;
+  productViewModalOpen.value = false;
+  variantEditModalOpen.value = false;
+  await openEditProduct(product, 'attributes');
+  variantAttributesOnlyModal.value = true;
+}
+
+async function openNewVariantForProduct(product?: CatalogProduct): Promise<void> {
+  if (product && Number(product.id || 0) !== selectedProductId.value) {
+    await selectProduct(product);
+  }
+  variantMenuProductId.value = 0;
+  stockMenuProductId.value = 0;
+  productViewModalOpen.value = false;
+  productModalOpen.value = false;
+  startNewVariantForm();
+  variantEditModalOpen.value = true;
+  await nextTick();
+  document.querySelector<HTMLInputElement>('[data-variant-field="sku"]')?.focus();
+}
+
+async function deleteVariantFromProduct(product: CatalogProduct | undefined, variant: CatalogVariant): Promise<void> {
+  const variantId = Number(variant.id || 0);
+  const productId = Number(product?.id || selectedProductId.value || variant.product_id || 0);
+  if (!canWrite.value || variantId < 1 || productId < 1) return;
+  if (!window.confirm(`Effacer la variante "${variantDisplayName(variant)}" ?`)) return;
+  busy.value = `delete-variant-${variantId}`;
+  try {
+    await businessCatalogApi.deleteVariant(variantId);
+    variantMenuProductId.value = 0;
+    if (selectedVariant.value && Number(selectedVariant.value.id || 0) === variantId) {
+      selectedVariant.value = null;
+    }
+    await Promise.all([
+      selectProduct({ id: productId, name: product?.name || productForm.name }),
+      loadCatalog(),
+    ]);
+    setNotice('Variante effacée.');
+  } catch (err) {
+    setError(err, 'Variante non effacée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
 async function openVariantPriceAdjustments(product: CatalogProduct): Promise<void> {
   closeCatalogMenus();
   if (Number(product.id) !== selectedProductId.value) {
@@ -1510,6 +1772,7 @@ function closeVariantPriceModal(): void {
 
 function closeProductModal(): void {
   productModalOpen.value = false;
+  variantAttributesOnlyModal.value = false;
   if (selectedProduct.value) fillProductForm(selectedProduct.value);
 }
 
@@ -1521,11 +1784,13 @@ function closeCatalogMenus(): void {
   document.querySelectorAll<HTMLDetailsElement>('.catalog-menu[open]').forEach((menu) => {
     menu.open = false;
   });
+  variantMenuProductId.value = 0;
+  stockMenuProductId.value = 0;
 }
 
 function onDocumentPointerDown(event: PointerEvent): void {
   const target = event.target as HTMLElement | null;
-  if (target?.closest('.catalog-menu')) return;
+  if (target?.closest('.catalog-menu, .catalog-variant-cell, .catalog-stock-cell')) return;
   closeCatalogMenus();
 }
 
@@ -1534,14 +1799,26 @@ function resetVariantForm(): void {
     sku: '',
     barcode: '',
     name: '',
+    sales_note: '',
     status: 'active',
     stock_quantity: '0',
     track_stock: true,
+    allow_backorder: true,
+    backorder_delivery_days: '',
     purchase_adjustment_type: 'none',
     purchase_adjustment_value: '',
     sale_adjustment_type: 'none',
     sale_adjustment_value: '',
   });
+}
+
+function startNewVariantForm(): void {
+  selectedVariant.value = null;
+  variantStock.value = null;
+  stockMovements.value = [];
+  variantAttributeValues.value = [];
+  applyAttributeValues('variant', []);
+  resetVariantForm();
 }
 
 function variantAdjustmentValue(variant: CatalogVariant, priceKind: 'purchase' | 'sale', field: 'type' | 'value'): string {
@@ -1562,9 +1839,12 @@ function fillVariantFormFromVariant(variant: CatalogVariant): void {
     sku: text(variant.sku),
     barcode: text(variant.barcode),
     name: text(variant.name),
+    sales_note: text(variant.sales_note),
     status: text(variant.status || 'active'),
     stock_quantity: text(variant.stock_quantity ?? 0),
     track_stock: variant.track_stock !== null && variant.track_stock !== undefined ? Boolean(variant.track_stock) : true,
+    allow_backorder: variant.allow_backorder !== null && variant.allow_backorder !== undefined ? Boolean(variant.allow_backorder) : true,
+    backorder_delivery_days: variant.backorder_delivery_days !== null && variant.backorder_delivery_days !== undefined ? text(variant.backorder_delivery_days) : '',
     purchase_adjustment_type: variantAdjustmentValue(variant, 'purchase', 'type') || 'none',
     purchase_adjustment_value: variantAdjustmentValue(variant, 'purchase', 'value'),
     sale_adjustment_type: variantAdjustmentValue(variant, 'sale', 'type') || 'none',
@@ -1610,6 +1890,7 @@ function resetBundleIdentityForm(): void {
     is_public: false,
     is_ecommerce_enabled: true,
     is_pos_enabled: true,
+    is_catalogue_enabled: true,
   });
   Object.assign(bundlePriceForm, { currency: 'CHF', base_purchase_price: '', base_sale_price: '' });
 }
@@ -1630,6 +1911,7 @@ function fillBundleIdentityForm(detail: ProductDetail | null): void {
     is_public: Boolean(data.is_public),
     is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled),
     is_pos_enabled: Boolean(data.is_pos_enabled),
+    is_catalogue_enabled: data.is_catalogue_enabled !== false,
   });
 }
 
@@ -1649,6 +1931,7 @@ function bundleChannels(): string[] {
     bundleIdentityForm.is_public ? 'public' : '',
     bundleIdentityForm.is_ecommerce_enabled ? 'ecommerce' : '',
     bundleIdentityForm.is_pos_enabled ? 'pos' : '',
+    bundleIdentityForm.is_catalogue_enabled ? 'catalogue' : '',
   ].filter(Boolean);
 }
 
@@ -1664,11 +1947,13 @@ function bundleProductPayload(): Record<string, unknown> {
     description: bundleIdentityForm.description,
     unit: 'unit',
     track_stock: false,
-    allow_backorder: false,
+    allow_backorder: true,
+    backorder_delivery_days: 7,
     channels: bundleChannels().length > 0 ? bundleChannels() : ['internal'],
     is_public: bundleIdentityForm.is_public,
     is_ecommerce_enabled: bundleIdentityForm.is_ecommerce_enabled,
     is_pos_enabled: bundleIdentityForm.is_pos_enabled,
+    is_catalogue_enabled: bundleIdentityForm.is_catalogue_enabled,
     base_purchase_price: optionalMoneyPayload(bundlePriceForm.base_purchase_price),
     base_sale_price: optionalMoneyPayload(bundlePriceForm.base_sale_price),
     currency: bundlePriceForm.currency || 'CHF',
@@ -1819,8 +2104,10 @@ async function duplicateBundleOffer(product: CatalogProduct): Promise<void> {
       is_public: false,
       is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled ?? product.is_ecommerce_enabled),
       is_pos_enabled: Boolean(data.is_pos_enabled ?? product.is_pos_enabled),
+      is_catalogue_enabled: data.is_catalogue_enabled !== false,
       track_stock: false,
-      allow_backorder: false,
+      allow_backorder: true,
+      backorder_delivery_days: Number(data.backorder_delivery_days ?? product.backorder_delivery_days ?? 7),
       base_sale_price: sale?.amount ?? undefined,
       base_purchase_price: canPurchaseRead.value ? purchase?.amount ?? undefined : undefined,
       currency: currency || 'CHF',
@@ -2025,6 +2312,18 @@ function fillCategoryForm(category: CatalogRecord | null = null): void {
   });
 }
 
+function fillTaxClassForm(taxClass: CatalogTaxClass | null = null): void {
+  Object.assign(taxClassForm, {
+    id: Number(taxClass?.id || 0),
+    code: text(taxClass?.code),
+    name: text(taxClass?.name),
+    rate: text(taxClass?.rate ?? 0),
+    country: text(taxClass?.country || 'CH'),
+    is_default: Boolean(taxClass?.is_default),
+    usage_count: Number(taxClass?.usage_count || 0),
+  });
+}
+
 function resetAssetForm(asset: CatalogProductAsset | null = null): void {
   Object.assign(assetForm, {
     id: Number(asset?.asset_id || asset?.id || 0),
@@ -2090,6 +2389,7 @@ function openProductReference(kind: ProductReferenceKind): void {
   referenceKind.value = kind;
   if (kind === 'brand') fillBrandForm(null);
   if (kind === 'category') fillCategoryForm(null);
+  if (kind === 'tax') fillTaxClassForm(null);
   referenceModalOpen.value = true;
 }
 
@@ -2199,6 +2499,47 @@ async function deleteCurrentCategory(): Promise<void> {
   }
 }
 
+async function saveTaxClass(): Promise<void> {
+  if (!canWrite.value) return;
+  busy.value = 'tax-class';
+  try {
+    const payload = {
+      code: taxClassForm.code || taxClassForm.name,
+      name: taxClassForm.name,
+      rate: Number(taxClassForm.rate || 0),
+      country: taxClassForm.country || 'CH',
+      is_default: taxClassForm.is_default,
+    };
+    if (taxClassForm.id > 0) await businessCatalogApi.updateTaxClass(taxClassForm.id, payload);
+    else await businessCatalogApi.createTaxClass(payload);
+    await loadCatalog();
+    fillTaxClassForm(null);
+    setNotice('Taux TVA enregistré.');
+  } catch (err) {
+    setError(err, 'Taux TVA non enregistré.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function deleteCurrentTaxClass(): Promise<void> {
+  if (!canWrite.value || taxClassForm.id < 1 || taxClassForm.usage_count > 0) return;
+  if (typeof window !== 'undefined' && !window.confirm('Effacer ce taux TVA ? Cette action est possible uniquement si aucun produit ne l’utilise.')) return;
+  busy.value = 'tax-class-delete';
+  try {
+    await businessCatalogApi.deleteTaxClass(taxClassForm.id);
+    await loadCatalog();
+    if (String(productForm.tax_class_id) === String(taxClassForm.id)) productForm.tax_class_id = '';
+    if (String(bulkProductForm.tax_class_id) === String(taxClassForm.id)) bulkProductForm.tax_class_id = '';
+    fillTaxClassForm(null);
+    setNotice('Taux TVA effacé.');
+  } catch (err) {
+    setError(err, 'Taux TVA non effacé.');
+  } finally {
+    busy.value = '';
+  }
+}
+
 async function loadAttributeDefinitions(): Promise<void> {
   try {
     const [groupResponse, attributeResponse] = await Promise.all([
@@ -2238,6 +2579,7 @@ async function loadVariantAttributeValues(variantId = Number(selectedVariant.val
   try {
     const response = await businessCatalogApi.variantAttributes(variantId);
     variantAttributeValues.value = response.data.attributes || [];
+    variantAttributeValuesById.value = { ...variantAttributeValuesById.value, [variantId]: variantAttributeValues.value };
     applyAttributeValues('variant', variantAttributeValues.value);
   } catch (err) {
     variantAttributeValues.value = [];
@@ -2270,6 +2612,10 @@ async function saveAttributeGroup(): Promise<void> {
 
 async function saveAttributeDefinition(): Promise<void> {
   if (!canWrite.value) return;
+  if (!idOrNull(attributeForm.group_id)) {
+    setError(new Error('Sélectionner un groupe d’attributs.'), 'Attribut non enregistré.');
+    return;
+  }
   busy.value = 'attribute';
   try {
     const payload = {
@@ -2361,6 +2707,7 @@ async function saveVariantAttributeValues(notify = true): Promise<boolean> {
   try {
     const response = await businessCatalogApi.updateVariantAttributes(variantId, { values: valuesPayloadFromForm(variantAttributeForm) });
     variantAttributeValues.value = response.data.attributes || [];
+    variantAttributeValuesById.value = { ...variantAttributeValuesById.value, [variantId]: variantAttributeValues.value };
     applyAttributeValues('variant', variantAttributeValues.value);
     if (notify) setNotice('Attributs variante enregistrés.');
     return true;
@@ -2512,10 +2859,11 @@ async function loadCatalog(): Promise<void> {
   try {
     const pageLimit = productPageLimit.value;
     const pageOffset = productPageSize.value === 'all' ? 0 : (productPage.value - 1) * productNumericPageLimit.value;
-    const [brandResponse, categoryResponse, optionResponse, productResponse, bundleProductResponse, componentProductResponse, discountResponse] = await Promise.all([
+    const [brandResponse, categoryResponse, optionResponse, taxClassResponse, productResponse, bundleProductResponse, componentProductResponse, discountResponse] = await Promise.all([
       businessCatalogApi.brands(),
       businessCatalogApi.categories(),
       businessCatalogApi.options(),
+      businessCatalogApi.taxClasses(),
       businessCatalogApi.products({
         q: productFilter.q,
         view: productFilter.view || undefined,
@@ -2539,6 +2887,7 @@ async function loadCatalog(): Promise<void> {
     brands.value = brandResponse.data.brands || [];
     categories.value = categoryResponse.data.categories || [];
     options.value = optionResponse.data.options || [];
+    taxClasses.value = taxClassResponse.data.tax_classes || [];
     products.value = productResponse.data.products || [];
     bundleProductRows.value = bundleProductResponse.data.products || [];
     bundleComponentProductRows.value = componentProductResponse.data.products || [];
@@ -2572,6 +2921,7 @@ async function loadCatalog(): Promise<void> {
 async function selectProduct(product: CatalogProduct): Promise<void> {
   loading.value = true;
   try {
+    variantAttributeValuesById.value = {};
     const response = await businessCatalogApi.product(Number(product.id));
     selectedProduct.value = response.data.product;
     fillProductForm(response.data.product);
@@ -2618,14 +2968,16 @@ async function saveProduct(notify = true): Promise<boolean> {
 }
 
 async function saveProductModal(): Promise<void> {
+  if (productModalScope.value === 'attributes' && productModalMode.value === 'edit' && variantAttributesOnlyModal.value) {
+    await saveVariantAttributeValues(true);
+    return;
+  }
   if (productModalScope.value !== 'attributes' || productModalMode.value !== 'edit') {
     await saveProduct();
     return;
   }
   const productId = selectedProductId.value;
-  const variantId = Number(selectedVariant.value?.id || 0);
   const productValues = valuesPayloadFromForm(productAttributeForm);
-  const variantValues = valuesPayloadFromForm(variantAttributeForm);
   const productSaved = await saveProduct(false);
   if (!productSaved) return;
   try {
@@ -2633,14 +2985,8 @@ async function saveProductModal(): Promise<void> {
     const productResponse = await businessCatalogApi.updateProductAttributes(productId, { values: productValues });
     productAttributeValues.value = productResponse.data.attributes || [];
     applyAttributeValues('product', productAttributeValues.value);
-    if (variantId > 0) {
-      busy.value = 'variant-attributes';
-      const variantResponse = await businessCatalogApi.updateVariantAttributes(variantId, { values: variantValues });
-      variantAttributeValues.value = variantResponse.data.attributes || [];
-      applyAttributeValues('variant', variantAttributeValues.value);
-    }
     await selectProduct({ id: productId, name: productForm.name });
-    setNotice('Produit et attributs enregistrés.');
+    setNotice('Attributs produit enregistrés.');
   } catch (err) {
     setError(err, 'Attributs non enregistrés.');
   } finally {
@@ -2679,6 +3025,7 @@ async function duplicateProduct(product: CatalogProduct): Promise<void> {
       is_public: false,
       is_ecommerce_enabled: Boolean(data.is_ecommerce_enabled ?? product.is_ecommerce_enabled),
       is_pos_enabled: Boolean(data.is_pos_enabled ?? product.is_pos_enabled),
+      is_catalogue_enabled: data.is_catalogue_enabled !== false,
       option_ids: Array.isArray(detail.options) ? detail.options.map((option) => Number(option.id || 0)).filter(Boolean) : [],
       base_sale_price: sale?.amount ?? undefined,
       currency: currency || 'CHF',
@@ -2760,23 +3107,90 @@ async function createVariant(): Promise<void> {
   if (!canWrite.value || productId < 1) return;
   busy.value = 'variant';
   try {
-    await businessCatalogApi.createVariant(productId, {
+    const response = await businessCatalogApi.createVariant(productId, {
       sku: variantForm.sku,
       barcode: variantForm.barcode || undefined,
       name: variantForm.name || variantForm.sku,
+      sales_note: variantForm.sales_note || undefined,
       status: variantForm.status,
       stock_quantity: Number(variantForm.stock_quantity || 0),
       track_stock: variantForm.track_stock,
+      allow_backorder: variantForm.allow_backorder,
+      backorder_delivery_days: variantForm.backorder_delivery_days === '' ? undefined : Number(variantForm.backorder_delivery_days || 0),
       purchase_adjustment_type: canPurchaseRead.value ? variantForm.purchase_adjustment_type : 'none',
       purchase_adjustment_value: canPurchaseRead.value ? positiveAdjustmentValue(variantForm.purchase_adjustment_value, variantForm.purchase_adjustment_type) : undefined,
       sale_adjustment_type: variantForm.sale_adjustment_type,
       sale_adjustment_value: positiveAdjustmentValue(variantForm.sale_adjustment_value, variantForm.sale_adjustment_type),
     });
+    const createdVariantId = Number(response.data.variant?.id || 0);
     resetVariantForm();
+    await loadCatalog();
     await selectProduct({ id: productId, name: productForm.name });
+    const createdVariant = selectedVariants.value.find((variant) => Number(variant.id || 0) === createdVariantId) || response.data.variant;
+    if (createdVariant) {
+      await selectVariant(createdVariant);
+    }
+    if (variantEditModalOpen.value) {
+      variantEditModalOpen.value = false;
+    }
     setNotice('Variante créée.');
   } catch (err) {
     setError(err, 'Variante non créée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function applyUpdatedVariant(updated: CatalogVariant): void {
+  selectedVariant.value = { ...selectedVariant.value, ...updated };
+  const index = selectedVariants.value.findIndex((variant) => Number(variant.id || 0) === Number(updated.id || 0));
+  if (index >= 0 && selectedProduct.value?.variants) {
+    selectedProduct.value.variants[index] = { ...selectedProduct.value.variants[index], ...updated };
+  }
+  if (selectedVariant.value) {
+    fillVariantFormFromVariant(selectedVariant.value);
+  }
+}
+
+async function saveSelectedVariant(): Promise<void> {
+  const variantId = Number(selectedVariant.value?.id || 0);
+  if (!canWrite.value || variantId < 1) return;
+  busy.value = `variant-${variantId}`;
+  try {
+    const payload: Record<string, unknown> = {
+      sku: variantForm.sku,
+      barcode: variantForm.barcode || null,
+      name: variantForm.name || variantForm.sku,
+      sales_note: variantForm.sales_note || null,
+      status: variantForm.status,
+      stock_quantity: Number(variantForm.stock_quantity || 0),
+      track_stock: variantForm.track_stock,
+      allow_backorder: variantForm.allow_backorder,
+    };
+    if (variantForm.backorder_delivery_days !== '') {
+      payload.backorder_delivery_days = Number(variantForm.backorder_delivery_days || 0);
+    }
+    const response = await businessCatalogApi.updateVariant(variantId, payload);
+    applyUpdatedVariant(response.data.variant);
+    await Promise.all([loadVariantStock(response.data.variant), loadVariantAttributeValues(Number(response.data.variant.id || 0))]);
+    setNotice('Variante enregistrée.');
+  } catch (err) {
+    setError(err, 'Variante non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveSelectedVariantSalesNote(): Promise<void> {
+  const variantId = Number(selectedVariant.value?.id || 0);
+  if (!canWrite.value || variantId < 1) return;
+  busy.value = `variant-note-${variantId}`;
+  try {
+    const response = await businessCatalogApi.updateVariant(variantId, { sales_note: variantForm.sales_note || null });
+    applyUpdatedVariant(response.data.variant);
+    setNotice('Commentaire variante enregistré.');
+  } catch (err) {
+    setError(err, 'Commentaire variante non enregistré.');
   } finally {
     busy.value = '';
   }
@@ -3172,6 +3586,7 @@ onBeforeUnmount(() => {
                       <option value="public">Public</option>
                       <option value="ecommerce">E-commerce</option>
                       <option value="pos">POS</option>
+                      <option value="catalogue">Brochure</option>
                     </select>
                   </label>
                   <label>
@@ -3211,6 +3626,19 @@ onBeforeUnmount(() => {
                   <label v-for="column in productColumns" :key="column.key"><input v-model="visibleProductColumns[column.key]" type="checkbox"> {{ column.label }}</label>
                 </div>
               </details>
+              <details class="catalog-menu catalog-menu--exports">
+                <summary class="catalog-icon-summary" aria-label="Import / Export produits" title="Import / Export">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/></svg>
+                </summary>
+                <div class="catalog-menu-panel">
+                  <a :href="exportIncompleteCsvUrl">Exporter les incomplets</a>
+                  <a :href="exportPosCsvUrl">Exporter POS</a>
+                  <a :href="exportEcommerceCsvUrl">Exporter e-commerce</a>
+                  <a :href="exportCatalogueCsvUrl">Exporter catalogue</a>
+                  <a :href="exportCataloguePdfUrl">Exporter brochure</a>
+                  <button type="button" :disabled="!canWrite" @click="showImportPanel = !showImportPanel; closeCatalogMenus()">Importer CSV</button>
+                </div>
+              </details>
               <details class="catalog-menu catalog-menu--actions">
                 <summary aria-label="Actions produits" title="Actions">...</summary>
                 <div class="catalog-menu-panel">
@@ -3218,14 +3646,10 @@ onBeforeUnmount(() => {
                   <button type="button" :disabled="!canWrite" @click="openProductReference('status')">Statut</button>
                   <button type="button" :disabled="!canWrite" @click="openProductReference('brand')">Marque</button>
                   <button type="button" :disabled="!canWrite" @click="openProductReference('category')">Catégorie</button>
+                  <button type="button" :disabled="!canWrite" @click="openProductReference('tax')">TVA</button>
                   <button type="button" :disabled="!canWrite" @click="openAttributeSettings('groups')">Groupes</button>
                   <button type="button" :disabled="!canWrite" @click="openAttributeSettings('attributes')">Attributs</button>
                   <button type="button" :disabled="!canWrite" @click="openAttributeSettings('options')">Options</button>
-                  <a :href="exportCsvUrl">Exporter tout le catalogue</a>
-                  <a :href="exportIncompleteCsvUrl">Exporter les incomplets</a>
-                  <a :href="exportPosCsvUrl">Exporter POS</a>
-                  <a :href="exportEcommerceCsvUrl">Exporter e-commerce</a>
-                  <button type="button" :disabled="!canWrite" @click="showImportPanel = !showImportPanel; closeCatalogMenus()">Importer CSV</button>
                 </div>
               </details>
             </div>
@@ -3259,10 +3683,6 @@ onBeforeUnmount(() => {
 
           <div v-if="showImportPanel" class="catalog-csv-panel">
             <div class="toolbar">
-              <a class="btn ghost" :href="exportCsvUrl">Exporter tout</a>
-              <a class="btn ghost" :href="exportIncompleteCsvUrl">Incomplets</a>
-              <a class="btn ghost" :href="exportPosCsvUrl">POS</a>
-              <a class="btn ghost" :href="exportEcommerceCsvUrl">E-commerce</a>
               <button class="btn ghost" type="button" :disabled="!canWrite || !importCsvText.trim() || busy === 'csv-preview'" @click="previewCatalogImport">Prévisualiser</button>
               <button class="btn primary" type="button" :disabled="!canWrite || !importCsvText.trim() || importHasErrors || busy === 'csv-apply'" @click="applyCatalogImport">Importer</button>
             </div>
@@ -3285,7 +3705,7 @@ onBeforeUnmount(() => {
           <div v-if="selectedProductsCount > 0" class="catalog-bulk-panel">
             <div class="catalog-bulk-panel__summary">
               <strong>{{ selectedProductsCount }} produit(s) sélectionné(s)</strong>
-              <button class="btn ghost btn-sm" type="button" @click="clearBulkSelection">Vider</button>
+              <button class="btn ghost btn-sm" type="button" @click="clearBulkSelection">Cacher</button>
             </div>
             <div class="catalog-bulk-grid">
               <label>Statut
@@ -3309,6 +3729,13 @@ onBeforeUnmount(() => {
                   <option v-for="category in categories" :key="Number(category.id)" :value="String(category.id)">{{ category.name }}</option>
                 </select>
               </label>
+              <label>TVA
+                <select v-model="bulkProductForm.tax_class_id" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="0">Aucune TVA</option>
+                  <option v-for="taxClass in taxClasses" :key="Number(taxClass.id)" :value="String(taxClass.id)">{{ taxClassLabel(taxClass.id) }}</option>
+                </select>
+              </label>
               <label>Public
                 <select v-model="bulkProductForm.is_public" class="select" :disabled="!canWrite">
                   <option value="">Conserver</option>
@@ -3325,6 +3752,13 @@ onBeforeUnmount(() => {
               </label>
               <label>POS
                 <select v-model="bulkProductForm.is_pos_enabled" class="select" :disabled="!canWrite">
+                  <option value="">Conserver</option>
+                  <option value="1">Activer</option>
+                  <option value="0">Désactiver</option>
+                </select>
+              </label>
+              <label>Brochure
+                <select v-model="bulkProductForm.is_catalogue_enabled" class="select" :disabled="!canWrite">
                   <option value="">Conserver</option>
                   <option value="1">Activer</option>
                   <option value="0">Désactiver</option>
@@ -3397,16 +3831,59 @@ onBeforeUnmount(() => {
                     <span>{{ brandName(product.brand_id) }}</span>
                     <small>{{ categoryName(product.category_id) }}</small>
                   </td>
-                  <td v-if="productColumnVisible('variants')" @click.stop="!productIsArchived(product) && selectProduct(product)">
-                    <div v-if="hasInactiveVariants(product)" class="catalog-cell-inline">
-                      <span class="catalog-signal catalog-signal--muted">Variante inactive</span>
+                  <td v-if="productColumnVisible('variants')" class="catalog-variant-cell" @click.stop>
+                    <div class="catalog-variant-trigger">
+                      <button class="catalog-variant-count" type="button" :disabled="productIsArchived(product)" @click="selectProduct(product)">{{ variantActivityLabel(product) }}</button>
+                      <button class="catalog-icon-button catalog-icon-button--muted" type="button" :disabled="productIsArchived(product) || !canWrite" :aria-label="`Ajouter une variante à ${product.name}`" title="Ajouter une variante" @click="openNewVariantForProduct(product)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-square" viewBox="0 0 16 16" aria-hidden="true"><path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>
+                      </button>
+                      <button class="catalog-variant-toggle" type="button" :disabled="productIsArchived(product) || numberValue(product.variant_count) < 1" :aria-label="`Afficher les variantes de ${product.name}`" title="Afficher les variantes" @click="toggleProductVariantMenu(product)">
+                        <svg v-if="variantMenuProductId === Number(product.id || 0)" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-down" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"/></svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></svg>
+                      </button>
                     </div>
-                    <div v-else class="catalog-cell-inline"><strong class="catalog-variant-count">{{ variantActivityLabel(product) }}</strong></div>
+                    <div v-if="variantMenuProductId === Number(product.id || 0)" class="catalog-variant-menu-panel">
+                      <div v-for="variant in productVariantMenuRows(product)" :key="`row-variant-${variant.id}`" class="catalog-variant-menu-row">
+                        <div class="catalog-variant-menu-main">
+                          <strong :class="{ 'is-archived': variantIsArchived(variant), 'is-inactive': variantIsInactive(variant) }">{{ variantDisplayName(variant) }}</strong>
+                          <small v-if="variantCompactAttributeSummary(variant)">{{ variantCompactAttributeSummary(variant) }}</small>
+                        </div>
+                        <div class="catalog-variant-menu-actions">
+                          <button class="catalog-icon-button" type="button" :aria-label="`Modifier les textes de ${variantDisplayName(variant)}`" title="Données texte" @click="openVariantEditModal(product, variant)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-card-text" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8m0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>
+                          </button>
+                          <button class="catalog-icon-button" type="button" :aria-label="`Modifier les attributs de ${variantDisplayName(variant)}`" title="Attributs variante" @click="openVariantAttributesModal(product, variant)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-beaker" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 1.5A.5.5 0 0 1 5 1h6a.5.5 0 0 1 0 1h-.5v4.2l3.18 5.724A2 2 0 0 1 11.93 15H4.07a2 2 0 0 1-1.75-3.076L5.5 6.2V2H5a.5.5 0 0 1-.5-.5M6.5 6.46 3.195 12.41A1 1 0 0 0 4.07 14h7.86a1 1 0 0 0 .875-1.59L9.5 6.46V2h-3z"/><path d="M5.33 10 4.07 12.27A.5.5 0 0 0 4.51 13h6.98a.5.5 0 0 0 .44-.73L10.67 10z"/></svg>
+                          </button>
+                          <button class="catalog-icon-button catalog-icon-button--danger" type="button" :disabled="!canWrite || busy === `delete-variant-${variant.id}`" :aria-label="`Effacer ${variantDisplayName(variant)}`" title="Effacer variante" @click="deleteVariantFromProduct(product, variant)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash2" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 1h3a1 1 0 0 1 1 1v1H14a.5.5 0 0 1 0 1h-.55l-.78 9.34A2 2 0 0 1 10.68 15H5.32a2 2 0 0 1-1.99-1.66L2.55 4H2a.5.5 0 0 1 0-1h3.5V2a1 1 0 0 1 1-1m0 2h3V2h-3zM3.55 4l.77 9.17a1 1 0 0 0 1 .83h5.36a1 1 0 0 0 1-.83L12.45 4z"/><path d="M6.5 6.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V7a.5.5 0 0 1 .5-.5m3 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V7a.5.5 0 0 1 .5-.5"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                      <p v-if="productVariantMenuRows(product).length === 0" class="muted">Aucune variante.</p>
+                    </div>
                   </td>
-                  <td v-if="productColumnVisible('stock')" @click.stop="!productIsArchived(product) && openEditProduct(product, 'stock')">
-                    <div class="catalog-cell-inline catalog-cell-inline--wrap">
-                      <span class="catalog-signal" :class="`catalog-signal--${stockSignal(product).tone}`">{{ stockSignal(product).label }}</span>
+                  <td v-if="productColumnVisible('stock')" class="catalog-stock-cell" @click.stop="!productIsArchived(product) && openEditProduct(product, 'stock')">
+                    <div class="catalog-stock-display">
+                      <button
+                        class="catalog-stock-indicator"
+                        type="button"
+                        :class="`catalog-stock-indicator--${stockIndicatorTone(product)}`"
+                        :disabled="productIsArchived(product) || numberValue(product.variant_count) <= 1"
+                        :aria-label="stockIndicatorLabel(product)"
+                        :title="stockIndicatorLabel(product)"
+                        @click.stop="toggleProductStockMenu(product)"
+                      ></button>
                       <span>{{ stockSummaryLabel(product) }}</span>
+                    </div>
+                    <div v-if="stockMenuProductId === Number(product.id || 0)" class="catalog-stock-menu-panel" @click.stop>
+                      <div v-for="variant in productVariantMenuRows(product)" :key="`stock-variant-${variant.id}`" class="catalog-stock-menu-row">
+                        <span class="catalog-stock-dot" :class="`catalog-stock-dot--${variantStockTone(product, variant)}`"></span>
+                        <div>
+                          <strong>{{ variantDisplayName(variant) }}</strong>
+                          <small>{{ variantStockLabel(product, variant) }}</small>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td v-if="productColumnVisible('price')" @click.stop="!productIsArchived(product) && openEditProduct(product, 'prices')">
@@ -3455,6 +3932,7 @@ onBeforeUnmount(() => {
                           <button type="button" :disabled="!canWrite" @click.stop="openEditProduct(product)">Éditer</button>
                           <button type="button" :disabled="!canWrite" @click.stop="openProductMedia(product)">Médias</button>
                           <button type="button" :disabled="!canWrite" @click.stop="openProductAttributes(product)">Attributs du produit</button>
+                          <button type="button" :disabled="!canWrite" @click.stop="openProductTax(product)">Taux TVA</button>
                           <button type="button" :disabled="!canPriceWrite" @click.stop="openVariantPriceAdjustments(product)">Ajustements prix</button>
                           <button type="button" :disabled="!canWrite || busy === `duplicate-product-${product.id}`" @click.stop="duplicateProduct(product)">Dupliquer</button>
                           <button type="button" :disabled="!canWrite || busy === `archive-product-${product.id}`" @click.stop="archiveProduct(product)">Archiver</button>
@@ -3554,8 +4032,8 @@ onBeforeUnmount(() => {
               <h3>Schéma des prix</h3>
               <div class="catalog-read-grid catalog-price-grid">
                 <div><span>Devise</span><strong>{{ productForm.currency || 'CHF' }}</strong></div>
-                <div v-if="canPurchaseRead"><span>Prix d'achat (base HT)</span><strong>{{ productForm.base_purchase_price || '—' }} {{ productForm.currency }}</strong></div>
-                <div><span>Prix de vente (base HT)</span><strong>{{ productForm.base_sale_price || priceLabel(selectedProductSummary?.sale_price_min) }}</strong></div>
+                <div v-if="canPurchaseRead"><span>Prix d'achat (base TTC)</span><strong>{{ productForm.base_purchase_price || '—' }} {{ productForm.currency }}</strong></div>
+                <div><span>Prix de vente (base TTC)</span><strong>{{ productForm.base_sale_price || priceLabel(selectedProductSummary?.sale_price_min) }}</strong></div>
               </div>
             </div>
 
@@ -3579,7 +4057,6 @@ onBeforeUnmount(() => {
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Combinaison</th>
                     <th>SKU</th>
                     <th>Barcode</th>
                     <th>Statut</th>
@@ -3591,11 +4068,6 @@ onBeforeUnmount(() => {
                 </thead>
                 <tbody>
                   <tr v-for="variant in selectedVariants" :key="variant.id">
-                    <td>
-                      <div class="token-row token-row--wrap">
-                        <span v-for="option in variant.option_values || []" :key="`${variant.id}-${option.option_code}-${option.value_code}`" class="token">{{ optionLabel(option) }}</span>
-                      </div>
-                    </td>
                     <td>{{ variant.sku }}</td>
                     <td>{{ variant.barcode || '—' }}</td>
                     <td><StatusBadge :status="variant.status || 'draft'" /></td>
@@ -3618,23 +4090,28 @@ onBeforeUnmount(() => {
                     </td>
                   </tr>
                   <tr v-if="selectedVariants.length === 0">
-                    <td colspan="8" class="muted">Aucune variante.</td>
+                    <td colspan="7" class="muted">Aucune variante.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <div class="catalog-form-grid variant-create">
-              <label class="field">SKU<input v-model="variantForm.sku" class="input" :disabled="!canWrite || !selectedProductId"></label>
+              <label class="field">SKU<input v-model="variantForm.sku" class="input" data-variant-field="sku" :disabled="!canWrite || !selectedProductId"></label>
               <label class="field">Barcode<input v-model="variantForm.barcode" class="input" :disabled="!canWrite || !selectedProductId"></label>
               <label class="field">Nom<input v-model="variantForm.name" class="input" :disabled="!canWrite || !selectedProductId"></label>
+              <label class="field wide">Commentaire Vente / POS<textarea v-model="variantForm.sales_note" class="input" rows="2" :disabled="!canWrite || !selectedProductId"></textarea></label>
               <label class="field">Statut<select v-model="variantForm.status" class="select" :disabled="!canWrite || !selectedProductId"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
               <label class="field">Stock initial<input v-model="variantForm.stock_quantity" class="input" :disabled="!canWrite || !selectedProductId"></label>
               <label class="checkbox-inline"><input v-model="variantForm.track_stock" type="checkbox" :disabled="!canWrite || !selectedProductId"> Suivi stock</label>
+              <label class="checkbox-inline"><input v-model="variantForm.allow_backorder" type="checkbox" :disabled="!canWrite || !selectedProductId"> Livraison différée</label>
+              <label class="field">Délai hors stock<input v-model="variantForm.backorder_delivery_days" class="input" type="number" min="1" step="1" :disabled="!canWrite || !selectedProductId || !variantForm.allow_backorder" placeholder="Hérite du produit"></label>
               <label v-if="canPurchaseRead" class="field">Ajustement achat<select v-model="variantForm.purchase_adjustment_type" class="select" :disabled="!canWrite || !selectedProductId"><option v-for="type in adjustmentTypes" :key="type" :value="type">{{ type }}</option></select></label>
               <label v-if="canPurchaseRead" class="field">Valeur achat<input v-model="variantForm.purchase_adjustment_value" class="input" :disabled="!canWrite || !selectedProductId"></label>
               <label class="field">Ajustement vente<select v-model="variantForm.sale_adjustment_type" class="select" :disabled="!canWrite || !selectedProductId"><option v-for="type in adjustmentTypes" :key="type" :value="type">{{ type }}</option></select></label>
               <label class="field">Valeur vente<input v-model="variantForm.sale_adjustment_value" class="input" :disabled="!canWrite || !selectedProductId"></label>
+              <button class="btn ghost" type="button" :disabled="!canWrite || !selectedProductId" @click="startNewVariantForm">Nouvelle variante</button>
+              <button class="btn ghost" type="button" :disabled="!canWrite || !selectedVariant || busy === `variant-${selectedVariant?.id}`" @click="saveSelectedVariant">Enregistrer variante sélectionnée</button>
               <button class="btn primary" type="button" :disabled="!canWrite || !selectedProductId || busy === 'variant'" @click="createVariant">Ajouter variante</button>
             </div>
           </div>
@@ -3755,15 +4232,22 @@ onBeforeUnmount(() => {
                   <button class="btn small" type="submit" :disabled="loading">Appliquer</button>
                 </div>
               </details>
+              <details class="catalog-menu catalog-menu--exports">
+                <summary class="catalog-icon-summary" aria-label="Import / Export offres" title="Import / Export">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/></svg>
+                </summary>
+                <div class="catalog-menu-panel">
+                  <a :href="exportOffersCsvUrl">Exporter offres</a>
+                  <a :href="exportBundlesCsvUrl">Exporter bundles</a>
+                  <a :href="exportDiscountsCsvUrl">Exporter réductions</a>
+                  <button type="button" :disabled="!canWrite" @click="showOfferImportPanel = !showOfferImportPanel; closeCatalogMenus()">Importer CSV offres</button>
+                </div>
+              </details>
               <details class="catalog-menu catalog-menu--actions">
                 <summary aria-label="Actions offres" title="Actions">...</summary>
                 <div class="catalog-menu-panel">
                   <button type="button" :disabled="!canWrite" @click="openCreateBundleOffer">Nouveau bundle</button>
                   <button type="button" :disabled="!canDiscountWrite" @click="openCreateDiscountOffer">Nouvelle réduction</button>
-                  <a :href="exportOffersCsvUrl">Exporter offres</a>
-                  <a :href="exportBundlesCsvUrl">Exporter bundles</a>
-                  <a :href="exportDiscountsCsvUrl">Exporter réductions</a>
-                  <button type="button" :disabled="!canWrite" @click="showOfferImportPanel = !showOfferImportPanel; closeCatalogMenus()">Importer CSV offres</button>
                 </div>
               </details>
             </div>
@@ -3785,9 +4269,6 @@ onBeforeUnmount(() => {
 
           <div v-if="showOfferImportPanel" class="catalog-csv-panel">
             <div class="toolbar">
-              <a class="btn ghost" :href="exportOffersCsvUrl">Exporter tout</a>
-              <a class="btn ghost" :href="exportBundlesCsvUrl">Bundles</a>
-              <a class="btn ghost" :href="exportDiscountsCsvUrl">Réductions</a>
               <button class="btn ghost" type="button" :disabled="!canWrite || !offerImportCsvText.trim() || busy === 'offers-csv-preview'" @click="previewOffersImport">Prévisualiser</button>
               <button class="btn primary" type="button" :disabled="!canWrite || !offerImportCsvText.trim() || offerImportHasErrors || busy === 'offers-csv-apply'" @click="applyOffersImport">Importer</button>
             </div>
@@ -3982,11 +4463,12 @@ onBeforeUnmount(() => {
               <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
               <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_ecommerce_enabled" type="checkbox" :disabled="!canWrite"> E-commerce</label>
               <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
+              <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_catalogue_enabled" type="checkbox" :disabled="!canWrite"> Brochure</label>
               <label class="field">Mode de prix<select v-model="bundleForm.pricing_mode" class="select" :disabled="!canWrite"><option value="fixed">Prix fixe</option><option value="sum_components">Somme des composants</option><option value="discount_components">Somme remisée</option></select></label>
               <label class="field">Mode de disponibilité<select v-model="bundleForm.stock_mode" class="select" :disabled="!canWrite"><option value="components">Selon composants</option><option value="virtual">Virtuel</option><option value="none">Sans suivi</option></select></label>
               <label class="field">Devise<input v-model="bundlePriceForm.currency" class="input" :disabled="!canPriceWrite"></label>
-              <label v-if="canPurchaseRead" class="field">Prix d'achat (base HT)<input v-model="bundlePriceForm.base_purchase_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
-              <label class="field">Prix de vente (base HT)<input v-model="bundlePriceForm.base_sale_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
+              <label v-if="canPurchaseRead" class="field">Prix d'achat (base TTC)<input v-model="bundlePriceForm.base_purchase_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
+              <label class="field">Prix de vente (base TTC)<input v-model="bundlePriceForm.base_sale_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
               <label class="checkbox-inline"><input v-model="bundleForm.is_active" type="checkbox" :disabled="!canWrite"> Bundle actif</label>
             </div>
             <div v-if="selectedBundle" class="table-wrap">
@@ -4098,6 +4580,29 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
+          <div v-else-if="referenceKind === 'tax'" class="catalog-reference-layout">
+            <div class="catalog-reference-list">
+              <button v-for="taxClass in taxClasses" :key="taxClass.id" type="button" @click="fillTaxClassForm(taxClass)">
+                <strong>{{ taxClassLabel(taxClass.id) }}</strong>
+                <span>{{ taxClass.code || '—' }} · {{ taxClass.country || 'CH' }} · {{ Number(taxClass.usage_count || 0) }} produit(s)</span>
+              </button>
+              <p v-if="taxClasses.length === 0" class="muted">Aucun taux TVA.</p>
+            </div>
+            <div class="catalog-form-grid">
+              <label class="field">Nom<input v-model="taxClassForm.name" class="input" :disabled="!canWrite" placeholder="Standard"></label>
+              <label class="field">Code<input v-model="taxClassForm.code" class="input" :disabled="!canWrite" placeholder="standard"></label>
+              <label class="field">Taux (%)<input v-model="taxClassForm.rate" class="input" type="number" min="0" step="0.01" :disabled="!canWrite"></label>
+              <label class="field">Pays<input v-model="taxClassForm.country" class="input" maxlength="2" :disabled="!canWrite" placeholder="CH"></label>
+              <label class="checkbox-inline"><input v-model="taxClassForm.is_default" type="checkbox" :disabled="!canWrite"> Taux par défaut</label>
+              <p v-if="taxClassForm.id && taxClassForm.usage_count > 0" class="muted wide">{{ taxClassForm.usage_count }} produit(s) utilisent ce taux. Il ne peut pas être effacé tant qu’il est utilisé.</p>
+              <footer class="catalog-modal-actions wide">
+                <button class="btn ghost" type="button" @click="fillTaxClassForm(null)">Nouveau taux</button>
+                <button class="btn ghost" type="button" :disabled="!canWrite || !taxClassForm.id || taxClassForm.usage_count > 0 || busy === 'tax-class-delete'" @click="deleteCurrentTaxClass">Effacer</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !taxClassForm.name.trim() || busy === 'tax-class'" @click="saveTaxClass">Enregistrer</button>
+              </footer>
+            </div>
+          </div>
+
           <div v-else class="catalog-reference-layout">
             <div class="catalog-reference-list">
               <button v-for="category in categories" :key="category.id" type="button" @click="fillCategoryForm(category)">
@@ -4172,14 +4677,14 @@ onBeforeUnmount(() => {
               <div class="catalog-reference-list compact-list">
                 <button v-for="attribute in attributes" :key="attribute.id" type="button" @click="fillAttributeForm(attribute)">
                   <strong>{{ attribute.name }}</strong>
-                  <span>{{ attribute.group_name || 'Général' }} · {{ attributeTypeLabel(attribute.data_type) }}</span>
+                  <span>{{ attribute.group_name }} · {{ attributeTypeLabel(attribute.data_type) }}</span>
                 </button>
                 <p v-if="attributes.length === 0" class="muted">Aucun attribut.</p>
               </div>
               <div class="catalog-form-grid">
                 <label class="field">Nom<input v-model="attributeForm.name" class="input" :disabled="!canWrite"></label>
                 <label class="field">Code<input v-model="attributeForm.code" class="input" :disabled="!canWrite"></label>
-                <label class="field">Groupe<select v-model="attributeForm.group_id" class="select" :disabled="!canWrite"><option value="">Général</option><option v-for="group in attributeGroups" :key="group.id" :value="group.id">{{ group.name }}</option></select></label>
+                <label class="field">Groupe<select v-model="attributeForm.group_id" class="select" :disabled="!canWrite"><option value="" disabled>Sélectionner un groupe</option><option v-for="group in attributeGroups" :key="group.id" :value="group.id">{{ group.name }}</option></select></label>
                 <label class="field">Type<select v-model="attributeForm.data_type" class="select" :disabled="!canWrite"><option v-for="type in attributeTypes" :key="type" :value="type">{{ attributeTypeLabel(type) }}</option></select></label>
                 <label class="field">Unité<input v-model="attributeForm.unit" class="input" :disabled="!canWrite"></label>
                 <label class="field">Ordre<input v-model="attributeForm.sort_order" class="input" :disabled="!canWrite"></label>
@@ -4284,7 +4789,8 @@ onBeforeUnmount(() => {
             <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'status')"><span>Statut</span><StatusBadge :status="productData.status || 'draft'" /></button>
             <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'brand')"><span>Marque</span><strong>{{ brandName(productData.brand_id) }}</strong></button>
             <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'classification', 'category')"><span>Catégorie</span><strong>{{ categoryName(productData.category_id) }}</strong></button>
-            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'stock')"><span>Stock</span><strong>{{ productForm.track_stock ? 'Suivi' : 'Non suivi' }} · {{ productForm.allow_backorder ? 'réassort autorisé' : 'réassort bloqué' }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'tax')"><span>TVA</span><strong>{{ taxClassLabel(productData.tax_class_id) }}</strong></button>
+            <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'stock')"><span>Stock</span><strong>{{ productForm.track_stock ? 'Suivi' : 'Non suivi' }} · {{ productForm.allow_backorder ? `livraison sous ${productForm.backorder_delivery_days || 7} j` : 'nous contacter' }}</strong></button>
             <button type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Unité</span><strong>{{ productData.unit || 'unit' }}</strong></button>
             <button class="wide" type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Résumé</span><p>{{ productData.short_description || '—' }}</p></button>
             <button class="wide" type="button" @click="productViewModalOpen = false; openEditProduct(undefined, 'identity')"><span>Description</span><p>{{ productData.description || '—' }}</p></button>
@@ -4294,10 +4800,23 @@ onBeforeUnmount(() => {
             <section>
               <h3>Variantes</h3>
               <div class="catalog-compact-list">
-                <button v-for="variant in selectedVariants" :key="variant.id" type="button" class="catalog-compact-row" @click="productViewModalOpen = false; openProductAttributes()">
-                  <strong>{{ variant.sku || variant.name }}</strong>
-                  <span>{{ money(variant.computed_prices?.final_sale_price) }} · stock {{ variant.stock_quantity ?? 0 }}</span>
-                </button>
+                <div v-for="variant in selectedVariants" :key="variant.id" class="catalog-compact-row catalog-variant-summary-row">
+                  <div>
+                    <strong>{{ variantDisplayName(variant) }}</strong>
+                    <span>{{ money(variant.computed_prices?.final_sale_price) }} · stock {{ variant.stock_quantity ?? 0 }}</span>
+                  </div>
+                  <div class="catalog-variant-menu-actions">
+                    <button class="catalog-icon-button" type="button" :aria-label="`Modifier les textes de ${variantDisplayName(variant)}`" title="Données texte" @click="openVariantEditModal(undefined, variant)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-card-text" viewBox="0 0 16 16" aria-hidden="true"><path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8m0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5"/></svg>
+                    </button>
+                    <button class="catalog-icon-button" type="button" :aria-label="`Modifier les attributs de ${variantDisplayName(variant)}`" title="Attributs variante" @click="openVariantAttributesModal(undefined, variant)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-beaker" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 1.5A.5.5 0 0 1 5 1h6a.5.5 0 0 1 0 1h-.5v4.2l3.18 5.724A2 2 0 0 1 11.93 15H4.07a2 2 0 0 1-1.75-3.076L5.5 6.2V2H5a.5.5 0 0 1-.5-.5M6.5 6.46 3.195 12.41A1 1 0 0 0 4.07 14h7.86a1 1 0 0 0 .875-1.59L9.5 6.46V2h-3z"/><path d="M5.33 10 4.07 12.27A.5.5 0 0 0 4.51 13h6.98a.5.5 0 0 0 .44-.73L10.67 10z"/></svg>
+                    </button>
+                    <button class="catalog-icon-button catalog-icon-button--danger" type="button" :disabled="!canWrite || busy === `delete-variant-${variant.id}`" :aria-label="`Effacer ${variantDisplayName(variant)}`" title="Effacer variante" @click="deleteVariantFromProduct(undefined, variant)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash2" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 1h3a1 1 0 0 1 1 1v1H14a.5.5 0 0 1 0 1h-.55l-.78 9.34A2 2 0 0 1 10.68 15H5.32a2 2 0 0 1-1.99-1.66L2.55 4H2a.5.5 0 0 1 0-1h3.5V2a1 1 0 0 1 1-1m0 2h3V2h-3zM3.55 4l.77 9.17a1 1 0 0 0 1 .83h5.36a1 1 0 0 0 1-.83L12.45 4z"/><path d="M6.5 6.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V7a.5.5 0 0 1 .5-.5m3 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V7a.5.5 0 0 1 .5-.5"/></svg>
+                    </button>
+                  </div>
+                </div>
                 <p v-if="selectedVariants.length === 0" class="muted">Aucune variante.</p>
               </div>
             </section>
@@ -4311,7 +4830,7 @@ onBeforeUnmount(() => {
             <section class="catalog-clickable-section" @click="productViewModalOpen = false; openEditProduct(undefined, 'stock')">
               <h3>Stock</h3>
               <div v-if="productData" class="catalog-quality-strip">
-                <span class="catalog-signal" :class="`catalog-signal--${stockSignal(productData).tone}`">{{ stockSignal(productData).label }}</span>
+                <span class="catalog-stock-dot" :class="`catalog-stock-dot--${stockIndicatorTone(productData)}`"></span>
                 <span class="catalog-signal catalog-signal--muted">{{ stockSummaryLabel(productData) }}</span>
               </div>
             </section>
@@ -4365,7 +4884,7 @@ onBeforeUnmount(() => {
         <section class="catalog-modal" role="dialog" aria-modal="true" :aria-label="productModalTitle()">
           <header class="catalog-modal-head">
             <div>
-              <p class="eyebrow">Produit</p>
+              <p class="eyebrow">{{ variantAttributesOnlyModal ? 'Variante' : 'Produit' }}</p>
               <h2>{{ productModalTitle() }}</h2>
             </div>
             <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeProductModal">×</button>
@@ -4392,23 +4911,37 @@ onBeforeUnmount(() => {
               <label class="checkbox-inline"><input v-model="productForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
               <label class="checkbox-inline"><input v-model="productForm.is_ecommerce_enabled" type="checkbox" :disabled="!canWrite"> E-commerce</label>
               <label class="checkbox-inline"><input v-model="productForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
+              <label class="checkbox-inline"><input v-model="productForm.is_catalogue_enabled" type="checkbox" :disabled="!canWrite"> Brochure</label>
             </div>
+          </div>
+          <div v-if="productModalShows('tax')" class="catalog-section">
+            <h3>TVA</h3>
+            <div class="catalog-form-grid">
+              <label class="field">Classe TVA
+                <select v-model="productForm.tax_class_id" class="select" :disabled="!canWrite">
+                  <option value="">Aucune TVA</option>
+                  <option v-for="taxClass in taxClasses" :key="Number(taxClass.id)" :value="String(taxClass.id)">{{ taxClassLabel(taxClass.id) }}</option>
+                </select>
+              </label>
+            </div>
+            <p class="muted">La classe TVA sélectionnée est reprise par les snapshots de vente, le POS et les exports.</p>
           </div>
           <div v-if="productModalShows('stock')" class="catalog-section">
             <h3>Stock</h3>
             <div class="catalog-form-grid">
               <label class="field">Unité<input v-model="productForm.unit" class="input" :disabled="!canWrite" placeholder="unit, kg, h..."></label>
               <label class="checkbox-inline"><input v-model="productForm.track_stock" type="checkbox" :disabled="!canWrite"> Suivre le stock</label>
-              <label class="checkbox-inline"><input v-model="productForm.allow_backorder" type="checkbox" :disabled="!canWrite"> Autoriser le réassort / backorder</label>
+              <label class="checkbox-inline"><input v-model="productForm.allow_backorder" type="checkbox" :disabled="!canWrite"> Livraison différée si stock à zéro</label>
+              <label class="field">Délai hors stock (jours)<input v-model="productForm.backorder_delivery_days" class="input" type="number" min="1" step="1" :disabled="!canWrite || !productForm.allow_backorder"></label>
             </div>
-            <p class="muted">Les quantités se gèrent au niveau des variantes via les mouvements de stock.</p>
+            <p class="muted">Envoi immédiat si stock &gt; 0. Livraison différée si livrable mais stock nul. Option contact si stock nul et pas livrable.</p>
           </div>
           <div v-if="productModalShows('prices')" class="catalog-section">
             <h3>Schéma des prix</h3>
             <div class="catalog-form-grid catalog-price-grid">
               <label class="field">Devise<input v-model="productForm.currency" class="input" :disabled="!canPriceWrite"></label>
-              <label v-if="canPurchaseRead" class="field">Prix d'achat (base HT)<input v-model="productForm.base_purchase_price" class="input" :disabled="!canPriceWrite"></label>
-              <label class="field">Prix de vente (base HT)<input v-model="productForm.base_sale_price" class="input" :disabled="!canPriceWrite"></label>
+              <label v-if="canPurchaseRead" class="field">Prix d'achat (base TTC)<input v-model="productForm.base_purchase_price" class="input" :disabled="!canPriceWrite"></label>
+              <label class="field">Prix de vente (base TTC)<input v-model="productForm.base_sale_price" class="input" :disabled="!canPriceWrite"></label>
             </div>
           </div>
           <div v-if="productModalShows('media')" class="catalog-section catalog-asset-manager">
@@ -4492,7 +5025,7 @@ onBeforeUnmount(() => {
                 <label class="field">Variante
                   <select v-model="assetForm.variant_id" class="select" :disabled="!canWrite">
                     <option value="">Produit</option>
-                    <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
+                    <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variantDisplayName(variant) }}</option>
                   </select>
                 </label>
                 <label class="field">Rôle
@@ -4524,11 +5057,11 @@ onBeforeUnmount(() => {
           <div v-if="productModalShows('attributes')" class="catalog-section catalog-attribute-manager">
             <div class="panel__header compact">
               <div>
-                <h3>Attributs</h3>
-                <p class="muted">Choisir les groupes applicables, puis renseigner uniquement les attributs correspondants.</p>
+                <h3>{{ variantAttributesOnlyModal ? `Attributs de ${variantDisplayName(selectedVariant || {})}` : 'Attributs' }}</h3>
+                <p class="muted">{{ variantAttributesOnlyModal ? 'Renseigner uniquement les attributs propres à cette variante.' : 'Choisir les groupes applicables, puis renseigner uniquement les attributs correspondants.' }}</p>
               </div>
             </div>
-            <section class="catalog-attribute-scope">
+            <section v-if="!variantAttributesOnlyModal" class="catalog-attribute-scope">
               <div class="catalog-attribute-scope-head">
                 <div>
                   <h4>Groupes d’attributs du produit</h4>
@@ -4542,8 +5075,8 @@ onBeforeUnmount(() => {
               </div>
               <p v-if="attributeGroups.length === 0" class="muted">Aucun groupe d’attributs configuré.</p>
             </section>
-            <div v-if="groupedAttributes.length" class="catalog-attribute-groups">
-              <section class="catalog-attribute-scope">
+            <div class="catalog-attribute-groups">
+              <section v-if="!variantAttributesOnlyModal" class="catalog-attribute-scope">
                 <div class="catalog-attribute-scope-head">
                   <div>
                     <h4>Produit</h4>
@@ -4587,18 +5120,12 @@ onBeforeUnmount(() => {
 	                </section>
 	              </section>
 
-	              <section class="catalog-attribute-scope catalog-attribute-scope--variant">
+              <section v-if="variantAttributesOnlyModal" class="catalog-attribute-scope catalog-attribute-scope--variant">
                 <div class="catalog-attribute-scope-head">
                   <div>
                     <h4>Variante</h4>
                     <p class="muted">Attributs propres à la variante choisie.</p>
                   </div>
-                  <label class="field catalog-variant-picker">
-                    <select class="select" :value="selectedVariant?.id || ''" :disabled="!canWrite || selectedVariants.length === 0" @change="selectVariantById(eventValue($event))">
-                      <option value="">Aucune variante</option>
-                      <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
-                    </select>
-                  </label>
                 </div>
                 <div v-if="variantAttributeWarnings.length" class="catalog-quality-strip">
                   <span v-for="warning in variantAttributeWarnings" :key="`variant-attribute-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
@@ -4640,11 +5167,54 @@ onBeforeUnmount(() => {
                 <p v-else class="muted">Aucune variante sélectionnée.</p>
               </section>
             </div>
-            <p v-else class="muted">Sélectionnez au moins un groupe d’attributs pour ce produit.</p>
+            <p v-if="!groupedAttributes.length" class="muted">Aucun attribut PIM sélectionné pour ce produit.</p>
           </div>
           <footer class="catalog-modal-actions">
             <button class="btn ghost" type="button" @click="closeProductModal">Fermer</button>
             <button v-if="productModalScope !== 'media' || productModalMode === 'create'" class="btn primary" type="button" :disabled="!canWrite || busy === 'product' || busy === 'product-attributes' || busy === 'variant-attributes'" @click="saveProductModal">Enregistrer</button>
+          </footer>
+        </section>
+      </div>
+
+      <div v-if="variantEditModalOpen" class="catalog-modal-backdrop" role="presentation" @click.self="closeVariantEditModal">
+        <section class="catalog-modal" role="dialog" aria-modal="true" :aria-label="selectedVariant ? 'Modifier la variante' : 'Créer une variante'">
+          <header class="catalog-modal-head">
+            <div>
+              <p class="eyebrow">Variante</p>
+              <h2>{{ selectedVariant?.name || selectedVariant?.sku || 'Nouvelle variante' }}</h2>
+            </div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeVariantEditModal">×</button>
+          </header>
+
+          <div v-if="selectedVariant || selectedProductId" class="catalog-section">
+            <div class="catalog-form-grid">
+              <label class="field">SKU<input v-model="variantForm.sku" class="input" data-variant-field="sku" :disabled="!canWrite"></label>
+              <label class="field">Nom<input v-model="variantForm.name" class="input" :disabled="!canWrite"></label>
+              <label class="field">Barcode<input v-model="variantForm.barcode" class="input" :disabled="!canWrite"></label>
+              <label class="field">Statut
+                <select v-model="variantForm.status" class="select" :disabled="!canWrite">
+                  <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
+                </select>
+              </label>
+              <label class="field wide">Commentaire Vente / POS<textarea v-model="variantForm.sales_note" class="input" rows="3" :disabled="!canWrite"></textarea></label>
+              <template v-if="!selectedVariant">
+                <label class="field">Stock initial<input v-model="variantForm.stock_quantity" class="input" type="number" step="1" :disabled="!canWrite"></label>
+                <label class="checkbox-inline"><input v-model="variantForm.track_stock" type="checkbox" :disabled="!canWrite"> Suivi stock</label>
+                <label class="checkbox-inline"><input v-model="variantForm.allow_backorder" type="checkbox" :disabled="!canWrite"> Livraison différée</label>
+                <label class="field">Délai hors stock<input v-model="variantForm.backorder_delivery_days" class="input" type="number" min="1" step="1" :disabled="!canWrite || !variantForm.allow_backorder" placeholder="Hérite du produit"></label>
+              </template>
+            </div>
+          </div>
+          <p v-else class="muted">Aucun produit sélectionné.</p>
+
+          <footer class="catalog-modal-actions">
+            <button class="btn ghost" type="button" @click="closeVariantEditModal">Fermer</button>
+            <button
+              class="btn primary"
+              type="button"
+              :disabled="!canWrite || (!selectedVariant && !selectedProductId) || busy === 'variant' || busy === `variant-${selectedVariant?.id}`"
+              @click="selectedVariant ? saveSelectedVariant() : createVariant()"
+            >{{ selectedVariant ? 'Enregistrer variante' : 'Créer la variante' }}</button>
           </footer>
         </section>
       </div>
@@ -4661,9 +5231,9 @@ onBeforeUnmount(() => {
           <div v-if="selectedVariants.length > 0" class="catalog-section">
             <p class="muted">Les prix de base restent sur le produit. Ces ajustements s’appliquent uniquement à la variante sélectionnée.</p>
             <div class="catalog-form-grid">
-              <label class="field">Variante
+              <label class="field wide">Variante
                 <select class="select" :value="selectedVariant?.id || ''" :disabled="!canPriceWrite" @change="selectVariantById(eventValue($event))">
-                  <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variant.sku || variant.name }}</option>
+                  <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variantDisplayName(variant) }}</option>
                 </select>
               </label>
               <label v-if="canPurchaseRead" class="field">Ajustement achat
@@ -5161,6 +5731,254 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: .35rem;
   min-height: 1.65rem;
+}
+
+.catalog-variant-cell {
+  position: relative;
+  width: 10rem;
+}
+
+.catalog-variant-trigger {
+  align-items: center;
+  display: inline-flex;
+  gap: .25rem;
+  white-space: nowrap;
+}
+
+.catalog-variant-count,
+.catalog-variant-toggle {
+  border: 0;
+  background: transparent;
+  color: #344054;
+  font: inherit;
+}
+
+.catalog-variant-count {
+  font-weight: 800;
+  padding: .2rem .15rem;
+}
+
+.catalog-variant-toggle {
+  align-items: center;
+  display: inline-flex;
+  font-size: .9rem;
+  height: 1.55rem;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 1.55rem;
+}
+
+.catalog-variant-count:hover,
+.catalog-variant-toggle:hover {
+  color: #0f172a;
+}
+
+.catalog-stock-cell {
+  position: relative;
+}
+
+.catalog-stock-display {
+  align-items: center;
+  display: inline-flex;
+  gap: .45rem;
+  white-space: nowrap;
+}
+
+.catalog-stock-indicator {
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: .72rem;
+  padding: 0;
+  width: .72rem;
+}
+
+.catalog-stock-indicator:disabled {
+  cursor: default;
+}
+
+.catalog-stock-dot {
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: .62rem;
+  width: .62rem;
+}
+
+.catalog-stock-indicator--success,
+.catalog-stock-dot--success {
+  background: #16a34a;
+}
+
+.catalog-stock-indicator--warning,
+.catalog-stock-dot--warning {
+  background: #f59e0b;
+}
+
+.catalog-stock-indicator--danger,
+.catalog-stock-dot--danger {
+  background: #dc2626;
+}
+
+.catalog-stock-indicator--muted,
+.catalog-stock-dot--muted {
+  background: #98a2b3;
+}
+
+.catalog-stock-menu-panel {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, .16);
+  display: grid;
+  gap: .25rem;
+  left: 0;
+  min-width: 15rem;
+  padding: .45rem;
+  position: absolute;
+  top: calc(100% + .25rem);
+  z-index: 30;
+}
+
+.catalog-stock-menu-row {
+  align-items: center;
+  border-radius: 6px;
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: .35rem .5rem;
+}
+
+.catalog-stock-menu-row:hover {
+  background: #f8fafc;
+}
+
+.catalog-stock-menu-row div {
+  display: grid;
+  min-width: 0;
+}
+
+.catalog-stock-menu-row strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.catalog-stock-menu-row small {
+  color: #667085;
+  font-weight: 700;
+}
+
+.catalog-variant-menu-panel {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, .16);
+  display: grid;
+  gap: .25rem;
+  left: 0;
+  min-width: 16rem;
+  padding: .45rem;
+  position: absolute;
+  top: calc(100% + .25rem);
+  z-index: 30;
+}
+
+.catalog-variant-menu-row,
+.catalog-variant-summary-row {
+  align-items: center;
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.catalog-variant-summary-row {
+  border: 0;
+  background: #fff;
+  padding: .35rem 0;
+}
+
+.catalog-variant-menu-row {
+  border-radius: 6px;
+  padding: .35rem .35rem .35rem .5rem;
+}
+
+.catalog-variant-menu-row:hover {
+  background: #f8fafc;
+}
+
+.catalog-variant-menu-row strong,
+.catalog-variant-summary-row strong {
+  color: #0f172a;
+  overflow-wrap: anywhere;
+}
+
+.catalog-variant-menu-main {
+  display: grid;
+  gap: .1rem;
+  min-width: 0;
+}
+
+.catalog-variant-menu-main small {
+  color: #98a2b3;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.catalog-variant-menu-row strong.is-archived {
+  color: #d98b8b;
+}
+
+.catalog-variant-menu-row strong.is-inactive {
+  color: #98a2b3;
+}
+
+.catalog-variant-menu-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: .15rem;
+}
+
+.catalog-icon-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #475467;
+  display: inline-flex;
+  height: 1.75rem;
+  justify-content: center;
+  padding: 0;
+  width: 1.75rem;
+}
+
+.catalog-icon-button:hover,
+.catalog-icon-button:focus-visible {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.catalog-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.catalog-icon-button--danger {
+  color: #b42318;
+}
+
+.catalog-icon-button--danger:hover,
+.catalog-icon-button--danger:focus-visible {
+  background: #fef3f2;
+  color: #912018;
+}
+
+.catalog-icon-button--muted {
+  color: #667085;
 }
 
 .catalog-cell-inline--wrap {

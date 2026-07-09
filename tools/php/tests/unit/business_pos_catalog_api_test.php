@@ -16,6 +16,7 @@ use App\Modules\Business\Repositories\CatalogOptionRepository;
 use App\Modules\Business\Repositories\CatalogProductRepository;
 use App\Modules\Business\Repositories\CatalogVariantRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
+use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Repository\SiteRepository;
 use App\Security\PublicApiTokenGuard;
 
@@ -84,6 +85,7 @@ try {
     $variants = new CatalogVariantRepository($businessDb);
     $options = new CatalogOptionRepository($businessDb);
     $discounts = new CatalogDiscountRepository($businessDb);
+    $bundles = new BusinessProductBundleService($businessDb);
 
     $brand = $brands->create(1, ['name' => 'POS Brand', 'slug' => 'pos-brand', 'is_public' => true], 1);
     $category = $categories->create(1, ['name' => 'POS Category', 'slug' => 'pos-category', 'is_public' => true], 1);
@@ -127,6 +129,109 @@ try {
         'status' => 'active',
     ], 1);
 
+    $bundleComponent = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'tax_class_id' => $taxClass['id'] ?? null,
+        'name' => 'POS Bundle Component',
+        'slug' => 'pos-bundle-component-' . bin2hex(random_bytes(3)),
+        'status' => 'draft',
+        'channels' => ['pos'],
+        'base_sale_price' => 25,
+        'track_stock' => true,
+        'allow_backorder' => true,
+        'backorder_delivery_days' => 4,
+    ], 1);
+    $bundleComponentVariant = $variants->create(1, (int) $bundleComponent['id'], [
+        'sku' => 'POS-BUNDLE-COMP-' . strtoupper(bin2hex(random_bytes(2))),
+        'name' => 'Composant POS différé',
+        'status' => 'active',
+        'stock_quantity' => 0,
+    ], 1);
+    $products->update(1, (int) $bundleComponent['id'], ['status' => 'active'], 1);
+    $bundleProduct = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'tax_class_id' => $taxClass['id'] ?? null,
+        'name' => 'POS Backorder Pack',
+        'slug' => 'pos-backorder-pack-' . bin2hex(random_bytes(3)),
+        'type' => 'bundle',
+        'status' => 'draft',
+        'channels' => ['pos'],
+        'base_sale_price' => 75,
+        'track_stock' => false,
+    ], 1);
+    $bundleVariant = $variants->create(1, (int) $bundleProduct['id'], [
+        'sku' => 'POS-BACKORDER-PACK-' . strtoupper(bin2hex(random_bytes(2))),
+        'name' => 'Pack POS différé',
+        'status' => 'active',
+        'track_stock' => false,
+    ], 1);
+    $bundles->replaceProductBundle(1, (int) $bundleProduct['id'], [
+        'bundle_variant_id' => $bundleVariant['id'],
+        'pricing_mode' => 'fixed',
+        'stock_mode' => 'components',
+        'is_active' => true,
+        'components' => [[
+            'component_product_id' => $bundleComponent['id'],
+            'component_variant_id' => $bundleComponentVariant['id'],
+            'quantity' => 1,
+            'is_required' => true,
+        ]],
+    ], 1);
+    $products->update(1, (int) $bundleProduct['id'], ['status' => 'active'], 1);
+
+    $contactComponent = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'tax_class_id' => $taxClass['id'] ?? null,
+        'name' => 'POS Contact Component',
+        'slug' => 'pos-contact-component-' . bin2hex(random_bytes(3)),
+        'status' => 'draft',
+        'channels' => ['pos'],
+        'base_sale_price' => 20,
+        'track_stock' => true,
+        'allow_backorder' => false,
+    ], 1);
+    $contactComponentVariant = $variants->create(1, (int) $contactComponent['id'], [
+        'sku' => 'POS-CONTACT-COMP-' . strtoupper(bin2hex(random_bytes(2))),
+        'name' => 'Composant POS contact',
+        'status' => 'active',
+        'stock_quantity' => 0,
+    ], 1);
+    $products->update(1, (int) $contactComponent['id'], ['status' => 'active'], 1);
+    $contactBundleProduct = $products->create(1, [
+        'brand_id' => $brand['id'],
+        'category_id' => $category['id'],
+        'tax_class_id' => $taxClass['id'] ?? null,
+        'name' => 'POS Contact Pack',
+        'slug' => 'pos-contact-pack-' . bin2hex(random_bytes(3)),
+        'type' => 'bundle',
+        'status' => 'draft',
+        'channels' => ['pos'],
+        'base_sale_price' => 65,
+        'track_stock' => false,
+    ], 1);
+    $contactBundleVariant = $variants->create(1, (int) $contactBundleProduct['id'], [
+        'sku' => 'POS-CONTACT-PACK-' . strtoupper(bin2hex(random_bytes(2))),
+        'name' => 'Pack POS contact',
+        'status' => 'active',
+        'track_stock' => false,
+    ], 1);
+    $bundles->replaceProductBundle(1, (int) $contactBundleProduct['id'], [
+        'bundle_variant_id' => $contactBundleVariant['id'],
+        'pricing_mode' => 'fixed',
+        'stock_mode' => 'components',
+        'is_active' => true,
+        'components' => [[
+            'component_product_id' => $contactComponent['id'],
+            'component_variant_id' => $contactComponentVariant['id'],
+            'quantity' => 1,
+            'is_required' => true,
+        ]],
+    ], 1);
+    $products->update(1, (int) $contactBundleProduct['id'], ['status' => 'active'], 1);
+
     $ecommerceOnly = $products->create(1, [
         'name' => 'E-commerce Only POS Excluded',
         'slug' => 'ecommerce-only-pos-excluded',
@@ -142,9 +247,9 @@ try {
     ], 1);
 
     $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
-    $handlerFor = static function (array $query = [], string $path = '/api/v1/pos/catalog/bootstrap') use ($sites, $businessDb): PosCatalogApiHandler {
+    $handlerFor = static function (array $query = [], string $path = '/api/v1/pos/catalog/bootstrap') use ($sites, $businessDb, $bundles): PosCatalogApiHandler {
         $request = new Request('GET', $path, $query, [], ['HTTP_HOST' => 'example.test'], [], []);
-        return new PosCatalogApiHandler($request, $sites, new PosCatalogRepository($businessDb), new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb)));
+        return new PosCatalogApiHandler($request, $sites, new PosCatalogRepository($businessDb), new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb)), $bundles);
     };
 
     $bootstrap = $handlerFor()->bootstrap();
@@ -170,6 +275,20 @@ try {
     $h->assertSame('120.00', $pricing['regular_sale_price'] ?? null, 'POS regular sale price includes variant adjustment');
     $h->assertSame('108.00', $pricing['final_sale_price'] ?? null, 'POS final sale price includes active POS discount');
     $h->assertSame('Remise POS', $pricing['discount']['label'] ?? null, 'POS discount label is exposed');
+    $backorderBundleVariant = null;
+    $contactBundleVariantPayload = null;
+    foreach (($decoded['data']['products'] ?? []) as $product) {
+        if (($product['product_id'] ?? 0) === (int) $bundleProduct['id']) {
+            $backorderBundleVariant = $product['variants'][0] ?? null;
+        }
+        if (($product['product_id'] ?? 0) === (int) $contactBundleProduct['id']) {
+            $contactBundleVariantPayload = $product['variants'][0] ?? null;
+        }
+    }
+    $h->assertSame('backorder', $backorderBundleVariant['availability']['status'] ?? null, 'POS bundle inherits backorder availability from components');
+    $h->assertSame(4, $backorderBundleVariant['availability']['delivery_lead_time_days'] ?? null, 'POS bundle exposes component backorder delay');
+    $h->assertSame('contact_us', $contactBundleVariantPayload['availability']['status'] ?? null, 'POS bundle switches to contact when a required component is not deliverable');
+    $h->assertSame(false, $contactBundleVariantPayload['availability']['available'] ?? null, 'POS contact bundle is not orderable');
 
     $barcode = $handlerFor(['barcode' => '7612345678901'], '/api/v1/pos/catalog/variants')->variants();
     $h->assertSame(200, $barcode->status(), 'POS variants endpoint responds');

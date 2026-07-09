@@ -38,6 +38,51 @@ final class BusinessPimApiController
         ], 'admin.business.pim.product_assets.index.v1', $this->meta($site, $languageCode));
     }
 
+    public function taxClasses(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'tax_classes' => $this->pim->taxClasses((int) $site['id']),
+        ], 'admin.business.pim.tax_classes.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function storeTaxClass(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'tax_class' => $this->pim->createTaxClass((int) $site['id'], $this->payload(), $this->actorId()),
+                'message' => 'Taux TVA créé.',
+            ], 'admin.business.pim.tax_classes.show.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function updateTaxClass(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'tax_class' => $this->pim->updateTaxClass((int) $site['id'], $this->id($id), $this->payload(), $this->actorId()),
+                'message' => 'Taux TVA mis à jour.',
+            ], 'admin.business.pim.tax_classes.show.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function deleteTaxClass(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            $deleted = $this->pim->deleteTaxClassIfUnused((int) $site['id'], $this->id($id));
+            return Response::success(['deleted' => $deleted, 'archived' => false, 'id' => $this->id($id)], 'admin.business.pim.tax_classes.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
     public function storeProductAsset(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');

@@ -159,6 +159,10 @@ Retour de marchandises et remboursement financier sont separes. Un remboursement
 ### Event / Outbox
 
 Evenements internes et outbox Vente pour tracer checkout, paiement, retour, remboursement, annulation et mouvements.
+L'outbox publie des enveloppes stables `schema_version=1` dont le `topic` vaut
+`event_type`. Elle est prete pour des consommateurs IA, CRM ou CMS, mais ces
+adaptateurs restent hors ligne tant que les modules correspondants ne sont pas
+branches explicitement.
 
 ### Reporting
 

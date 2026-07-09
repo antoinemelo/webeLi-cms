@@ -104,7 +104,12 @@ try {
     $db->run("INSERT INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text) VALUES(?, ?, 'fr', 'Coton bleu')", [$variantId, $attributeId]);
 
     $h->expectException(
-        fn() => $db->run("INSERT INTO business_attributes(site_id, code, name, data_type) VALUES(1, 'badtype', 'Bad Type', 'object')"),
+        fn() => $db->run("INSERT INTO business_attributes(site_id, code, name, data_type) VALUES(1, 'nogroup', 'No Group', 'text')"),
+        PDOException::class,
+        'attribute group is required'
+    );
+    $h->expectException(
+        fn() => $db->run("INSERT INTO business_attributes(site_id, group_id, code, name, data_type) VALUES(1, ?, 'badtype', 'Bad Type', 'object')", [$groupId]),
         PDOException::class,
         'attribute data_type enum is enforced'
     );

@@ -145,11 +145,23 @@ use App\Modules\Business\Services\BusinessProductAssetService;
 use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Modules\Business\Services\BusinessProductCompletenessService;
 use App\Modules\Business\Services\CatalogCsvService;
+use App\Modules\Business\Services\CatalogPdfService;
 use App\Modules\Business\Services\CatalogDiscountService;
 use App\Modules\Business\Services\CatalogProductService;
 use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
+use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
+use App\Modules\Sale\Adapters\NullCmsAccountBridge;
+use App\Modules\Sale\Adapters\NullCrmActivitySink;
+use App\Modules\Sale\Adapters\NullCustomerSnapshotAdapter;
+use App\Modules\Sale\Adapters\UnavailableSellableCatalogAdapter;
+use App\Modules\Sale\Contracts\CmsAccountBridge;
+use App\Modules\Sale\Contracts\CrmActivitySink;
+use App\Modules\Sale\Contracts\CustomerSnapshotPort;
+use App\Modules\Sale\Contracts\SellableCatalogPort;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
+use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCustomerSnapshotService;
 use App\Modules\Sale\Pricing\SalePricingService;
@@ -164,10 +176,14 @@ use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
+use App\Modules\Sale\Services\SaleImportExportReportService;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleStockMovementService;
+use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
 use App\Modules\Sale\Services\SalePosService;
+use App\Modules\Sale\Payments\PaymentProviderRegistry;
 
 final class ServiceFactory
 {
@@ -587,12 +603,51 @@ final class ServiceFactory
 
     public function saleCatalogSnapshots(): SaleCatalogSnapshotService
     {
-        return $this->once('sale_catalog_snapshots', fn() => new SaleCatalogSnapshotService($this->saleDatabaseConnection(), $this->businessCatalogSellables()));
+        return $this->once('sale_catalog_snapshots', fn() => new SaleCatalogSnapshotService($this->saleDatabaseConnection(), $this->saleSellableCatalogPort()));
+    }
+
+    public function saleCatalogExport(): SaleCatalogExportService
+    {
+        return $this->once('sale_catalog_export', fn() => new SaleCatalogExportService(
+            $this->saleChannels(),
+            $this->saleCatalogSnapshots(),
+            $this->salePricing()
+        ));
     }
 
     public function saleCustomerSnapshots(): SaleCustomerSnapshotService
     {
-        return $this->once('sale_customer_snapshots', fn() => new SaleCustomerSnapshotService($this->saleDatabaseConnection(), $this->businessCrmRelationSnapshots()));
+        return $this->once('sale_customer_snapshots', fn() => new SaleCustomerSnapshotService($this->saleDatabaseConnection(), $this->saleCustomerSnapshotPort()));
+    }
+
+    public function saleSellableCatalogPort(): SellableCatalogPort
+    {
+        return $this->once('sale_sellable_catalog_port', function (): SellableCatalogPort {
+            if ($this->modules()->get('business') === null || !$this->modules()->isEnabled('business')) {
+                return new UnavailableSellableCatalogAdapter();
+            }
+            return new BusinessSellableCatalogAdapter($this->businessCatalogSellables());
+        });
+    }
+
+    public function saleCustomerSnapshotPort(): CustomerSnapshotPort
+    {
+        return $this->once('sale_customer_snapshot_port', function (): CustomerSnapshotPort {
+            if ($this->modules()->get('business') === null || !$this->modules()->isEnabled('business')) {
+                return new NullCustomerSnapshotAdapter();
+            }
+            return new BusinessCustomerSnapshotAdapter($this->businessCrmRelationSnapshots());
+        });
+    }
+
+    public function saleCrmActivitySink(): CrmActivitySink
+    {
+        return $this->once('sale_crm_activity_sink', fn() => new NullCrmActivitySink());
+    }
+
+    public function saleCmsAccountBridge(): CmsAccountBridge
+    {
+        return $this->once('sale_cms_account_bridge', fn() => new NullCmsAccountBridge());
     }
 
     public function saleChannels(): SaleChannelRepository
@@ -602,7 +657,7 @@ final class ServiceFactory
 
     public function saleCarts(): SaleCartRepository
     {
-        return $this->once('sale_carts', fn() => new SaleCartRepository($this->saleDatabaseConnection()));
+        return $this->once('sale_carts', fn() => new SaleCartRepository($this->saleDatabaseConnection(), $this->salePricing()));
     }
 
     public function saleOrders(): SaleOrderRepository
@@ -647,7 +702,20 @@ final class ServiceFactory
 
     public function saleInventory(): SaleInventoryService
     {
-        return $this->once('sale_inventory', fn() => new SaleInventoryService($this->saleInventoryRepository()));
+        return $this->once('sale_inventory', fn() => new SaleInventoryService(
+            $this->saleInventoryRepository(),
+            new SaleStockReservationService($this->saleInventoryRepository()),
+            new SaleStockMovementService($this->saleInventoryRepository()),
+            $this->saleEvents()
+        ));
+    }
+
+    public function saleImportExportReports(): SaleImportExportReportService
+    {
+        return $this->once('sale_import_export_reports', fn() => new SaleImportExportReportService(
+            $this->saleDatabaseConnection(),
+            $this->saleInventory()
+        ));
     }
 
     public function saleCartService(): SaleCartService
@@ -677,12 +745,18 @@ final class ServiceFactory
 
     public function salePaymentService(): SalePaymentService
     {
-        return $this->once('sale_payment_service', fn() => new SalePaymentService($this->salePayments(), $this->saleOrders(), $this->saleEvents()));
+        return $this->once('sale_payment_service', fn() => new SalePaymentService(
+            $this->salePayments(),
+            $this->saleOrders(),
+            $this->saleEvents(),
+            $this->saleIdempotency(),
+            new PaymentProviderRegistry()
+        ));
     }
 
     public function saleOrderService(): SaleOrderService
     {
-        return $this->once('sale_order_service', fn() => new SaleOrderService($this->saleOrders(), $this->saleEvents()));
+        return $this->once('sale_order_service', fn() => new SaleOrderService($this->saleOrders(), $this->saleEvents(), $this->saleInventory()));
     }
 
     public function salePosService(): SalePosService
@@ -900,6 +974,14 @@ final class ServiceFactory
             $this->businessCatalogVariants(),
             $this->businessCatalogOptions(),
             $this->businessCatalogPricing()
+        ));
+    }
+
+    public function businessCatalogPdf(): CatalogPdfService
+    {
+        return $this->once('business_catalog_pdf', fn() => new CatalogPdfService(
+            $this->businessCatalogProducts(),
+            $this->businessCatalogVariants()
         ));
     }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sale\Services;
 
 use App\Core\Database;
-use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Sale\Contracts\SellableCatalogPort;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -13,7 +13,7 @@ final class SaleCatalogSnapshotService
 {
     public function __construct(
         private readonly SaleDatabaseConnection $sale,
-        private readonly BusinessCatalogSellableReadService $sellables
+        private readonly SellableCatalogPort $sellables
     ) {}
 
     /** @return array<string,mixed> */
@@ -24,6 +24,7 @@ final class SaleCatalogSnapshotService
             'include_purchase_price' => true,
             'include_internal_fields' => true,
         ]);
+        $snapshot = $this->applyInventorySnapshot($siteId, $snapshot);
         if ($requireSellable && !((bool) ($snapshot['is_sellable'] ?? false))) {
             throw new InvalidArgumentException('sale.catalog.variant_not_sellable');
         }
@@ -40,7 +41,91 @@ final class SaleCatalogSnapshotService
     /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
     public function searchSellableVariants(int $siteId, array $filters = []): array
     {
-        return $this->sellables->searchSellableVariants($siteId, $filters);
+        $result = $this->sellables->searchSellableVariants($siteId, $filters);
+        $result['items'] = $this->applyInventorySnapshots($siteId, $result['items']);
+        return $result;
+    }
+
+    /** @param array<string,mixed> $snapshot @return array<string,mixed> */
+    private function applyInventorySnapshot(int $siteId, array $snapshot): array
+    {
+        $variantId = (int) ($snapshot['business_variant_id'] ?? 0);
+        if ($variantId < 1) {
+            return $snapshot;
+        }
+        $row = $this->database()->one(
+            'SELECT business_variant_id,
+                    MAX(tracked) AS tracked,
+                    COALESCE(SUM(on_hand_quantity), 0) AS stock_quantity,
+                    COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
+                    COALESCE(SUM(available_quantity), 0) AS available_quantity
+             FROM sale_inventory_items
+             WHERE site_id = ? AND business_variant_id = ?
+             GROUP BY business_variant_id',
+            [$siteId, $variantId]
+        );
+        return $row === null ? $snapshot : $this->withInventory($snapshot, $row);
+    }
+
+    /** @param list<array<string,mixed>> $items @return list<array<string,mixed>> */
+    private function applyInventorySnapshots(int $siteId, array $items): array
+    {
+        $variantIds = [];
+        foreach ($items as $item) {
+            $variantId = (int) ($item['business_variant_id'] ?? 0);
+            if ($variantId > 0) {
+                $variantIds[$variantId] = $variantId;
+            }
+        }
+        if ($variantIds === []) {
+            return $items;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($variantIds), '?'));
+        $rows = $this->database()->all(
+            'SELECT business_variant_id,
+                    MAX(tracked) AS tracked,
+                    COALESCE(SUM(on_hand_quantity), 0) AS stock_quantity,
+                    COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
+                    COALESCE(SUM(available_quantity), 0) AS available_quantity
+             FROM sale_inventory_items
+             WHERE site_id = ? AND business_variant_id IN (' . $placeholders . ')
+             GROUP BY business_variant_id',
+            array_merge([$siteId], array_values($variantIds))
+        );
+        $byVariant = [];
+        foreach ($rows as $row) {
+            $byVariant[(int) $row['business_variant_id']] = $row;
+        }
+
+        foreach ($items as $index => $item) {
+            $variantId = (int) ($item['business_variant_id'] ?? 0);
+            if (isset($byVariant[$variantId])) {
+                $items[$index] = $this->withInventory($item, $byVariant[$variantId]);
+            }
+        }
+        return $items;
+    }
+
+    /** @param array<string,mixed> $snapshot @param array<string,mixed> $inventory @return array<string,mixed> */
+    private function withInventory(array $snapshot, array $inventory): array
+    {
+        $stockQuantity = (int) ($inventory['stock_quantity'] ?? 0);
+        $stockReserved = (int) ($inventory['stock_reserved'] ?? 0);
+        $availableQuantity = (int) ($inventory['available_quantity'] ?? 0);
+        $snapshot['track_stock'] = ((int) ($inventory['tracked'] ?? 0)) === 1;
+        $snapshot['stock_quantity'] = $stockQuantity;
+        $snapshot['stock_reserved'] = $stockReserved;
+        $snapshot['available_quantity'] = $availableQuantity;
+        $metadata = $snapshot['metadata'] ?? [];
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
+        $metadata['stock_quantity'] = $stockQuantity;
+        $metadata['stock_reserved'] = $stockReserved;
+        $metadata['available_quantity'] = $availableQuantity;
+        $snapshot['metadata'] = $metadata;
+        return $snapshot;
     }
 
     /** @param array<string,mixed> $snapshot */

@@ -41,7 +41,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
         $limit = $this->limit($limit, 100);
         $offset = $this->offset($offset);
         $rows = $this->database()->all(
-            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.updated_at
+            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.backorder_delivery_days, p.updated_at
              FROM business_products p
              WHERE ' . $sqlWhere . '
              ORDER BY p.updated_at DESC, p.id DESC
@@ -61,7 +61,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     {
         [$where, $params] = $this->productWhere($siteId, ['slug' => $slug]);
         $row = $this->database()->one(
-            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.updated_at
+            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.backorder_delivery_days, p.updated_at
              FROM business_products p
              WHERE ' . implode(' AND ', $where) . '
              LIMIT 1',
@@ -76,7 +76,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
         $where[] = 'p.id = :id';
         $params['id'] = $id;
         $row = $this->database()->one(
-            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.updated_at
+            'SELECT p.id, p.site_id, p.brand_id, p.category_id, p.type, p.name, p.slug, p.short_description, p.description, p.unit, p.track_stock, p.allow_backorder, p.backorder_delivery_days, p.updated_at
              FROM business_products p
              WHERE ' . implode(' AND ', $where) . '
              LIMIT 1',
@@ -88,7 +88,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     public function variantById(int $siteId, int $variantId): ?array
     {
         $row = $this->database()->one(
-            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.updated_at, p.site_id
+            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at, p.site_id
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              WHERE v.id = ? AND v.status = "active" AND v.archived_at IS NULL
@@ -103,7 +103,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     public function activeVariants(int $siteId, int $productId): array
     {
         return array_map(fn(array $row): array => $this->castRow($row), $this->database()->all(
-            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.updated_at
+            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              WHERE v.product_id = ? AND v.status = "active" AND v.archived_at IS NULL

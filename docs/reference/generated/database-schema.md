@@ -68,8 +68,8 @@ generated: true
 | `business_product_tags` | id, site_id, name, slug, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_variant_option_values` | variant_id, option_id, option_value_id, created_at |
 | `business_product_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, currency, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
-| `business_product_variants` | id, product_id, status, sku, barcode, name, track_stock, stock_quantity, stock_reserved, allow_backorder, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_variants` | id, product_id, status, sku, barcode, name, sales_note, track_stock, stock_quantity, stock_reserved, allow_backorder, backorder_delivery_days, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_stock_movements` | id, variant_id, movement_type, quantity, reason, reference_type, reference_id, created_by_iam_user_id, created_at |
 | `business_tag_links` | id, tag_id, target_type, company_id, contact_id, created_by_iam_user_id, created_at |
 | `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |

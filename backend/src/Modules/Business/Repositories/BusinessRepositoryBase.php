@@ -122,7 +122,7 @@ abstract class BusinessRepositoryBase
 
     protected function boolInt(mixed $value): int
     {
-        return (int) (bool) $value;
+        return (int) $this->boolValue($value);
     }
 
     /** @return array<string,mixed> */
@@ -133,11 +133,31 @@ abstract class BusinessRepositoryBase
                 $row[$key] = (int) $row[$key];
             }
         }
-        foreach (['is_system', 'is_primary', 'is_verified', 'is_enabled', 'is_default', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'track_stock', 'allow_backorder', 'tax_included'] as $key) {
+        foreach (['is_system', 'is_primary', 'is_verified', 'is_enabled', 'is_default', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'track_stock', 'allow_backorder', 'tax_included'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
-                $row[$key] = (bool) $row[$key];
+                $row[$key] = $this->boolValue($row[$key]);
             }
         }
         return $row;
+    }
+
+    protected function boolValue(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (float) $value !== 0.0;
+        }
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if (in_array($normalized, ['', '0', 'false', 'no', 'off', 'null'], true)) {
+                return false;
+            }
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+        }
+        return (bool) $value;
     }
 }

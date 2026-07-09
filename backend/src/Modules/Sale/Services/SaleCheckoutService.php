@@ -24,34 +24,40 @@ final class SaleCheckoutService
     {
         $cart = $this->carts->requireCart($cartId);
         $request = ['cart_id' => $cartId, 'source' => $payload['source'] ?? 'admin'];
-        $replayed = $this->idempotency->completed((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request);
-        if ($replayed !== null) {
-            return $replayed;
-        }
-
-        $db = $this->connection->database();
-        if ($db === null) {
-            throw new SaleValidationException('sale.database_unavailable');
-        }
-        $order = $db->transaction(function () use ($cartId, $payload): array {
-            $cart = $this->carts->requireCart($cartId);
-            if ((string) $cart['status'] !== 'active') {
-                throw new SaleValidationException('sale.cart_not_convertible');
+        return $this->idempotency->run((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request, function () use ($cartId, $payload): array {
+            $db = $this->connection->database();
+            if ($db === null) {
+                throw new SaleValidationException('sale.database_unavailable');
             }
-            $lines = $this->carts->lines($cartId);
-            if ($lines === []) {
-                throw new SaleValidationException('sale.cart_empty');
-            }
-            if ((int) $cart['grand_total_minor'] < 0) {
-                throw new SaleValidationException('sale.total_negative');
-            }
-            $order = $this->orders->createFromCart($cart, $lines, (string) ($payload['source'] ?? 'admin'));
-            $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
-            $this->carts->markConverted($cartId, (int) $order['id']);
-            $this->events->emit((int) $cart['site_id'], 'sale.order.placed', 'order', (int) $order['id'], ['cart_id' => $cartId], $payload['iam_user_id'] ?? null);
-            return $order;
+            return $db->transaction(function () use ($cartId, $payload): array {
+                $cart = $this->carts->requireCart($cartId);
+                if ((string) $cart['status'] !== 'active') {
+                    throw new SaleValidationException('sale.cart_not_convertible');
+                }
+                $lines = $this->carts->lines($cartId);
+                if ($lines === []) {
+                    throw new SaleValidationException('sale.cart_empty');
+                }
+                if ((int) $cart['grand_total_minor'] < 0) {
+                    throw new SaleValidationException('sale.total_negative');
+                }
+                $order = $this->orders->createFromCart($cart, $lines, (string) ($payload['source'] ?? 'admin'), $this->carts->adjustments($cartId));
+                $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
+                $this->carts->markConverted($cartId, (int) $order['id']);
+                $this->events->emit((int) $cart['site_id'], 'sale.order.placed', 'order', (int) $order['id'], [
+                    'site_id' => (int) $cart['site_id'],
+                    'order_id' => (int) $order['id'],
+                    'order_number' => (string) $order['order_number'],
+                    'grand_total_minor' => (int) $order['grand_total_minor'],
+                    'currency' => (string) $order['currency'],
+                    'cart_id' => $cartId,
+                    'customer_ref_id' => $order['customer_contact_id'] ?? $order['customer_company_id'] ?? null,
+                    'payment_status' => (string) $order['payment_status'],
+                    'source' => (string) $order['source'],
+                    'iam_user_id' => $payload['iam_user_id'] ?? null,
+                ], $payload['iam_user_id'] ?? null);
+                return $order;
+            });
         });
-        $this->idempotency->complete((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request, $order);
-        return $order;
     }
 }

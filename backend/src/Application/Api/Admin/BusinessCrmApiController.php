@@ -70,7 +70,7 @@ final class BusinessCrmApiController
                 'memo' => ['fields' => ['id', 'company_id', 'contact_id', 'title', 'body', 'visibility', 'created_at', 'updated_at']],
                 'activity' => ['fields' => ['id', 'kind', 'entity_type', 'entity_id', 'action', 'summary', 'created_at']],
                 'message' => ['fields' => ['id', 'contact_id', 'channel', 'subject', 'status', 'created_at', 'sent_at']],
-                'product' => ['fields' => ['id', 'site_id', 'sku_base', 'name', 'slug', 'type', 'status', 'brand_id', 'category_id', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'updated_at']],
+                'product' => ['fields' => ['id', 'site_id', 'sku_base', 'name', 'slug', 'type', 'status', 'brand_id', 'category_id', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'updated_at']],
                 'variant' => ['fields' => ['id', 'product_id', 'sku', 'barcode', 'name', 'status', 'stock_quantity', 'stock_reserved', 'track_stock', 'updated_at']],
                 'product_asset' => ['fields' => ['id', 'product_id', 'variant_id', 'media_id', 'role', 'title', 'alt_text', 'is_public', 'channel_scope']],
                 'attribute' => ['fields' => ['id', 'group_id', 'code', 'name', 'data_type', 'is_required', 'is_filterable', 'is_searchable', 'is_public']],

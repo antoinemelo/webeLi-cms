@@ -7,6 +7,12 @@
   "provider_class": "App\\Modules\\Sale\\SaleModuleProvider",
   "provider_file": "backend/src/Modules/Sale/SaleModuleProvider.php",
   "enabled_by_default": true,
+  "optional_integrations": [
+    "sellable_catalog",
+    "customer_snapshot",
+    "crm_activity_sink",
+    "cms_account_bridge"
+  ],
   "databases": [
     {
       "key": "sale",

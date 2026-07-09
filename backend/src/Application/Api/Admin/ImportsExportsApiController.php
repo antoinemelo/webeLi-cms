@@ -70,8 +70,8 @@ final class ImportsExportsApiController
         }
 
         return Response::success([
-            'label' => 'Imports / Exports',
-            'placement' => 'Production éditoriale > Imports / Exports',
+            'label' => 'I/E des contenus',
+            'placement' => 'Production éditoriale > I/E des contenus',
             'default_trigger' => 'manual',
             'statuses' => ['pending', 'running', 'succeeded', 'partial', 'failed', 'skipped'],
             'last_export' => $canWrite ? $repo->latest($siteKey) : null,

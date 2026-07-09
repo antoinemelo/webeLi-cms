@@ -15,7 +15,6 @@ const ModulesView = () => import('@/views/modules/ModulesView.vue');
 const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
 const BusinessCrmView = () => import('@/views/modules/BusinessCrmView.vue');
 const SaleView = () => import('@/views/modules/SaleView.vue');
-const SalePosView = () => import('@/views/modules/SalePosView.vue');
 const MenusView = () => import('@/views/content/MenusView.vue');
 const TaxonomiesView = () => import('@/views/content/TaxonomiesView.vue');
 const BlueprintsView = () => import('@/views/system/BlueprintsView.vue');
@@ -85,7 +84,7 @@ export const router = createRouter({
     { path: '/business/catalog', name: 'business-catalog-compat', component: BusinessCrmView, props: { initialTab: 'products' } },
     { path: '/sale', name: 'sale', component: SaleView },
     { path: '/sale/orders', name: 'sale-orders', component: SaleView },
-    { path: '/sale/pos', name: 'sale-pos', component: SalePosView },
+    { path: '/sale/pos', name: 'sale-pos', component: SaleView },
     { path: '/sale/settings', name: 'sale-settings', component: SaleView },
     { path: '/modules/:moduleKey', name: 'module-detail', component: ModulesView, props: true },
     { path: '/menus', name: 'menus', component: MenusView },
@@ -103,4 +102,27 @@ export const router = createRouter({
     { path: '/profile', name: 'profile', component: ProfileView },
     { path: '/:pathMatch(.*)*', redirect: '/' }
   ]
+});
+
+router.onError((error, to) => {
+  const message = String(error?.message || error || '').toLowerCase();
+  const isStaleChunkError = [
+    'failed to fetch dynamically imported module',
+    'error loading dynamically imported module',
+    'importing a module script failed',
+    'dynamically imported module'
+  ].some((needle) => message.includes(needle));
+
+  if (!isStaleChunkError || typeof window === 'undefined') {
+    return;
+  }
+
+  const target = router.resolve(to).href || window.location.pathname;
+  const reloadKey = `amcms.admin.chunk-reload:${target}`;
+  if (window.sessionStorage.getItem(reloadKey) === '1') {
+    return;
+  }
+
+  window.sessionStorage.setItem(reloadKey, '1');
+  window.location.assign(target);
 });

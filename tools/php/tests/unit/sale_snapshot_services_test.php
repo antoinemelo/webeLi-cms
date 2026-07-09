@@ -12,6 +12,8 @@ use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
 use App\Modules\Business\Services\BusinessCrmRelationSnapshotService;
 use App\Modules\Business\Services\CatalogVisibilityService;
+use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCustomerSnapshotService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
@@ -25,7 +27,7 @@ try {
     $pricing = new CatalogPricingService($pricingRepository);
     $posCatalog = new PosCatalogRepository($businessDb);
     $sellables = new BusinessCatalogSellableReadService($pricingRepository, $pricing, $posCatalog);
-    $saleCatalog = new SaleCatalogSnapshotService(new SaleDatabaseConnection($salePath), $sellables);
+    $saleCatalog = new SaleCatalogSnapshotService(new SaleDatabaseConnection($salePath), new BusinessSellableCatalogAdapter($sellables));
 
     $variantRow = $businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
     $variantId = (int) ($variantRow['id'] ?? 0);
@@ -69,6 +71,16 @@ try {
     $skuSearch = $sellables->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-GOURDE-BLEU']);
     $h->assertSame(1, count($skuSearch['items']), 'sellable search finds by SKU');
     $h->assertSame('physical', $skuSearch['items'][0]['product_type'], 'sellable search keeps physical product type');
+    $saleDb->run('INSERT INTO sale_stock_locations(site_id, code, name, location_type, status) VALUES(1, "main", "Stock principal", "main", "active")');
+    $stockLocationId = (int) $saleDb->lastInsertId();
+    $saleDb->run(
+        'INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity)
+         VALUES(1, ?, ?, "DEMO-GOURDE-BLEU", 1, 7, 2, 5)',
+        [$variantId, $stockLocationId]
+    );
+    $stockSearch = $saleCatalog->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-GOURDE-BLEU']);
+    $h->assertSame(5, (int) ($stockSearch['items'][0]['available_quantity'] ?? -1), 'sale catalog search overlays transaction stock availability');
+    $h->assertSame(5, (int) ($stockSearch['items'][0]['metadata']['available_quantity'] ?? -1), 'sale catalog search overlays transaction stock metadata');
     $barcodeSearch = $sellables->searchSellableVariants(1, ['channel' => 'pos', 'barcode' => '7610000000100']);
     $h->assertSame('DEMO-GOURDE-BLEU', $barcodeSearch['items'][0]['sku'] ?? null, 'sellable search finds by barcode');
     $serviceSearch = $sellables->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-VOL-CLASSIC-20']);
@@ -87,7 +99,7 @@ try {
     $companies = new BusinessCompanyRepository($businessDb);
     $contacts = new BusinessContactRepository($businessDb);
     $crmSnapshots = new BusinessCrmRelationSnapshotService($companies, $contacts);
-    $saleCustomers = new SaleCustomerSnapshotService(new SaleDatabaseConnection($salePath), $crmSnapshots);
+    $saleCustomers = new SaleCustomerSnapshotService(new SaleDatabaseConnection($salePath), new BusinessCustomerSnapshotAdapter($crmSnapshots));
 
     $noCustomer = $saleCustomers->snapshot(1, null, null);
     $h->assertSame(null, $noCustomer, 'customer snapshot is optional for POS');

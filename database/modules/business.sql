@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_offers (
     variant_id INTEGER,
     category_id INTEGER,
     brand_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
     starts_at TEXT,
     ends_at TEXT,
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','archived')),
@@ -293,10 +293,12 @@ CREATE TABLE IF NOT EXISTS business_products (
     unit TEXT NOT NULL DEFAULT 'unit',
     tax_class_id INTEGER,
     track_stock INTEGER NOT NULL DEFAULT 0 CHECK(track_stock IN (0,1)),
-    allow_backorder INTEGER NOT NULL DEFAULT 0 CHECK(allow_backorder IN (0,1)),
+    allow_backorder INTEGER NOT NULL DEFAULT 1 CHECK(allow_backorder IN (0,1)),
+    backorder_delivery_days INTEGER NOT NULL DEFAULT 7 CHECK(backorder_delivery_days >= 0),
     is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
     is_ecommerce_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_ecommerce_enabled IN (0,1)),
     is_pos_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_pos_enabled IN (0,1)),
+    is_catalogue_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_catalogue_enabled IN (0,1)),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -369,10 +371,12 @@ CREATE TABLE IF NOT EXISTS business_product_variants (
     sku TEXT NOT NULL,
     barcode TEXT,
     name TEXT NOT NULL,
+    sales_note TEXT,
     track_stock INTEGER,
     stock_quantity REAL NOT NULL DEFAULT 0 CHECK(stock_quantity >= 0),
     stock_reserved REAL NOT NULL DEFAULT 0 CHECK(stock_reserved >= 0),
     allow_backorder INTEGER,
+    backorder_delivery_days INTEGER CHECK(backorder_delivery_days IS NULL OR backorder_delivery_days >= 0),
     weight_grams INTEGER CHECK(weight_grams IS NULL OR weight_grams >= 0),
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_by_iam_user_id INTEGER,
@@ -453,7 +457,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_discounts (
     currency TEXT CHECK(currency IS NULL OR currency IN ('CHF','EUR','USD')),
     scope_type TEXT NOT NULL CHECK(scope_type IN ('product','variant','category','brand')),
     scope_id INTEGER NOT NULL,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','admin')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
     starts_at TEXT,
     ends_at TEXT,
     priority INTEGER NOT NULL DEFAULT 100,
@@ -593,7 +597,7 @@ CREATE TABLE IF NOT EXISTS business_product_assets (
     caption TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
-    channel_scope TEXT NOT NULL DEFAULT 'all' CHECK(channel_scope IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel_scope TEXT NOT NULL DEFAULT 'all' CHECK(channel_scope IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -648,7 +652,7 @@ CREATE TABLE IF NOT EXISTS business_asset_renditions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
     media_id INTEGER NOT NULL,
-    channel TEXT NOT NULL CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     rendition_key TEXT NOT NULL,
     width INTEGER CHECK(width IS NULL OR width > 0),
     height INTEGER CHECK(height IS NULL OR height > 0),
@@ -687,7 +691,7 @@ CREATE TABLE IF NOT EXISTS business_attribute_groups (
 CREATE TABLE IF NOT EXISTS business_attributes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
-    group_id INTEGER,
+    group_id INTEGER NOT NULL,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     data_type TEXT NOT NULL CHECK(data_type IN ('text','textarea','rich_text','number','decimal','boolean','select','multi_select','date','url','file','dimension','weight','color')),
@@ -703,7 +707,7 @@ CREATE TABLE IF NOT EXISTS business_attributes (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     archived_at TEXT,
-    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE(site_id, code),
     CHECK(site_id > 0),
     CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
@@ -798,7 +802,7 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
     scope TEXT NOT NULL CHECK(scope IN ('product','variant','asset','price','tax','channel')),
     required_field TEXT,
     required_attribute_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     weight INTEGER NOT NULL DEFAULT 1 CHECK(weight > 0),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -818,7 +822,7 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
     variant_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     score INTEGER NOT NULL CHECK(score >= 0 AND score <= 100),
     is_sellable INTEGER NOT NULL DEFAULT 0 CHECK(is_sellable IN (0,1)),
     missing_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(missing_json)),
@@ -873,18 +877,18 @@ VALUES
     (1, NULL, 'Experiences', 'experiences', 'Services et experiences de demonstration.', 1, 10),
     (1, NULL, 'Boutique', 'boutique', 'Produits physiques et bons cadeaux de demonstration.', 1, 20);
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'service', 'active', 'public', 'DEMO-VOL', 'Vol decouverte', 'vol-decouverte', 'Service catalogue de demonstration.', 'service', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'service', 'active', 'public', 'DEMO-VOL', 'Vol decouverte', 'vol-decouverte', 'Service catalogue de demonstration.', 'service', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'experiences' AND t.site_id = 1 AND t.code = 'standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'DEMO-GOURDE', 'Gourde demo', 'gourde-demo', 'Produit physique catalogue de demonstration.', 'piece', t.id, 1, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'DEMO-GOURDE', 'Gourde demo', 'gourde-demo', 'Produit physique catalogue de demonstration.', 'piece', t.id, 1, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'boutique' AND t.site_id = 1 AND t.code = 'standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'DEMO-GIFT', 'Bon cadeau demo', 'bon-cadeau-demo', 'Bon cadeau simple de demonstration.', 'piece', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'DEMO-GIFT', 'Bon cadeau demo', 'bon-cadeau-demo', 'Bon cadeau simple de demonstration.', 'piece', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'boutique' AND t.site_id = 1 AND t.code = 'standard';
 
@@ -930,44 +934,23 @@ VALUES
 INSERT OR IGNORE INTO business_tax_classes(site_id, code, name, rate, country, is_default)
 VALUES (1, 'catalog_standard', 'Catalogue standard CH', 8.1, 'CH', 0);
 
-INSERT OR IGNORE INTO business_product_options(site_id, code, name, type, sort_order)
-VALUES
-    (1, 'model', 'Modèle', 'select', 40),
-    (1, 'size', 'Taille', 'select', 50),
-    (1, 'color', 'Couleur', 'color', 60);
-
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'classic', 'Classic', 'classic', 10 FROM business_product_options WHERE site_id = 1 AND code = 'model';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'premium', 'Premium', 'premium', 20 FROM business_product_options WHERE site_id = 1 AND code = 'model';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 's', 'S', 's', 10 FROM business_product_options WHERE site_id = 1 AND code = 'size';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'm', 'M', 'm', 20 FROM business_product_options WHERE site_id = 1 AND code = 'size';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, sort_order)
-SELECT id, 'l', 'L', 'l', 30 FROM business_product_options WHERE site_id = 1 AND code = 'size';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, color_hex, sort_order)
-SELECT id, 'blue', 'Bleu', 'blue', '#0066CC', 10 FROM business_product_options WHERE site_id = 1 AND code = 'color';
-INSERT OR IGNORE INTO business_product_option_values(option_id, code, label, value, color_hex, sort_order)
-SELECT id, 'black', 'Noir', 'black', '#000000', 20 FROM business_product_options WHERE site_id = 1 AND code = 'color';
-
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'TSHIRT-DEMO', 'T-shirt Demo', 't-shirt-demo', 'Marchandise de demonstration avec variantes.', 'piece', t.id, 1, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'TSHIRT-DEMO', 'T-shirt Demo', 't-shirt-demo', 'Marchandise de demonstration avec variantes.', 'piece', t.id, 1, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'marchandises' AND t.site_id = 1 AND t.code = 'catalog_standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'service', 'active', 'public', 'CONSULTATION', 'Consultation', 'consultation', 'Service de demonstration du catalogue.', 'service', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'service', 'active', 'public', 'CONSULTATION', 'Consultation', 'consultation', 'Service de demonstration du catalogue.', 'service', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'services' AND t.site_id = 1 AND t.code = 'catalog_standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'GIFT-DEMO', 'Bon cadeau simple', 'bon-cadeau-simple', 'Bon cadeau simple de demonstration du catalogue.', 'piece', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'GIFT-DEMO', 'Bon cadeau simple', 'bon-cadeau-simple', 'Bon cadeau simple de demonstration du catalogue.', 'piece', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'services' AND t.site_id = 1 AND t.code = 'catalog_standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'bundle', 'active', 'public', 'BUNDLE-DEMO', 'Pack demo', 'pack-demo', 'Offre composee de demonstration regroupant un produit et un service.', 'bundle', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'bundle', 'active', 'public', 'BUNDLE-DEMO', 'Pack demo', 'pack-demo', 'Offre composee de demonstration regroupant un produit et un service.', 'bundle', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'nouvelle-marque' AND c.site_id = 1 AND c.slug = 'marchandises' AND t.site_id = 1 AND t.code = 'catalog_standard';
 
@@ -988,17 +971,12 @@ SELECT id, 'purchase', 'CHF', 59.00, 0 FROM business_products WHERE site_id = 1 
 INSERT OR IGNORE INTO business_product_base_prices(product_id, price_kind, currency, amount, tax_included)
 SELECT id, 'sale', 'CHF', 119.00, 1 FROM business_products WHERE site_id = 1 AND slug = 'pack-demo';
 
-INSERT OR IGNORE INTO business_product_option_links(product_id, option_id, is_required, sort_order)
-SELECT p.id, o.id, 1, o.sort_order
-FROM business_products p, business_product_options o
-WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND o.site_id = 1 AND o.code IN ('model','size','color');
-
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-M-BLUE', 'Classic / M / Bleu', 1, 15, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-M-BLUE', 'M / Bleu', 1, 15, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-CLASSIC-L-BLUE', 'Classic / L / Bleu', 1, 10, 0, 0, 20 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-L-BLUE', 'L / Bleu', 1, 10, 0, 0, 20 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
-SELECT id, 'active', 'TSHIRT-DEMO-PREMIUM-M-BLACK', 'Premium / M / Noir', 1, 8, 0, 0, 30 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
+SELECT id, 'active', 'TSHIRT-DEMO-M-BLACK', 'M / Noir', 1, 8, 0, 0, 30 FROM business_products WHERE site_id = 1 AND slug = 't-shirt-demo';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
 SELECT id, 'active', 'CONSULTATION-STANDARD', 'Consultation standard', 0, 0, 0, 0, 10 FROM business_products WHERE site_id = 1 AND slug = 'consultation';
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
@@ -1017,7 +995,7 @@ SELECT b.id, p.id, v.id, 1, 1, 10, '{"fixture":"pim_lite","component":"product"}
 FROM business_product_bundles b
 INNER JOIN business_products bundle_product ON bundle_product.id = b.bundle_product_id
 INNER JOIN business_products p ON p.site_id = b.site_id AND p.slug = 't-shirt-demo'
-INNER JOIN business_product_variants v ON v.product_id = p.id AND v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE'
+INNER JOIN business_product_variants v ON v.product_id = p.id AND v.sku = 'TSHIRT-DEMO-M-BLUE'
 WHERE bundle_product.slug = 'pack-demo';
 
 INSERT OR IGNORE INTO business_bundle_components(bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json)
@@ -1029,46 +1007,16 @@ INNER JOIN business_product_variants v ON v.product_id = p.id AND v.sku = 'CONSU
 WHERE bundle_product.slug = 'pack-demo';
 
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
-SELECT v.id, 'purchase', 'amount_delta', 2.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE';
+SELECT v.id, 'purchase', 'amount_delta', 2.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-L-BLUE';
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
-SELECT v.id, 'sale', 'amount_delta', 5.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE';
+SELECT v.id, 'sale', 'amount_delta', 5.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-L-BLUE';
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
-SELECT v.id, 'purchase', 'percent_delta', 15.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK';
+SELECT v.id, 'purchase', 'percent_delta', 15.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-M-BLACK';
 INSERT OR IGNORE INTO business_product_variant_price_adjustments(variant_id, price_kind, adjustment_type, adjustment_value, currency)
-SELECT v.id, 'sale', 'percent_delta', 25.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK';
+SELECT v.id, 'sale', 'percent_delta', 25.00, NULL FROM business_product_variants v WHERE v.sku = 'TSHIRT-DEMO-M-BLACK';
 
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE' AND o.site_id = 1 AND o.code = 'model' AND ov.option_id = o.id AND ov.code = 'classic';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE' AND o.site_id = 1 AND o.code = 'size' AND ov.option_id = o.id AND ov.code = 'm';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE' AND o.site_id = 1 AND o.code = 'color' AND ov.option_id = o.id AND ov.code = 'blue';
-
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE' AND o.site_id = 1 AND o.code = 'model' AND ov.option_id = o.id AND ov.code = 'classic';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE' AND o.site_id = 1 AND o.code = 'size' AND ov.option_id = o.id AND ov.code = 'l';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-L-BLUE' AND o.site_id = 1 AND o.code = 'color' AND ov.option_id = o.id AND ov.code = 'blue';
-
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK' AND o.site_id = 1 AND o.code = 'model' AND ov.option_id = o.id AND ov.code = 'premium';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK' AND o.site_id = 1 AND o.code = 'size' AND ov.option_id = o.id AND ov.code = 'm';
-INSERT OR IGNORE INTO business_product_variant_option_values(variant_id, option_id, option_value_id)
-SELECT v.id, o.id, ov.id FROM business_product_variants v, business_product_options o, business_product_option_values ov
-WHERE v.sku = 'TSHIRT-DEMO-PREMIUM-M-BLACK' AND o.site_id = 1 AND o.code = 'color' AND ov.option_id = o.id AND ov.code = 'black';
-
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-VALUES (1, NULL, NULL, 'physical', 'draft', 'internal', 'INCOMPLETE-DEMO', 'Produit incomplet demo', 'produit-incomplet-demo', 'Produit volontairement incomplet pour tester la qualite catalogue.', 'piece', 1, 0, 0, 0, 0);
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+VALUES (1, NULL, NULL, 'physical', 'draft', 'internal', 'INCOMPLETE-DEMO', 'Produit incomplet demo', 'produit-incomplet-demo', 'Produit volontairement incomplet pour tester la qualite catalogue.', 'piece', 1, 0, 0, 0, 0, 1);
 
 INSERT OR IGNORE INTO business_product_variants(product_id, status, sku, name, track_stock, stock_quantity, stock_reserved, allow_backorder, sort_order)
 SELECT id, 'draft', 'INCOMPLETE-DEMO-DRAFT', 'Brouillon incomplet', 1, 0, 0, 0, 10
@@ -1124,6 +1072,14 @@ INSERT OR IGNORE INTO business_product_attribute_group_links(product_id, group_i
 SELECT p.id, g.id, 10
 FROM business_products p, business_attribute_groups g
 WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND g.site_id = 1 AND g.code = 'textile';
+INSERT OR IGNORE INTO business_product_attribute_group_links(product_id, group_id, sort_order)
+SELECT p.id, g.id, 20
+FROM business_products p, business_attribute_groups g
+WHERE p.site_id = 1 AND p.slug = 't-shirt-demo' AND g.site_id = 1 AND g.code = 'technique';
+INSERT OR IGNORE INTO business_product_attribute_group_links(product_id, group_id, sort_order)
+SELECT p.id, g.id, 10
+FROM business_products p, business_attribute_groups g
+WHERE p.site_id = 1 AND p.slug IN ('vol-decouverte', 'consultation') AND g.site_id = 1 AND g.code = 'service';
 
 INSERT OR IGNORE INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json)
 SELECT 1, g.id, 'couleur', 'Couleur', 'color', NULL, 1, 1, 1, 1, 10, '{}'
@@ -1146,6 +1102,8 @@ FROM business_attribute_groups g WHERE g.site_id = 1 AND g.code = 'technique';
 
 INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, color_hex, sort_order)
 SELECT id, 'bleu', 'Bleu', 'bleu', '#0066CC', 10 FROM business_attributes WHERE site_id = 1 AND code = 'couleur';
+INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, color_hex, sort_order)
+SELECT id, 'noir', 'Noir', 'noir', '#000000', 20 FROM business_attributes WHERE site_id = 1 AND code = 'couleur';
 INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
 SELECT id, 'm', 'M', 'm', 20 FROM business_attributes WHERE site_id = 1 AND code = 'taille';
 INSERT OR IGNORE INTO business_attribute_options(attribute_id, code, label, value, sort_order)
@@ -1173,13 +1131,29 @@ FROM business_products p, business_attributes a
 WHERE p.site_id = 1 AND p.slug = 'vol-decouverte' AND a.site_id = 1 AND a.code = 'niveau';
 
 INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'M'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'TSHIRT-DEMO-M-BLUE' AND a.site_id = 1 AND a.code = 'taille';
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
 SELECT v.id, a.id, 'fr', 'Bleu'
 FROM business_product_variants v, business_attributes a
-WHERE v.sku = 'DEMO-GOURDE-BLEU' AND a.site_id = 1 AND a.code = 'couleur';
+WHERE v.sku = 'TSHIRT-DEMO-M-BLUE' AND a.site_id = 1 AND a.code = 'couleur';
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'L'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'TSHIRT-DEMO-L-BLUE' AND a.site_id = 1 AND a.code = 'taille';
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'Bleu'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'TSHIRT-DEMO-L-BLUE' AND a.site_id = 1 AND a.code = 'couleur';
 INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
 SELECT v.id, a.id, 'fr', 'M'
 FROM business_product_variants v, business_attributes a
-WHERE v.sku = 'TSHIRT-DEMO-CLASSIC-M-BLUE' AND a.site_id = 1 AND a.code = 'taille';
+WHERE v.sku = 'TSHIRT-DEMO-M-BLACK' AND a.site_id = 1 AND a.code = 'taille';
+INSERT OR IGNORE INTO business_variant_attribute_values(variant_id, attribute_id, language, value_text)
+SELECT v.id, a.id, 'fr', 'Noir'
+FROM business_product_variants v, business_attributes a
+WHERE v.sku = 'TSHIRT-DEMO-M-BLACK' AND a.site_id = 1 AND a.code = 'couleur';
 
 INSERT OR IGNORE INTO business_product_completeness_rules(site_id, code, name, scope, required_field, channel, weight, is_active)
 VALUES

@@ -101,6 +101,7 @@ try {
         'status' => 'active',
         'stock_quantity' => 10,
         'track_stock' => true,
+        'allow_backorder' => false,
         'option_values' => ['model' => 'classic', 'size' => 'm'],
         'purchase_adjustment_type' => 'amount_delta',
         'purchase_adjustment_value' => 5,

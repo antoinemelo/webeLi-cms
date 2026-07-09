@@ -14,7 +14,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         if (!$includeArchived) {
             $where[] = 'archived_at IS NULL';
         }
-        foreach (['status', 'type', 'brand_id', 'category_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled'] as $key) {
+        foreach (['status', 'type', 'brand_id', 'category_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled'] as $key) {
             if (array_key_exists($key, $filters) && $filters[$key] !== '' && $filters[$key] !== null) {
                 $where[] = $key . ' = :' . $key;
                 $params[$key] = in_array($key, ['brand_id', 'category_id'], true) ? (int) $filters[$key] : $filters[$key];
@@ -33,6 +33,8 @@ final class CatalogProductRepository extends BusinessRepositoryBase
             $sellableFilter = 'pos';
         } elseif ($view === 'ready_ecommerce') {
             $sellableFilter = 'ecommerce';
+        } elseif ($view === 'ready_catalogue') {
+            $sellableFilter = 'catalogue';
         } elseif ($view === 'without_image') {
             $imageFilter = 'without';
         } elseif ($view === 'without_price') {
@@ -46,6 +48,8 @@ final class CatalogProductRepository extends BusinessRepositoryBase
             $where[] = 'is_ecommerce_enabled = 1';
         } elseif (($filters['channel'] ?? '') === 'pos') {
             $where[] = 'is_pos_enabled = 1';
+        } elseif (($filters['channel'] ?? '') === 'catalogue') {
+            $where[] = 'is_catalogue_enabled = 1';
         }
         if (!empty($filters['low_stock'])) {
             $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1)';
@@ -71,8 +75,12 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         } elseif ($completenessFilter === 'incomplete') {
             $where[] = 'NOT EXISTS (SELECT 1 FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" AND s.score >= 100)';
         }
-        if ($sellableFilter === 'pos' || $sellableFilter === 'ecommerce') {
-            $where[] = $sellableFilter === 'pos' ? 'is_pos_enabled = 1' : 'is_ecommerce_enabled = 1';
+        if (in_array($sellableFilter, ['pos', 'ecommerce', 'catalogue'], true)) {
+            $where[] = match ($sellableFilter) {
+                'pos' => 'is_pos_enabled = 1',
+                'ecommerce' => 'is_ecommerce_enabled = 1',
+                default => 'is_catalogue_enabled = 1',
+            };
             $where[] = 'status = "active"';
             $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = "active" AND v.archived_at IS NULL)';
             $where[] = 'EXISTS (SELECT 1 FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = "sale" AND p.valid_from IS NULL AND p.amount IS NOT NULL)';
@@ -122,9 +130,10 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         $name = $this->text($payload['name'] ?? null, 'name', 180);
         $slug = $this->slug($payload['slug'] ?? $name);
         $channels = $payload['channels'] ?? [];
+        $defaultCatalogueEnabled = in_array('catalogue', $channels, true) || !in_array('internal', $channels, true);
         $this->database()->run(
-            'INSERT INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, created_by_iam_user_id, updated_by_iam_user_id)
-             VALUES(:site_id, :brand_id, :category_id, :type, :status, :visibility, :sku_base, :name, :slug, :short_description, :description, :unit, :tax_class_id, :track_stock, :allow_backorder, :is_public, :is_ecommerce_enabled, :is_pos_enabled, :actor, :actor)',
+            'INSERT INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id)
+             VALUES(:site_id, :brand_id, :category_id, :type, :status, :visibility, :sku_base, :name, :slug, :short_description, :description, :unit, :tax_class_id, :track_stock, :allow_backorder, :backorder_delivery_days, :is_public, :is_ecommerce_enabled, :is_pos_enabled, :is_catalogue_enabled, :actor, :actor)',
             [
                 'site_id' => $this->requireSiteId($siteId),
                 'brand_id' => $payload['brand_id'] ?? null,
@@ -140,10 +149,12 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                 'unit' => $this->key($payload['unit'] ?? 'unit', 'unit', 32),
                 'tax_class_id' => $payload['tax_class_id'] ?? null,
                 'track_stock' => $this->boolInt($payload['track_stock'] ?? $payload['stock_enabled'] ?? false),
-                'allow_backorder' => $this->boolInt($payload['allow_backorder'] ?? false),
+                'allow_backorder' => $this->boolInt($payload['allow_backorder'] ?? true),
+                'backorder_delivery_days' => max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 7)),
                 'is_public' => $this->boolInt($payload['is_public'] ?? in_array('public', $channels, true)),
                 'is_ecommerce_enabled' => $this->boolInt($payload['is_ecommerce_enabled'] ?? in_array('ecommerce', $channels, true)),
                 'is_pos_enabled' => $this->boolInt($payload['is_pos_enabled'] ?? in_array('pos', $channels, true)),
+                'is_catalogue_enabled' => $this->boolInt($payload['is_catalogue_enabled'] ?? $defaultCatalogueEnabled),
                 'actor' => $actorId,
             ]
         );
@@ -171,6 +182,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         $isPublic = array_key_exists('is_public', $payload) ? $payload['is_public'] : ($hasChannels ? in_array('public', $channels, true) : $current['is_public']);
         $isEcommerceEnabled = array_key_exists('is_ecommerce_enabled', $payload) ? $payload['is_ecommerce_enabled'] : ($hasChannels ? in_array('ecommerce', $channels, true) : $current['is_ecommerce_enabled']);
         $isPosEnabled = array_key_exists('is_pos_enabled', $payload) ? $payload['is_pos_enabled'] : ($hasChannels ? in_array('pos', $channels, true) : $current['is_pos_enabled']);
+        $isCatalogueEnabled = array_key_exists('is_catalogue_enabled', $payload) ? $payload['is_catalogue_enabled'] : ($hasChannels ? in_array('catalogue', $channels, true) : ($current['is_catalogue_enabled'] ?? true));
         $this->database()->run(
             'UPDATE business_products SET
                 brand_id = :brand_id,
@@ -187,9 +199,11 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                 tax_class_id = :tax_class_id,
                 track_stock = :track_stock,
                 allow_backorder = :allow_backorder,
+                backorder_delivery_days = :backorder_delivery_days,
                 is_public = :is_public,
                 is_ecommerce_enabled = :is_ecommerce_enabled,
                 is_pos_enabled = :is_pos_enabled,
+                is_catalogue_enabled = :is_catalogue_enabled,
                 updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
              WHERE site_id = :site_id AND id = :id',
             [
@@ -208,10 +222,12 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                 'unit' => $this->key($payload['unit'] ?? $current['unit'] ?? 'unit', 'unit', 32),
                 'tax_class_id' => array_key_exists('tax_class_id', $payload) ? $payload['tax_class_id'] : ($current['tax_class_id'] ?? null),
                 'track_stock' => $this->boolInt($payload['track_stock'] ?? $current['track_stock'] ?? false),
-                'allow_backorder' => $this->boolInt($payload['allow_backorder'] ?? $current['allow_backorder'] ?? false),
+                'allow_backorder' => $this->boolInt($payload['allow_backorder'] ?? $current['allow_backorder'] ?? true),
+                'backorder_delivery_days' => max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? $current['backorder_delivery_days'] ?? 7)),
                 'is_public' => $this->boolInt($isPublic),
                 'is_ecommerce_enabled' => $this->boolInt($isEcommerceEnabled),
                 'is_pos_enabled' => $this->boolInt($isPosEnabled),
+                'is_catalogue_enabled' => $this->boolInt($isCatalogueEnabled),
                 'actor' => $actorId,
             ]
         );

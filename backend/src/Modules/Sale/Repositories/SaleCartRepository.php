@@ -5,9 +5,19 @@ declare(strict_types=1);
 namespace App\Modules\Sale\Repositories;
 
 use App\Modules\Sale\Exceptions\SaleValidationException;
+use App\Modules\Sale\Pricing\SalePricingService;
+use App\Modules\Sale\Services\SaleDatabaseConnection;
 
 final class SaleCartRepository extends SaleRepositoryBase
 {
+    private SalePricingService $pricing;
+
+    public function __construct(SaleDatabaseConnection $connection, ?SalePricingService $pricing = null)
+    {
+        parent::__construct($connection);
+        $this->pricing = $pricing ?? new SalePricingService();
+    }
+
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
     public function list(int $siteId, array $filters = [], int $limit = 50, int $offset = 0): array
     {
@@ -68,6 +78,7 @@ final class SaleCartRepository extends SaleRepositoryBase
     {
         $cart = $this->requireCart($cartId);
         $cart['lines'] = $this->lines($cartId);
+        $cart['adjustments'] = $this->adjustments($cartId);
         return $cart;
     }
 
@@ -75,6 +86,12 @@ final class SaleCartRepository extends SaleRepositoryBase
     public function lines(int $cartId): array
     {
         return $this->rawDatabase()->all('SELECT * FROM sale_cart_lines WHERE cart_id = ? ORDER BY id ASC', [$cartId]);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function adjustments(int $cartId): array
+    {
+        return $this->rawDatabase()->all('SELECT * FROM sale_cart_adjustments WHERE cart_id = ? ORDER BY id ASC', [$cartId]);
     }
 
     /** @param array<string,mixed> $snapshot @return array<string,mixed> */
@@ -87,7 +104,7 @@ final class SaleCartRepository extends SaleRepositoryBase
         );
         if ($existing !== null) {
             $newQuantity = (int) $existing['quantity'] + $quantity;
-            $totals = $this->lineTotals($amounts, $newQuantity);
+            $totals = $this->pricing->lineTotals($amounts, $newQuantity);
             $this->rawDatabase()->run(
                 'UPDATE sale_cart_lines
                  SET quantity = ?, line_subtotal_minor = ?, line_discount_minor = ?,
@@ -99,14 +116,14 @@ final class SaleCartRepository extends SaleRepositoryBase
                     $totals['line_discount_minor'],
                     $totals['line_tax_minor'],
                     $totals['line_total_minor'],
-                    $this->json(['snapshot' => $snapshot]),
+                    $this->lineMetadata($snapshot, $totals),
                     (int) $existing['id'],
                 ]
             );
             return $this->requireLine((int) $existing['id']);
         }
 
-        $totals = $this->lineTotals($amounts, $quantity);
+        $totals = $this->pricing->lineTotals($amounts, $quantity);
         $this->rawDatabase()->run(
             'INSERT INTO sale_cart_lines(
                 cart_id, line_key, business_product_id, business_variant_id, sku, barcode,
@@ -137,7 +154,7 @@ final class SaleCartRepository extends SaleRepositoryBase
                 $totals['line_discount_minor'],
                 $totals['line_tax_minor'],
                 $totals['line_total_minor'],
-                $this->json(['snapshot' => $snapshot]),
+                $this->lineMetadata($snapshot, $totals),
             ]
         );
         return $this->requireLine((int) $this->rawDatabase()->lastInsertId());
@@ -153,24 +170,11 @@ final class SaleCartRepository extends SaleRepositoryBase
         return $row;
     }
 
-    /** @return array{subtotal_minor:int,discount_total_minor:int,tax_total_minor:int,grand_total_minor:int} */
+    /** @return array{subtotal_minor:int,discount_total_minor:int,tax_total_minor:int,shipping_total_minor:int,grand_total_minor:int,surcharge_total_minor:int,tax_lines:list<array<string,mixed>>,adjustments:list<array<string,mixed>>} */
     public function recalculateTotals(int $cartId): array
     {
-        $totals = $this->rawDatabase()->one(
-            'SELECT
-                COALESCE(SUM(line_subtotal_minor), 0) AS subtotal_minor,
-                COALESCE(SUM(line_discount_minor), 0) AS discount_total_minor,
-                COALESCE(SUM(line_tax_minor), 0) AS tax_total_minor,
-                COALESCE(SUM(line_total_minor), 0) AS grand_total_minor
-             FROM sale_cart_lines WHERE cart_id = ?',
-            [$cartId]
-        ) ?? [];
-        $payload = [
-            'subtotal_minor' => max(0, (int) ($totals['subtotal_minor'] ?? 0)),
-            'discount_total_minor' => max(0, (int) ($totals['discount_total_minor'] ?? 0)),
-            'tax_total_minor' => max(0, (int) ($totals['tax_total_minor'] ?? 0)),
-            'grand_total_minor' => max(0, (int) ($totals['grand_total_minor'] ?? 0)),
-        ];
+        $lines = $this->lines($cartId);
+        $payload = $this->pricing->cartTotals($lines, 0, $this->normalizedCartAdjustments($cartId, $lines));
         $this->rawDatabase()->run(
             'UPDATE sale_carts
              SET subtotal_minor = ?, discount_total_minor = ?, tax_total_minor = ?,
@@ -179,6 +183,55 @@ final class SaleCartRepository extends SaleRepositoryBase
             [$payload['subtotal_minor'], $payload['discount_total_minor'], $payload['tax_total_minor'], $payload['grand_total_minor'], $cartId]
         );
         return $payload;
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function setManualCartAdjustment(int $cartId, array $payload): array
+    {
+        $cart = $this->requireCart($cartId);
+        if ((string) $cart['status'] !== 'active') {
+            throw new SaleValidationException('sale.cart_not_active');
+        }
+        $rawValue = (float) ($payload['value'] ?? 0);
+        $kind = (string) ($payload['kind'] ?? $payload['adjustment_type'] ?? ($rawValue > 0.0 ? 'surcharge' : 'manual_discount'));
+        $kind = in_array($kind, ['surcharge', 'add', 'addition'], true) ? 'surcharge' : 'manual_discount';
+        $mode = (string) ($payload['mode'] ?? $payload['value_type'] ?? 'amount');
+        $mode = $mode === 'percent' ? 'percent' : 'amount';
+        $value = abs($rawValue);
+
+        $this->rawDatabase()->run(
+            'DELETE FROM sale_cart_adjustments WHERE cart_id = ? AND cart_line_id IS NULL AND source_type = "manual"',
+            [$cartId]
+        );
+
+        if ($value > 0.0) {
+            $baseMinor = $this->cartAdjustmentBaseMinor($this->lines($cartId));
+            $amountMinor = $mode === 'percent'
+                ? $this->divideRounded($baseMinor * (int) round($value * 100), 10000)
+                : (int) round($value * 100);
+            if ($amountMinor > 0) {
+                $this->rawDatabase()->run(
+                    'INSERT INTO sale_cart_adjustments(cart_id, cart_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json)
+                     VALUES(?, NULL, ?, "manual", NULL, ?, ?, ?, ?)',
+                    [
+                        $cartId,
+                        $kind,
+                        $kind === 'surcharge' ? 'Ajout POS' : 'Remise POS',
+                        $amountMinor,
+                        (string) $cart['currency'],
+                        $this->json([
+                            'scope' => 'pos_total',
+                            'mode' => $mode,
+                            'value' => $value,
+                            'basis_points' => $mode === 'percent' ? (int) round($value * 100) : null,
+                        ]),
+                    ]
+                );
+            }
+        }
+
+        $this->recalculateTotals($cartId);
+        return $this->cartWithLines($cartId);
     }
 
     public function markConverted(int $cartId, int $orderId): void
@@ -198,7 +251,7 @@ final class SaleCartRepository extends SaleRepositoryBase
         if ((int) $line['cart_id'] !== $cartId) {
             throw new SaleValidationException('sale.cart_line_not_found');
         }
-        $totals = $this->lineTotals([
+        $totals = $this->pricing->lineTotals([
             'regular_unit_price_minor' => (int) $line['regular_unit_price_minor'],
             'unit_price_minor' => (int) $line['unit_price_minor'],
             'tax_rate_basis_points' => (int) $line['tax_rate_basis_points'],
@@ -207,9 +260,17 @@ final class SaleCartRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'UPDATE sale_cart_lines
              SET quantity = ?, line_subtotal_minor = ?, line_discount_minor = ?,
-                 line_tax_minor = ?, line_total_minor = ?, updated_at = CURRENT_TIMESTAMP
+                 line_tax_minor = ?, line_total_minor = ?, metadata_json = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
-            [$quantity, $totals['line_subtotal_minor'], $totals['line_discount_minor'], $totals['line_tax_minor'], $totals['line_total_minor'], $lineId]
+            [
+                $quantity,
+                $totals['line_subtotal_minor'],
+                $totals['line_discount_minor'],
+                $totals['line_tax_minor'],
+                $totals['line_total_minor'],
+                $this->lineMetadataFromExisting($line, $totals),
+                $lineId,
+            ]
         );
         $this->recalculateTotals($cartId);
         return $this->requireLine($lineId);
@@ -225,26 +286,73 @@ final class SaleCartRepository extends SaleRepositoryBase
         $this->recalculateTotals($cartId);
     }
 
-    /** @param array<string,int|bool> $amounts @return array<string,int> */
-    private function lineTotals(array $amounts, int $quantity): array
+    /** @param array<string,mixed> $snapshot @param array<string,mixed> $totals */
+    private function lineMetadata(array $snapshot, array $totals): string
     {
-        $regular = (int) $amounts['regular_unit_price_minor'];
-        $unit = (int) $amounts['unit_price_minor'];
-        $subtotal = $regular * $quantity;
-        $lineTotal = $unit * $quantity;
-        $discount = max(0, $subtotal - $lineTotal);
-        $rate = (int) $amounts['tax_rate_basis_points'];
-        $tax = (bool) $amounts['tax_included']
-            ? (int) round($lineTotal * $rate / (10000 + $rate))
-            : (int) round($lineTotal * $rate / 10000);
-        if (!(bool) $amounts['tax_included']) {
-            $lineTotal += $tax;
+        return $this->json([
+            'snapshot' => $snapshot,
+            'pricing' => $this->pricingMetadata($totals),
+        ]);
+    }
+
+    /** @param array<string,mixed> $line @param array<string,mixed> $totals */
+    private function lineMetadataFromExisting(array $line, array $totals): string
+    {
+        $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+        if (!is_array($metadata)) {
+            $metadata = [];
         }
+        $metadata['pricing'] = $this->pricingMetadata($totals);
+        return $this->json($metadata);
+    }
+
+    /** @param array<string,mixed> $totals @return array<string,mixed> */
+    private function pricingMetadata(array $totals): array
+    {
         return [
-            'line_subtotal_minor' => max(0, $subtotal),
-            'line_discount_minor' => $discount,
-            'line_tax_minor' => max(0, $tax),
-            'line_total_minor' => max(0, $lineTotal),
+            'taxable_amount_minor' => (int) ($totals['taxable_amount_minor'] ?? 0),
+            'tax_lines' => $totals['tax_lines'] ?? [],
+            'adjustments' => $totals['adjustments'] ?? [],
+            'rounding' => 'integer_half_up',
         ];
+    }
+
+    /** @param list<array<string,mixed>> $lines @return list<array<string,mixed>> */
+    private function normalizedCartAdjustments(int $cartId, array $lines): array
+    {
+        $adjustments = $this->adjustments($cartId);
+        $baseMinor = $this->cartAdjustmentBaseMinor($lines);
+        foreach ($adjustments as &$adjustment) {
+            $metadata = json_decode((string) ($adjustment['metadata_json'] ?? '{}'), true);
+            if (!is_array($metadata) || ($metadata['mode'] ?? null) !== 'percent') {
+                continue;
+            }
+            $basisPoints = max(0, (int) ($metadata['basis_points'] ?? 0));
+            $amountMinor = $this->divideRounded($baseMinor * $basisPoints, 10000);
+            if ($amountMinor !== (int) ($adjustment['amount_minor'] ?? 0)) {
+                $this->rawDatabase()->run('UPDATE sale_cart_adjustments SET amount_minor = ? WHERE id = ?', [$amountMinor, (int) $adjustment['id']]);
+                $adjustment['amount_minor'] = $amountMinor;
+            }
+        }
+        unset($adjustment);
+        return $adjustments;
+    }
+
+    /** @param list<array<string,mixed>> $lines */
+    private function cartAdjustmentBaseMinor(array $lines): int
+    {
+        $baseMinor = 0;
+        foreach ($lines as $line) {
+            $baseMinor += max(0, (int) ($line['line_total_minor'] ?? 0));
+        }
+        return $baseMinor;
+    }
+
+    private function divideRounded(int $numerator, int $denominator): int
+    {
+        if ($denominator <= 0 || $numerator <= 0) {
+            return 0;
+        }
+        return intdiv($numerator + intdiv($denominator, 2), $denominator);
     }
 }

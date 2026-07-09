@@ -57,6 +57,23 @@ try {
 
     $fkViolations = $db->all('PRAGMA foreign_key_check');
     $h->assertSame(0, count($fkViolations), 'catalog demo data has no foreign key violation');
+    $orphanProductAttributes = $db->one(
+        'SELECT COUNT(*) AS count
+         FROM business_product_attribute_values v
+         INNER JOIN business_attributes a ON a.id = v.attribute_id
+         LEFT JOIN business_product_attribute_group_links l ON l.product_id = v.product_id AND l.group_id = a.group_id
+         WHERE a.group_id IS NOT NULL AND l.product_id IS NULL'
+    );
+    $h->assertSame(0, (int) ($orphanProductAttributes['count'] ?? -1), 'seed product attributes always belong to a linked group');
+    $orphanVariantAttributes = $db->one(
+        'SELECT COUNT(*) AS count
+         FROM business_variant_attribute_values av
+         INNER JOIN business_attributes a ON a.id = av.attribute_id
+         INNER JOIN business_product_variants v ON v.id = av.variant_id
+         LEFT JOIN business_product_attribute_group_links l ON l.product_id = v.product_id AND l.group_id = a.group_id
+         WHERE a.group_id IS NOT NULL AND l.product_id IS NULL'
+    );
+    $h->assertSame(0, (int) ($orphanVariantAttributes['count'] ?? -1), 'seed variant attributes always belong to a linked group');
 
     $requiredIndexes = [
         'idx_business_product_categories_root_slug',
@@ -137,7 +154,7 @@ try {
     $h->assertSame('product', (string) ($discount['scope_type'] ?? ''), 'demo discount targets product');
     $h->assertSame('pos', (string) ($discount['channel'] ?? ''), 'demo discount targets POS channel');
 
-    $db->run("INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled) VALUES(1, 'bundle', 'draft', 'public', 'BUNDLE-DEMO', 'Bundle demo', 'bundle-demo', 0, 0, 1, 1, 1)");
+    $db->run("INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled) VALUES(1, 'bundle', 'draft', 'public', 'BUNDLE-DEMO', 'Bundle demo', 'bundle-demo', 0, 0, 1, 1, 1, 1)");
     $bundleProduct = $db->one("SELECT id, type FROM business_products WHERE slug = 'bundle-demo'");
     $h->assertSame('bundle', (string) ($bundleProduct['type'] ?? ''), 'bundle product type can identify a distinct sellable bundle');
     $bundleProductId = (int) ($bundleProduct['id'] ?? 0);
@@ -160,12 +177,45 @@ try {
     $h->assertSame(['marchandises', 'services'], array_map(static fn(array $row): string => (string) $row['slug'], $point06Categories), 'point 06 demo categories exist');
     $point06Products = $db->all('SELECT type FROM business_products WHERE site_id = 1 AND slug IN (?, ?, ?) ORDER BY type', ['t-shirt-demo', 'consultation', 'bon-cadeau-simple']);
     $h->assertSame(['gift_card', 'physical', 'service'], array_map(static fn(array $row): string => (string) $row['type'], $point06Products), 'point 06 demo merchandise, service and gift card exist');
-    $point06Options = $db->all('SELECT code FROM business_product_options WHERE site_id = 1 AND code IN (?, ?, ?) ORDER BY code', ['model', 'size', 'color']);
-    $h->assertSame(['color', 'model', 'size'], array_map(static fn(array $row): string => (string) $row['code'], $point06Options), 'point 06 demo options exist');
-    $allOptionCodes = $db->all('SELECT code FROM business_product_options WHERE site_id = 1 ORDER BY code');
-    $h->assertSame(['color', 'model', 'size'], array_map(static fn(array $row): string => (string) $row['code'], $allOptionCodes), 'catalog demo exposes one canonical option set');
+    $tshirtOptionLinks = $db->one(
+        'SELECT COUNT(*) AS count
+         FROM business_product_option_links l
+         INNER JOIN business_products p ON p.id = l.product_id
+         WHERE p.slug = ?',
+        ['t-shirt-demo']
+    );
+    $h->assertSame(0, (int) ($tshirtOptionLinks['count'] ?? -1), 'T-shirt demo has no duplicate product option axes');
+    $tshirtVariantOptions = $db->one(
+        'SELECT COUNT(*) AS count
+         FROM business_product_variant_option_values ov
+         INNER JOIN business_product_variants v ON v.id = ov.variant_id
+         WHERE v.sku LIKE ?',
+        ['TSHIRT-DEMO-%']
+    );
+    $h->assertSame(0, (int) ($tshirtVariantOptions['count'] ?? -1), 'T-shirt demo variants use grouped PIM attributes instead of option values');
     $point06Variants = $db->all('SELECT sku FROM business_product_variants WHERE sku LIKE ? ORDER BY sku', ['TSHIRT-DEMO-%']);
-    $h->assertSame(['TSHIRT-DEMO-CLASSIC-L-BLUE', 'TSHIRT-DEMO-CLASSIC-M-BLUE', 'TSHIRT-DEMO-PREMIUM-M-BLACK'], array_map(static fn(array $row): string => (string) $row['sku'], $point06Variants), 'point 06 demo variants exist');
+    $h->assertSame(['TSHIRT-DEMO-L-BLUE', 'TSHIRT-DEMO-M-BLACK', 'TSHIRT-DEMO-M-BLUE'], array_map(static fn(array $row): string => (string) $row['sku'], $point06Variants), 'point 06 demo variants exist');
+    $point06VariantAttributes = $db->all(
+        'SELECT v.sku, a.code, av.value_text
+         FROM business_variant_attribute_values av
+         INNER JOIN business_product_variants v ON v.id = av.variant_id
+         INNER JOIN business_attributes a ON a.id = av.attribute_id
+         WHERE v.sku LIKE ?
+         ORDER BY v.sku, a.code',
+        ['TSHIRT-DEMO-%']
+    );
+    $h->assertSame(
+        [
+            'TSHIRT-DEMO-L-BLUE:couleur:Bleu',
+            'TSHIRT-DEMO-L-BLUE:taille:L',
+            'TSHIRT-DEMO-M-BLACK:couleur:Noir',
+            'TSHIRT-DEMO-M-BLACK:taille:M',
+            'TSHIRT-DEMO-M-BLUE:couleur:Bleu',
+            'TSHIRT-DEMO-M-BLUE:taille:M',
+        ],
+        array_map(static fn(array $row): string => $row['sku'] . ':' . $row['code'] . ':' . $row['value_text'], $point06VariantAttributes),
+        'T-shirt demo variant axes are stored as Textile attributes'
+    );
     $point06Adjustments = $db->all(
         'SELECT v.sku, a.price_kind, a.adjustment_type, a.adjustment_value
          FROM business_product_variant_price_adjustments a
@@ -176,10 +226,10 @@ try {
     );
     $h->assertSame(
         [
-            'TSHIRT-DEMO-CLASSIC-L-BLUE:purchase:amount_delta:2',
-            'TSHIRT-DEMO-CLASSIC-L-BLUE:sale:amount_delta:5',
-            'TSHIRT-DEMO-PREMIUM-M-BLACK:purchase:percent_delta:15',
-            'TSHIRT-DEMO-PREMIUM-M-BLACK:sale:percent_delta:25',
+            'TSHIRT-DEMO-L-BLUE:purchase:amount_delta:2',
+            'TSHIRT-DEMO-L-BLUE:sale:amount_delta:5',
+            'TSHIRT-DEMO-M-BLACK:purchase:percent_delta:15',
+            'TSHIRT-DEMO-M-BLACK:sale:percent_delta:25',
         ],
         array_map(static fn(array $row): string => $row['sku'] . ':' . $row['price_kind'] . ':' . $row['adjustment_type'] . ':' . (string) (float) $row['adjustment_value'], $point06Adjustments),
         'point 06 demo variant adjustments match prompt'

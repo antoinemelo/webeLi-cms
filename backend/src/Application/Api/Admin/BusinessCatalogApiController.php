@@ -16,6 +16,7 @@ use App\Modules\Business\Repositories\CatalogOptionRepository;
 use App\Modules\Business\Repositories\CatalogProductRepository;
 use App\Modules\Business\Repositories\CatalogVariantRepository;
 use App\Modules\Business\Services\CatalogCsvService;
+use App\Modules\Business\Services\CatalogPdfService;
 use App\Modules\Business\Services\CatalogDiscountService;
 use App\Modules\Business\Services\CatalogProductService;
 use App\Modules\Business\Services\CatalogStockService;
@@ -45,6 +46,7 @@ final class BusinessCatalogApiController
         private readonly CatalogDiscountService $discountService,
         private readonly CatalogStockService $stockService,
         private readonly CatalogCsvService $csv,
+        private readonly CatalogPdfService $pdf,
         private readonly CatalogPricingService $pricing,
         private readonly ?BusinessProductCompletenessService $completeness = null,
     ) {}
@@ -56,6 +58,19 @@ final class BusinessCatalogApiController
             return new Response(200, $this->csv->exportProductsCsv((int) $site['id'], $this->canReadPurchasePrices((int) $site['id']), $this->exportFilters()), [
                 'Content-Type' => 'text/csv; charset=utf-8',
                 'Content-Disposition' => 'attachment; filename="business-catalog-products.csv"',
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function exportCatalogPdf(): Response
+    {
+        [$site] = $this->authorize('business.catalog.read');
+        try {
+            return new Response(200, $this->pdf->exportProductsPdf((int) $site['id'], $this->exportFilters()), [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="business-catalog-products.pdf"',
             ]);
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -271,6 +286,7 @@ final class BusinessCatalogApiController
         [$site, $languageCode] = $this->authorize('business.catalog.write');
         try {
             $variant = $this->variantService->create((int) $site['id'], $this->id($id), $this->payload(), $this->actorId());
+            $this->recalculateCompleteness($this->id($id));
             return Response::success(['variant' => $this->variantPayload((int) $site['id'], $variant), 'message' => 'Variante créée.'], 'admin.business.catalog.variants.show.v1', $this->meta($site, $languageCode), 201);
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -292,6 +308,9 @@ final class BusinessCatalogApiController
         [$site, $languageCode] = $this->authorize('business.catalog.write');
         try {
             $variant = $this->variants->update((int) $site['id'], $this->id($id), $this->payload(), $this->actorId());
+            if ($variant) {
+                $this->recalculateCompleteness((int) ($variant['product_id'] ?? 0));
+            }
             return $variant ? Response::success(['variant' => $this->variantPayload((int) $site['id'], $variant), 'message' => 'Variante mise à jour.'], 'admin.business.catalog.variants.show.v1', $this->meta($site, $languageCode)) : $this->notFound('Variante introuvable.', $id);
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -301,7 +320,11 @@ final class BusinessCatalogApiController
     public function deleteVariant(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
+        $variant = $this->variants->findById($this->id($id), true);
         $this->variantService->archive((int) $site['id'], $this->id($id), $this->actorId());
+        if ($variant && (int) ($variant['site_id'] ?? 0) === (int) $site['id']) {
+            $this->recalculateCompleteness((int) ($variant['product_id'] ?? 0));
+        }
         return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.catalog.variants.delete.v1', $this->meta($site, $languageCode));
     }
 
@@ -393,6 +416,7 @@ final class BusinessCatalogApiController
                 }
                 $this->products->setBasePrice($this->id($id), (string) $price['price_kind'], $price['amount'], (string) ($price['currency'] ?? 'CHF'), (bool) ($price['tax_included'] ?? true), $this->actorId());
             }
+            $this->recalculateCompleteness($this->id($id));
             return Response::success(['prices' => $this->safePrices($this->products->prices((int) $site['id'], $this->id($id))), 'message' => 'Prix de base mis à jour.'], 'admin.business.catalog.prices.index.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -413,6 +437,8 @@ final class BusinessCatalogApiController
                 }
                 $this->variants->setAdjustment($this->id($id), $priceKind, (string) $adjustment['type'], $adjustment['value'] ?? null, $this->actorId());
             }
+            $this->recalculateCompleteness((int) ($variant['product_id'] ?? 0));
+            $variant = $this->variants->findById($this->id($id), true) ?? $variant;
             return Response::success(['variant' => $this->variantPayload((int) $site['id'], $variant), 'message' => 'Ajustements mis à jour.'], 'admin.business.catalog.variants.prices.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -457,6 +483,7 @@ final class BusinessCatalogApiController
                 isset($payload['reference_id']) && $payload['reference_id'] !== '' ? (int) $payload['reference_id'] : null,
                 $this->actorId()
             );
+            $this->recalculateCompleteness((int) ($result['variant']['product_id'] ?? 0));
             return Response::success([
                 'stock' => $this->stockService->stock((int) $site['id'], $this->id($id)),
                 'movement' => $result['movement'],
@@ -626,7 +653,7 @@ final class BusinessCatalogApiController
     private function productFilters(): array
     {
         $filters = [];
-        foreach (['q', 'status', 'type', 'brand_id', 'category_id', 'tag', 'channel', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'low_stock', 'view', 'image', 'price', 'purchase_price', 'tax', 'completeness', 'sellable'] as $key) {
+        foreach (['q', 'status', 'type', 'brand_id', 'category_id', 'tag', 'channel', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'low_stock', 'view', 'image', 'price', 'purchase_price', 'tax', 'completeness', 'sellable'] as $key) {
             if (array_key_exists($key, $this->request->query)) {
                 $filters[$key] = $this->request->query[$key];
             }
@@ -684,7 +711,7 @@ final class BusinessCatalogApiController
         if (!$product) {
             return null;
         }
-        if (($product['completeness_score'] ?? null) === null) {
+        if ($this->productCompletenessNeedsRefresh($product)) {
             $this->recalculateCompleteness($productId);
             $product = $this->products->find($siteId, $productId, $includeArchived) ?? $product;
         }
@@ -725,7 +752,7 @@ final class BusinessCatalogApiController
         }
         $changed = false;
         foreach ($products as $product) {
-            if (($product['completeness_score'] ?? null) !== null) {
+            if (!$this->productCompletenessNeedsRefresh($product)) {
                 continue;
             }
             $productId = (int) ($product['id'] ?? 0);
@@ -736,6 +763,20 @@ final class BusinessCatalogApiController
             $changed = true;
         }
         return $changed;
+    }
+
+    /** @param array<string,mixed> $product */
+    private function productCompletenessNeedsRefresh(array $product): bool
+    {
+        if (($product['completeness_score'] ?? null) === null) {
+            return true;
+        }
+        if ((int) ($product['completeness_score'] ?? 0) >= 100 && (($product['tax_class_id'] ?? null) === null || (int) ($product['image_count'] ?? 0) < 1)) {
+            return true;
+        }
+        $summary = (string) ($product['missing_summary_json'] ?? '');
+        return str_contains($summary, 'required_product_attribute_missing_')
+            || str_contains($summary, 'stale_attribute_state');
     }
 
     private function recalculateCompleteness(int $productId): void

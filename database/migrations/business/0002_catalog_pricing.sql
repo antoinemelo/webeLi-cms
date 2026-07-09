@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_offers (
     variant_id INTEGER,
     category_id INTEGER,
     brand_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
     starts_at TEXT,
     ends_at TEXT,
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','archived')),

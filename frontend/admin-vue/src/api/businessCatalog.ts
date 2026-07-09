@@ -10,6 +10,10 @@ export type CatalogProduct = CatalogRecord & {
   is_public?: boolean;
   is_ecommerce_enabled?: boolean;
   is_pos_enabled?: boolean;
+  is_catalogue_enabled?: boolean;
+  track_stock?: boolean;
+  allow_backorder?: boolean;
+  backorder_delivery_days?: number | string | null;
   variant_count?: number;
   active_variant_count?: number;
   stock_quantity_total?: number | string | null;
@@ -29,6 +33,10 @@ export type CatalogVariant = CatalogRecord & {
   barcode?: string | null;
   stock_quantity?: number;
   stock_reserved?: number;
+  track_stock?: boolean | null;
+  allow_backorder?: boolean | null;
+  backorder_delivery_days?: number | string | null;
+  sales_note?: string | null;
   computed_prices?: Record<string, unknown> | null;
   option_values?: Array<Record<string, unknown>>;
 };
@@ -49,8 +57,8 @@ export type CatalogProductAsset = Record<string, unknown> & {
 export type CatalogAttributeGroup = CatalogRecord & { code?: string; description?: string | null; sort_order?: number };
 export type CatalogAttribute = CatalogRecord & {
   code?: string;
-  group_id?: number | null;
-  group_name?: string | null;
+  group_id?: number;
+  group_name?: string;
   data_type?: string;
   unit?: string | null;
   is_required?: boolean;
@@ -66,6 +74,13 @@ export type CatalogAttributeValue = CatalogRecord & {
   data_type?: string;
   language?: string;
   value?: unknown;
+};
+export type CatalogTaxClass = CatalogRecord & {
+  code?: string;
+  rate?: number | string;
+  country?: string;
+  is_default?: boolean;
+  usage_count?: number;
 };
 export type CatalogDiscount = CatalogRecord & {
   discount_type?: string;
@@ -167,6 +182,9 @@ export const businessCatalogApi = {
   exportCsvUrl(query: Record<string, string | number | boolean | undefined | null> = {}) {
     return adminApi.href('/business/catalog/export.csv', query);
   },
+  exportPdfUrl(query: Record<string, string | number | boolean | undefined | null> = {}) {
+    return adminApi.href('/business/catalog/export.pdf', query);
+  },
   previewImport(payload: Record<string, unknown>) {
     return adminApi.post<{ import: CatalogImportReport }>('/business/catalog/import/preview', payload);
   },
@@ -205,6 +223,18 @@ export const businessCatalogApi = {
   },
   bulkUpdateProducts(payload: Record<string, unknown>) {
     return adminApi.post<{ bulk: CatalogBulkReport }>('/business/pim/products/bulk-update', payload);
+  },
+  taxClasses() {
+    return adminApi.get<{ tax_classes: CatalogTaxClass[] }>('/business/pim/tax-classes');
+  },
+  createTaxClass(payload: Record<string, unknown>) {
+    return adminApi.post<{ tax_class: CatalogTaxClass }>('/business/pim/tax-classes', payload);
+  },
+  updateTaxClass(id: number, payload: Record<string, unknown>) {
+    return adminApi.patch<{ tax_class: CatalogTaxClass }>(`/business/pim/tax-classes/${id}`, payload);
+  },
+  deleteTaxClass(id: number) {
+    return adminApi.delete<{ deleted: boolean; archived: boolean; id: number }>(`/business/pim/tax-classes/${id}`);
   },
   bulkRecalculateProducts(payload: Record<string, unknown>) {
     return adminApi.post<{ bulk: CatalogBulkReport }>('/business/pim/products/bulk-recalculate', payload);
@@ -295,6 +325,12 @@ export const businessCatalogApi = {
   },
   createVariant(productId: number, payload: Record<string, unknown>) {
     return adminApi.post<{ variant: CatalogVariant }>(`/business/catalog/products/${productId}/variants`, payload);
+  },
+  updateVariant(id: number, payload: Record<string, unknown>) {
+    return adminApi.patch<{ variant: CatalogVariant }>(`/business/catalog/variants/${id}`, payload);
+  },
+  deleteVariant(id: number) {
+    return adminApi.delete<{ deleted: boolean; archived: boolean; id: number }>(`/business/catalog/variants/${id}`);
   },
   updateVariantPriceAdjustments(id: number, payload: Record<string, unknown>) {
     return adminApi.put<{ variant: CatalogVariant }>(`/business/catalog/variants/${id}/price-adjustments`, payload);

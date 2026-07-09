@@ -9,10 +9,12 @@ use App\Core\ApiException;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
+use App\Mail\MailerInterface;
 use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
@@ -23,11 +25,13 @@ use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
 use App\Modules\Sale\SaleModuleProvider;
 use App\Modules\Sale\Services\SaleCartService;
+use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
+use App\Modules\Sale\Services\SaleImportExportReportService;
 use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
@@ -80,13 +84,26 @@ try {
     $inventory = new SaleInventoryService($inventoryRepository);
     $events = new SaleEventService(new SaleEventRepository($saleConnection));
     $idempotency = new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection));
-    $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, $sellables);
-    $cartService = new SaleCartService($carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, $events, $idempotency);
+    $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, new BusinessSellableCatalogAdapter($sellables));
+    $salePricing = new SalePricingService();
+    $cartService = new SaleCartService($carts, $channels, $catalogSnapshots, $salePricing, $inventory, $events, $idempotency);
+    $catalogExport = new SaleCatalogExportService($channels, $catalogSnapshots, $salePricing);
+    $importExportReports = new SaleImportExportReportService($saleConnection, $inventory);
     $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
-    $paymentService = new SalePaymentService($payments, $orders, $events);
+    $paymentService = new SalePaymentService($payments, $orders, $events, $idempotency);
     $orderService = new SaleOrderService($orders, $events);
+    $mailer = new class implements MailerInterface {
+        /** @var list<array{to:string,subject:string,text:string,html:?string}> */
+        public array $messages = [];
 
-    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $saleConnection, $channels, $carts, $orders, $payments, $inventoryRepository, $catalogSnapshots, $cartService, $checkout, $paymentService, $orderService): SaleAdminApiController {
+        public function send(string $to, string $subject, string $textBody, ?string $htmlBody = null): bool
+        {
+            $this->messages[] = ['to' => $to, 'subject' => $subject, 'text' => $textBody, 'html' => $htmlBody];
+            return true;
+        }
+    };
+
+    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $saleConnection, $channels, $carts, $orders, $payments, $inventory, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer): SaleAdminApiController {
         if ($userId > 0) {
             $token = 'sale-api-test-token-' . $userId;
             $iam->run('DELETE FROM iam_sessions WHERE user_id = :user_id', ['user_id' => $userId]);
@@ -109,7 +126,7 @@ try {
         }
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
         $auth = new AuthRepository($iam);
-        return new SaleAdminApiController($request, $sites, $auth, new Authorization($auth), $saleConnection, $channels, $carts, $orders, $payments, $inventoryRepository, $catalogSnapshots, $cartService, $checkout, $paymentService, $orderService);
+        return new SaleAdminApiController($request, $sites, $auth, new Authorization($auth), $saleConnection, $channels, $carts, $orders, $payments, $inventory, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer);
     };
 
     $routes = (new SaleModuleProvider())->adminRoutes();
@@ -121,16 +138,36 @@ try {
         ['GET', '/admin/api/sale/payment-methods'],
         ['GET', '/admin/api/sale/pos/bootstrap'],
         ['GET', '/admin/api/sale/pos/catalog'],
+        ['GET', '/admin/api/sale/export/orders.csv'],
+        ['GET', '/admin/api/sale/export/order-lines.csv'],
+        ['GET', '/admin/api/sale/export/payments.csv'],
+        ['GET', '/admin/api/sale/export/pos-sessions.csv'],
+        ['GET', '/admin/api/sale/export/stock-movements.csv'],
+        ['GET', '/admin/api/sale/export/returns-refunds.csv'],
+        ['POST', '/admin/api/sale/import/stock/preview'],
+        ['POST', '/admin/api/sale/import/stock/apply'],
         ['GET', '/admin/api/sale/pos/variants'],
         ['POST', '/admin/api/sale/pos/sessions/open'],
         ['POST', '/admin/api/sale/pos/sessions/1/close'],
         ['POST', '/admin/api/sale/pos/carts'],
         ['POST', '/admin/api/sale/pos/carts/1/lines'],
         ['PATCH', '/admin/api/sale/pos/carts/1/lines/1'],
+        ['DELETE', '/admin/api/sale/pos/carts/1/lines/1'],
+        ['POST', '/admin/api/sale/pos/carts/1/adjustments'],
         ['POST', '/admin/api/sale/pos/checkout'],
         ['GET', '/admin/api/sale/pos/orders/1/receipt'],
+        ['POST', '/admin/api/sale/pos/orders/1/receipt/email'],
+        ['GET', '/admin/api/sale/ai/schema'],
+        ['GET', '/admin/api/sale/ai/orders/1/summary-context'],
+        ['GET', '/admin/api/sale/ai/pos/day-summary-context'],
+        ['GET', '/admin/api/sale/ai/customers/contact/1/analysis-context'],
+        ['GET', '/admin/api/sale/ai/unpaid-orders-context'],
         ['GET', '/admin/api/sale/stock/items'],
         ['GET', '/admin/api/sale/reports/daily'],
+        ['GET', '/admin/api/sale/reports/channels'],
+        ['GET', '/admin/api/sale/reports/payment-methods'],
+        ['GET', '/admin/api/sale/reports/stock'],
+        ['GET', '/admin/api/sale/reports/refunds'],
     ] as [$method, $path]) {
         $match = (new Router())->match($method, $path, $routes);
         $h->assertTrue($match !== null, 'sale admin route is declared: ' . $method . ' ' . $path);
@@ -186,15 +223,44 @@ try {
     $orderId = (int) ($checkoutPayload['data']['order']['id'] ?? 0);
     $h->assertTrue($orderId > 0, 'checkout endpoint returns order');
 
-    $paymentResponse = $controllerFor(1, 'POST', '/admin/api/sale/orders/' . $orderId . '/payments', [], ['amount_minor' => 2900])->storeOrderPayment($orderId);
+    $paymentPayloadInput = ['amount_minor' => 2900, 'payment_method' => 'manual_card', 'idempotency_key' => 'api-payment'];
+    $paymentResponse = $controllerFor(1, 'POST', '/admin/api/sale/orders/' . $orderId . '/payments', [], $paymentPayloadInput)->storeOrderPayment($orderId);
     $h->assertSame(201, $paymentResponse->status(), 'sale admin can record order payment');
     $paymentPayload = json_decode($paymentResponse->body(), true);
     $h->assertSame('paid', $paymentPayload['data']['order']['payment_status'] ?? null, 'payment endpoint updates order payment status');
+    $paymentTransactionId = (int) ($paymentPayload['data']['transaction']['id'] ?? 0);
+    $paymentReplayResponse = $controllerFor(1, 'POST', '/admin/api/sale/orders/' . $orderId . '/payments', [], $paymentPayloadInput)->storeOrderPayment($orderId);
+    $h->assertSame(201, $paymentReplayResponse->status(), 'sale admin payment endpoint is idempotent');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_payment_transactions WHERE order_id = ? AND transaction_type = "payment"', [$orderId])['count'] ?? 0), 'idempotent payment replay does not duplicate transaction');
+    $intent = $saleDb->one('SELECT provider_key, status FROM sale_payment_intents WHERE order_id = ? LIMIT 1', [$orderId]);
+    $h->assertSame('manual_card', $intent['provider_key'] ?? null, 'payment intent stores provider key');
+    $h->assertSame('captured', $intent['status'] ?? null, 'payment intent is captured after provider payment');
+
+    $refundInput = ['amount_minor' => 900, 'reason' => 'Retour partiel', 'idempotency_key' => 'api-refund'];
+    $refundResponse = $controllerFor(1, 'POST', '/admin/api/sale/payments/' . $paymentTransactionId . '/refund', [], $refundInput)->refundPayment($paymentTransactionId);
+    $h->assertSame(201, $refundResponse->status(), 'sale admin can refund a payment through provider service');
+    $refundPayload = json_decode($refundResponse->body(), true);
+    $h->assertSame('partially_refunded', $refundPayload['data']['order']['payment_status'] ?? null, 'partial refund updates order payment status');
+    $refundReplayResponse = $controllerFor(1, 'POST', '/admin/api/sale/payments/' . $paymentTransactionId . '/refund', [], $refundInput)->refundPayment($paymentTransactionId);
+    $h->assertSame(201, $refundReplayResponse->status(), 'sale refund endpoint is idempotent');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_refunds WHERE payment_transaction_id = ?', [$paymentTransactionId])['count'] ?? 0), 'idempotent refund replay does not duplicate refund');
 
     $eventsResponse = $controllerFor(1, 'GET', '/admin/api/sale/orders/' . $orderId . '/events')->orderEvents($orderId);
     $h->assertSame(200, $eventsResponse->status(), 'sale admin can list order events');
     $eventsPayload = json_decode($eventsResponse->body(), true);
     $h->assertTrue(in_array('sale.order.placed', array_column($eventsPayload['data']['events'] ?? [], 'event_type'), true), 'order events include placed event');
+
+    $aiSchemaResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/schema')->aiSchema();
+    $h->assertSame(200, $aiSchemaResponse->status(), 'sale AI private schema is available');
+    $aiSchemaPayload = json_decode($aiSchemaResponse->body(), true);
+    $h->assertSame(false, $aiSchemaPayload['data']['external_ai_allowed'] ?? true, 'sale AI schema forbids external AI by default');
+    $h->assertTrue(isset($aiSchemaPayload['data']['contexts']['sale.ai.order_summary']), 'sale AI schema declares order summary context');
+
+    $aiOrderContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/orders/' . $orderId . '/summary-context')->aiOrderSummaryContext($orderId);
+    $h->assertSame(200, $aiOrderContextResponse->status(), 'sale AI order summary context is available');
+    $aiOrderContextPayload = json_decode($aiOrderContextResponse->body(), true);
+    $h->assertSame(false, $aiOrderContextPayload['data']['external_ai_allowed'] ?? true, 'sale AI order context forbids external AI by default');
+    $h->assertSame($orderId, (int) ($aiOrderContextPayload['data']['order']['id'] ?? 0), 'sale AI order context exposes requested order');
 
     $stockResponse = $controllerFor(1, 'GET', '/admin/api/sale/stock/items')->stockItems();
     $h->assertSame(200, $stockResponse->status(), 'sale admin can list stock items');
@@ -219,6 +285,7 @@ try {
     $sessionPayload = json_decode($sessionResponse->body(), true);
     $cashSessionId = (int) ($sessionPayload['data']['session']['id'] ?? 0);
     $h->assertTrue($cashSessionId > 0, 'sale POS open session returns session id');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.pos.session.opened"')['count'] ?? 0), 'sale POS session opening is queued in outbox');
 
     $posCartResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/carts')->posStoreCart();
     $h->assertSame(201, $posCartResponse->status(), 'sale POS can create a cart');
@@ -241,6 +308,7 @@ try {
     $h->assertSame(201, $posCheckoutResponse->status(), 'sale POS can checkout a cash cart');
     $posCheckoutBody = json_decode($posCheckoutResponse->body(), true);
     $posOrderId = (int) ($posCheckoutBody['data']['order']['id'] ?? 0);
+    $h->assertTrue(str_starts_with((string) ($posCheckoutBody['data']['order']['order_number'] ?? ''), 'POS-'), 'sale POS checkout uses POS order number prefix');
     $h->assertSame('paid', $posCheckoutBody['data']['order']['payment_status'] ?? null, 'sale POS checkout records payment');
     $h->assertTrue(isset($posCheckoutBody['data']['receipt']['printable_text']), 'sale POS checkout returns printable receipt payload');
 
@@ -251,6 +319,15 @@ try {
 
     $receiptResponse = $controllerFor(1, 'GET', '/admin/api/sale/pos/orders/' . $posOrderId . '/receipt')->posOrderReceipt($posOrderId);
     $h->assertSame(200, $receiptResponse->status(), 'sale POS can reload an order receipt');
+    $orderReceiptResponse = $controllerFor(1, 'GET', '/admin/api/sale/orders/' . $posOrderId . '/receipt')->orderReceipt($posOrderId);
+    $orderReceiptPayload = json_decode($orderReceiptResponse->body(), true);
+    $h->assertSame(200, $orderReceiptResponse->status(), 'sale orders can print the same receipt payload');
+    $h->assertTrue(str_contains((string) ($orderReceiptPayload['data']['receipt']['printable_text'] ?? ''), 'Ticket de caisse'), 'sale order receipt uses ticket formatter');
+
+    $emailReceiptResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/orders/' . $posOrderId . '/receipt/email', [], ['email' => 'client@example.test'])->posEmailReceipt($posOrderId);
+    $h->assertSame(200, $emailReceiptResponse->status(), 'sale POS can email an order receipt');
+    $h->assertSame('client@example.test', $mailer->messages[0]['to'] ?? null, 'sale POS receipt email uses requested recipient');
+    $h->assertTrue(str_contains($mailer->messages[0]['subject'] ?? '', 'POS-'), 'sale POS receipt email subject uses POS reference');
 
     $sessionAfterSale = $saleDb->one('SELECT * FROM sale_cash_sessions WHERE id = ?', [$cashSessionId]);
     $expectedCash = (int) ($sessionAfterSale['expected_cash_minor'] ?? 0);
@@ -261,9 +338,66 @@ try {
     $closeSessionPayload = json_decode($closeSessionResponse->body(), true);
     $h->assertSame('closed', $closeSessionPayload['data']['session']['status'] ?? null, 'sale POS closed session is marked closed');
     $h->assertSame(0, (int) ($closeSessionPayload['data']['session']['difference_minor'] ?? -1), 'sale POS closed session computes cash difference');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.pos.session.closed"')['count'] ?? 0), 'sale POS session closing is queued in outbox');
+
+    $aiPosContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/pos/day-summary-context', ['date' => gmdate('Y-m-d')])->aiPosDaySummaryContext();
+    $h->assertSame(200, $aiPosContextResponse->status(), 'sale AI POS day context is available');
+    $aiPosContextPayload = json_decode($aiPosContextResponse->body(), true);
+    $h->assertSame(false, $aiPosContextPayload['data']['external_ai_allowed'] ?? true, 'sale AI POS context forbids external AI by default');
+    $h->assertTrue(($aiPosContextPayload['data']['totals']['orders_count'] ?? 0) >= 1, 'sale AI POS context includes daily orders');
+
+    $aiCustomerContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/customers/contact/1/analysis-context')->aiCustomerSalesAnalysisContext('contact', 1);
+    $h->assertSame(200, $aiCustomerContextResponse->status(), 'sale AI customer context is available');
+    $aiUnpaidContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/unpaid-orders-context')->aiUnpaidOrdersContext();
+    $h->assertSame(200, $aiUnpaidContextResponse->status(), 'sale AI unpaid orders context is available');
 
     $reportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/daily')->dailyReport();
     $h->assertSame(200, $reportResponse->status(), 'sale admin can read daily report');
+    $dailyReportPayload = json_decode($reportResponse->body(), true);
+    $h->assertTrue(array_key_exists('by_channel', $dailyReportPayload['data']['report'] ?? []), 'sale daily report exposes channel breakdown');
+
+    $channelsReportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/channels')->channelsReport();
+    $h->assertSame(200, $channelsReportResponse->status(), 'sale admin can read channel report');
+    $paymentMethodsReportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/payment-methods')->paymentMethodsReport();
+    $h->assertSame(200, $paymentMethodsReportResponse->status(), 'sale admin can read payment methods report');
+    $stockReportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/stock')->stockReport();
+    $h->assertSame(200, $stockReportResponse->status(), 'sale admin can read stock report');
+    $refundsReportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/refunds')->refundsReport();
+    $h->assertSame(200, $refundsReportResponse->status(), 'sale admin can read refunds report');
+
+    $ordersExport = $controllerFor(1, 'GET', '/admin/api/sale/export/orders.csv')->exportOrdersCsv();
+    $h->assertSame(200, $ordersExport->status(), 'sale admin can export orders CSV');
+    $h->assertSame('text/csv; charset=utf-8', $ordersExport->headers()['Content-Type'] ?? null, 'sale orders export is CSV');
+    $h->assertTrue(str_contains($ordersExport->body(), 'order_number;channel_id;source'), 'sale orders export has stable headers');
+    $h->assertTrue(str_contains($ordersExport->body(), 'POS-'), 'sale orders export contains POS order');
+
+    $orderLinesExport = $controllerFor(1, 'GET', '/admin/api/sale/export/order-lines.csv')->exportOrderLinesCsv();
+    $h->assertSame(200, $orderLinesExport->status(), 'sale admin can export order lines CSV');
+    $h->assertTrue(str_contains($orderLinesExport->body(), 'unit_purchase_price_minor'), 'sale order lines export documents purchase column');
+    $h->assertTrue(str_contains($orderLinesExport->body(), 'DEMO-GOURDE-BLEU'), 'sale order lines export contains SKU snapshot');
+
+    $paymentsExport = $controllerFor(1, 'GET', '/admin/api/sale/export/payments.csv')->exportPaymentsCsv();
+    $h->assertSame(200, $paymentsExport->status(), 'sale admin can export payments CSV');
+    $h->assertTrue(str_contains($paymentsExport->body(), 'transaction_type;status;amount_minor'), 'sale payments export has stable headers');
+
+    $posSessionsExport = $controllerFor(1, 'GET', '/admin/api/sale/export/pos-sessions.csv')->exportPosSessionsCsv();
+    $h->assertSame(200, $posSessionsExport->status(), 'sale admin can export POS sessions CSV');
+    $stockMovementsExport = $controllerFor(1, 'GET', '/admin/api/sale/export/stock-movements.csv')->exportStockMovementsCsv();
+    $h->assertSame(200, $stockMovementsExport->status(), 'sale admin can export stock movements CSV');
+    $returnsRefundsExport = $controllerFor(1, 'GET', '/admin/api/sale/export/returns-refunds.csv')->exportReturnsRefundsCsv();
+    $h->assertSame(200, $returnsRefundsExport->status(), 'sale admin can export returns and refunds CSV');
+
+    $stockImportCsv = "business_variant_id;sku;quantity_delta;reason\n" . (int) $variant['id'] . ";DEMO-GOURDE-BLEU;2;Import stock test\n";
+    $stockPreview = $controllerFor(1, 'POST', '/admin/api/sale/import/stock/preview', [], ['csv' => $stockImportCsv])->previewStockImport();
+    $h->assertSame(200, $stockPreview->status(), 'sale stock import preview validates CSV');
+    $stockPreviewPayload = json_decode($stockPreview->body(), true);
+    $h->assertSame(true, $stockPreviewPayload['data']['import']['dry_run'] ?? null, 'sale stock import preview is dry-run');
+    $h->assertSame(1, $stockPreviewPayload['data']['import']['valid_rows'] ?? null, 'sale stock import preview reports valid rows');
+    $stockApply = $controllerFor(1, 'POST', '/admin/api/sale/import/stock/apply', [], ['csv' => $stockImportCsv])->applyStockImport();
+    $h->assertSame(200, $stockApply->status(), 'sale stock import apply writes adjustment');
+    $stockApplyPayload = json_decode($stockApply->body(), true);
+    $h->assertSame(1, $stockApplyPayload['data']['import']['adjusted'] ?? null, 'sale stock import apply reports adjustment');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE reason = "Import stock test"')['count'] ?? 0), 'sale stock import writes stock movement');
 } finally {
     $businessDb = null;
     $saleDb = null;

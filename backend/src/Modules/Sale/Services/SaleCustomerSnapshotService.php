@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Sale\Services;
 
 use App\Core\Database;
-use App\Modules\Business\Services\BusinessCrmRelationSnapshotService;
+use App\Modules\Sale\Contracts\CustomerSnapshotPort;
 use RuntimeException;
 
 final class SaleCustomerSnapshotService
 {
     public function __construct(
         private readonly SaleDatabaseConnection $sale,
-        private readonly BusinessCrmRelationSnapshotService $relations
+        private readonly CustomerSnapshotPort $relations
     ) {}
 
     /** @return array<string,mixed>|null */

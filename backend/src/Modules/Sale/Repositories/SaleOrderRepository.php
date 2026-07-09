@@ -34,10 +34,11 @@ final class SaleOrderRepository extends SaleRepositoryBase
         return ['items' => $items, 'limit' => $limit, 'offset' => $offset, 'total' => $total, 'has_more' => ($offset + $limit) < $total];
     }
 
-    /** @param array<string,mixed> $cart @param list<array<string,mixed>> $lines @return array<string,mixed> */
-    public function createFromCart(array $cart, array $lines, string $source = 'admin'): array
+    /** @param array<string,mixed> $cart @param list<array<string,mixed>> $lines @param list<array<string,mixed>> $adjustments @return array<string,mixed> */
+    public function createFromCart(array $cart, array $lines, string $source = 'admin', array $adjustments = []): array
     {
-        $orderNumber = 'SALE-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $prefix = $source === 'pos' ? 'POS' : 'SALE';
+        $orderNumber = $prefix . '-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3));
         $this->rawDatabase()->run(
             'INSERT INTO sale_orders(
                 site_id, channel_id, order_number, source, status, payment_status, currency,
@@ -101,6 +102,22 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 ]
             );
         }
+        foreach ($adjustments as $adjustment) {
+            $this->rawDatabase()->run(
+                'INSERT INTO sale_order_adjustments(order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json)
+                 VALUES(?, NULL, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $orderId,
+                    (string) $adjustment['adjustment_type'],
+                    (string) $adjustment['source_type'],
+                    $adjustment['source_id'] ?? null,
+                    (string) $adjustment['label'],
+                    (int) $adjustment['amount_minor'],
+                    (string) $adjustment['currency'],
+                    (string) $adjustment['metadata_json'],
+                ]
+            );
+        }
         $this->rawDatabase()->run(
             'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason)
              VALUES(?, NULL, "placed", ?, "checkout")',
@@ -140,6 +157,22 @@ final class SaleOrderRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'UPDATE sale_orders SET paid_total_minor = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             [$paidTotalMinor, $status, $orderId]
+        );
+        return $this->requireOrder($orderId);
+    }
+
+    public function updateRefundedTotal(int $orderId, int $refundedTotalMinor): array
+    {
+        $order = $this->requireOrder($orderId);
+        $paidTotal = (int) $order['paid_total_minor'];
+        $refundedTotalMinor = max(0, min($refundedTotalMinor, $paidTotal));
+        $status = (string) $order['payment_status'];
+        if ($refundedTotalMinor > 0) {
+            $status = $refundedTotalMinor >= $paidTotal ? 'refunded' : 'partially_refunded';
+        }
+        $this->rawDatabase()->run(
+            'UPDATE sale_orders SET refunded_total_minor = ?, payment_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [$refundedTotalMinor, $status, $orderId]
         );
         return $this->requireOrder($orderId);
     }

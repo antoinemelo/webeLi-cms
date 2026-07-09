@@ -35,6 +35,10 @@ try {
         'GET /admin/api/business/pim/products/{id}/bundle',
         'PUT /admin/api/business/pim/products/{id}/bundle',
         'POST /admin/api/business/pim/bundles/{id}/components',
+        'GET /admin/api/business/pim/tax-classes',
+        'POST /admin/api/business/pim/tax-classes',
+        'PATCH /admin/api/business/pim/tax-classes/{id}',
+        'DELETE /admin/api/business/pim/tax-classes/{id}',
         'GET /admin/api/business/pim/attribute-groups',
         'GET /admin/api/business/pim/attributes',
         'GET /admin/api/business/pim/products/{id}/attributes',
@@ -52,7 +56,7 @@ try {
     }
     $h->assertSame([], $provider->publicHeadlessRoutes(), 'Business PIM does not declare public headless routes');
     $contractKeys = array_column($provider->apiContracts(), 'key');
-    foreach (['admin.business.pim.product_assets.index.v1', 'admin.business.pim.product_bundle.show.v1', 'admin.business.pim.bundle_components.store.v1', 'admin.business.pim.attributes.index.v1', 'admin.business.pim.sellable_snapshot.show.v1', 'admin.business.pim.offers.bulk_update.v1', 'admin.business.pim.offers.export.v1', 'admin.business.pim.offers.import.preview.v1', 'admin.business.pim.offers.import.apply.v1'] as $contractKey) {
+    foreach (['admin.business.pim.product_assets.index.v1', 'admin.business.pim.product_bundle.show.v1', 'admin.business.pim.bundle_components.store.v1', 'admin.business.pim.tax_classes.index.v1', 'admin.business.pim.tax_classes.store.v1', 'admin.business.pim.tax_classes.show.v1', 'admin.business.pim.tax_classes.delete.v1', 'admin.business.pim.attributes.index.v1', 'admin.business.pim.sellable_snapshot.show.v1', 'admin.business.pim.offers.bulk_update.v1', 'admin.business.pim.offers.export.v1', 'admin.business.pim.offers.import.preview.v1', 'admin.business.pim.offers.import.apply.v1'] as $contractKey) {
         $h->assertTrue(in_array($contractKey, $contractKeys, true), 'Business provider declares PIM contract ' . $contractKey);
     }
 
@@ -119,6 +123,7 @@ try {
     $product = $businessDb->one("SELECT id FROM business_products WHERE slug = 'gourde-demo' LIMIT 1");
     $brand = $businessDb->one("SELECT id FROM business_product_brands WHERE site_id = 1 ORDER BY id ASC LIMIT 1");
     $category = $businessDb->one("SELECT id FROM business_product_categories WHERE site_id = 1 ORDER BY id ASC LIMIT 1");
+    $taxClass = $businessDb->one("SELECT id FROM business_tax_classes WHERE site_id = 1 ORDER BY is_default DESC, id ASC LIMIT 1");
     $variant = $businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
     $componentProduct = $businessDb->one("SELECT id FROM business_products WHERE slug = 'bon-cadeau-demo' LIMIT 1");
     $componentVariant = $businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GIFT-100' LIMIT 1");
@@ -127,17 +132,49 @@ try {
     $productId = (int) ($product['id'] ?? 0);
     $brandId = (int) ($brand['id'] ?? 0);
     $categoryId = (int) ($category['id'] ?? 0);
+    $taxClassId = (int) ($taxClass['id'] ?? 0);
     $variantId = (int) ($variant['id'] ?? 0);
     $componentProductId = (int) ($componentProduct['id'] ?? 0);
     $componentVariantId = (int) ($componentVariant['id'] ?? 0);
     $secondComponentProductId = (int) ($secondComponentProduct['id'] ?? 0);
     $secondComponentVariantId = (int) ($secondComponentVariant['id'] ?? 0);
-    $h->assertTrue($productId > 0 && $variantId > 0 && $componentProductId > 0 && $componentVariantId > 0 && $brandId > 0 && $categoryId > 0, 'demo product, variant, taxonomy and bundle components are available');
+    $h->assertTrue($productId > 0 && $variantId > 0 && $componentProductId > 0 && $componentVariantId > 0 && $brandId > 0 && $categoryId > 0 && $taxClassId > 0, 'demo product, variant, taxonomy, tax class and bundle components are available');
 
     $assetList = $controllerFor(1, 'GET', '/admin/api/business/pim/products/' . $productId . '/assets')->productAssets($productId);
     $h->assertSame(200, $assetList->status(), 'catalog admin can list PIM product assets');
     $assetPayload = json_decode($assetList->body(), true);
     $h->assertTrue(count($assetPayload['data']['assets'] ?? []) > 0, 'PIM product assets endpoint returns assets');
+
+    $taxList = $controllerFor(1, 'GET', '/admin/api/business/pim/tax-classes')->taxClasses();
+    $h->assertSame(200, $taxList->status(), 'catalog admin can list PIM tax classes');
+    $taxPayload = json_decode($taxList->body(), true);
+    $h->assertTrue(count($taxPayload['data']['tax_classes'] ?? []) > 0, 'PIM tax classes endpoint returns rows');
+
+    $taxCreate = $controllerFor(1, 'POST', '/admin/api/business/pim/tax-classes', [], [
+        'code' => 'test_tax',
+        'name' => 'Test TVA',
+        'rate' => 3.7,
+        'country' => 'CH',
+        'is_default' => false,
+    ])->storeTaxClass();
+    $h->assertSame(201, $taxCreate->status(), 'catalog admin can create PIM tax class');
+    $createdTaxClass = json_decode($taxCreate->body(), true)['data']['tax_class'];
+    $createdTaxClassId = (int) ($createdTaxClass['id'] ?? 0);
+    $h->assertTrue($createdTaxClassId > 0, 'PIM tax class creation returns id');
+
+    $taxUpdate = $controllerFor(1, 'PATCH', '/admin/api/business/pim/tax-classes/' . $createdTaxClassId, [], [
+        'name' => 'Test TVA réduit',
+        'rate' => 2.5,
+        'country' => 'CH',
+        'is_default' => false,
+    ])->updateTaxClass($createdTaxClassId);
+    $h->assertSame(200, $taxUpdate->status(), 'catalog admin can update PIM tax class');
+    $updatedTaxClass = json_decode($taxUpdate->body(), true)['data']['tax_class'];
+    $h->assertSame('Test TVA réduit', $updatedTaxClass['name'] ?? '', 'PIM tax class update changes name');
+    $h->assertSame(2.5, (float) ($updatedTaxClass['rate'] ?? 0), 'PIM tax class update changes rate');
+
+    $taxDelete = $controllerFor(1, 'DELETE', '/admin/api/business/pim/tax-classes/' . $createdTaxClassId)->deleteTaxClass($createdTaxClassId);
+    $h->assertSame(200, $taxDelete->status(), 'catalog admin can delete unused PIM tax class');
 
     $assetCreate = $controllerFor(1, 'POST', '/admin/api/business/pim/products/' . $productId . '/assets', [], [
         'variant_id' => $variantId,
@@ -244,10 +281,17 @@ try {
     $h->assertSame(422, $invalidOption->status(), 'PIM product attributes are constrained to declared attribute options');
     $h->assertSame('business.attribute_option_invalid', json_decode($invalidOption->body(), true)['error']['fields']['business_pim'][0] ?? null, 'PIM rejects values outside declared options');
 
+    $businessDb->run(
+        'INSERT OR REPLACE INTO business_product_completeness_scores(product_id, variant_id, channel, score, is_sellable, missing_json)
+         VALUES(?, ?, "pos", 1, 0, ?)',
+        [$productId, $variantId, json_encode(['stale_attribute_state'], JSON_THROW_ON_ERROR)]
+    );
     $variantValues = $controllerFor(1, 'PUT', '/admin/api/business/pim/variants/' . $variantId . '/attributes', [], [
         'values' => [['attribute_id' => $attributeId, 'language' => 'fr', 'value_text' => 'coton']],
     ])->putVariantAttributes($variantId);
     $h->assertSame(200, $variantValues->status(), 'catalog admin can replace PIM variant attributes');
+    $variantCompleteness = $businessDb->one('SELECT score, missing_json FROM business_product_completeness_scores WHERE variant_id = ? AND channel = "pos"', [$variantId]);
+    $h->assertTrue((int) ($variantCompleteness['score'] ?? 1) !== 1 || (string) ($variantCompleteness['missing_json'] ?? '') !== '["stale_attribute_state"]', 'PIM variant attribute update recalculates stale completeness');
 
     $lockedType = $controllerFor(1, 'PATCH', '/admin/api/business/pim/attributes/' . $attributeId, [], [
         'name' => 'Matière API',
@@ -295,6 +339,7 @@ try {
         'changes' => [
             'brand_id' => $brandId,
             'category_id' => $categoryId,
+            'tax_class_id' => $taxClassId,
             'is_public' => true,
             'is_ecommerce_enabled' => true,
             'is_pos_enabled' => false,
@@ -305,12 +350,17 @@ try {
     $bulkApplyPayload = json_decode($bulkApply->body(), true)['data']['bulk'];
     $h->assertSame(false, $bulkApplyPayload['dry_run'], 'PIM bulk update apply is not dry-run');
     $h->assertSame(1, $bulkApplyPayload['updated'], 'PIM bulk update returns updated count');
-    $updatedProduct = $businessDb->one('SELECT brand_id, category_id, is_public, is_ecommerce_enabled, is_pos_enabled FROM business_products WHERE id = ?', [$productId]);
+    $h->assertSame(1, $bulkApplyPayload['recalculated'], 'PIM bulk update recalculates changed products');
+    $updatedProduct = $businessDb->one('SELECT brand_id, category_id, tax_class_id, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled FROM business_products WHERE id = ?', [$productId]);
     $h->assertSame($brandId, (int) ($updatedProduct['brand_id'] ?? 0), 'PIM bulk update changes brand');
     $h->assertSame($categoryId, (int) ($updatedProduct['category_id'] ?? 0), 'PIM bulk update changes category');
+    $h->assertSame($taxClassId, (int) ($updatedProduct['tax_class_id'] ?? 0), 'PIM bulk update changes tax class');
     $h->assertSame(1, (int) ($updatedProduct['is_public'] ?? 0), 'PIM bulk update changes public channel');
     $h->assertSame(1, (int) ($updatedProduct['is_ecommerce_enabled'] ?? 0), 'PIM bulk update changes ecommerce channel');
     $h->assertSame(0, (int) ($updatedProduct['is_pos_enabled'] ?? 1), 'PIM bulk update changes POS channel');
+
+    $taxDeleteUsed = $controllerFor(1, 'DELETE', '/admin/api/business/pim/tax-classes/' . $taxClassId)->deleteTaxClass($taxClassId);
+    $h->assertSame(422, $taxDeleteUsed->status(), 'catalog admin cannot delete used PIM tax class');
 
     $bulkCompleteness = $controllerFor(1, 'POST', '/admin/api/business/pim/products/bulk-recalculate', [], [
         'product_ids' => [$productId],
@@ -329,8 +379,8 @@ try {
     $h->assertTrue(trim((string) ($archivedProduct['archived_at'] ?? '')) !== '', 'PIM bulk archive sets archived timestamp');
 
     $businessDb->run(
-        "INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, unit, is_public, is_ecommerce_enabled, is_pos_enabled)
-         VALUES(1, 'bundle', 'draft', 'internal', 'BUNDLE-BULK-TEST', 'Bundle bulk test', 'bundle-bulk-test', 'unit', 0, 0, 0)"
+        "INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, unit, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+         VALUES(1, 'bundle', 'draft', 'internal', 'BUNDLE-BULK-TEST', 'Bundle bulk test', 'bundle-bulk-test', 'unit', 0, 0, 0, 1)"
     );
     $bundleOfferId = (int) $businessDb->lastInsertId();
     $discount = $businessDb->one("SELECT id FROM business_catalog_discounts WHERE site_id = 1 AND archived_at IS NULL LIMIT 1");

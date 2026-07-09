@@ -13,16 +13,20 @@ final class BusinessCatalogSellableReadService
 {
     private readonly BusinessProductAssetService $assets;
     private readonly BusinessProductBundleService $bundles;
+    private readonly BusinessProductCompletenessService $completenessService;
+    private ?bool $hasVariantSalesNoteColumn = null;
 
     public function __construct(
         private readonly BusinessCatalogPricingRepository $pricingRepository,
         private readonly CatalogPricingService $pricing,
         private readonly PosCatalogRepository $catalog,
         ?BusinessProductAssetService $assets = null,
-        ?BusinessProductBundleService $bundles = null
+        ?BusinessProductBundleService $bundles = null,
+        ?BusinessProductCompletenessService $completenessService = null
     ) {
         $this->assets = $assets ?? new BusinessProductAssetService($pricingRepository->rawDatabase());
         $this->bundles = $bundles ?? new BusinessProductBundleService($pricingRepository->rawDatabase());
+        $this->completenessService = $completenessService ?? new BusinessProductCompletenessService($pricingRepository->rawDatabase());
     }
 
     /** @param array<string,mixed>|int|null $context @return array<string,mixed> */
@@ -189,7 +193,9 @@ final class BusinessCatalogSellableReadService
 
         $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
+        $backorderDeliveryDays = $row['variant_backorder_delivery_days'] === null ? (int) $row['product_backorder_delivery_days'] : (int) $row['variant_backorder_delivery_days'];
         $available = (float) $row['stock_quantity'] - (float) $row['stock_reserved'];
+        $availability = $this->availability($trackStock, $allowBackorder, $available, $backorderDeliveryDays);
         $currency = strtoupper((string) ($context['currency'] ?: ($pricingSummary['currency'] ?? $row['sale_currency'] ?? 'CHF')));
         $regularSaleMinor = $this->moneyMinor($pricingSummary['regular_sale_price'] ?? $row['base_sale_price'] ?? null);
         $finalSaleMinor = $this->moneyMinor($pricingSummary['final_sale_price'] ?? $row['base_sale_price'] ?? null);
@@ -200,6 +206,8 @@ final class BusinessCatalogSellableReadService
         $taxRateBasisPoints = $taxClass === null ? 0 : (int) round(((float) ($taxClass['rate'] ?? 0)) * 100);
         $mainAsset = $this->assets->mainAssetForProduct((int) $row['business_product_id'], $variantId, $channel);
         $completeness = $this->completeness($siteId, (int) $row['business_product_id'], $variantId, $channel);
+        $attributes = $this->catalogAttributes((int) $row['business_product_id'], $variantId, (string) $context['language']);
+        $variantOptions = $this->variantOptions($variantId);
         $missing = $this->missingRequirements($row, $channel, $trackStock, $allowBackorder, $available, $regularSaleMinor, $taxClass, $completeness);
         $isSellable = $missing === [];
 
@@ -213,6 +221,10 @@ final class BusinessCatalogSellableReadService
             'barcode' => $row['barcode'] ?? null,
             'product_name' => (string) $row['product_name'],
             'variant_name' => (string) $row['variant_name'],
+            'sales_note' => $row['sales_note'] === null ? null : (string) $row['sales_note'],
+            'variant_sales_note' => $row['sales_note'] === null ? null : (string) $row['sales_note'],
+            'variant_options' => $variantOptions,
+            'option_values' => $variantOptions,
             'brand_name' => $brand['name'] ?? null,
             'category_name' => $category['name'] ?? null,
             'product_type' => (string) $row['product_type'],
@@ -233,9 +245,13 @@ final class BusinessCatalogSellableReadService
             'main_media_id' => $mainAsset['media_id'] ?? null,
             'main_media_url' => $mainAsset['url'] ?? null,
             'track_stock' => $trackStock,
+            'allow_backorder' => $allowBackorder,
+            'backorder_delivery_days' => $backorderDeliveryDays,
+            'availability' => $availability,
             'is_public' => (bool) $row['is_public'],
             'is_ecommerce_enabled' => (bool) $row['is_ecommerce_enabled'],
             'is_pos_enabled' => (bool) $row['is_pos_enabled'],
+            'is_catalogue_enabled' => (bool) ($row['is_catalogue_enabled'] ?? true),
             'is_sellable' => $isSellable,
             'missing_requirements' => $missing,
             'visibility' => [
@@ -244,6 +260,7 @@ final class BusinessCatalogSellableReadService
                 'is_public' => (bool) $row['is_public'],
                 'is_ecommerce_enabled' => (bool) $row['is_ecommerce_enabled'],
                 'is_pos_enabled' => (bool) $row['is_pos_enabled'],
+                'is_catalogue_enabled' => (bool) ($row['is_catalogue_enabled'] ?? true),
             ],
             'metadata' => [
                 'product_slug' => (string) $row['product_slug'],
@@ -253,8 +270,12 @@ final class BusinessCatalogSellableReadService
                 'stock_reserved' => (float) $row['stock_reserved'],
                 'available_quantity' => $available,
                 'allow_backorder' => $allowBackorder,
+                'backorder_delivery_days' => $backorderDeliveryDays,
+                'availability_status' => $availability['status'],
                 'tax_class' => $taxClass,
                 'completeness' => $completeness,
+                'attributes' => $attributes,
+                'variant_options' => $variantOptions,
             ],
             'snapshot_json' => [],
         ];
@@ -268,6 +289,23 @@ final class BusinessCatalogSellableReadService
 
         $bundle = $this->bundles->bundleSummaryForVariant($siteId, $variantId);
         $snapshot += $bundle;
+        if ((bool) ($snapshot['is_bundle'] ?? false)) {
+            $bundleStatus = (string) ($bundle['bundle_availability_status'] ?? 'in_stock');
+            if ($bundleStatus === 'backorder') {
+                $days = max(1, (int) ($bundle['bundle_backorder_delivery_days'] ?? $backorderDeliveryDays));
+                $snapshot['allow_backorder'] = true;
+                $snapshot['backorder_delivery_days'] = $days;
+                $snapshot['availability'] = $this->availability(true, true, 0.0, $days);
+                $snapshot['metadata']['allow_backorder'] = true;
+                $snapshot['metadata']['backorder_delivery_days'] = $days;
+                $snapshot['metadata']['availability_status'] = 'backorder';
+            } elseif ($bundleStatus === 'contact_us') {
+                $snapshot['allow_backorder'] = false;
+                $snapshot['availability'] = $this->availability(true, false, 0.0, $backorderDeliveryDays);
+                $snapshot['metadata']['allow_backorder'] = false;
+                $snapshot['metadata']['availability_status'] = 'contact_us';
+            }
+        }
         if (($bundle['bundle_missing_requirements'] ?? []) !== []) {
             $snapshot['missing_requirements'] = array_values(array_unique(array_merge($snapshot['missing_requirements'], $bundle['bundle_missing_requirements'])));
             $snapshot['is_sellable'] = false;
@@ -305,10 +343,13 @@ final class BusinessCatalogSellableReadService
         if ($channel === 'ecommerce' && !((bool) $row['is_ecommerce_enabled'])) {
             $missing[] = 'channel_ecommerce_disabled';
         }
+        if ($channel === 'catalogue' && !((bool) ($row['is_catalogue_enabled'] ?? true))) {
+            $missing[] = 'channel_catalogue_disabled';
+        }
         if (in_array($channel, ['public', 'ecommerce'], true) && (!((bool) $row['is_public']) || (string) $row['visibility'] !== 'public')) {
             $missing[] = 'public_visibility_missing';
         }
-        if ($trackStock && !$allowBackorder && $available <= 0.0) {
+        if (in_array($channel, ['pos', 'ecommerce'], true) && $trackStock && !$allowBackorder && $available <= 0.0) {
             $missing[] = 'stock_unavailable';
         }
         if ($completeness !== null && !((bool) ($completeness['is_sellable'] ?? true))) {
@@ -333,27 +374,44 @@ final class BusinessCatalogSellableReadService
              LIMIT 1',
             ['product_id' => $productId, 'variant_id' => $variantId, 'channel' => $this->pimChannel($channel)]
         );
-        $row ??= $db->one(
-            'SELECT * FROM business_product_completeness_scores
-             WHERE product_id = :product_id AND variant_id IS NULL AND channel IN (:channel, "all")
-             ORDER BY CASE channel WHEN :channel THEN 0 ELSE 1 END
-             LIMIT 1',
-            ['product_id' => $productId, 'channel' => $this->pimChannel($channel)]
-        );
         if ($row === null) {
-            return null;
+            return $this->liveVariantCompleteness($variantId, $channel);
         }
-        return [
+        $stored = [
             'score' => (int) $row['score'],
             'is_sellable' => (bool) $row['is_sellable'],
             'missing' => $this->jsonDecode((string) ($row['missing_json'] ?? '[]')),
             'calculated_at' => $row['calculated_at'] ?? null,
+        ];
+        if ((bool) $stored['is_sellable']) {
+            return $stored;
+        }
+        return $this->liveVariantCompleteness($variantId, $channel) ?? $stored;
+    }
+
+    /** @return array<string,mixed>|null */
+    private function liveVariantCompleteness(int $variantId, string $channel): ?array
+    {
+        if (!in_array($channel, ['admin', 'pos', 'ecommerce', 'catalogue'], true)) {
+            return null;
+        }
+        try {
+            $result = $this->completenessService->calculateVariantSellability($variantId, $this->pimChannel($channel));
+        } catch (\Throwable) {
+            return null;
+        }
+        return [
+            'score' => (int) ($result['score'] ?? 0),
+            'is_sellable' => (bool) ($result['is_sellable'] ?? false),
+            'missing' => $result['missing'] ?? [],
+            'calculated_at' => null,
         ];
     }
 
     /** @return array<string,mixed> */
     private function variantRow(int $siteId, int $variantId): array
     {
+        $salesNoteSelect = $this->hasVariantSalesNoteColumn() ? 'v.sales_note' : 'NULL';
         $row = $this->pricingRepository->rawDatabase()->one(
             'SELECT
                 p.id AS business_product_id,
@@ -370,17 +428,21 @@ final class BusinessCatalogSellableReadService
                 p.unit,
                 p.track_stock AS product_track_stock,
                 p.allow_backorder AS product_allow_backorder,
+                p.backorder_delivery_days AS product_backorder_delivery_days,
                 p.is_public,
                 p.is_ecommerce_enabled,
                 p.is_pos_enabled,
+                p.is_catalogue_enabled,
                 v.status AS variant_status,
                 v.sku,
                 v.barcode,
                 v.name AS variant_name,
+                ' . $salesNoteSelect . ' AS sales_note,
                 v.track_stock AS variant_track_stock,
                 v.stock_quantity,
                 v.stock_reserved,
                 v.allow_backorder AS variant_allow_backorder,
+                v.backorder_delivery_days AS variant_backorder_delivery_days,
                 purchase.amount AS base_purchase_price,
                 purchase.currency AS purchase_currency,
                 sale.amount AS base_sale_price,
@@ -402,6 +464,132 @@ final class BusinessCatalogSellableReadService
             throw new InvalidArgumentException('business.catalog.variant_not_found');
         }
         return $row;
+    }
+
+    private function hasVariantSalesNoteColumn(): bool
+    {
+        if ($this->hasVariantSalesNoteColumn !== null) {
+            return $this->hasVariantSalesNoteColumn;
+        }
+        foreach ($this->pricingRepository->rawDatabase()->all('PRAGMA table_info(business_product_variants)') as $column) {
+            if (($column['name'] ?? '') === 'sales_note') {
+                return $this->hasVariantSalesNoteColumn = true;
+            }
+        }
+        return $this->hasVariantSalesNoteColumn = false;
+    }
+
+    /** @return array{product:list<array<string,mixed>>,variant:list<array<string,mixed>>,merged:list<array<string,mixed>>} */
+    private function catalogAttributes(int $productId, int $variantId, string $language): array
+    {
+        $product = $this->attributeValues('product', $productId, $language);
+        $variant = $this->attributeValues('variant', $variantId, $language);
+        $mergedByCode = [];
+        foreach ($product as $attribute) {
+            $mergedByCode[(string) $attribute['code']] = $attribute + ['scope' => 'product'];
+        }
+        foreach ($variant as $attribute) {
+            $mergedByCode[(string) $attribute['code']] = $attribute + ['scope' => 'variant'];
+        }
+
+        return [
+            'product' => $product,
+            'variant' => $variant,
+            'merged' => array_values($mergedByCode),
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function attributeValues(string $scope, int $ownerId, string $language): array
+    {
+        $table = $scope === 'variant' ? 'business_variant_attribute_values' : 'business_product_attribute_values';
+        $owner = $scope === 'variant' ? 'variant_id' : 'product_id';
+        $rows = $this->pricingRepository->rawDatabase()->all(
+            'SELECT
+                a.id AS attribute_id,
+                a.code,
+                a.name,
+                a.data_type,
+                a.unit,
+                v.language,
+                v.value_text,
+                v.value_number,
+                v.value_json
+             FROM ' . $table . ' v
+             INNER JOIN business_attributes a ON a.id = v.attribute_id
+             WHERE v.' . $owner . ' = :owner_id
+                AND a.archived_at IS NULL
+                AND v.language IN ("und", :language)
+             ORDER BY a.sort_order ASC, a.code ASC, CASE v.language WHEN :language THEN 0 ELSE 1 END',
+            ['owner_id' => $ownerId, 'language' => $language]
+        );
+
+        $byCode = [];
+        foreach ($rows as $row) {
+            $code = (string) ($row['code'] ?? '');
+            if ($code === '' || array_key_exists($code, $byCode)) {
+                continue;
+            }
+            $byCode[$code] = [
+                'attribute_id' => (int) $row['attribute_id'],
+                'code' => $code,
+                'name' => (string) $row['name'],
+                'data_type' => (string) $row['data_type'],
+                'unit' => $row['unit'] ?? null,
+                'language' => (string) $row['language'],
+                'value' => $this->attributeValue($row),
+            ];
+        }
+
+        return array_values($byCode);
+    }
+
+    /** @param array<string,mixed> $row */
+    private function attributeValue(array $row): mixed
+    {
+        if (($row['value_json'] ?? null) !== null && (string) $row['value_json'] !== '') {
+            return $this->jsonDecode((string) $row['value_json']);
+        }
+        if (($row['value_number'] ?? null) !== null && (string) $row['value_number'] !== '') {
+            return (float) $row['value_number'];
+        }
+        return $row['value_text'] ?? null;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function variantOptions(int $variantId): array
+    {
+        return array_map(
+            static fn(array $row): array => [
+                'option_id' => (int) $row['option_id'],
+                'option_code' => (string) $row['option_code'],
+                'option_name' => (string) $row['option_name'],
+                'value_id' => (int) $row['value_id'],
+                'value_code' => (string) $row['value_code'],
+                'label' => (string) $row['label'],
+                'value' => (string) $row['value'],
+                'color_hex' => $row['color_hex'] ?? null,
+            ],
+            $this->pricingRepository->rawDatabase()->all(
+                'SELECT
+                    o.id AS option_id,
+                    o.code AS option_code,
+                    o.name AS option_name,
+                    ov.id AS value_id,
+                    ov.code AS value_code,
+                    ov.label,
+                    ov.value,
+                    ov.color_hex
+                 FROM business_product_variant_option_values vv
+                 INNER JOIN business_product_options o ON o.id = vv.option_id
+                 INNER JOIN business_product_option_values ov ON ov.id = vv.option_value_id
+                 WHERE vv.variant_id = ?
+                    AND o.archived_at IS NULL
+                    AND ov.archived_at IS NULL
+                 ORDER BY o.sort_order ASC, ov.sort_order ASC, o.name ASC',
+                [$variantId]
+            )
+        );
     }
 
     private function requireSiteId(int $siteId): int
@@ -435,7 +623,7 @@ final class BusinessCatalogSellableReadService
     private function channel(string $channel): string
     {
         $channel = trim($channel) === '' ? 'admin' : trim($channel);
-        if (!in_array($channel, ['admin', 'pos', 'ecommerce', 'public', 'quote'], true)) {
+        if (!in_array($channel, ['admin', 'pos', 'ecommerce', 'public', 'catalogue', 'quote'], true)) {
             throw new InvalidArgumentException('business.catalog.channel_invalid');
         }
         return $channel;
@@ -478,6 +666,8 @@ final class BusinessCatalogSellableReadService
         }
         if ($channel === 'pos') {
             $where[] = 'p.is_pos_enabled = 1';
+        } elseif ($channel === 'catalogue') {
+            $where[] = 'p.is_catalogue_enabled = 1';
         } elseif (in_array($channel, ['ecommerce', 'public'], true)) {
             $where[] = 'p.is_ecommerce_enabled = 1';
             $where[] = 'p.is_public = 1';
@@ -509,6 +699,33 @@ final class BusinessCatalogSellableReadService
             throw new InvalidArgumentException('business.catalog.product_type_invalid');
         }
         return $type;
+    }
+
+    /** @return array{status:string,label:string,is_orderable:bool,delivery_lead_time_days:int|null} */
+    private function availability(bool $trackStock, bool $allowBackorder, float $available, int $backorderDeliveryDays): array
+    {
+        if (!$trackStock || $available > 0.0) {
+            return [
+                'status' => 'in_stock',
+                'label' => 'Livrable immediatement',
+                'is_orderable' => true,
+                'delivery_lead_time_days' => null,
+            ];
+        }
+        if ($allowBackorder) {
+            return [
+                'status' => 'backorder',
+                'label' => 'Livraison sous ' . max(1, $backorderDeliveryDays) . ' jours',
+                'is_orderable' => true,
+                'delivery_lead_time_days' => max(1, $backorderDeliveryDays),
+            ];
+        }
+        return [
+            'status' => 'contact_us',
+            'label' => 'Nous contacter pour commander ce produit',
+            'is_orderable' => false,
+            'delivery_lead_time_days' => null,
+        ];
     }
 
     private function moneyMinor(mixed $amount): int

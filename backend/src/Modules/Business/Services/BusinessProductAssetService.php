@@ -10,7 +10,7 @@ use InvalidArgumentException;
 final class BusinessProductAssetService
 {
     private const ROLES = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'brand_logo', 'packaging', 'seo', 'internal'];
-    private const CHANNELS = ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'];
+    private const CHANNELS = ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
 
     public function __construct(private readonly Database $db) {}
 

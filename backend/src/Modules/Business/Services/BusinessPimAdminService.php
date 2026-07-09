@@ -10,10 +10,10 @@ use InvalidArgumentException;
 final class BusinessPimAdminService
 {
     private const ATTRIBUTE_TYPES = ['text','textarea','rich_text','number','decimal','boolean','select','multi_select','date','url','file','dimension','weight','color'];
-    private const CHANNELS = ['all','public','ecommerce','pos','admin','pdf'];
+    private const CHANNELS = ['all','public','ecommerce','pos','catalogue','admin','pdf'];
     private const OFFER_CSV_HEADERS = [
         'offer_type', 'offer_id', 'name', 'status', 'channel', 'sku', 'slug',
-        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled',
+        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled',
         'pricing_mode', 'stock_mode', 'bundle_active',
         'discount_type', 'discount_value', 'currency', 'scope_type', 'scope_id',
         'priority', 'starts_at', 'ends_at',
@@ -94,7 +94,7 @@ final class BusinessPimAdminService
         return array_map(fn(array $row): array => $this->attributePayload($row), $this->db->all(
             'SELECT a.*, g.code AS group_code, g.name AS group_name
              FROM business_attributes a
-             LEFT JOIN business_attribute_groups g ON g.id = a.group_id
+             INNER JOIN business_attribute_groups g ON g.id = a.group_id
              WHERE a.site_id = ? AND a.archived_at IS NULL
              ORDER BY COALESCE(g.sort_order, 9999) ASC, a.sort_order ASC, a.name ASC, a.id ASC',
             [$this->siteId($siteId)]
@@ -104,13 +104,14 @@ final class BusinessPimAdminService
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function createAttribute(int $siteId, array $payload, int $actorId): array
     {
-        $this->assertGroupBelongsToSite($siteId, isset($payload['group_id']) ? (int) $payload['group_id'] : null);
+        $groupId = $this->requiredGroupId($payload['group_id'] ?? null);
+        $this->assertGroupBelongsToSite($siteId, $groupId);
         $this->db->run(
             'INSERT INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json, created_by_iam_user_id, updated_by_iam_user_id)
              VALUES(:site_id, :group_id, :code, :name, :data_type, :unit, :is_required, :is_filterable, :is_searchable, :is_public, :sort_order, :validation_json, :actor, :actor)',
             [
                 'site_id' => $this->siteId($siteId),
-                'group_id' => isset($payload['group_id']) && (int) $payload['group_id'] > 0 ? (int) $payload['group_id'] : null,
+                'group_id' => $groupId,
                 'code' => $this->key($payload['code'] ?? $payload['name'] ?? '', 'attribute_code'),
                 'name' => $this->text($payload['name'] ?? null, 'attribute_name', 180),
                 'data_type' => $this->choice((string) ($payload['data_type'] ?? 'text'), self::ATTRIBUTE_TYPES, 'attribute_type'),
@@ -134,7 +135,9 @@ final class BusinessPimAdminService
         if ($current === null) {
             return null;
         }
-        $groupId = array_key_exists('group_id', $payload) ? ((int) $payload['group_id'] > 0 ? (int) $payload['group_id'] : null) : ($current['group_id'] === null ? null : (int) $current['group_id']);
+        $groupId = array_key_exists('group_id', $payload)
+            ? $this->requiredGroupId($payload['group_id'])
+            : $this->requiredGroupId($current['group_id'] ?? null);
         $this->assertGroupBelongsToSite($siteId, $groupId);
         $dataType = $this->choice((string) ($payload['data_type'] ?? $current['data_type']), self::ATTRIBUTE_TYPES, 'attribute_type');
         if ($dataType !== (string) $current['data_type'] && $this->attributeHasValues($id)) {
@@ -237,6 +240,7 @@ final class BusinessPimAdminService
     {
         $product = $this->requireProduct($siteId, $productId);
         $this->replaceValues('product', $productId, $this->valuesPayload($payload), $actorId, (int) $product['site_id'], (int) $product['id']);
+        $this->recalculateProductCompleteness($siteId, (int) $product['id']);
         return $this->productAttributeValues($siteId, $productId);
     }
 
@@ -252,6 +256,7 @@ final class BusinessPimAdminService
     {
         $variant = $this->requireVariant($siteId, $variantId);
         $this->replaceValues('variant', $variantId, $this->valuesPayload($payload), $actorId, (int) $variant['site_id'], (int) $variant['product_id']);
+        $this->recalculateProductCompleteness($siteId, (int) $variant['product_id']);
         return $this->variantAttributeValues($siteId, $variantId);
     }
 
@@ -275,6 +280,86 @@ final class BusinessPimAdminService
         return $this->productCompleteness($siteId, $productId) + ['recalculated' => true];
     }
 
+    /** @return list<array<string,mixed>> */
+    public function taxClasses(int $siteId): array
+    {
+        return array_map(fn(array $row): array => $this->cast($row), $this->db->all(
+            'SELECT t.id, t.site_id, t.code, t.name, t.rate, t.country, t.is_default,
+                    (SELECT COUNT(*) FROM business_products p WHERE p.site_id = t.site_id AND p.tax_class_id = t.id AND p.archived_at IS NULL) AS usage_count
+             FROM business_tax_classes t
+             WHERE t.site_id = ? AND t.archived_at IS NULL
+             ORDER BY is_default DESC, rate DESC, name ASC',
+            [$this->siteId($siteId)]
+        ));
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function createTaxClass(int $siteId, array $payload, int $actorId): array
+    {
+        $data = $this->taxClassPayload($payload, null);
+        $siteId = $this->siteId($siteId);
+        $this->db->transaction(function () use ($siteId, $data, $actorId): void {
+            if ((int) $data['is_default'] === 1) {
+                $this->db->run('UPDATE business_tax_classes SET is_default = 0, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND archived_at IS NULL', [$actorId > 0 ? $actorId : null, $siteId]);
+            }
+            $this->db->run(
+                'INSERT INTO business_tax_classes(site_id, code, name, rate, country, is_default, created_by_iam_user_id, updated_by_iam_user_id)
+                 VALUES(:site_id, :code, :name, :rate, :country, :is_default, :actor, :actor)',
+                [
+                    'site_id' => $siteId,
+                    'code' => $data['code'],
+                    'name' => $data['name'],
+                    'rate' => $data['rate'],
+                    'country' => $data['country'],
+                    'is_default' => $data['is_default'],
+                    'actor' => $actorId > 0 ? $actorId : null,
+                ]
+            );
+        });
+        return $this->requireTaxClass($siteId, (int) $this->db->lastInsertId());
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed>|null */
+    public function updateTaxClass(int $siteId, int $taxClassId, array $payload, int $actorId): ?array
+    {
+        $current = $this->requireTaxClass($siteId, $taxClassId);
+        $data = $this->taxClassPayload($payload, $current);
+        $siteId = $this->siteId($siteId);
+        $taxClassId = $this->id($taxClassId, 'tax_class_id');
+        $this->db->transaction(function () use ($siteId, $taxClassId, $data, $actorId): void {
+            if ((int) $data['is_default'] === 1) {
+                $this->db->run('UPDATE business_tax_classes SET is_default = 0, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id <> ? AND archived_at IS NULL', [$actorId > 0 ? $actorId : null, $siteId, $taxClassId]);
+            }
+            $this->db->run(
+                'UPDATE business_tax_classes
+                 SET code = :code, name = :name, rate = :rate, country = :country, is_default = :is_default,
+                     updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
+                 WHERE site_id = :site_id AND id = :id AND archived_at IS NULL',
+                [
+                    'code' => $data['code'],
+                    'name' => $data['name'],
+                    'rate' => $data['rate'],
+                    'country' => $data['country'],
+                    'is_default' => $data['is_default'],
+                    'actor' => $actorId > 0 ? $actorId : null,
+                    'site_id' => $siteId,
+                    'id' => $taxClassId,
+                ]
+            );
+        });
+        return $this->requireTaxClass($siteId, $taxClassId);
+    }
+
+    public function deleteTaxClassIfUnused(int $siteId, int $taxClassId): bool
+    {
+        $taxClass = $this->requireTaxClass($siteId, $taxClassId);
+        if ((int) ($taxClass['usage_count'] ?? 0) > 0) {
+            throw new InvalidArgumentException('business.tax_class_in_use');
+        }
+        $this->db->run('DELETE FROM business_tax_classes WHERE site_id = ? AND id = ? AND archived_at IS NULL', [$this->siteId($siteId), $this->id($taxClassId, 'tax_class_id')]);
+        return true;
+    }
+
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function bulkUpdateProducts(int $siteId, array $payload, int $actorId): array
     {
@@ -282,6 +367,7 @@ final class BusinessPimAdminService
         $changes = is_array($payload['changes'] ?? null) ? $payload['changes'] : [];
         $dryRun = (bool) ($payload['dry_run'] ?? true);
         $allowed = $this->normalizeBulkProductChanges($siteId, $changes);
+        $recalculated = 0;
         if (!$dryRun && $allowed !== []) {
             foreach ($ids as $id) {
                 $this->requireProduct($siteId, $id);
@@ -295,9 +381,13 @@ final class BusinessPimAdminService
                     }
                     $this->db->run('UPDATE business_products SET ' . $field . ' = ?, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?', [$value, $actorId > 0 ? $actorId : null, $siteId, $id]);
                 }
+                if (!isset($allowed['archive'])) {
+                    $this->recalculateProductCompleteness($siteId, $id);
+                    $recalculated++;
+                }
             }
         }
-        return ['dry_run' => $dryRun, 'product_ids' => $ids, 'changes' => $allowed, 'updated' => $dryRun ? 0 : count($ids)];
+        return ['dry_run' => $dryRun, 'product_ids' => $ids, 'changes' => $allowed, 'updated' => $dryRun ? 0 : count($ids), 'recalculated' => $recalculated];
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -430,6 +520,7 @@ final class BusinessPimAdminService
                     $this->csvBool($bundle['is_public'] ?? false),
                     $this->csvBool($bundle['is_ecommerce_enabled'] ?? false),
                     $this->csvBool($bundle['is_pos_enabled'] ?? false),
+                    $this->csvBool($bundle['is_catalogue_enabled'] ?? true),
                     $bundle['pricing_mode'] ?? 'fixed',
                     $bundle['stock_mode'] ?? 'components',
                     $this->csvBool($bundle['bundle_active'] ?? true),
@@ -447,7 +538,7 @@ final class BusinessPimAdminService
             }
             if ($channel !== '') {
                 $discountWhere[] = 'channel = ?';
-                $discountParams[] = $this->choice($channel, ['all','ecommerce','pos','admin'], 'discount_channel');
+                $discountParams[] = $this->choice($channel, ['all','ecommerce','pos','catalogue','admin'], 'discount_channel');
             }
             $discounts = $this->db->all(
                 'SELECT * FROM business_catalog_discounts WHERE ' . implode(' AND ', $discountWhere) . ' ORDER BY priority ASC, name ASC, id ASC',
@@ -461,7 +552,7 @@ final class BusinessPimAdminService
                     $discount['status'] ?? '',
                     $discount['channel'] ?? 'all',
                     '', '',
-                    '', '', '',
+                    '', '', '', '',
                     '', '', '',
                     $discount['discount_type'] ?? '',
                     $discount['discount_value'] ?? '',
@@ -681,6 +772,7 @@ final class BusinessPimAdminService
                 'is_public' => $this->csvBoolValue($row['is_public'] ?? '') || in_array($channel, ['public','all'], true),
                 'is_ecommerce_enabled' => $this->csvBoolValue($row['is_ecommerce_enabled'] ?? '') || in_array($channel, ['ecommerce','all'], true),
                 'is_pos_enabled' => $this->csvBoolValue($row['is_pos_enabled'] ?? '') || in_array($channel, ['pos','all'], true),
+                'is_catalogue_enabled' => $this->csvBoolValue($row['is_catalogue_enabled'] ?? '1') || in_array($channel, ['catalogue','all'], true),
             ],
             'bundle' => [
                 'pricing_mode' => $this->choice($row['pricing_mode'] ?: 'fixed', ['fixed','sum_components','discount_components'], 'pricing_mode'),
@@ -718,7 +810,7 @@ final class BusinessPimAdminService
             'discount' => [
                 'name' => $this->text($row['name'] ?? ($existing['name'] ?? ''), 'offer_name', 180),
                 'status' => $this->choice(($row['status'] ?? '') ?: (string) ($existing['status'] ?? 'draft'), ['draft','active','archived'], 'discount_status'),
-                'channel' => $this->choice($row['channel'] ?: (string) ($existing['channel'] ?? 'all'), ['all','ecommerce','pos','admin'], 'discount_channel'),
+                'channel' => $this->choice($row['channel'] ?: (string) ($existing['channel'] ?? 'all'), ['all','ecommerce','pos','catalogue','admin'], 'discount_channel'),
                 'discount_type' => $discountType,
                 'discount_value' => round($value, 2),
                 'currency' => $discountType === 'amount' ? strtoupper(trim($row['currency'] ?: (string) ($existing['currency'] ?? 'CHF'))) : null,
@@ -751,8 +843,8 @@ final class BusinessPimAdminService
         $archivedAt = $status === 'archived' ? 'CURRENT_TIMESTAMP' : 'NULL';
         if ($plan['action'] === 'create_bundle') {
             $this->db->run(
-                'INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, unit, is_public, is_ecommerce_enabled, is_pos_enabled, created_by_iam_user_id, updated_by_iam_user_id, archived_at)
-                 VALUES(:site_id, "bundle", :status, :visibility, :sku, :name, :slug, "unit", :is_public, :is_ecommerce, :is_pos, :actor, :actor, ' . $archivedAt . ')',
+                'INSERT INTO business_products(site_id, type, status, visibility, sku_base, name, slug, unit, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, archived_at)
+                 VALUES(:site_id, "bundle", :status, :visibility, :sku, :name, :slug, "unit", :is_public, :is_ecommerce, :is_pos, :is_catalogue, :actor, :actor, ' . $archivedAt . ')',
                 [
                     'site_id' => $siteId,
                     'status' => $status,
@@ -763,6 +855,7 @@ final class BusinessPimAdminService
                     'is_public' => !empty($product['is_public']) ? 1 : 0,
                     'is_ecommerce' => !empty($product['is_ecommerce_enabled']) ? 1 : 0,
                     'is_pos' => !empty($product['is_pos_enabled']) ? 1 : 0,
+                    'is_catalogue' => !empty($product['is_catalogue_enabled']) ? 1 : 0,
                     'actor' => $actorId > 0 ? $actorId : null,
                 ]
             );
@@ -772,7 +865,7 @@ final class BusinessPimAdminService
         $this->db->run(
             'UPDATE business_products
              SET status = :status, visibility = :visibility, sku_base = :sku, name = :name, slug = :slug,
-                 is_public = :is_public, is_ecommerce_enabled = :is_ecommerce, is_pos_enabled = :is_pos,
+                 is_public = :is_public, is_ecommerce_enabled = :is_ecommerce, is_pos_enabled = :is_pos, is_catalogue_enabled = :is_catalogue,
                  archived_at = ' . $archivedAt . ', updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
              WHERE site_id = :site_id AND id = :id AND type = "bundle"',
             [
@@ -786,6 +879,7 @@ final class BusinessPimAdminService
                 'is_public' => !empty($product['is_public']) ? 1 : 0,
                 'is_ecommerce' => !empty($product['is_ecommerce_enabled']) ? 1 : 0,
                 'is_pos' => !empty($product['is_pos_enabled']) ? 1 : 0,
+                'is_catalogue' => !empty($product['is_catalogue_enabled']) ? 1 : 0,
                 'actor' => $actorId > 0 ? $actorId : null,
             ]
         );
@@ -844,8 +938,10 @@ final class BusinessPimAdminService
             $where[] = 'p.is_ecommerce_enabled = 1';
         } elseif ($channel === 'pos') {
             $where[] = 'p.is_pos_enabled = 1';
+        } elseif ($channel === 'catalogue') {
+            $where[] = 'p.is_catalogue_enabled = 1';
         } elseif ($channel === 'all') {
-            $where[] = '(p.is_public = 1 OR p.is_ecommerce_enabled = 1 OR p.is_pos_enabled = 1)';
+            $where[] = '(p.is_public = 1 OR p.is_ecommerce_enabled = 1 OR p.is_pos_enabled = 1 OR p.is_catalogue_enabled = 1)';
         } elseif ($channel !== 'admin') {
             throw new InvalidArgumentException('business.offers_export_channel_invalid');
         }
@@ -858,6 +954,7 @@ final class BusinessPimAdminService
             !empty($row['is_public']) ? 'public' : null,
             !empty($row['is_ecommerce_enabled']) ? 'ecommerce' : null,
             !empty($row['is_pos_enabled']) ? 'pos' : null,
+            !empty($row['is_catalogue_enabled']) ? 'catalogue' : null,
         ]));
     }
 
@@ -909,7 +1006,7 @@ final class BusinessPimAdminService
     {
         $row = $this->db->one(
             'SELECT a.*, g.code AS group_code, g.name AS group_name
-             FROM business_attributes a LEFT JOIN business_attribute_groups g ON g.id = a.group_id
+             FROM business_attributes a INNER JOIN business_attribute_groups g ON g.id = a.group_id
              WHERE a.id = ? LIMIT 1',
             [$id]
         );
@@ -962,6 +1059,15 @@ final class BusinessPimAdminService
         if ($groupId !== null && $this->attributeGroupForSite($siteId, $groupId) === null) {
             throw new InvalidArgumentException('business.attribute_group_not_found');
         }
+    }
+
+    private function requiredGroupId(mixed $groupId): int
+    {
+        $id = (int) $groupId;
+        if ($id < 1) {
+            throw new InvalidArgumentException('business.attribute_group_required');
+        }
+        return $id;
     }
 
     /** @return array<string,mixed> */
@@ -1197,15 +1303,18 @@ final class BusinessPimAdminService
     /** @param array<string,mixed> $row @return array<string,mixed> */
     private function cast(array $row): array
     {
-        foreach (['id','site_id','group_id','attribute_id','product_id','variant_id','media_id','sort_order','score','weight','created_by_iam_user_id','updated_by_iam_user_id'] as $key) {
+        foreach (['id','site_id','group_id','attribute_id','product_id','variant_id','media_id','sort_order','score','weight','usage_count','created_by_iam_user_id','updated_by_iam_user_id'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (int) $row[$key];
             }
         }
-        foreach (['is_required','is_filterable','is_searchable','is_public','is_active','is_sellable'] as $key) {
+        foreach (['is_required','is_filterable','is_searchable','is_public','is_active','is_sellable','is_default'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (bool) $row[$key];
             }
+        }
+        if (array_key_exists('rate', $row) && $row['rate'] !== null) {
+            $row['rate'] = (float) $row['rate'];
         }
         return $row;
     }
@@ -1341,9 +1450,10 @@ final class BusinessPimAdminService
         return match ($field) {
             'status' => $this->choice((string) $value, ['draft','active','archived'], 'product_status'),
             'visibility' => $this->choice((string) $value, ['internal','public','hidden'], 'product_visibility'),
-            'is_public', 'is_ecommerce_enabled', 'is_pos_enabled' => $this->bool($value),
+            'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled' => $this->bool($value),
             'brand_id' => $this->optionalSiteEntityId($siteId, 'business_product_brands', $value, 'brand_id'),
             'category_id' => $this->optionalSiteEntityId($siteId, 'business_product_categories', $value, 'category_id'),
+            'tax_class_id' => $this->optionalSiteEntityId($siteId, 'business_tax_classes', $value, 'tax_class_id'),
             'archive' => $this->bool($value),
             default => $value,
         };
@@ -1352,7 +1462,7 @@ final class BusinessPimAdminService
     /** @param array<string,mixed> $changes @return array<string,mixed> */
     private function normalizeBulkProductChanges(int $siteId, array $changes): array
     {
-        $allowed = array_intersect_key($changes, array_flip(['status','visibility','brand_id','category_id','is_public','is_ecommerce_enabled','is_pos_enabled','archive']));
+        $allowed = array_intersect_key($changes, array_flip(['status','visibility','brand_id','category_id','tax_class_id','is_public','is_ecommerce_enabled','is_pos_enabled','is_catalogue_enabled','archive']));
         $normalized = [];
         foreach ($allowed as $field => $value) {
             if ($field === 'archive' && !$this->bool($value)) {
@@ -1377,7 +1487,7 @@ final class BusinessPimAdminService
             }
             $normalized[$field] = match ($field) {
                 'status' => $this->choice((string) $value, ['draft','active','archived'], 'discount_status'),
-                'channel' => $this->choice((string) $value, ['all','ecommerce','pos','admin'], 'discount_channel'),
+                'channel' => $this->choice((string) $value, ['all','ecommerce','pos','catalogue','admin'], 'discount_channel'),
                 default => $value,
             };
         }
@@ -1395,12 +1505,15 @@ final class BusinessPimAdminService
                 $bundleChanges['is_public'] = true;
                 $bundleChanges['is_ecommerce_enabled'] = true;
                 $bundleChanges['is_pos_enabled'] = true;
+                $bundleChanges['is_catalogue_enabled'] = true;
             } elseif ($channel === 'public') {
                 $bundleChanges['is_public'] = true;
             } elseif ($channel === 'ecommerce') {
                 $bundleChanges['is_ecommerce_enabled'] = true;
             } elseif ($channel === 'pos') {
                 $bundleChanges['is_pos_enabled'] = true;
+            } elseif ($channel === 'catalogue') {
+                $bundleChanges['is_catalogue_enabled'] = true;
             } elseif ($channel !== 'admin') {
                 throw new InvalidArgumentException('business.catalog.offer_channel_invalid');
             }
@@ -1468,6 +1581,49 @@ final class BusinessPimAdminService
                 [$value, $actorId > 0 ? $actorId : null, $siteId, $discountId]
             );
         }
+    }
+
+    /** @param array<string,mixed> $payload @param array<string,mixed>|null $current @return array<string,mixed> */
+    private function taxClassPayload(array $payload, ?array $current): array
+    {
+        $name = array_key_exists('name', $payload)
+            ? $this->text($payload['name'], 'tax_class_name', 120)
+            : $this->text($current['name'] ?? null, 'tax_class_name', 120);
+        $code = array_key_exists('code', $payload)
+            ? $this->key($payload['code'] ?: $name, 'tax_class_code')
+            : $this->key($current['code'] ?? $name, 'tax_class_code');
+        $rate = array_key_exists('rate', $payload) ? (float) $payload['rate'] : (float) ($current['rate'] ?? 0);
+        if ($rate < 0) {
+            throw new InvalidArgumentException('business.tax_class_rate_invalid');
+        }
+        $country = strtoupper(trim((string) (array_key_exists('country', $payload) ? $payload['country'] : ($current['country'] ?? 'CH'))));
+        if (preg_match('/^[A-Z]{2}$/', $country) !== 1) {
+            throw new InvalidArgumentException('business.tax_class_country_invalid');
+        }
+        return [
+            'code' => $code,
+            'name' => $name,
+            'rate' => round($rate, 4),
+            'country' => $country,
+            'is_default' => array_key_exists('is_default', $payload) ? $this->bool($payload['is_default']) : (int) (bool) ($current['is_default'] ?? false),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function requireTaxClass(int $siteId, int $taxClassId): array
+    {
+        $row = $this->db->one(
+            'SELECT t.id, t.site_id, t.code, t.name, t.rate, t.country, t.is_default,
+                    (SELECT COUNT(*) FROM business_products p WHERE p.site_id = t.site_id AND p.tax_class_id = t.id AND p.archived_at IS NULL) AS usage_count
+             FROM business_tax_classes t
+             WHERE t.site_id = ? AND t.id = ? AND t.archived_at IS NULL
+             LIMIT 1',
+            [$this->siteId($siteId), $this->id($taxClassId, 'tax_class_id')]
+        );
+        if ($row === null) {
+            throw new InvalidArgumentException('business.tax_class_not_found');
+        }
+        return $this->cast($row);
     }
 
     private function optionalSiteEntityId(int $siteId, string $table, mixed $value, string $field): ?int

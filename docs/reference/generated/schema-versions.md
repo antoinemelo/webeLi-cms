@@ -23,6 +23,7 @@ generated: true
 | `database/migrations/business/0003_catalog_schema.sql` | `0003_catalog_schema` |
 | `database/migrations/business/0004_catalog_demo_seed.sql` | `0004_catalog_demo_seed` |
 | `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
+| `database/migrations/business/0005_variant_sales_note.sql` | `0005_variant_sales_note` |
 | `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
@@ -37,3 +38,5 @@ generated: true
 | `database/migrations/iam/0006_imports_exports_permissions.sql` | `0006_imports_exports_permissions` |
 | `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |
 | `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
+| `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
+| `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |

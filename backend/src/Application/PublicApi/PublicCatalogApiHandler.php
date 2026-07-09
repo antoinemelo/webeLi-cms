@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Repository\SiteRepository;
 use Throwable;
 
@@ -21,6 +22,7 @@ final class PublicCatalogApiHandler
         private readonly SiteRepository $sites,
         private readonly PublicCatalogRepository $catalog,
         private readonly CatalogPricingService $pricing,
+        private readonly ?BusinessProductBundleService $bundles = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -78,7 +80,7 @@ final class PublicCatalogApiHandler
         if (!$product) {
             return $this->notFound('Produit introuvable.', ['id' => (string) ($variant['product_id'] ?? '')]);
         }
-        return $this->json(['variant' => $this->variantPayload($product, $variant, true, $languageCode)], 'public.catalog.variants.show.v1', $site, $languageCode);
+        return $this->json(['variant' => $this->variantPayload((int) $site['id'], $product, $variant, true, $languageCode)], 'public.catalog.variants.show.v1', $site, $languageCode);
     }
 
     /** @return array{0:array<string,mixed>,1:string} */
@@ -111,7 +113,7 @@ final class PublicCatalogApiHandler
     /** @param array<string,mixed> $product */
     private function productPayload(int $siteId, array $product, bool $detailed, string $languageCode): array
     {
-        $variants = array_map(fn(array $variant): array => $this->variantPayload($product, $variant, $detailed, $languageCode), $this->catalog->activeVariants($siteId, (int) $product['id']));
+        $variants = array_map(fn(array $variant): array => $this->variantPayload($siteId, $product, $variant, $detailed, $languageCode), $this->catalog->activeVariants($siteId, (int) $product['id']));
         $media = $this->publicMedia($this->catalog->productMedia((int) $product['id']));
         $availability = $this->productAvailability($product, $variants);
         $payload = [
@@ -140,10 +142,10 @@ final class PublicCatalogApiHandler
     }
 
     /** @param array<string,mixed> $product @param array<string,mixed> $variant */
-    private function variantPayload(array $product, array $variant, bool $detailed, string $languageCode): array
+    private function variantPayload(int $siteId, array $product, array $variant, bool $detailed, string $languageCode): array
     {
         $pricing = $this->publicPricing((int) $variant['id']);
-        $availability = $this->variantAvailability($product, $variant);
+        $availability = $this->variantAvailability($siteId, $product, $variant);
         $media = $detailed ? $this->publicMedia($this->catalog->productMedia((int) $product['id'], (int) $variant['id'])) : [];
         $payload = [
             'id' => (int) $variant['id'],
@@ -246,26 +248,65 @@ final class PublicCatalogApiHandler
     }
 
     /** @param array<string,mixed> $product @param array<string,mixed> $variant */
-    private function variantAvailability(array $product, array $variant): array
+    private function variantAvailability(int $siteId, array $product, array $variant): array
     {
         $trackStock = array_key_exists('track_stock', $variant) && $variant['track_stock'] !== null ? (bool) $variant['track_stock'] : (bool) ($product['track_stock'] ?? false);
         $allowBackorder = array_key_exists('allow_backorder', $variant) && $variant['allow_backorder'] !== null ? (bool) $variant['allow_backorder'] : (bool) ($product['allow_backorder'] ?? false);
-        $available = true;
-        if ($trackStock && !$allowBackorder) {
-            $available = ((float) ($variant['stock_quantity'] ?? 0) - (float) ($variant['stock_reserved'] ?? 0)) > 0;
+        $backorderDeliveryDays = array_key_exists('backorder_delivery_days', $variant) && $variant['backorder_delivery_days'] !== null ? (int) $variant['backorder_delivery_days'] : (int) ($product['backorder_delivery_days'] ?? 7);
+        $availableQuantity = (float) ($variant['stock_quantity'] ?? 0) - (float) ($variant['stock_reserved'] ?? 0);
+        $availability = $this->availabilityPayload($trackStock, $allowBackorder, $availableQuantity, $backorderDeliveryDays);
+        if ($this->bundles !== null && (string) ($product['type'] ?? '') === 'bundle') {
+            $summary = $this->bundles->bundleSummaryForVariant($siteId, (int) $variant['id']);
+            $availability = $this->bundleAvailabilityPayload($summary, $availability);
         }
-        return ['available' => $available, 'backorder_allowed' => $allowBackorder];
+        return $availability;
     }
 
     /** @param array<string,mixed> $product @param list<array<string,mixed>> $variants */
     private function productAvailability(array $product, array $variants): array
     {
+        $backorder = null;
         foreach ($variants as $variant) {
-            if (!empty($variant['availability']['available'])) {
-                return ['available' => true];
+            $availability = $variant['availability'] ?? [];
+            if (($availability['status'] ?? '') === 'in_stock') {
+                return $availability;
+            }
+            if (!empty($availability['available']) && $backorder === null) {
+                $backorder = $availability;
             }
         }
-        return ['available' => !$product['track_stock'] && $variants !== []];
+        if ($backorder !== null) {
+            return $backorder;
+        }
+        return $variants === []
+            ? $this->availabilityPayload(true, false, 0.0, (int) ($product['backorder_delivery_days'] ?? 7))
+            : ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+    }
+
+    /** @return array<string,mixed> */
+    private function availabilityPayload(bool $trackStock, bool $allowBackorder, float $availableQuantity, int $backorderDeliveryDays): array
+    {
+        if (!$trackStock || $availableQuantity > 0.0) {
+            return ['available' => true, 'backorder_allowed' => false, 'status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null];
+        }
+        if ($allowBackorder) {
+            $days = max(1, $backorderDeliveryDays);
+            return ['available' => true, 'backorder_allowed' => true, 'status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days];
+        }
+        return ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+    }
+
+    /** @param array<string,mixed> $summary @param array<string,mixed> $fallback @return array<string,mixed> */
+    private function bundleAvailabilityPayload(array $summary, array $fallback): array
+    {
+        if (!((bool) ($summary['is_bundle'] ?? false))) {
+            return $fallback;
+        }
+        return match ((string) ($summary['bundle_availability_status'] ?? 'in_stock')) {
+            'backorder' => $this->availabilityPayload(true, true, 0.0, max(1, (int) ($summary['bundle_backorder_delivery_days'] ?? $fallback['delivery_lead_time_days'] ?? 7))),
+            'contact_us' => $this->availabilityPayload(true, false, 0.0, 7),
+            default => $this->availabilityPayload(false, false, 1.0, 7),
+        };
     }
 
     /** @return array<string,mixed> */

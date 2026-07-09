@@ -90,10 +90,12 @@ CREATE TABLE IF NOT EXISTS business_products (
     unit TEXT NOT NULL DEFAULT 'unit',
     tax_class_id INTEGER,
     track_stock INTEGER NOT NULL DEFAULT 0 CHECK(track_stock IN (0,1)),
-    allow_backorder INTEGER NOT NULL DEFAULT 0 CHECK(allow_backorder IN (0,1)),
+    allow_backorder INTEGER NOT NULL DEFAULT 1 CHECK(allow_backorder IN (0,1)),
+    backorder_delivery_days INTEGER NOT NULL DEFAULT 7 CHECK(backorder_delivery_days >= 0),
     is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
     is_ecommerce_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_ecommerce_enabled IN (0,1)),
     is_pos_enabled INTEGER NOT NULL DEFAULT 0 CHECK(is_pos_enabled IN (0,1)),
+    is_catalogue_enabled INTEGER NOT NULL DEFAULT 1 CHECK(is_catalogue_enabled IN (0,1)),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -170,6 +172,7 @@ CREATE TABLE IF NOT EXISTS business_product_variants (
     stock_quantity REAL NOT NULL DEFAULT 0 CHECK(stock_quantity >= 0),
     stock_reserved REAL NOT NULL DEFAULT 0 CHECK(stock_reserved >= 0),
     allow_backorder INTEGER,
+    backorder_delivery_days INTEGER CHECK(backorder_delivery_days IS NULL OR backorder_delivery_days >= 0),
     weight_grams INTEGER CHECK(weight_grams IS NULL OR weight_grams >= 0),
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_by_iam_user_id INTEGER,
@@ -250,7 +253,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_discounts (
     currency TEXT CHECK(currency IS NULL OR currency IN ('CHF','EUR','USD')),
     scope_type TEXT NOT NULL CHECK(scope_type IN ('product','variant','category','brand')),
     scope_id INTEGER NOT NULL,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','admin')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
     starts_at TEXT,
     ends_at TEXT,
     priority INTEGER NOT NULL DEFAULT 100,
@@ -332,7 +335,7 @@ CREATE TABLE IF NOT EXISTS business_product_assets (
     caption TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
-    channel_scope TEXT NOT NULL DEFAULT 'all' CHECK(channel_scope IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel_scope TEXT NOT NULL DEFAULT 'all' CHECK(channel_scope IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -442,7 +445,7 @@ CREATE TABLE IF NOT EXISTS business_asset_renditions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
     media_id INTEGER NOT NULL,
-    channel TEXT NOT NULL CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     rendition_key TEXT NOT NULL,
     width INTEGER CHECK(width IS NULL OR width > 0),
     height INTEGER CHECK(height IS NULL OR height > 0),
@@ -478,7 +481,7 @@ CREATE TABLE IF NOT EXISTS business_attribute_groups (
 CREATE TABLE IF NOT EXISTS business_attributes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
-    group_id INTEGER,
+    group_id INTEGER NOT NULL,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     data_type TEXT NOT NULL CHECK(data_type IN ('text','textarea','rich_text','number','decimal','boolean','select','multi_select','date','url','file','dimension','weight','color')),
@@ -494,7 +497,7 @@ CREATE TABLE IF NOT EXISTS business_attributes (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     archived_at TEXT,
-    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(group_id) REFERENCES business_attribute_groups(id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE(site_id, code),
     CHECK(site_id > 0),
     CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
@@ -580,7 +583,7 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
     scope TEXT NOT NULL CHECK(scope IN ('product','variant','asset','price','tax','channel')),
     required_field TEXT,
     required_attribute_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     weight INTEGER NOT NULL DEFAULT 1 CHECK(weight > 0),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -598,7 +601,7 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
     variant_id INTEGER,
-    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','admin','pdf')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     score INTEGER NOT NULL CHECK(score >= 0 AND score <= 100),
     is_sellable INTEGER NOT NULL DEFAULT 0 CHECK(is_sellable IN (0,1)),
     missing_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(missing_json)),
@@ -649,18 +652,18 @@ VALUES
     (1, NULL, 'Experiences', 'experiences', 'Services et experiences de demonstration.', 1, 10),
     (1, NULL, 'Boutique', 'boutique', 'Produits physiques et bons cadeaux de demonstration.', 1, 20);
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'service', 'active', 'public', 'DEMO-VOL', 'Vol decouverte', 'vol-decouverte', 'Service catalogue de demonstration.', 'service', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'service', 'active', 'public', 'DEMO-VOL', 'Vol decouverte', 'vol-decouverte', 'Service catalogue de demonstration.', 'service', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'experiences' AND t.site_id = 1 AND t.code = 'standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'DEMO-GOURDE', 'Gourde demo', 'gourde-demo', 'Produit physique catalogue de demonstration.', 'piece', t.id, 1, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'physical', 'active', 'public', 'DEMO-GOURDE', 'Gourde demo', 'gourde-demo', 'Produit physique catalogue de demonstration.', 'piece', t.id, 1, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'boutique' AND t.site_id = 1 AND t.code = 'standard';
 
-INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled)
-SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'DEMO-GIFT', 'Bon cadeau demo', 'bon-cadeau-demo', 'Bon cadeau simple de demonstration.', 'piece', t.id, 0, 0, 1, 1, 1
+INSERT OR IGNORE INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, unit, tax_class_id, track_stock, allow_backorder, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled)
+SELECT 1, b.id, c.id, 'gift_card', 'active', 'public', 'DEMO-GIFT', 'Bon cadeau demo', 'bon-cadeau-demo', 'Bon cadeau simple de demonstration.', 'piece', t.id, 0, 0, 1, 1, 1, 1
 FROM business_product_brands b, business_product_categories c, business_tax_classes t
 WHERE b.site_id = 1 AND b.slug = 'demo-outdoor' AND c.site_id = 1 AND c.slug = 'boutique' AND t.site_id = 1 AND t.code = 'standard';
 

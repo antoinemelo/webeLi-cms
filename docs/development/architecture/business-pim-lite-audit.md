@@ -117,7 +117,11 @@ Le POS dispose deja d'une recherche et de snapshots de variantes vendables. Le s
 
 ### Dependances de modules
 
-`SaleModuleProvider::dependencies()` declare explicitement `business`. Vente depend donc proprement d'Opérations pour le catalogue et les references CRM, sans dupliquer les tables catalogue.
+`SaleModuleProvider::dependencies()` ne declare plus `business` comme dependance
+obligatoire. Vente consomme le catalogue et les references CRM via des ports
+optionnels (`SellableCatalogPort`, `CustomerSnapshotPort`) et des adaptateurs
+Operations lorsque `business` est actif, sans dupliquer les tables catalogue ni
+creer de cle etrangere inter-base.
 
 ### Tests existants
 

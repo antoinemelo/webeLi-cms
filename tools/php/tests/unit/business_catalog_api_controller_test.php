@@ -19,6 +19,7 @@ use App\Modules\Business\Repositories\CatalogStockRepository;
 use App\Modules\Business\Repositories\CatalogVariantRepository;
 use App\Modules\Business\Services\CatalogCsvService;
 use App\Modules\Business\Services\CatalogDiscountService;
+use App\Modules\Business\Services\CatalogPdfService;
 use App\Modules\Business\Services\CatalogProductService;
 use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
@@ -34,6 +35,11 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $businessDb->pdo()->exec($catalogSchema);
+$variantSalesNoteMigration = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0005_variant_sales_note.sql');
+if ($variantSalesNoteMigration === false) {
+    throw new RuntimeException('Unable to read business variant sales note migration.');
+}
+$businessDb->pdo()->exec($variantSalesNoteMigration);
 [$iamDir, $iamPath] = test_temp_db(__DIR__ . '/../../../../database/iam.sql');
 $coreDir = sys_get_temp_dir() . '/amcms-business-catalog-api-core-' . bin2hex(random_bytes(6));
 mkdir($coreDir, 0775, true);
@@ -101,15 +107,19 @@ try {
     $stockService = new CatalogStockService($stock);
     $pricing = new CatalogPricingService(new BusinessCatalogPricingRepository($businessDb));
     $csv = new CatalogCsvService($businessDb, $brands, $categories, $products, $variants, $options, $pricing);
+    $pdf = new CatalogPdfService($products, $variants);
     $completeness = new BusinessProductCompletenessService($businessDb);
     $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
+    $standardTaxClass = $businessDb->one("SELECT id FROM business_tax_classes WHERE site_id = 1 AND code = 'standard' LIMIT 1");
+    $standardTaxClassId = (int) ($standardTaxClass['id'] ?? 0);
+    $h->assertTrue($standardTaxClassId > 0, 'standard tax class is available');
 
-    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing, $completeness): BusinessCatalogApiController {
+    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pdf, $pricing, $completeness): BusinessCatalogApiController {
         $token = 'business-catalog-api-test-token-' . $userId;
         $_SESSION['admin_user'] = ['id' => $userId, 'email' => 'catalog-' . $userId . '@example.test', 'session_secret' => $token];
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
         $auth = new AuthRepository($iam);
-        return new BusinessCatalogApiController($request, $sites, $auth, new Authorization($auth), $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pricing, $completeness);
+        return new BusinessCatalogApiController($request, $sites, $auth, new Authorization($auth), $brands, $categories, $products, $variants, $options, $discounts, $productService, $variantService, $discountService, $stockService, $csv, $pdf, $pricing, $completeness);
     };
 
     $businessDb->run("INSERT INTO business_companies(id, site_id, name, normalized_name, status, email) VALUES(10, 1, 'API Supplier', 'api supplier', 'supplier', 'supplier@example.test')");
@@ -133,9 +143,10 @@ try {
     $color = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options', [], ['code' => 'color_api', 'name' => 'Color', 'type' => 'color'])->storeOption()->body(), true)['data']['option'];
     $model = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options', [], ['code' => 'model_api', 'name' => 'Model', 'type' => 'select'])->storeOption()->body(), true)['data']['option'];
     $sizeM = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options/' . $size['id'] . '/values', [], ['code' => 'm', 'label' => 'M', 'value' => 'm'])->storeOptionValue((int) $size['id'])->body(), true)['data']['option_value'];
+    $sizeL = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options/' . $size['id'] . '/values', [], ['code' => 'l', 'label' => 'L', 'value' => 'l'])->storeOptionValue((int) $size['id'])->body(), true)['data']['option_value'];
     $colorBlue = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options/' . $color['id'] . '/values', [], ['code' => 'blue', 'label' => 'Blue', 'value' => 'blue', 'color_hex' => '#0066CC'])->storeOptionValue((int) $color['id'])->body(), true)['data']['option_value'];
     $modelClassic = json_decode($controllerFor(1, 'POST', '/admin/api/business/catalog/options/' . $model['id'] . '/values', [], ['code' => 'classic', 'label' => 'Classic', 'value' => 'classic'])->storeOptionValue((int) $model['id'])->body(), true)['data']['option_value'];
-    $h->assertTrue((int) $sizeM['id'] > 0 && (int) $colorBlue['id'] > 0 && (int) $modelClassic['id'] > 0, 'generic option values are created');
+    $h->assertTrue((int) $sizeM['id'] > 0 && (int) $sizeL['id'] > 0 && (int) $colorBlue['id'] > 0 && (int) $modelClassic['id'] > 0, 'generic option values are created');
 
     $productResponse = $controllerFor(1, 'POST', '/admin/api/business/catalog/products', [], [
         'name' => 'API Product',
@@ -192,6 +203,7 @@ try {
         'sku' => 'API-PRODUCT-M-BLUE-CLASSIC',
         'name' => 'API Product M Blue Classic',
         'status' => 'active',
+        'sales_note' => 'Commentaire POS initial',
         'stock_quantity' => 8,
         'option_values' => ['size_api' => 'm', 'color_api' => 'blue', 'model_api' => 'classic'],
         'purchase_adjustment_type' => 'amount_delta',
@@ -202,7 +214,24 @@ try {
     $h->assertSame(201, $variantResponse->status(), 'catalog admin can create variant with generic size color model');
     $variantPayload = json_decode($variantResponse->body(), true);
     $variantId = (int) ($variantPayload['data']['variant']['id'] ?? 0);
+    $h->assertSame('Commentaire POS initial', $variantPayload['data']['variant']['sales_note'] ?? null, 'variant creation persists POS sales note');
     $h->assertSame(3, count($variantPayload['data']['variant']['option_values'] ?? []), 'variant exposes its option values');
+    $variantScores = (int) ($businessDb->one('SELECT COUNT(*) AS count FROM business_product_completeness_scores WHERE variant_id = ?', [$variantId])['count'] ?? 0);
+    $h->assertTrue($variantScores > 0, 'variant save recalculates completeness scores');
+
+    $variantUpdateResponse = $controllerFor(1, 'PATCH', '/admin/api/business/catalog/variants/' . $variantId, [], [
+        'sku' => 'API-PRODUCT-L-BLUE-CLASSIC',
+        'name' => 'API Product L Blue Classic',
+        'sales_note' => 'Commentaire POS modifié',
+        'option_values' => ['size_api' => 'l', 'color_api' => 'blue', 'model_api' => 'classic'],
+    ])->updateVariant($variantId);
+    $h->assertSame(200, $variantUpdateResponse->status(), 'catalog admin can update variant sales note');
+    $variantUpdatePayload = json_decode($variantUpdateResponse->body(), true);
+    $h->assertSame('API-PRODUCT-L-BLUE-CLASSIC', $variantUpdatePayload['data']['variant']['sku'] ?? null, 'variant update changes SKU');
+    $h->assertSame('API Product L Blue Classic', $variantUpdatePayload['data']['variant']['name'] ?? null, 'variant update changes name');
+    $h->assertSame('Commentaire POS modifié', $variantUpdatePayload['data']['variant']['sales_note'] ?? null, 'variant update returns POS sales note');
+    $variantSizeOption = array_values(array_filter($variantUpdatePayload['data']['variant']['option_values'] ?? [], static fn(array $option): bool => ($option['option_code'] ?? '') === 'size_api'))[0] ?? [];
+    $h->assertSame('l', $variantSizeOption['value_code'] ?? null, 'variant update changes option values');
 
     $businessDb->run(
         'INSERT INTO business_product_assets(site_id, product_id, media_id, role, title, alt_text, is_public, channel_scope)
@@ -256,6 +285,7 @@ try {
         'base_purchase_price' => 12,
         'base_sale_price' => 30,
         'currency' => 'CHF',
+        'tax_class_id' => $standardTaxClassId,
     ], 1);
     $readyProductId = (int) ($readyProduct['id'] ?? 0);
     $businessDb->run(

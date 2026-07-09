@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 final class BusinessProductCompletenessService
 {
-    private const CHANNELS = ['admin', 'pos', 'ecommerce'];
+    private const CHANNELS = ['admin', 'pos', 'ecommerce', 'catalogue'];
 
     public function __construct(private readonly Database $db) {}
 
@@ -37,6 +37,9 @@ final class BusinessProductCompletenessService
         if ($channel === 'pos' && !((bool) ($product['is_pos_enabled'] ?? false))) {
             $missing[] = $this->issue('channel_pos_disabled', 'is_pos_enabled', 'Canal POS désactivé');
         }
+        if ($channel === 'catalogue' && !((bool) ($product['is_catalogue_enabled'] ?? true))) {
+            $missing[] = $this->issue('channel_catalogue_disabled', 'is_catalogue_enabled', 'Canal catalogue désactivé');
+        }
         if ($channel === 'ecommerce') {
             if (!((bool) ($product['is_ecommerce_enabled'] ?? false))) {
                 $missing[] = $this->issue('channel_ecommerce_disabled', 'is_ecommerce_enabled', 'Canal e-commerce désactivé');
@@ -46,17 +49,15 @@ final class BusinessProductCompletenessService
             }
         }
 
-        if ($channel === 'ecommerce' && !$this->hasMainAsset($productId, null, 'ecommerce')) {
+        if (in_array($channel, ['ecommerce', 'catalogue'], true) && !$this->hasMainAsset($productId, null, $channel)) {
             $warnings[] = $this->issue('main_image_missing', 'assets', 'Image principale recommandée');
         }
-
-        foreach ($this->requiredAttributesForProduct($productId) as $attribute) {
-            if (!$this->hasAttributeValue('product', $productId, (int) $attribute['id'])) {
-                $missing[] = $this->issue(
-                    'required_product_attribute_missing_' . $this->issueCodeSuffix((string) ($attribute['code'] ?? $attribute['id'])),
-                    'attributes',
-                    'Attribut produit requis manquant : ' . (string) ($attribute['name'] ?? $attribute['code'])
-                );
+        if ($channel === 'admin') {
+            if (($product['tax_class_id'] ?? null) === null) {
+                $missing[] = $this->issue('tax_class_missing', 'tax_class_id', 'TVA manquante');
+            }
+            if (!$this->hasCatalogAsset($productId)) {
+                $warnings[] = $this->issue('main_image_missing', 'assets', 'Image principale recommandée');
             }
         }
 
@@ -121,6 +122,9 @@ final class BusinessProductCompletenessService
         if ($channel === 'pos' && !((bool) $row['is_pos_enabled'])) {
             $missing[] = $this->issue('channel_pos_disabled', 'is_pos_enabled', 'Canal POS désactivé');
         }
+        if ($channel === 'catalogue' && !((bool) ($row['is_catalogue_enabled'] ?? true))) {
+            $missing[] = $this->issue('channel_catalogue_disabled', 'is_catalogue_enabled', 'Canal catalogue désactivé');
+        }
         if ($channel === 'ecommerce') {
             if (!((bool) $row['is_ecommerce_enabled'])) {
                 $missing[] = $this->issue('channel_ecommerce_disabled', 'is_ecommerce_enabled', 'Canal e-commerce désactivé');
@@ -141,19 +145,20 @@ final class BusinessProductCompletenessService
             if (!$taxOk) {
                 $missing[] = $this->issue('tax_class_missing', 'tax_class_id', 'TVA manquante');
             }
-        } elseif ($channel === 'ecommerce' && $row['tax_class_id'] === null) {
+        } elseif (in_array($channel, ['ecommerce', 'catalogue'], true) && $row['tax_class_id'] === null) {
             $missing[] = $this->issue('tax_class_missing', 'tax_class_id', 'TVA manquante');
         }
 
         $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
+        $backorderDeliveryDays = $row['variant_backorder_delivery_days'] === null ? (int) $row['product_backorder_delivery_days'] : (int) $row['variant_backorder_delivery_days'];
         $available = (float) $row['stock_quantity'] - (float) $row['stock_reserved'];
-        if ((string) $row['product_type'] === 'physical' && $trackStock && !$allowBackorder && $available <= 0.0) {
+        if (in_array($channel, ['pos', 'ecommerce'], true) && (string) $row['product_type'] === 'physical' && $trackStock && !$allowBackorder && $available <= 0.0) {
             $missing[] = $this->issue('stock_unavailable', 'stock', 'Stock indisponible');
         }
 
         foreach ($this->requiredAttributesForProduct($productId) as $attribute) {
-            if (!$this->hasAttributeValue('variant', $variantId, (int) $attribute['id'])) {
+            if (!$this->hasVariantOrProductAttributeValue($productId, $variantId, $attribute)) {
                 $missing[] = $this->issue(
                     'required_variant_attribute_missing_' . $this->issueCodeSuffix((string) ($attribute['code'] ?? $attribute['id'])),
                     'attributes',
@@ -179,6 +184,7 @@ final class BusinessProductCompletenessService
             'stock' => [
                 'track_stock' => $trackStock,
                 'allow_backorder' => $allowBackorder,
+                'backorder_delivery_days' => $backorderDeliveryDays,
                 'available_quantity' => $available,
             ],
         ];
@@ -271,16 +277,19 @@ final class BusinessProductCompletenessService
                 p.tax_class_id,
                 p.track_stock AS product_track_stock,
                 p.allow_backorder AS product_allow_backorder,
+                p.backorder_delivery_days AS product_backorder_delivery_days,
                 p.is_public,
                 p.is_ecommerce_enabled,
                 p.is_pos_enabled,
+                p.is_catalogue_enabled,
                 v.id AS variant_id,
                 v.status AS variant_status,
                 v.sku,
                 v.track_stock AS variant_track_stock,
                 v.stock_quantity,
                 v.stock_reserved,
-                v.allow_backorder AS variant_allow_backorder
+                v.allow_backorder AS variant_allow_backorder,
+                v.backorder_delivery_days AS variant_backorder_delivery_days
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
              WHERE v.id = ? AND v.archived_at IS NULL AND p.archived_at IS NULL
@@ -335,6 +344,18 @@ final class BusinessProductCompletenessService
         ) !== null;
     }
 
+    private function hasCatalogAsset(int $productId): bool
+    {
+        return $this->db->one(
+            'SELECT 1 FROM business_product_assets
+             WHERE product_id = ?
+               AND archived_at IS NULL
+               AND role <> "internal"
+             LIMIT 1',
+            [$productId]
+        ) !== null;
+    }
+
     /** @return list<array<string,mixed>> */
     private function requiredAttributesForProduct(int $productId): array
     {
@@ -362,13 +383,21 @@ final class BusinessProductCompletenessService
              WHERE ' . $owner . ' = ?
                AND attribute_id = ?
                AND (
-                   value_text IS NOT NULL
+                   (value_text IS NOT NULL AND trim(value_text) <> "")
                    OR value_number IS NOT NULL
-                   OR value_json IS NOT NULL
+                   OR (value_json IS NOT NULL AND trim(value_json) NOT IN ("", "[]", "{}", "null"))
                )
              LIMIT 1',
             [$this->id($ownerId, $owner), $this->id($attributeId, 'attribute_id')]
         ) !== null;
+    }
+
+    /** @param array<string,mixed> $attribute */
+    private function hasVariantOrProductAttributeValue(int $productId, int $variantId, array $attribute): bool
+    {
+        $attributeId = (int) $attribute['id'];
+        return $this->hasAttributeValue('variant', $variantId, $attributeId)
+            || $this->hasAttributeValue('product', $productId, $attributeId);
     }
 
     private function issueCodeSuffix(string $value): string

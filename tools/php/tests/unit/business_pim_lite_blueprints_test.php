@@ -78,14 +78,14 @@ foreach ($expectedKeys as $key => $resourceKey) {
 }
 
 $product = $byKey['business_product'];
-assertPimFields($h, $product, ['site_id', 'brand_id', 'category_id', 'type', 'status', 'visibility', 'sku_base', 'name', 'slug', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled'], 'business_product');
+assertPimFields($h, $product, ['site_id', 'brand_id', 'category_id', 'type', 'status', 'visibility', 'sku_base', 'name', 'slug', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled'], 'business_product');
 assertPimEnum($h, $product, 'type', ['physical', 'service', 'gift_card', 'bundle'], 'product types are declared');
 $h->assertTrue(in_array('catalog.find_products', $product['ai']['allowed_actions'] ?? [], true), 'product blueprint prepares catalog.find_products');
 $h->assertTrue(in_array('catalog.suggest_product_description', $product['ai']['allowed_actions'] ?? [], true), 'product blueprint prepares catalog.suggest_product_description');
 $h->assertSame(true, $product['ai']['default_prompt_safe'] ?? null, 'product blueprint is prompt-safe by default');
 
 $variant = $byKey['business_variant'];
-assertPimFields($h, $variant, ['product_id', 'status', 'sku', 'barcode', 'name', 'stock_quantity', 'stock_reserved', 'track_stock', 'allow_backorder'], 'business_variant');
+assertPimFields($h, $variant, ['product_id', 'status', 'sku', 'barcode', 'name', 'stock_quantity', 'stock_reserved', 'track_stock', 'allow_backorder', 'backorder_delivery_days'], 'business_variant');
 $h->assertTrue(in_array('catalog.prepare_sale_snapshot', $variant['ai']['allowed_actions'] ?? [], true), 'variant blueprint prepares catalog.prepare_sale_snapshot');
 $h->assertTrue(in_array('catalog.check_ecommerce_readiness', $variant['ai']['allowed_actions'] ?? [], true), 'variant blueprint prepares catalog.check_ecommerce_readiness');
 
@@ -93,7 +93,7 @@ $productAsset = $byKey['business_product_asset'];
 $h->assertSame('business_product_assets', $productAsset['storage']['table'] ?? null, 'product asset blueprint points to the native PIM asset table');
 assertPimFields($h, $productAsset, ['product_id', 'variant_id', 'media_id', 'role', 'title', 'alt_text', 'is_public', 'channel_scope'], 'business_product_asset');
 assertPimEnum($h, $productAsset, 'role', ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'brand_logo', 'packaging', 'seo', 'internal'], 'product asset roles are declared');
-assertPimEnum($h, $productAsset, 'channel_scope', ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'], 'product asset channel scopes are declared');
+assertPimEnum($h, $productAsset, 'channel_scope', ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'], 'product asset channel scopes are declared');
 $h->assertTrue(in_array('catalog.suggest_alt_text', $productAsset['ai']['allowed_actions'] ?? [], true), 'product asset blueprint prepares catalog.suggest_alt_text');
 
 $metadata = $byKey['business_asset_metadata'];
@@ -113,7 +113,7 @@ assertPimFields($h, $byKey['business_variant_attribute_value'], ['variant_id', '
 $rule = $byKey['business_completeness_rule'];
 assertPimFields($h, $rule, ['code', 'name', 'scope', 'required_field', 'required_attribute_id', 'channel', 'weight', 'is_active'], 'business_completeness_rule');
 assertPimEnum($h, $rule, 'scope', ['product', 'variant', 'asset', 'price', 'tax', 'channel'], 'completeness rule scopes are declared');
-assertPimEnum($h, $rule, 'channel', ['all', 'public', 'ecommerce', 'pos', 'admin', 'pdf'], 'completeness rule channels are declared');
+assertPimEnum($h, $rule, 'channel', ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'], 'completeness rule channels are declared');
 $h->assertSame(['required_field', 'required_attribute_id'], $rule['validation']['any_required'] ?? null, 'completeness rule documents required-field fallback');
 
 $score = $byKey['business_completeness_score'];
@@ -171,6 +171,9 @@ assertPimFields($h, $snapshot, [
     'main_media_url',
     'track_stock',
     'is_public',
+    'allow_backorder',
+    'backorder_delivery_days',
+    'availability',
     'is_ecommerce_enabled',
     'is_pos_enabled',
     'is_sellable',

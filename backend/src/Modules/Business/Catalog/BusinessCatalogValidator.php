@@ -34,7 +34,9 @@ final class BusinessCatalogValidator
             'unit' => $this->key($payload['unit'] ?? 'unit', 'unit', 32),
             'currency' => $currency,
             'tax_class' => $taxClass,
-            'stock_enabled' => (bool) ($payload['stock_enabled'] ?? $type === 'physical'),
+            'stock_enabled' => $this->boolValue($payload['stock_enabled'] ?? $type === 'physical'),
+            'allow_backorder' => $this->boolValue($payload['allow_backorder'] ?? true),
+            'backorder_delivery_days' => max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 7)),
             'base_purchase_price' => $basePurchasePrice,
             'base_sale_price' => $baseSalePrice,
         ];
@@ -69,16 +71,31 @@ final class BusinessCatalogValidator
         $sku = $this->key($payload['sku'] ?? null, 'sku', 80, true);
         $purchaseAdjustmentType = $this->normalizeAdjustmentType($payload['purchase_adjustment_type'] ?? $payload['purchase_adjustment_mode'] ?? 'none');
         $saleAdjustmentType = $this->normalizeAdjustmentType($payload['sale_adjustment_type'] ?? $payload['sale_adjustment_mode'] ?? 'none');
-        return [
+        $validated = [
             'sku' => $sku,
             'barcode' => $this->nullableText($payload['barcode'] ?? null, 'barcode', 80),
+            'name' => $this->nullableText($payload['name'] ?? null, 'name', 180) ?? $sku,
+            'sales_note' => $this->nullableText($payload['sales_note'] ?? null, 'sales_note', 2000),
             'status' => $this->choice($payload['status'] ?? 'draft', BusinessCatalogDefinitions::VARIANT_STATUSES, 'variant_status'),
             'purchase_adjustment_type' => $purchaseAdjustmentType,
             'purchase_adjustment_value' => $this->adjustmentValue($purchaseAdjustmentType, $payload['purchase_adjustment_value'] ?? null, 'purchase_adjustment_value'),
             'sale_adjustment_type' => $saleAdjustmentType,
             'sale_adjustment_value' => $this->adjustmentValue($saleAdjustmentType, $payload['sale_adjustment_value'] ?? null, 'sale_adjustment_value'),
             'stock_quantity' => max(0, (int) ($payload['stock_quantity'] ?? 0)),
+            'stock_reserved' => max(0, (int) ($payload['stock_reserved'] ?? 0)),
+            'weight_grams' => array_key_exists('weight_grams', $payload) && $payload['weight_grams'] !== null ? max(0, (int) $payload['weight_grams']) : null,
+            'sort_order' => max(0, (int) ($payload['sort_order'] ?? 0)),
         ];
+        if (array_key_exists('track_stock', $payload)) {
+            $validated['track_stock'] = $this->boolValue($payload['track_stock']);
+        }
+        if (array_key_exists('allow_backorder', $payload)) {
+            $validated['allow_backorder'] = $this->boolValue($payload['allow_backorder']);
+        }
+        if (array_key_exists('backorder_delivery_days', $payload) || array_key_exists('delivery_lead_time_days', $payload)) {
+            $validated['backorder_delivery_days'] = max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 0));
+        }
+        return $validated;
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -260,5 +277,25 @@ final class BusinessCatalogValidator
     private function roundMoney(float $value): float
     {
         return round($value, 2);
+    }
+
+    private function boolValue(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (float) $value !== 0.0;
+        }
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if (in_array($normalized, ['', '0', 'false', 'no', 'off', 'null'], true)) {
+                return false;
+            }
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+        }
+        return (bool) $value;
     }
 }

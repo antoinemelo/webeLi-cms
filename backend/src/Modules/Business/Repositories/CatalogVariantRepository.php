@@ -6,6 +6,8 @@ namespace App\Modules\Business\Repositories;
 
 final class CatalogVariantRepository extends BusinessRepositoryBase
 {
+    private ?bool $hasSalesNoteColumn = null;
+
     /** @return list<array<string,mixed>> */
     public function listForProduct(int $siteId, int $productId, bool $includeArchived = false): array
     {
@@ -26,10 +28,8 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
         if ($this->skuExists($sku)) {
             throw new \InvalidArgumentException('business.catalog.sku_exists');
         }
-        $this->database()->run(
-            'INSERT INTO business_product_variants(product_id, status, sku, barcode, name, track_stock, stock_quantity, stock_reserved, allow_backorder, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id)
-             VALUES(:product_id, :status, :sku, :barcode, :name, :track_stock, :stock_quantity, :stock_reserved, :allow_backorder, :weight_grams, :sort_order, :actor, :actor)',
-            [
+        $hasSalesNoteColumn = $this->hasSalesNoteColumn();
+        $params = [
                 'product_id' => $product['id'],
                 'status' => $this->choice($payload['status'] ?? 'draft', ['draft', 'active', 'archived'], 'variant_status'),
                 'sku' => $sku,
@@ -39,10 +39,18 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
                 'stock_quantity' => max(0, (float) ($payload['stock_quantity'] ?? 0)),
                 'stock_reserved' => max(0, (float) ($payload['stock_reserved'] ?? 0)),
                 'allow_backorder' => array_key_exists('allow_backorder', $payload) ? $this->boolInt($payload['allow_backorder']) : null,
+                'backorder_delivery_days' => array_key_exists('backorder_delivery_days', $payload) || array_key_exists('delivery_lead_time_days', $payload) ? max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 0)) : null,
                 'weight_grams' => $payload['weight_grams'] ?? null,
                 'sort_order' => max(0, (int) ($payload['sort_order'] ?? 0)),
                 'actor' => $actorId,
-            ]
+        ];
+        if ($hasSalesNoteColumn) {
+            $params['sales_note'] = $this->nullableText($payload['sales_note'] ?? null, 'sales_note', 2000);
+        }
+        $this->database()->run(
+            'INSERT INTO business_product_variants(product_id, status, sku, barcode, name, ' . ($hasSalesNoteColumn ? 'sales_note, ' : '') . 'track_stock, stock_quantity, stock_reserved, allow_backorder, backorder_delivery_days, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id)
+             VALUES(:product_id, :status, :sku, :barcode, :name, ' . ($hasSalesNoteColumn ? ':sales_note, ' : '') . ':track_stock, :stock_quantity, :stock_reserved, :allow_backorder, :backorder_delivery_days, :weight_grams, :sort_order, :actor, :actor)',
+            $params
         );
         $variantId = $this->database()->lastInsertId();
         $this->syncOptionValues($productId, $variantId, $payload['option_values'] ?? []);
@@ -71,13 +79,8 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
         if ($sku !== (string) $current['sku'] && $this->skuExists($sku)) {
             throw new \InvalidArgumentException('business.catalog.sku_exists');
         }
-        $this->database()->run(
-            'UPDATE business_product_variants
-             SET status = :status, sku = :sku, barcode = :barcode, name = :name, track_stock = :track_stock, stock_quantity = :stock_quantity,
-                 stock_reserved = :stock_reserved, allow_backorder = :allow_backorder, weight_grams = :weight_grams, sort_order = :sort_order,
-                 updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
-             WHERE id = :id',
-            [
+        $hasSalesNoteColumn = $this->hasSalesNoteColumn();
+        $params = [
                 'id' => $id,
                 'status' => $this->choice($payload['status'] ?? $current['status'], ['draft', 'active', 'archived'], 'variant_status'),
                 'sku' => $sku,
@@ -87,10 +90,21 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
                 'stock_quantity' => max(0, (float) ($payload['stock_quantity'] ?? $current['stock_quantity'] ?? 0)),
                 'stock_reserved' => max(0, (float) ($payload['stock_reserved'] ?? $current['stock_reserved'] ?? 0)),
                 'allow_backorder' => array_key_exists('allow_backorder', $payload) ? $this->boolInt($payload['allow_backorder']) : ($current['allow_backorder'] ?? null),
+                'backorder_delivery_days' => array_key_exists('backorder_delivery_days', $payload) || array_key_exists('delivery_lead_time_days', $payload) ? max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 0)) : ($current['backorder_delivery_days'] ?? null),
                 'weight_grams' => $payload['weight_grams'] ?? $current['weight_grams'] ?? null,
                 'sort_order' => max(0, (int) ($payload['sort_order'] ?? $current['sort_order'] ?? 0)),
                 'actor' => $actorId,
-            ]
+        ];
+        if ($hasSalesNoteColumn) {
+            $params['sales_note'] = $this->nullableText($payload['sales_note'] ?? $current['sales_note'] ?? null, 'sales_note', 2000);
+        }
+        $this->database()->run(
+            'UPDATE business_product_variants
+             SET status = :status, sku = :sku, barcode = :barcode, name = :name, ' . ($hasSalesNoteColumn ? 'sales_note = :sales_note, ' : '') . 'track_stock = :track_stock, stock_quantity = :stock_quantity,
+                 stock_reserved = :stock_reserved, allow_backorder = :allow_backorder, backorder_delivery_days = :backorder_delivery_days, weight_grams = :weight_grams, sort_order = :sort_order,
+                 updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id',
+            $params
         );
         if (array_key_exists('option_values', $payload)) {
             $this->database()->run('DELETE FROM business_product_variant_option_values WHERE variant_id = ?', [$id]);
@@ -202,6 +216,19 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
     private function skuExists(string $sku): bool
     {
         return $this->database()->one('SELECT 1 FROM business_product_variants WHERE sku = ? AND archived_at IS NULL LIMIT 1', [$sku]) !== null;
+    }
+
+    private function hasSalesNoteColumn(): bool
+    {
+        if ($this->hasSalesNoteColumn !== null) {
+            return $this->hasSalesNoteColumn;
+        }
+        foreach ($this->database()->all('PRAGMA table_info(business_product_variants)') as $column) {
+            if (($column['name'] ?? '') === 'sales_note') {
+                return $this->hasSalesNoteColumn = true;
+            }
+        }
+        return $this->hasSalesNoteColumn = false;
     }
 
     private function sku(mixed $value): string

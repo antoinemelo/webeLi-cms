@@ -20,7 +20,7 @@ final class CatalogCsvService
     private const MAX_IMPORT_BYTES = 1048576;
     private const HEADERS = [
         'product_id', 'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
-        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'base_purchase_price',
+        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'base_purchase_price',
         'base_sale_price', 'currency', 'tax_class', 'options', 'variant_id', 'variant_sku',
         'variant_barcode', 'variant_name', 'variant_options', 'purchase_adjustment_type',
         'purchase_adjustment_value', 'sale_adjustment_type', 'sale_adjustment_value',
@@ -84,6 +84,7 @@ final class CatalogCsvService
                 $this->boolCell($record['is_public'] ?? false),
                 $this->boolCell($record['is_ecommerce_enabled'] ?? false),
                 $this->boolCell($record['is_pos_enabled'] ?? false),
+                $this->boolCell($record['is_catalogue_enabled'] ?? true),
                 $includePurchasePrices ? $this->moneyCell($record['base_purchase_price'] ?? null) : '',
                 $this->moneyCell($record['base_sale_price'] ?? null),
                 $record['sale_currency'] ?? $record['purchase_currency'] ?? 'CHF',
@@ -193,6 +194,7 @@ final class CatalogCsvService
                 'public' => 'is_public',
                 'ecommerce' => 'is_ecommerce_enabled',
                 'pos' => 'is_pos_enabled',
+                'catalogue' => 'is_catalogue_enabled',
                 default => throw new InvalidArgumentException('business.catalog.export_channel_invalid'),
             };
             $clauses[] = 'p.' . $field . ' = 1';
@@ -339,6 +341,7 @@ final class CatalogCsvService
                 'is_public' => $this->boolValue($row['is_public'] ?? '0'),
                 'is_ecommerce_enabled' => $this->boolValue($row['is_ecommerce_enabled'] ?? '0'),
                 'is_pos_enabled' => $this->boolValue($row['is_pos_enabled'] ?? '0'),
+                'is_catalogue_enabled' => $this->boolValue($row['is_catalogue_enabled'] ?? '1'),
                 'base_purchase_price' => $this->numberOrNull($row['base_purchase_price'] ?? ''),
                 'base_sale_price' => $this->numberOrNull($row['base_sale_price'] ?? ''),
                 'currency' => strtoupper(trim($row['currency'] ?? 'CHF') ?: 'CHF'),
@@ -372,6 +375,7 @@ final class CatalogCsvService
             !empty($productPayload['is_public']) ? 'public' : null,
             !empty($productPayload['is_ecommerce_enabled']) ? 'ecommerce' : null,
             !empty($productPayload['is_pos_enabled']) ? 'pos' : null,
+            !empty($productPayload['is_catalogue_enabled']) ? 'catalogue' : null,
         ]));
 
         if ($plan['product_action'] === 'create') {
@@ -410,7 +414,7 @@ final class CatalogCsvService
             'UPDATE business_products
              SET brand_id = :brand_id, category_id = :category_id, type = :type, status = :status, visibility = :visibility,
                  sku_base = :sku_base, name = :name, slug = :slug, tax_class_id = :tax_class_id,
-                 is_public = :is_public, is_ecommerce_enabled = :is_ecommerce_enabled, is_pos_enabled = :is_pos_enabled,
+                 is_public = :is_public, is_ecommerce_enabled = :is_ecommerce_enabled, is_pos_enabled = :is_pos_enabled, is_catalogue_enabled = :is_catalogue_enabled,
                  updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
              WHERE site_id = :site_id AND id = :id',
             [
@@ -428,6 +432,7 @@ final class CatalogCsvService
                 'is_public' => !empty($payload['is_public']) ? 1 : 0,
                 'is_ecommerce_enabled' => !empty($payload['is_ecommerce_enabled']) ? 1 : 0,
                 'is_pos_enabled' => !empty($payload['is_pos_enabled']) ? 1 : 0,
+                'is_catalogue_enabled' => !empty($payload['is_catalogue_enabled']) ? 1 : 0,
                 'actor' => $actorId,
             ]
         );

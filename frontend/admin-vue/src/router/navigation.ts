@@ -22,7 +22,7 @@ export type MainNavigationItem = {
 export const contentLinks: SectionLink[] = [
   { label: 'Pages', route: '/contents/pages', permission: 'content.read', hint: 'Arborescence, URL, brouillons, preview et publication.' },
   { label: 'Articles', route: '/contents/articles', permission: 'content.read', hint: 'Actualités, billets, statuts et SEO éditorial.' },
-  { label: 'Imports / Exports', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.' },
+  { label: 'I/E des contenus', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.' },
   { label: 'Archives de pages', route: '/contents/page_archives', permission: 'content.archive', hint: 'Pages spécialisées qui listent ou redirigent des contenus de type page.' },
   { label: 'Archives d’articles', route: '/contents/article_archives', permission: 'content.archive', hint: 'Pages spécialisées pour listes, archives et agrégations d’articles.' }
 ];
@@ -41,7 +41,9 @@ export const studioLinks: SectionLink[] = [
 ];
 
 
-export const moduleWorkbenchLinks: SectionLink[] = [];
+export const moduleWorkbenchLinks: SectionLink[] = [
+  { label: 'Vente', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read'], hint: 'Commandes, POS, paiements et stock transactionnel.' }
+];
 
 export const iamLinks: SectionLink[] = [
   { label: 'Utilisateurs', route: '/iam/users', permission: 'users.read', hint: 'Comptes, statuts, accès par site et réinitialisation de mot de passe.' },
@@ -67,7 +69,7 @@ export const assetLinks: SectionLink[] = [
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
-  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read'], children: moduleWorkbenchLinks },
+  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use'], children: moduleWorkbenchLinks },
   { key: 'assets', label: 'Actifs', route: '/media', children: assetLinks }
 ];
 
@@ -84,7 +86,7 @@ function searchAction(key: string, section: string, link: SectionLink, keywords:
 export const adminSearchActions: AdminSearchAction[] = [
   searchAction('dashboard.open', 'Navigation', { label: 'Cockpit', route: '/' }, ['accueil', 'dashboard', 'tableau de bord']),
   searchAction('studio.open', 'Navigation', { label: 'Studio', route: '/studio', permission: 'content.read', hint: 'Ouvrir le studio éditorial.' }, ['contenu', 'édition']),
-  searchAction('static.exports.open', 'Production éditoriale', { label: 'Imports / Exports', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter une page, une langue ou un site en HTML statique.' }, ['export', 'statique', 'release']),
+  searchAction('static.exports.open', 'Production éditoriale', { label: 'I/E des contenus', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter une page, une langue ou un site en HTML statique.' }, ['import', 'export', 'statique', 'release']),
   ...contentLinks.flatMap((link) => {
     const archive = link.route.includes('archive');
     const plural = link.route.includes('article') ? 'articles' : 'pages';

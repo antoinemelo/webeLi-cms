@@ -92,9 +92,19 @@ class SaleModuleSmokeTest(unittest.TestCase):
         self.assertEqual("system", manifest["type"])
         self.assertTrue(manifest["enabled_by_default"])
         self.assertEqual("App\\Modules\\Sale\\SaleModuleProvider", manifest["provider_class"])
+        self.assertEqual(
+            ["sellable_catalog", "customer_snapshot", "crm_activity_sink", "cms_account_bridge"],
+            manifest["optional_integrations"],
+        )
         database = manifest["databases"][0]
         self.assertEqual("storage/database/sale.sqlite", database["path"])
         self.assertEqual("database/modules/sale.sql", database["schema"])
+
+    def test_sale_module_is_registered_in_backend_module_config(self) -> None:
+        config = (ROOT / "backend/config/modules.php").read_text(encoding="utf-8")
+        self.assertIn("'sale'", config)
+        self.assertIn("App\\Modules\\Sale\\SaleModuleProvider::class", config)
+        self.assertIn("backend/src/Modules/Sale/module.json", config)
 
     def test_sale_database_is_discovered_and_seeded(self) -> None:
         self.assertIn("sale", module_keys(root=ROOT))
@@ -117,6 +127,8 @@ class SaleModuleSmokeTest(unittest.TestCase):
 
     def test_provider_declares_permissions_admin_and_optional_public_ecommerce_routes(self) -> None:
         provider = (ROOT / "backend/src/Modules/Sale/SaleModuleProvider.php").read_text(encoding="utf-8")
+        self.assertIn("public function dependencies(): array { return []; }", provider)
+        self.assertIn("integration.sale.events.v1", provider)
         for permission in EXPECTED_PERMISSIONS:
             self.assertIn(permission, provider)
         for route in [

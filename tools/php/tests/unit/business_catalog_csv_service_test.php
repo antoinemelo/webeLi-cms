@@ -174,7 +174,7 @@ function catalog_import_csv(array $values): string
 {
     $headers = [
         'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
-        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'base_purchase_price',
+        'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'base_purchase_price',
         'base_sale_price', 'currency', 'variant_sku', 'variant_name', 'variant_options',
         'purchase_adjustment_type', 'purchase_adjustment_value', 'sale_adjustment_type',
         'sale_adjustment_value', 'stock_quantity',

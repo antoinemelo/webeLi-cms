@@ -117,7 +117,7 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            $line = $this->carts->updateLineQuantity((int) $cart['id'], $this->id($line_id), (int) ($this->payload()['quantity'] ?? 1));
+            $line = $this->cartService->updateLineQuantity((int) $cart['id'], $this->id($line_id), (int) ($this->payload()['quantity'] ?? 1));
             return $this->json([
                 'cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true),
                 'line' => $this->linePayload($line),
@@ -134,7 +134,7 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            $this->carts->deleteLine((int) $cart['id'], $this->id($line_id));
+            $this->cartService->deleteLine((int) $cart['id'], $this->id($line_id));
             return $this->json([
                 'deleted' => true,
                 'cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true),

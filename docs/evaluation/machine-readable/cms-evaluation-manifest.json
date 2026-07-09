@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "2777aa50c1b4dbe957a0b20c5112b3ed8f8c355b",
+  "commit": "ed520d87cb621fafaac6532f7440e81c3604ade7",
   "confidence": "high",
   "databases": [
     "core",
@@ -43,6 +43,7 @@
     "docs/evaluation/product-scope.md",
     "docs/evaluation/release-audit-policy.md",
     "docs/evaluation/reproducible-checks.md",
+    "docs/evaluation/sale-module-review.md",
     "docs/evaluation/visual-editor.md"
   ],
   "evidence": [
@@ -52,9 +53,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-07-09",
+  "generated_at": "2026-07-10",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-07-09",
+  "last_verified": "2026-07-10",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],
