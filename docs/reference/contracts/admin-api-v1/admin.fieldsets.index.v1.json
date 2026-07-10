@@ -12,7 +12,19 @@
       {
         "fieldset_key": "seo_basic",
         "label": "SEO de base",
-        "usage_count": 2
+        "fields_count": 4,
+        "usage_count": 2,
+        "is_system": false,
+        "is_deletable": true,
+        "used_by": [
+          {
+            "blueprint_key": "page",
+            "label": "Page",
+            "resource_type": "content_type",
+            "site_id": null,
+            "scope": "global"
+          }
+        ]
       }
     ],
     "meta": {

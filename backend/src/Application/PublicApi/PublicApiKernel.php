@@ -716,7 +716,7 @@ final class PublicApiKernel
 
     private function contentTypeExists(string $type): bool
     {
-        return (bool) $this->db->one('SELECT 1 FROM content_types WHERE type_key = :type AND is_active = 1 LIMIT 1', ['type' => $type]);
+        return (bool) $this->db->one('SELECT 1 FROM content_types WHERE type_key = :type AND api_enabled = 1 LIMIT 1', ['type' => $type]);
     }
 
     /** @param array<string,mixed> $row */

@@ -47,7 +47,7 @@ final class SecurityAdminApiController
             'webhooks' => $canWebhooks ? $this->webhooks($siteId) : [],
             'cors' => $canCors ? ($siteId > 0 ? [$this->corsForSite($siteId)] : $this->corsSettings()) : [],
             'webhook_stats' => $canWebhooks ? $this->webhookStats($siteId) : ['pending' => 0, 'failed' => 0, 'succeeded' => 0, 'total' => 0],
-            'available_scopes' => ['headless:read', 'content:read', 'routes:read', 'menus:read', 'taxonomies:read', 'media:read', '*'],
+            'available_scopes' => ['headless:read', 'routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read', 'catalog:read', 'pos.catalog.read', '*'],
             'available_webhook_events' => ['content.published', 'content.unpublished', 'content.updated', '*'],
             'blueprints' => $this->securityBlueprints(),
         ], self::CONTRACT, ['contract_version' => AdminApiContract::VERSION]);
@@ -364,7 +364,7 @@ final class SecurityAdminApiController
         if (!$this->coreDb->tableExists('blueprints') || !$this->coreDb->tableExists('blueprint_fields')) {
             return [];
         }
-        $keys = ['security_api_token', 'security_webhook', 'security_cors', 'iam_email_2fa'];
+        $keys = ['security_api_token', 'security_webhook', 'security_cors', 'iam_login_mode'];
         $placeholders = implode(',', array_fill(0, count($keys), '?'));
         $rows = $this->coreDb->all("SELECT id, blueprint_key, label, description FROM blueprints WHERE resource_type = 'system' AND blueprint_key IN ({$placeholders})", $keys);
         $out = [];
@@ -460,11 +460,12 @@ final class SecurityAdminApiController
         );
 
         return array_map(function (array $r): array {
-            $basePath = $this->normalizeBasePath((string) ($r['base_path'] ?? ''));
+            $storedBasePath = $this->normalizeBasePath((string) ($r['base_path'] ?? ''));
             $host = $this->hostWithoutPort((string) ($r['host'] ?? ''));
             $scheme = in_array((string) ($r['scheme'] ?? 'https'), ['http', 'https'], true) ? (string) $r['scheme'] : 'https';
-            $requestBasePath = $this->requestBasePath($basePath);
-            $publicUrl = $host !== '' ? rtrim($scheme . '://' . $host . $basePath, '/') : '';
+            $requestBasePath = $this->requestBasePath($storedBasePath);
+            $publicBasePath = $this->publicBasePath($storedBasePath);
+            $publicUrl = $host !== '' ? rtrim($scheme . '://' . $host . $publicBasePath, '/') : '';
 
             return [
                 'id' => (int) $r['id'],
@@ -473,9 +474,9 @@ final class SecurityAdminApiController
                 'default_language_code' => (string) $r['default_language_code'],
                 'is_active' => (bool) $r['is_active'],
                 'host' => $host,
-                'base_path' => $basePath,
+                'base_path' => $publicBasePath,
                 'request_base_path' => $requestBasePath,
-                'public_path' => function_exists('url_path') ? url_path($requestBasePath === '' ? '/' : $requestBasePath . '/') : ($requestBasePath ?: '/'),
+                'public_path' => function_exists('url_path') ? url_path($requestBasePath === '' ? '/' : $requestBasePath . '/') : ($publicBasePath ?: '/'),
                 'public_url' => $publicUrl,
             ];
         }, $rows);
@@ -499,6 +500,22 @@ final class SecurityAdminApiController
             $basePath = substr($basePath, strlen($appBasePath)) ?: '';
         }
         return $this->normalizeBasePath($basePath);
+    }
+
+    private function publicBasePath(string $domainBasePath): string
+    {
+        $basePath = $this->normalizeBasePath($domainBasePath);
+        $appBasePath = $this->normalizeBasePath(function_exists('app_base_path') ? app_base_path() : '');
+        if ($appBasePath === '') {
+            return $basePath;
+        }
+        if ($basePath === '' || $basePath === '/') {
+            return $appBasePath;
+        }
+        if ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/')) {
+            return $basePath;
+        }
+        return $this->normalizeBasePath($appBasePath . '/' . ltrim($basePath, '/'));
     }
 
     private function hostWithoutPort(string $host): string

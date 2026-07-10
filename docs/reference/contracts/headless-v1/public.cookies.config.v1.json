@@ -5,7 +5,7 @@
   "description": "Retourne catégories, services et textes publics pour le site et la langue.",
   "method": "GET",
   "source": "canonical public application use case",
-  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "security": "Public endpoint: no bearer token is required; CORS, rate-limit and payload validation still apply.",
   "path": "/api/v1/cookies/config",
   "query_params": {
     "lang": {

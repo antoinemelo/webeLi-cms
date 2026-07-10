@@ -6,7 +6,6 @@ import argparse
 import json
 import re
 import sqlite3
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,6 +22,8 @@ GENERATED_SCAN_EXCLUDED_PARTS = {
     "__pycache__",
     "node_modules",
     "vendor",
+    "tests",
+    "test-results",
 }
 
 
@@ -30,24 +31,12 @@ def is_generated_scan_excluded(path: Path) -> bool:
     return any(part in GENERATED_SCAN_EXCLUDED_PARTS for part in path.relative_to(ROOT).parts)
 
 
-def release_metadata() -> dict:
-    path = ROOT / "config" / "release.json"
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {"technical_version": "unknown"}
-
-
-RELEASE = release_metadata()
-VERSION = str(RELEASE.get("technical_version", "unknown"))
-
-
 def header(name: str) -> str:
     return (
         "---\n"
         f"title: {name}\n"
         "audience:\n  - developer\n  - installer\n  - evaluator\n"
-        "status: stable\nversion: 1.0\n"
+        "status: stable\n"
         "source_of_truth: generated\n"
         "generator: tools/python/generators/generate_documentation.py\n"
         "owners:\n  - core\n"
@@ -165,27 +154,84 @@ def render_field_types() -> str:
     return header("Types de champs") + "| Type détecté |\n|---|\n" + "".join(f"| `{name}` |\n" for name in sorted(names))
 
 
-def command_help(command: str | None = None) -> str:
-    args = [sys.executable, str(ROOT / "tools/cms.py")]
-    if command:
-        args.append(command)
-    args.append("--help")
-    completed = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, timeout=20)
-    output = completed.stdout or completed.stderr
-    return output.strip()
+def command_help(*command: str) -> str:
+    from argparse import _SubParsersAction
+    from tools.python.cms import cli as cms_cli
+
+    current = cms_cli.parser()
+    # argparse otherwise derives its wrapping width from the current terminal.
+    # Generated references must be identical in CI, a local PTY and cron.
+    fixed_width = 80
+    current.formatter_class = lambda prog: argparse.HelpFormatter(prog, width=fixed_width)
+    for part in command:
+        subparsers = next(
+            (action for action in current._actions if isinstance(action, _SubParsersAction)),
+            None,
+        )
+        if subparsers is None or part not in subparsers.choices:
+            raise RuntimeError(f"Sous-commande CLI introuvable pour la documentation: {' '.join(command)}")
+        current = subparsers.choices[part]
+        current.formatter_class = lambda prog: argparse.HelpFormatter(prog, width=fixed_width)
+    return current.format_help().strip()
 
 
 def render_cli() -> str:
     body = header("Commandes CLI")
     body += "## Aide générale\n\n```text\n" + command_help() + "\n```\n\n"
-    for command in ("init", "rebuild", "validate", "qualify", "audit", "test", "export", "backup", "release", "docs"):
-        body += f"## `tools/cms.py {command}`\n\n```text\n{command_help(command)}\n```\n\n"
+    topics: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("init", ("init",)),
+        ("rebuild", ("rebuild",)),
+        ("validate", ("validate",)),
+        ("qualify", ("qualify",)),
+        ("audit", ("audit",)),
+        ("test", ("test",)),
+        ("smoke", ("smoke",)),
+        ("export", ("export",)),
+        ("backup", ("backup",)),
+        ("migrate", ("migrate",)),
+        ("instance", ("instance",)),
+        ("instance clone", ("instance", "clone")),
+        ("instance update", ("instance", "update")),
+        ("release", ("release",)),
+        ("docs", ("docs",)),
+        ("docs generate", ("docs", "generate")),
+        ("docs check", ("docs", "check")),
+        ("docs tree", ("docs", "tree")),
+        ("docs evaluation-generate", ("docs", "evaluation-generate")),
+        ("docs evaluation-check", ("docs", "evaluation-check")),
+    )
+    for label, args in topics:
+        body += f"## `tools/cms.py {label}`\n\n```text\n{command_help(*args)}\n```\n\n"
     return body
 
 
 def render_modules() -> str:
-    rows = [(path.parent.name, path.relative_to(ROOT).as_posix()) for path in sorted((ROOT / "backend/src/Modules").glob("*/*Manifest.php"))]
-    return header("Modules runtime") + "| Module | Manifest |\n|---|---|\n" + "".join(f"| `{name}` | `{source}` |\n" for name, source in rows)
+    manifest_paths = sorted((ROOT / "backend/src/Modules").glob("*/module.json"))
+    manifest_paths += sorted((ROOT / "local/modules").glob("*/module.json"))
+    manifest_paths += sorted((ROOT / "examples/modules").glob("*/module.json"))
+    body = header("Modules runtime")
+    body += "| Module | Type | Version | Activé par défaut | Base(s) | Manifeste |\n|---|---|---|---:|---|---|\n"
+    for path in manifest_paths:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        key = str(data.get("key") or path.parent.name)
+        module_type = str(data.get("type") or "unknown")
+        version = str(data.get("version") or "")
+        enabled = "oui" if data.get("enabled_by_default") is True else "non"
+        databases = data.get("databases", [])
+        db_keys = []
+        if isinstance(databases, list):
+            for item in databases:
+                if isinstance(item, dict) and item.get("key"):
+                    db_keys.append(f"`{item['key']}`")
+        rel = path.relative_to(ROOT).as_posix()
+        body += f"| `{key}` | `{module_type}` | `{version}` | {enabled} | {', '.join(db_keys) or '—'} | `{rel}` |\n"
+    body += "\nLes exemples sous `examples/modules/` documentent le contrat mais ne sont pas chargés automatiquement. Les modules clients actifs doivent être copiés ou développés sous `local/modules/` puis déclarés dans `ops/modules.local.json`.\n"
+    return body
 
 
 def render_native_blueprints() -> str:

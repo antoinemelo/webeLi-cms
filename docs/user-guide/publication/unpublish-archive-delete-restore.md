@@ -5,31 +5,24 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - `python3 tools/cms.py test`
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.publish
-  - content.delete
-  - content.revisions.restore
-source_paths:
-  - backend/routes/api.php
-  - `python3 tools/cms.py test`
-  - backend/src
 generated: false
 ---
 # Dépublier, archiver, supprimer ou restaurer
 
 ## Résultat attendu
 
-Dépublier, archiver, supprimer ou restaurer. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Dépublier, archiver, supprimer ou restaurer.
 
 ## Public et droits
 

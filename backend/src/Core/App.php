@@ -11,10 +11,16 @@ use App\Application\Api\Admin\AdminContextApiController;
 use App\Application\Api\Admin\BlockBlueprintApiController;
 use App\Application\Api\Admin\CapabilityApiController;
 use App\Application\Api\Admin\BlueprintApiController;
+use App\Application\Api\Admin\BusinessCatalogApiController;
+use App\Application\Api\Admin\BusinessCrmApiController;
+use App\Application\Api\Admin\BusinessMessagingApiController;
+use App\Application\Api\Admin\BusinessMailingApiController;
+use App\Application\Api\Admin\BusinessPimApiController;
 use App\Application\Api\Admin\ContentEntryApiController;
 use App\Application\Api\Admin\ContentRevisionApiController;
 use App\Application\Api\Admin\ConfigurationApiController;
 use App\Application\Api\Admin\CookieConsentApiController;
+use App\Application\Api\Admin\DocsApiController;
 use App\Application\Api\Admin\ContentTypeApiController;
 use App\Application\Api\Admin\MediaApiController;
 use App\Application\Api\Admin\MaintenanceApiController;
@@ -28,6 +34,7 @@ use App\Application\Api\Admin\ProfileApiController;
 use App\Application\Api\Admin\SeoAuditApiController;
 use App\Application\Api\Admin\ImportsExportsApiController;
 use App\Application\Api\Admin\SecurityAdminApiController;
+use App\Application\Api\Admin\SaleAdminApiController;
 use App\Application\Api\Admin\TaxonomyApiController;
 use App\Application\Api\Admin\VisualEditingApiController;
 use App\Application\Api\PublicHeadlessController;
@@ -38,9 +45,14 @@ use App\Application\PublicApi\PublicSearchApiHandler;
 use App\Application\PublicApi\PublicTaxonomyApiHandler;
 use App\Application\PublicApi\PublicFormApiHandler;
 use App\Application\PublicApi\PublicCookieConsentApiHandler;
+use App\Application\PublicApi\PublicCatalogApiHandler;
+use App\Application\PublicApi\PosCatalogApiHandler;
+use App\Application\PublicApi\PublicSaleApiHandler;
 use App\Application\Configuration\ConfigurationRepository;
 use App\Application\Configuration\MultisiteRepository;
 use App\Application\Frontend\HomeController;
+use App\Application\Frontend\BusinessMemoShareController;
+use App\Application\Frontend\BusinessUnsubscribeController;
 use App\Application\Frontend\PublicApiDocsController;
 use App\Application\Frontend\RouteResolutionController;
 use App\Security\AdminApiRequestGuard;
@@ -109,14 +121,14 @@ final class App
                     return $this->secureResponse($corsResponse);
                 }
 
-                $rateLimitResponse = (new PublicApiRateLimitGuard($this->request, $services->auth()->database(), $this->config))->enforce();
-                if ($rateLimitResponse !== null) {
-                    return $this->secureResponse($rateLimitResponse);
-                }
-
                 $tokenAuthResponse = (new PublicApiTokenGuard($this->request, $services->auth()->database(), $this->config))->enforce();
                 if ($tokenAuthResponse !== null) {
                     return $this->secureResponse($tokenAuthResponse);
+                }
+
+                $rateLimitResponse = (new PublicApiRateLimitGuard($this->request, $services->auth()->database(), $this->config))->enforce();
+                if ($rateLimitResponse !== null) {
+                    return $this->secureResponse($rateLimitResponse);
                 }
             }
 
@@ -177,6 +189,7 @@ final class App
             return array_merge(
                 require base_path('backend/routes/api.php'),
                 $this->shouldLoadModuleRoutes('api') ? $services->moduleRoutes()->routes('api') : [],
+                $this->shouldLoadModuleRoutes('api') ? $services->moduleRoutes()->routes('headless') : [],
             );
         }
 
@@ -298,6 +311,9 @@ final class App
                 new PublicSearchApiHandler($this->request, $services->publicSearch(), $services->sites()),
                 new PublicFormApiHandler($this->request, $services->forms(), $services->sites()),
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
+                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
+                new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout()),
             ),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
             AdminContextApiController::class => new AdminContextApiController($this->config, $this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleNavigation(), $services->moduleContracts()),
@@ -316,6 +332,99 @@ final class App
                 $services->aiUsageLogger(),
                 $services->aiBudget(),
                 $services->aiActionRegistry(),
+            ),
+            BusinessCrmApiController::class => new BusinessCrmApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessActivity(),
+                $services->businessCrm(),
+                $services->businessCompanies(),
+                $services->businessContacts(),
+                $services->businessDashboard(),
+                $services->businessRelationRead(),
+                $services->businessSearch(),
+                $services->businessTags(),
+                $services->businessMemos(),
+                $services->businessConsents(),
+                $services->businessConsentService(),
+                $services->businessMemoSharing(),
+                $services->businessCsv(),
+                $services->businessRelationSummary(),
+                $services->iamAdmin(),
+            ),
+            BusinessCatalogApiController::class => new BusinessCatalogApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessCatalogBrands(),
+                $services->businessCatalogCategories(),
+                $services->businessCatalogProducts(),
+                $services->businessCatalogVariants(),
+                $services->businessCatalogOptions(),
+                $services->businessCatalogDiscounts(),
+                $services->businessCatalogProductsService(),
+                $services->businessCatalogVariantsService(),
+                $services->businessCatalogDiscountsService(),
+                $services->businessCatalogStockService(),
+                $services->businessCatalogCsv(),
+                $services->businessCatalogPdf(),
+                $services->businessCatalogPricing(),
+                $services->businessProductCompleteness(),
+            ),
+            BusinessPimApiController::class => new BusinessPimApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessPimAdmin(),
+                $services->businessProductAssets(),
+                $services->businessProductBundles(),
+                $services->businessCatalogSellables(),
+            ),
+            BusinessMessagingApiController::class => new BusinessMessagingApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessMessages(),
+                $services->businessMessagingOutbox(),
+                $services->businessMessagingProviders(),
+                $services->businessContacts(),
+                $services->businessActivity(),
+            ),
+            BusinessMailingApiController::class => new BusinessMailingApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessMailingRepository(),
+                $services->businessMailing(),
+                $services->businessContacts(),
+            ),
+            SaleAdminApiController::class => new SaleAdminApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->saleDatabaseConnection(),
+                $services->saleChannels(),
+                $services->saleCarts(),
+                $services->saleOrders(),
+                $services->salePayments(),
+                $services->saleInventory(),
+                $services->saleCatalogSnapshots(),
+                $services->saleCatalogExport(),
+                $services->saleCartService(),
+                $services->saleCheckout(),
+                $services->salePaymentService(),
+                $services->saleOrderService(),
+                $services->saleEvents(),
+                $services->saleImportExportReports(),
+                $services->saleIdempotency(),
+                $services->mailer(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),
@@ -355,6 +464,7 @@ final class App
             TaxonomyApiController::class => new TaxonomyApiController($this->request, $services->sites(), $services->taxonomies(), $services->auth(), $services->authorization()),
             MenuApiController::class => new MenuApiController($this->request, $services->menus(), $services->sites(), $services->auth(), $services->authorization()),
             MediaApiController::class => new MediaApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->logger()),
+            DocsApiController::class => new DocsApiController($this->request, $services->auth()),
             MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline()),
             FormApiController::class => new FormApiController($this->request, $services->forms(), $services->sites(), $services->auth(), $services->authorization()),
             CookieConsentApiController::class => new CookieConsentApiController($this->request, $services->cookies(), $services->sites(), $services->auth(), $services->authorization()),
@@ -363,6 +473,8 @@ final class App
             SecurityAdminApiController::class => new SecurityAdminApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->auth(), $services->authorization()),
             IamAdminApiController::class => new IamAdminApiController($this->request, $services->auth(), $services->authorization(), $services->iamAdmin()),
             PublicApiDocsController::class => new PublicApiDocsController(),
+            BusinessMemoShareController::class => new BusinessMemoShareController($services->businessMemos(), $services->logger()),
+            BusinessUnsubscribeController::class => new BusinessUnsubscribeController($services->businessMailingRepository(), $services->logger()),
             HomeController::class,
             RouteResolutionController::class => new $class(
                 $this->config,

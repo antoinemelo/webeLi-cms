@@ -53,14 +53,40 @@ class Context:
 
 def resolve_executable(name: str, *, env_variable: str | None = None) -> str:
     configured = os.environ.get(env_variable, '').strip() if env_variable else ''
-    candidate = configured or shutil.which(name)
+    if configured:
+        path = Path(configured).expanduser()
+        if not path.is_file():
+            if env_variable == 'CMS_PHP_BINARY':
+                raise FileNotFoundError(f'CMS_PHP_BINARY points to a missing file: {path}')
+            raise FileNotFoundError(f'{env_variable} points to a missing file: {path}')
+        if not os.access(path, os.X_OK):
+            if env_variable == 'CMS_PHP_BINARY':
+                raise PermissionError(f'CMS_PHP_BINARY is not executable: {path}')
+            raise PermissionError(f'{env_variable} is not executable: {path}')
+        return str(path)
+    candidate = shutil.which(name)
     if not candidate:
+        if name == 'php' and env_variable == 'CMS_PHP_BINARY':
+            raise FileNotFoundError('PHP executable not found. Set CMS_PHP_BINARY or add php to PATH.')
         hint = f' ou définir {env_variable}' if env_variable else ''
         raise FileNotFoundError(f'Dépendance externe introuvable: {name}{hint}')
-    path = Path(candidate).expanduser()
-    if path.is_absolute() and not path.is_file():
-        raise FileNotFoundError(f'Exécutable configuré introuvable: {path}')
-    return str(path if path.is_absolute() else candidate)
+    return str(candidate)
+
+
+def resolve_php_binary() -> str:
+    return resolve_executable('php', env_variable='CMS_PHP_BINARY')
+
+
+def merged_environment(overrides: dict[str, str] | None = None) -> dict[str, str]:
+    """Return a subprocess environment with explicit overrides applied last.
+
+    This intentionally avoids ``dict(**os.environ, NAME=value)`` because that
+    pattern raises ``TypeError`` when NAME is already exported by the caller.
+    """
+    environment = os.environ.copy()
+    if overrides:
+        environment.update({str(key): str(value) for key, value in overrides.items()})
+    return environment
 
 
 def _terminate_process_group(process: subprocess.Popen[str]) -> None:
@@ -107,7 +133,7 @@ def execute(
         process = subprocess.Popen(
             cmd,
             cwd=working_directory,
-            env={**os.environ, **(env or {})},
+            env=merged_environment(env),
             text=True,
             stdout=subprocess.PIPE if ctx.json_output else None,
             stderr=subprocess.PIPE if ctx.json_output else None,
@@ -144,5 +170,5 @@ def python_script(ctx: Context, relative: str, args: Sequence[str] = (), *, time
 
 
 def php_console(ctx: Context, command: str, args: Sequence[str] = (), *, timeout: int | None = None) -> int:
-    php = resolve_executable('php', env_variable='CMS_PHP_BINARY')
+    php = resolve_php_binary()
     return execute(ctx, [php, str(ctx.root / 'backend/bin/console'), command, *args], timeout=timeout)

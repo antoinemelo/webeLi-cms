@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
+from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.database_inventory import native_database_names
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
@@ -119,9 +120,10 @@ def run(command: list[str], *, timeout: int = 60) -> tuple[int, str]:
 
 
 def php_code(code: str) -> tuple[int, str]:
-    php = shutil.which("php")
-    if php is None:
-        return 127, "PHP n'est pas disponible dans le PATH."
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        return 127, str(exc)
     return run([php, "-d", "display_errors=1", "-r", code])
 
 
@@ -217,7 +219,7 @@ def vite_manifest_missing_assets(manifest_path: Path, asset_root: Path) -> list[
     return missing
 
 
-def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True) -> int:
+def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True, echo_output: bool = True) -> int:
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     header = f"\n[{stamp}] >>> {' '.join(command)}\n"
     log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -227,9 +229,9 @@ def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True
         proc = subprocess.run(command, cwd=str(cwd), text=True, capture_output=True)
         stdout = proc.stdout or ""
         stderr = proc.stderr or ""
-        if stdout:
+        if echo_output and stdout:
             print(stdout, end="")
-        if stderr:
+        if echo_output and stderr:
             print(stderr, end="", file=sys.stderr)
         with log_file.open("a", encoding="utf-8") as handle:
             if stdout:
@@ -242,8 +244,10 @@ def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True
 
 
 def check_php_runtime(errors: list[str], warnings: list[str]) -> None:
-    if shutil.which("php") is None:
-        errors.append("PHP n'est pas disponible dans le PATH.")
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        errors.append(str(exc))
         return
     version = php_version_tuple()
     if version is None:
@@ -439,9 +443,10 @@ def main() -> int:
         log_file = ROOT / log_file
 
     errors, warnings = check_prerequisites(args.target)
-    if not args.skip_console and not errors and CONSOLE.exists() and shutil.which("php"):
-        for command in [["php", str(CONSOLE), "route:list"], ["php", str(CONSOLE), "system:smoke"]]:
-            code = run_step(command, ROOT, log_file)
+    if not args.skip_console and not errors and CONSOLE.exists():
+        php = resolve_php_binary()
+        for command in [[php, str(CONSOLE), "route:list"], [php, str(CONSOLE), "system:smoke"]]:
+            code = run_step(command, ROOT, log_file, echo_output=False)
             if code != 0:
                 errors.append(f"Commande de préflight échouée: {' '.join(command)}")
                 break
@@ -451,6 +456,11 @@ def main() -> int:
     else:
         label = "auto/local" if args.target == "auto" else args.target
         print(f"[preflight {label}]")
+        if not errors:
+            try:
+                print(f"INFO PHP utilisé: {resolve_php_binary()}")
+            except (FileNotFoundError, PermissionError):
+                pass
         for warning in warnings:
             print(f"WARN {warning}")
         for error in errors:

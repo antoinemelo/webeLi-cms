@@ -1103,7 +1103,7 @@ watch(() => route.query.tab, (tab) => {
             </div>
             <div class="col-12 col-lg-6 subsite-field">
               <label class="form-label fw-bold" for="new-site-path">Chemin public</label>
-              <input id="new-site-path" v-model="newSite.base_path" class="form-control" type="text" placeholder="/mod/site-c" />
+              <input id="new-site-path" v-model="newSite.base_path" class="form-control" type="text" placeholder="/site-c" />
               <p class="form-text">Sous-dossier public du site. Laisser vide pour un site à la racine du domaine.</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">

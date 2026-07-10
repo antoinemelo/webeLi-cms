@@ -1,0 +1,69 @@
+{
+  "contract": "public.discovery.v1",
+  "kind": "schema",
+  "summary": "Découvrir l’API headless publique.",
+  "description": "Retourne les URLs stables de santé et des spécifications OpenAPI pour le site courant.",
+  "method": "GET",
+  "source": "PublicApiDocsController::discovery",
+  "security": "Public endpoint; no bearer token required; no content data exposed.",
+  "path": "/api/v1",
+  "query_params": {},
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["name", "status", "base_path", "health", "openapi"],
+          "properties": {
+            "name": {"type": "string"},
+            "status": {"type": "string", "enum": ["available"]},
+            "base_path": {"type": "string"},
+            "health": {"type": "string"},
+            "openapi": {
+              "type": "object",
+              "required": ["json", "yaml"],
+              "properties": {
+                "json": {"type": "string"},
+                "yaml": {"type": "string"}
+              }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "required": ["contract", "request_id"],
+          "properties": {
+            "contract": {"type": "string", "const": "public.discovery.v1"},
+            "request_id": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "contract": "public.discovery.v1"
+  },
+  "errors": [],
+  "examples": {
+    "request": "GET /api/v1",
+    "response": {
+      "data": {
+        "name": "DEC CMS Public Headless API",
+        "status": "available",
+        "base_path": "/mod/api/v1",
+        "health": "/mod/api/v1/health",
+        "openapi": {
+          "json": "/mod/api/v1/openapi.json",
+          "yaml": "/mod/api/v1/openapi.yaml"
+        }
+      },
+      "meta": {
+        "contract": "public.discovery.v1",
+        "request_id": "20260622120000-abc"
+      }
+    }
+  }
+}

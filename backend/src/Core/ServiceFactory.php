@@ -106,6 +106,84 @@ use App\Modules\AiAssistant\Services\AiSettingsService;
 use App\Modules\AiAssistant\Services\AiSuggestionService;
 use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
+use App\Modules\Business\Repositories\BusinessCompanyRepository;
+use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
+use App\Modules\Business\Repositories\BusinessActivityRepository;
+use App\Modules\Business\Repositories\BusinessConsentRepository;
+use App\Modules\Business\Repositories\BusinessContactRepository;
+use App\Modules\Business\Repositories\BusinessDashboardRepository;
+use App\Modules\Business\Repositories\BusinessMemoRepository;
+use App\Modules\Business\Repositories\BusinessMessagingRepository;
+use App\Modules\Business\Repositories\BusinessMailingRepository;
+use App\Modules\Business\Repositories\BusinessRelationRepository;
+use App\Modules\Business\Repositories\BusinessRelationReadRepository;
+use App\Modules\Business\Repositories\BusinessSearchRepository;
+use App\Modules\Business\Repositories\BusinessTagRepository;
+use App\Modules\Business\Repositories\CatalogBrandRepository;
+use App\Modules\Business\Repositories\CatalogCategoryRepository;
+use App\Modules\Business\Repositories\CatalogDiscountRepository;
+use App\Modules\Business\Repositories\CatalogOptionRepository;
+use App\Modules\Business\Repositories\CatalogProductRepository;
+use App\Modules\Business\Repositories\CatalogStockRepository;
+use App\Modules\Business\Repositories\CatalogVariantRepository;
+use App\Modules\Business\Repositories\PosCatalogRepository;
+use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Modules\Business\Catalog\CatalogPricingService;
+use App\Modules\Business\Services\BusinessConsentService;
+use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Business\Services\BusinessCrmRelationSnapshotService;
+use App\Modules\Business\Services\BusinessCsvService;
+use App\Modules\Business\Services\BusinessCrmService;
+use App\Modules\Business\Services\BusinessDatabaseConnection;
+use App\Modules\Business\Services\BusinessMemoSharingService;
+use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\BusinessMessagingOutboxService;
+use App\Modules\Business\Services\BusinessMessagingProviderManager;
+use App\Modules\Business\Services\BusinessMailingService;
+use App\Modules\Business\Services\BusinessPimAdminService;
+use App\Modules\Business\Services\BusinessProductAssetService;
+use App\Modules\Business\Services\BusinessProductBundleService;
+use App\Modules\Business\Services\BusinessProductCompletenessService;
+use App\Modules\Business\Services\CatalogCsvService;
+use App\Modules\Business\Services\CatalogPdfService;
+use App\Modules\Business\Services\CatalogDiscountService;
+use App\Modules\Business\Services\CatalogProductService;
+use App\Modules\Business\Services\CatalogStockService;
+use App\Modules\Business\Services\CatalogVariantService;
+use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
+use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
+use App\Modules\Sale\Adapters\NullCmsAccountBridge;
+use App\Modules\Sale\Adapters\NullCrmActivitySink;
+use App\Modules\Sale\Adapters\NullCustomerSnapshotAdapter;
+use App\Modules\Sale\Adapters\UnavailableSellableCatalogAdapter;
+use App\Modules\Sale\Contracts\CmsAccountBridge;
+use App\Modules\Sale\Contracts\CrmActivitySink;
+use App\Modules\Sale\Contracts\CustomerSnapshotPort;
+use App\Modules\Sale\Contracts\SellableCatalogPort;
+use App\Modules\Sale\Services\SaleDatabaseConnection;
+use App\Modules\Sale\Services\SaleCatalogExportService;
+use App\Modules\Sale\Services\SaleCatalogSnapshotService;
+use App\Modules\Sale\Services\SaleCustomerSnapshotService;
+use App\Modules\Sale\Pricing\SalePricingService;
+use App\Modules\Sale\Repositories\SaleCartRepository;
+use App\Modules\Sale\Repositories\SaleChannelRepository;
+use App\Modules\Sale\Repositories\SaleEventRepository;
+use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
+use App\Modules\Sale\Repositories\SaleInventoryRepository;
+use App\Modules\Sale\Repositories\SaleOrderRepository;
+use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Services\SaleCartService;
+use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SaleEventService;
+use App\Modules\Sale\Services\SaleIdempotencyService;
+use App\Modules\Sale\Services\SaleImportExportReportService;
+use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleStockMovementService;
+use App\Modules\Sale\Services\SaleStockReservationService;
+use App\Modules\Sale\Services\SaleOrderService;
+use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SalePosService;
+use App\Modules\Sale\Payments\PaymentProviderRegistry;
 
 final class ServiceFactory
 {
@@ -511,6 +589,407 @@ final class ServiceFactory
         return $this->once('ai_database_connection', fn() => new AiDatabaseConnection($path));
     }
 
+    public function businessDatabaseConnection(): BusinessDatabaseConnection
+    {
+        $path = (string) ($this->config['databases']['business']['path'] ?? base_path('storage/database/business.sqlite'));
+        return $this->once('business_database_connection', fn() => new BusinessDatabaseConnection($path));
+    }
+
+    public function saleDatabaseConnection(): SaleDatabaseConnection
+    {
+        $path = (string) ($this->config['databases']['sale']['path'] ?? base_path('storage/database/sale.sqlite'));
+        return $this->once('sale_database_connection', fn() => new SaleDatabaseConnection($path));
+    }
+
+    public function saleCatalogSnapshots(): SaleCatalogSnapshotService
+    {
+        return $this->once('sale_catalog_snapshots', fn() => new SaleCatalogSnapshotService($this->saleDatabaseConnection(), $this->saleSellableCatalogPort()));
+    }
+
+    public function saleCatalogExport(): SaleCatalogExportService
+    {
+        return $this->once('sale_catalog_export', fn() => new SaleCatalogExportService(
+            $this->saleChannels(),
+            $this->saleCatalogSnapshots(),
+            $this->salePricing()
+        ));
+    }
+
+    public function saleCustomerSnapshots(): SaleCustomerSnapshotService
+    {
+        return $this->once('sale_customer_snapshots', fn() => new SaleCustomerSnapshotService($this->saleDatabaseConnection(), $this->saleCustomerSnapshotPort()));
+    }
+
+    public function saleSellableCatalogPort(): SellableCatalogPort
+    {
+        return $this->once('sale_sellable_catalog_port', function (): SellableCatalogPort {
+            if ($this->modules()->get('business') === null || !$this->modules()->isEnabled('business')) {
+                return new UnavailableSellableCatalogAdapter();
+            }
+            return new BusinessSellableCatalogAdapter($this->businessCatalogSellables());
+        });
+    }
+
+    public function saleCustomerSnapshotPort(): CustomerSnapshotPort
+    {
+        return $this->once('sale_customer_snapshot_port', function (): CustomerSnapshotPort {
+            if ($this->modules()->get('business') === null || !$this->modules()->isEnabled('business')) {
+                return new NullCustomerSnapshotAdapter();
+            }
+            return new BusinessCustomerSnapshotAdapter($this->businessCrmRelationSnapshots());
+        });
+    }
+
+    public function saleCrmActivitySink(): CrmActivitySink
+    {
+        return $this->once('sale_crm_activity_sink', fn() => new NullCrmActivitySink());
+    }
+
+    public function saleCmsAccountBridge(): CmsAccountBridge
+    {
+        return $this->once('sale_cms_account_bridge', fn() => new NullCmsAccountBridge());
+    }
+
+    public function saleChannels(): SaleChannelRepository
+    {
+        return $this->once('sale_channels', fn() => new SaleChannelRepository($this->saleDatabaseConnection()));
+    }
+
+    public function saleCarts(): SaleCartRepository
+    {
+        return $this->once('sale_carts', fn() => new SaleCartRepository($this->saleDatabaseConnection(), $this->salePricing()));
+    }
+
+    public function saleOrders(): SaleOrderRepository
+    {
+        return $this->once('sale_orders', fn() => new SaleOrderRepository($this->saleDatabaseConnection()));
+    }
+
+    public function salePayments(): SalePaymentRepository
+    {
+        return $this->once('sale_payments', fn() => new SalePaymentRepository($this->saleDatabaseConnection()));
+    }
+
+    public function saleInventoryRepository(): SaleInventoryRepository
+    {
+        return $this->once('sale_inventory_repository', fn() => new SaleInventoryRepository($this->saleDatabaseConnection()));
+    }
+
+    public function saleEventsRepository(): SaleEventRepository
+    {
+        return $this->once('sale_events_repository', fn() => new SaleEventRepository($this->saleDatabaseConnection()));
+    }
+
+    public function saleIdempotencyRepository(): SaleIdempotencyRepository
+    {
+        return $this->once('sale_idempotency_repository', fn() => new SaleIdempotencyRepository($this->saleDatabaseConnection()));
+    }
+
+    public function salePricing(): SalePricingService
+    {
+        return $this->once('sale_pricing', fn() => new SalePricingService());
+    }
+
+    public function saleEvents(): SaleEventService
+    {
+        return $this->once('sale_events', fn() => new SaleEventService($this->saleEventsRepository()));
+    }
+
+    public function saleIdempotency(): SaleIdempotencyService
+    {
+        return $this->once('sale_idempotency', fn() => new SaleIdempotencyService($this->saleIdempotencyRepository()));
+    }
+
+    public function saleInventory(): SaleInventoryService
+    {
+        return $this->once('sale_inventory', fn() => new SaleInventoryService(
+            $this->saleInventoryRepository(),
+            new SaleStockReservationService($this->saleInventoryRepository()),
+            new SaleStockMovementService($this->saleInventoryRepository()),
+            $this->saleEvents()
+        ));
+    }
+
+    public function saleImportExportReports(): SaleImportExportReportService
+    {
+        return $this->once('sale_import_export_reports', fn() => new SaleImportExportReportService(
+            $this->saleDatabaseConnection(),
+            $this->saleInventory()
+        ));
+    }
+
+    public function saleCartService(): SaleCartService
+    {
+        return $this->once('sale_cart_service', fn() => new SaleCartService(
+            $this->saleCarts(),
+            $this->saleChannels(),
+            $this->saleCatalogSnapshots(),
+            $this->salePricing(),
+            $this->saleInventory(),
+            $this->saleEvents(),
+            $this->saleIdempotency()
+        ));
+    }
+
+    public function saleCheckout(): SaleCheckoutService
+    {
+        return $this->once('sale_checkout', fn() => new SaleCheckoutService(
+            $this->saleDatabaseConnection(),
+            $this->saleCarts(),
+            $this->saleOrders(),
+            $this->saleInventory(),
+            $this->saleEvents(),
+            $this->saleIdempotency()
+        ));
+    }
+
+    public function salePaymentService(): SalePaymentService
+    {
+        return $this->once('sale_payment_service', fn() => new SalePaymentService(
+            $this->salePayments(),
+            $this->saleOrders(),
+            $this->saleEvents(),
+            $this->saleIdempotency(),
+            new PaymentProviderRegistry()
+        ));
+    }
+
+    public function saleOrderService(): SaleOrderService
+    {
+        return $this->once('sale_order_service', fn() => new SaleOrderService($this->saleOrders(), $this->saleEvents(), $this->saleInventory()));
+    }
+
+    public function salePosService(): SalePosService
+    {
+        return $this->once('sale_pos_service', fn() => new SalePosService($this->saleCartService(), $this->saleCheckout()));
+    }
+
+    public function businessCompanies(): BusinessCompanyRepository
+    {
+        return $this->once('business_companies', fn() => new BusinessCompanyRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessActivity(): BusinessActivityRepository
+    {
+        return $this->once('business_activity', fn() => new BusinessActivityRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessContacts(): BusinessContactRepository
+    {
+        return $this->once('business_contacts', fn() => new BusinessContactRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessDashboard(): BusinessDashboardRepository
+    {
+        return $this->once('business_dashboard', fn() => new BusinessDashboardRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessRelations(): BusinessRelationRepository
+    {
+        return $this->once('business_relations', fn() => new BusinessRelationRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessRelationRead(): BusinessRelationReadRepository
+    {
+        return $this->once('business_relation_read', fn() => new BusinessRelationReadRepository($this->businessRelations(), $this->businessMemos()));
+    }
+
+    public function businessSearch(): BusinessSearchRepository
+    {
+        return $this->once('business_search', fn() => new BusinessSearchRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCrmRelationSnapshots(): BusinessCrmRelationSnapshotService
+    {
+        return $this->once('business_crm_relation_snapshots', fn() => new BusinessCrmRelationSnapshotService($this->businessCompanies(), $this->businessContacts()));
+    }
+
+    public function businessTags(): BusinessTagRepository
+    {
+        return $this->once('business_tags', fn() => new BusinessTagRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMemos(): BusinessMemoRepository
+    {
+        return $this->once('business_memos', fn() => new BusinessMemoRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessConsents(): BusinessConsentRepository
+    {
+        return $this->once('business_consents', fn() => new BusinessConsentRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMessages(): BusinessMessagingRepository
+    {
+        return $this->once('business_messages', fn() => new BusinessMessagingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessMailingRepository(): BusinessMailingRepository
+    {
+        return $this->once('business_mailing_repository', fn() => new BusinessMailingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCrm(): BusinessCrmService
+    {
+        return $this->once('business_crm', fn() => new BusinessCrmService($this->businessCompanies(), $this->businessContacts(), $this->businessTags()));
+    }
+
+    public function businessCsv(): BusinessCsvService
+    {
+        return $this->once('business_csv', fn() => new BusinessCsvService($this->businessCompanies(), $this->businessContacts(), $this->businessTags(), $this->businessConsents()));
+    }
+
+    public function businessMemoSharing(): BusinessMemoSharingService
+    {
+        return $this->once('business_memo_sharing', fn() => new BusinessMemoSharingService($this->businessMemos()));
+    }
+
+    public function businessRelationSummary(): BusinessRelationSummaryService
+    {
+        return $this->once('business_relation_summary', fn() => new BusinessRelationSummaryService($this->businessRelationRead(), $this->businessActivity()));
+    }
+
+    public function businessConsentService(): BusinessConsentService
+    {
+        return $this->once('business_consent_service', fn() => new BusinessConsentService($this->businessConsents()));
+    }
+
+    public function businessMessagingOutbox(): BusinessMessagingOutboxService
+    {
+        return $this->once('business_messaging_outbox', fn() => new BusinessMessagingOutboxService($this->businessConsents(), $this->businessMessages()));
+    }
+
+    public function businessMessagingProviders(): BusinessMessagingProviderManager
+    {
+        return $this->once('business_messaging_providers', fn() => new BusinessMessagingProviderManager($this->businessMessages(), $this->mailer(), $this->logger));
+    }
+
+    public function businessMailing(): BusinessMailingService
+    {
+        return $this->once('business_mailing', fn() => new BusinessMailingService($this->businessMailingRepository(), $this->businessMessages()));
+    }
+
+    public function businessCatalogBrands(): CatalogBrandRepository
+    {
+        return $this->once('business_catalog_brands', fn() => new CatalogBrandRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogCategories(): CatalogCategoryRepository
+    {
+        return $this->once('business_catalog_categories', fn() => new CatalogCategoryRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogProducts(): CatalogProductRepository
+    {
+        return $this->once('business_catalog_products', fn() => new CatalogProductRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogVariants(): CatalogVariantRepository
+    {
+        return $this->once('business_catalog_variants', fn() => new CatalogVariantRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogOptions(): CatalogOptionRepository
+    {
+        return $this->once('business_catalog_options', fn() => new CatalogOptionRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogDiscounts(): CatalogDiscountRepository
+    {
+        return $this->once('business_catalog_discounts', fn() => new CatalogDiscountRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogStockRepository(): CatalogStockRepository
+    {
+        return $this->once('business_catalog_stock_repository', fn() => new CatalogStockRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogPricingRepository(): BusinessCatalogPricingRepository
+    {
+        return $this->once('business_catalog_pricing_repository', fn() => new BusinessCatalogPricingRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogSellables(): BusinessCatalogSellableReadService
+    {
+        return $this->once('business_catalog_sellables', fn() => new BusinessCatalogSellableReadService($this->businessCatalogPricingRepository(), $this->businessCatalogPricing(), $this->businessPosCatalog(), null, $this->businessProductBundles()));
+    }
+
+    public function businessProductAssets(): BusinessProductAssetService
+    {
+        return $this->once('business_product_assets', fn() => new BusinessProductAssetService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessProductBundles(): BusinessProductBundleService
+    {
+        return $this->once('business_product_bundles', fn() => new BusinessProductBundleService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessProductCompleteness(): BusinessProductCompletenessService
+    {
+        return $this->once('business_product_completeness', fn() => new BusinessProductCompletenessService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPimAdmin(): BusinessPimAdminService
+    {
+        return $this->once('business_pim_admin', fn() => new BusinessPimAdminService($this->businessDatabaseConnection()->database(), $this->businessProductCompleteness()));
+    }
+
+    public function businessPublicCatalog(): PublicCatalogRepository
+    {
+        return $this->once('business_public_catalog', fn() => new PublicCatalogRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPosCatalog(): PosCatalogRepository
+    {
+        return $this->once('business_pos_catalog', fn() => new PosCatalogRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCatalogProductsService(): CatalogProductService
+    {
+        return $this->once('business_catalog_products_service', fn() => new CatalogProductService($this->businessCatalogProducts()));
+    }
+
+    public function businessCatalogVariantsService(): CatalogVariantService
+    {
+        return $this->once('business_catalog_variants_service', fn() => new CatalogVariantService($this->businessCatalogVariants()));
+    }
+
+    public function businessCatalogDiscountsService(): CatalogDiscountService
+    {
+        return $this->once('business_catalog_discounts_service', fn() => new CatalogDiscountService($this->businessCatalogDiscounts()));
+    }
+
+    public function businessCatalogStockService(): CatalogStockService
+    {
+        return $this->once('business_catalog_stock_service', fn() => new CatalogStockService($this->businessCatalogStockRepository()));
+    }
+
+    public function businessCatalogCsv(): CatalogCsvService
+    {
+        return $this->once('business_catalog_csv', fn() => new CatalogCsvService(
+            $this->businessDatabaseConnection()->database(),
+            $this->businessCatalogBrands(),
+            $this->businessCatalogCategories(),
+            $this->businessCatalogProducts(),
+            $this->businessCatalogVariants(),
+            $this->businessCatalogOptions(),
+            $this->businessCatalogPricing()
+        ));
+    }
+
+    public function businessCatalogPdf(): CatalogPdfService
+    {
+        return $this->once('business_catalog_pdf', fn() => new CatalogPdfService(
+            $this->businessCatalogProducts(),
+            $this->businessCatalogVariants()
+        ));
+    }
+
+    public function businessCatalogPricing(): CatalogPricingService
+    {
+        return $this->once('business_catalog_pricing', fn() => new CatalogPricingService($this->businessCatalogPricingRepository()));
+    }
+
     public function aiSettings(): AiSettingsService
     {
         return $this->once('ai_settings', fn() => new AiSettingsService($this->aiDatabaseConnection()->database()));
@@ -731,6 +1210,7 @@ final class ServiceFactory
     {
         return $this->once('resolve_public_route', fn() => new ResolvePublicRoute(
             $this->publicContent(),
+            $this->publicSearch(),
             $this->publicRouteReads(),
             $this->sites(),
             $this->taxonomies(),

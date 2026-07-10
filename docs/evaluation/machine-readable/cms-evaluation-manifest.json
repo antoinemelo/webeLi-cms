@@ -23,22 +23,28 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": null,
+  "commit": "a30879f14fbdfb213a02f58cc32494073e3557ef",
   "confidence": "high",
   "databases": [
     "core",
     "iam",
     "modules"
   ],
-  "dirty": false,
-  "evaluated_version": "working-tree",
+  "dirty": true,
   "evaluation_documents": [
+    "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",
+    "docs/evaluation/audit-evidence-troubleshooting.md",
+    "docs/evaluation/business-crm-review.md",
     "docs/evaluation/evidence-index.md",
     "docs/evaluation/feature-matrix.md",
+    "docs/evaluation/latest-release-audit.md",
     "docs/evaluation/limitations.md",
     "docs/evaluation/product-scope.md",
-    "docs/evaluation/reproducible-checks.md"
+    "docs/evaluation/release-audit-policy.md",
+    "docs/evaluation/reproducible-checks.md",
+    "docs/evaluation/sale-module-review.md",
+    "docs/evaluation/visual-editor.md"
   ],
   "evidence": [
     "backend/composer.json",
@@ -47,9 +53,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-06-14",
+  "generated_at": "2026-07-10",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-06-14",
+  "last_verified": "2026-07-10",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],
@@ -59,6 +65,7 @@
     "cms-evaluation-manifest.json",
     "databases.json",
     "features.json",
+    "latest-release-audit.json",
     "permissions.json",
     "release-contents.json",
     "routes.json",

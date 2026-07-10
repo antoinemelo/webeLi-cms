@@ -36,6 +36,15 @@ npm run build
 
 Après build, vérifier que `admin-app/` contient l’application compilée servie par `/admin/app`.
 
+## Tests navigateur
+
+```bash
+python3 tools/cms.py e2e --install-browser  # première utilisation
+python3 tools/cms.py e2e
+```
+
+La commande compile les sources et teste une copie temporaire entièrement reconstruite. Elle ne demande aucun identifiant local et ne touche pas aux bases de travail. Le profil de qualification `release` réutilise les assets produits par son étape de build afin d’éviter une seconde compilation.
+
 
 ## Édition des contenus
 

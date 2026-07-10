@@ -5,31 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - database/schema/core.sql
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - content.read
-  - content.revisions.restore
-source_paths:
-  - backend/routes/api.php
-  - backend/src
-  - database/schema/core.sql
-  - admin-app/src
 generated: false
 ---
 # Comprendre les statuts, révisions et recherche éditoriale
 
 ## Résultat attendu
 
-Comprendre les statuts, révisions et recherche éditoriale. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Comprendre les statuts, révisions et recherche éditoriale.
 
 ## Public et droits
 

@@ -1,18 +1,12 @@
 {
   "schema_version": 1,
-  "technical_version": "dec_v06-e04a",
   "release_type": "minor",
-  "release_name": "Beta",
-  "bound_at": "2026-06-15T20:54:33Z",
+  "bound_at": "2026-07-10T05:33:57Z",
   "audit_profile": "release",
   "audit_status": "PASS",
   "audit_steps_passed": 21,
-  "release_archive": "dec_v06-e04a.zip",
-  "release_sha256": "efdb327a79e4b437e8a01b12231bd29155b5d72faafae93e0625ae8ae6c99c00",
-  "release_checksum_file": "dec_v06-e04a.zip.sha256",
-  "evidence_archive": "dec_v06-e04a-audit-evidence.zip",
-  "evidence_sha256": "91618cf4ac8925541f4ad45e62d630adc30cf5b3df1586ff1ac4408e3a4c18a2",
-  "evidence_checksum_file": "dec_v06-e04a-audit-evidence.zip.sha256",
+  "release_sha256": "6a77fb0494bbcf52c25d59ccec90b37042ee7542ea5f3d47990c15a8e9903545",
+  "evidence_sha256": "8c9ae5019c91068aa58be01c53219e4ff1475378b3482af6032d81bad34f6b8d",
   "policy": {
     "applies_to": [
       "minor",

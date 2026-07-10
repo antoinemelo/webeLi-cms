@@ -1,10 +1,10 @@
 {
-  "host": "ftp.example.com",
+  "host": "ftp.example.test",
   "port": 21,
-  "username": "ftp-user@example.com",
+  "username": "ftp-user@example.test",
   "password": "CHANGE_ME",
   "tls": true,
   "timeout": 30,
   "passive": true,
-  "remote_root": "/www/example.com"
+  "remote_root": "/www/example.test"
 }

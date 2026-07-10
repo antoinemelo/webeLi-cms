@@ -4,6 +4,9 @@
   "path": "/admin/api/blueprints/{key}/versions",
   "permission": "blueprints.manage",
   "request": {
+    "site_id": 1,
+    "resource_type": "content_type",
+    "scope": "site",
     "version": 2,
     "status": "draft",
     "schema": {},

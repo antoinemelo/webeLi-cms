@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Menu
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - menu.read
-  - menu.manage
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Menu
-  - admin-app/src
 generated: false
 ---
 # Créer et organiser un menu
 
 ## Résultat attendu
 
-Créer et organiser un menu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Créer et organiser un menu.
 
 ## Public et droits
 

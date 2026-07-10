@@ -22,7 +22,7 @@
         "block_id": "hero_home",
         "language_code": "fr",
         "locked_by_iam_user_id": 1,
-        "locked_by_label": "superadmin@webe.li",
+        "locked_by_label": "admin@example.test",
         "is_current_user": true,
         "lock_token": "...",
         "expires_at": "2026-05-14 08:20:49",

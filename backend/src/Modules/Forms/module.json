@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "key": "forms",
+  "name": "Formulaires",
+  "version": "1.0.0",
+  "type": "system",
+  "provider_class": "App\\Modules\\Forms\\FormsModuleProvider",
+  "provider_file": "backend/src/Modules/Forms/FormsModuleProvider.php",
+  "enabled_by_default": true,
+  "databases": [
+    {
+      "key": "forms",
+      "path": "storage/database/forms.sqlite",
+      "schema": "database/modules/forms.sql",
+      "migrations": "database/migrations/forms"
+    }
+  ],
+  "protected_on_core_update": false
+}

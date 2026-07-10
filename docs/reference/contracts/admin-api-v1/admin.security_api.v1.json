@@ -181,11 +181,14 @@
       },
       "available_scopes": [
         "headless:read",
-        "content:read",
         "routes:read",
+        "content:read",
+        "media:read",
+        "search:read",
         "menus:read",
         "taxonomies:read",
-        "media:read",
+        "catalog:read",
+        "pos.catalog.read",
         "*"
       ],
       "available_webhook_events": [

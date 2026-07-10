@@ -113,7 +113,12 @@ fi
 echo "==> Audit reproductible: $PROFILE"
 echo "==> Résultats: $RESULTS_DIR"
 
-run_args=(run --rm --name "cms-audit-${PROFILE}"
+CONTAINER_NAME="cms-audit-${PROFILE}"
+# Un timeout côté parent peut laisser un conteneur nommé en état résiduel.
+# On nettoie explicitement avant de lancer un nouvel audit reproductible.
+"$ENGINE" rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+
+run_args=(run --rm --name "$CONTAINER_NAME"
     --volume "$ROOT:/audit/source:ro"
     --volume "$RESULTS_DIR:/audit/results"
     --env "AUDIT_PROFILE=$PROFILE")

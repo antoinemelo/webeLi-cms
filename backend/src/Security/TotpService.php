@@ -11,8 +11,9 @@ namespace App\Security;
 final class TotpService
 {
     private const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    private const RECOVERY_HASH_PREFIX = 'hmac-sha256:';
 
-    public static function generateSecret(int $bytes = 10): string
+    public static function generateSecret(int $bytes = 20): string
     {
         return self::base32Encode(random_bytes($bytes));
     }
@@ -21,29 +22,30 @@ final class TotpService
     {
         $codes = [];
         for ($i = 0; $i < $count; $i++) {
-            $codes[] = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $raw = strtoupper(bin2hex(random_bytes(5)));
+            $codes[] = substr($raw, 0, 5) . '-' . substr($raw, 5, 5);
         }
         return $codes;
     }
 
-    public static function hashRecoveryCodes(array $codes): string
+    public static function hashRecoveryCodes(array $codes, string $appKey = ''): string
     {
-        $hashes = array_map(static fn(string $code): string => password_hash(self::normalizeCode($code), PASSWORD_DEFAULT), $codes);
+        $hashes = array_map(static fn(string $code): string => self::recoveryHash(self::normalizeRecoveryCode($code), $appKey), $codes);
         return json_encode($hashes, JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
-    /** @return array{ok:bool,hashes:string,used_code?:string} */
-    public static function verifyRecoveryCode(string $code, ?string $hashesJson): array
+    /** @return array{ok:bool,hashes:string} */
+    public static function verifyRecoveryCode(string $code, ?string $hashesJson, string $appKey = ''): array
     {
-        $normalized = self::normalizeCode($code);
+        $normalized = self::normalizeRecoveryCode($code);
         $hashes = json_decode((string) $hashesJson, true);
         if ($normalized === '' || !is_array($hashes)) {
             return ['ok' => false, 'hashes' => is_string($hashesJson) ? $hashesJson : '[]'];
         }
         foreach ($hashes as $index => $hash) {
-            if (is_string($hash) && password_verify($normalized, $hash)) {
+            if (is_string($hash) && self::recoveryHashMatches($normalized, $hash, $appKey)) {
                 unset($hashes[$index]);
-                return ['ok' => true, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]', 'used_code' => $normalized];
+                return ['ok' => true, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]'];
             }
         }
         return ['ok' => false, 'hashes' => json_encode(array_values($hashes), JSON_UNESCAPED_SLASHES) ?: '[]'];
@@ -57,14 +59,13 @@ final class TotpService
     public static function verifyCode(string $secret, string $code, int $window = 1, ?int $timestamp = null): bool
     {
         $code = self::normalizeCode($code);
-        if (!preg_match('/^\d{4,6}$/', $code)) {
+        if (!preg_match('/^\d{6}$/', $code)) {
             return false;
         }
         $timestamp = $timestamp ?? time();
         for ($i = -$window; $i <= $window; $i++) {
             $expected = self::code($secret, $timestamp + ($i * 30));
-            $comparable = strlen($code) < 6 ? substr($expected, -strlen($code)) : $expected;
-            if (hash_equals($comparable, $code)) {
+            if (hash_equals($expected, $code)) {
                 return true;
             }
         }
@@ -82,7 +83,15 @@ final class TotpService
             $cipher = sodium_crypto_secretbox($secret, $nonce, $key);
             return 'sodium:' . base64_encode($nonce . $cipher);
         }
-        return 'plain:' . $secret;
+        if (function_exists('openssl_encrypt')) {
+            $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+            $iv = random_bytes(16);
+            $cipher = openssl_encrypt($secret, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+            if (is_string($cipher)) {
+                return 'openssl:' . base64_encode($iv . $cipher);
+            }
+        }
+        throw new \RuntimeException('TOTP_SECRET_ENCRYPTION_UNAVAILABLE');
     }
 
     public static function decryptSecret(?string $protected, string $appKey = ''): string
@@ -102,10 +111,18 @@ final class TotpService
             $plain = sodium_crypto_secretbox_open($cipher, $nonce, $key);
             return is_string($plain) ? $plain : '';
         }
-        if (str_starts_with($protected, 'plain:')) {
-            return substr($protected, 6);
+        if (str_starts_with($protected, 'openssl:') && function_exists('openssl_decrypt')) {
+            $raw = base64_decode(substr($protected, 8), true);
+            if ($raw === false || strlen($raw) <= 16) {
+                return '';
+            }
+            $iv = substr($raw, 0, 16);
+            $cipher = substr($raw, 16);
+            $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+            $plain = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+            return is_string($plain) ? $plain : '';
         }
-        return $protected;
+        return '';
     }
 
     public static function otpauthUri(string $issuer, string $account, string $secret): string
@@ -162,6 +179,26 @@ final class TotpService
     private static function normalizeCode(string $code): string
     {
         return preg_replace('/\D+/', '', $code) ?? '';
+    }
+
+    private static function normalizeRecoveryCode(string $code): string
+    {
+        return strtoupper(preg_replace('/[^A-Za-z0-9]+/', '', $code) ?? '');
+    }
+
+    private static function recoveryHash(string $normalizedCode, string $appKey = ''): string
+    {
+        $key = hash('sha256', $appKey !== '' ? $appKey : self::fallbackKey(), true);
+        return self::RECOVERY_HASH_PREFIX . hash_hmac('sha256', $normalizedCode, $key);
+    }
+
+    private static function recoveryHashMatches(string $normalizedCode, string $hash, string $appKey = ''): bool
+    {
+        if (str_starts_with($hash, self::RECOVERY_HASH_PREFIX)) {
+            return hash_equals(self::recoveryHash($normalizedCode, $appKey), $hash);
+        }
+
+        return password_verify($normalizedCode, $hash);
     }
 
     private static function fallbackKey(): string

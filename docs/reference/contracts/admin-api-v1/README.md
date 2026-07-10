@@ -6,7 +6,6 @@ audience:
   - api-integrator
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: contract
 owners:

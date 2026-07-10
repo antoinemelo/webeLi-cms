@@ -4,14 +4,23 @@
   "path": "/admin/api/blueprints/{key}/activate",
   "permission": "blueprints.manage",
   "request": {
+    "site_id": 1,
+    "resource_type": "content_type",
+    "scope": "site",
     "version": 2
   },
+  "semantics": "Valide la version demandée, archive l’ancienne active et met à jour active_version_id dans une transaction. Peut aussi réactiver une version archivée pour retour arrière.",
   "response": {
     "data": {
       "id": 1,
       "blueprint_key": "page",
       "active_version": 2,
-      "is_active": true
+      "is_active": true,
+      "activated_version": {
+        "version": 2,
+        "status": "active",
+        "is_active": true
+      }
     },
     "meta": {
       "contract": "admin.blueprints.activate.v1",

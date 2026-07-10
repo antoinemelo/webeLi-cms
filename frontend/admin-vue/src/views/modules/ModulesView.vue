@@ -222,6 +222,7 @@ watch(selectedKey, (key) => { if (key) void loadModule(key, false); });
         </div>
         <div class="toolbar">
           <StatusBadge :status="healthStatus(selected)" />
+          <button v-if="primaryAdminRoute" class="btn" type="button" @click="router.push(primaryAdminRoute)">Ouvrir</button>
           <button v-if="canManage && !selected.installed" class="btn" type="button" :disabled="actionLoading !== ''" @click="runAction(selected, 'install')">Installer</button>
           <button v-if="canManage && selected.installed && !selected.enabled" class="btn" type="button" :disabled="actionLoading !== ''" @click="runAction(selected, 'enable')">Activer</button>
           <button v-if="canManage && selected.installed && selected.enabled" class="btn ghost" type="button" :disabled="actionLoading !== ''" @click="runAction(selected, 'disable')">Désactiver</button>

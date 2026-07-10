@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/src/Seo
+  - frontend
+  - backend/routes/web.php
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - seo.read
-  - seo.manage
-source_paths:
-  - backend/src/Seo
-  - frontend
-  - backend/routes/web.php
 generated: false
 ---
 # Gérer URL, canonique, hreflang, robots et données structurées
 
 ## Résultat attendu
 
-Gérer URL, canonique, hreflang, robots et données structurées. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Gérer URL, canonique, hreflang, robots et données structurées.
 
 ## Public et droits
 

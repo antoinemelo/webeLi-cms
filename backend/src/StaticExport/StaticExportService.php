@@ -47,12 +47,82 @@ final class StaticExportService
 
         $routes = $this->collector->collect($siteKey, $lang, $routePath);
         $ignored = $this->collector->ignoredRoutes();
+        $outputPlan = $this->analyzeOutputPlan($routes);
         $exported = [];
         $files = [];
         $media = [];
         $assetFiles = [];
         $formKeys = [];
         $formRuntimeRequired = false;
+
+        if ($this->outputPlanHasBlockingIssues($outputPlan)) {
+            $this->appendOutputPlanErrors($outputPlan);
+            $languages = array_values(array_unique(array_map(static fn(StaticExportRoute $r): string => $r->languageCode, $routes)));
+            sort($languages);
+            $report = [
+                'release_id' => $releaseId,
+                'dry_run' => $dryRun,
+                'routes_exported' => [],
+                'routes_ignored' => $ignored,
+                'files_written' => [],
+                'media_copied' => [],
+                'assets_copied' => [],
+                'zip_path' => null,
+                'redirects' => [],
+                'tombstones' => [],
+                'output_plan' => $outputPlan,
+                'errors' => $this->errors,
+                'warnings' => $this->warnings,
+                'artifacts' => ['static' => null, 'editorial' => null],
+                'editorial_error' => null,
+                'known_mvp_limits' => [],
+                'forms_static' => [
+                    'forms_rendered' => [],
+                    'submission_endpoint' => 'public_api_v2_forms_submit_when_backend_available',
+                    'runtime' => null,
+                ],
+                'editorial_integration' => [
+                    'placement' => 'Production éditoriale > Imports / Exports',
+                    'optional' => true,
+                    'trigger' => $trigger,
+                    'route' => $routePath,
+                    'webhook_outbox_topic' => 'static_export.succeeded',
+                    'static_rollback_is_editorial_rollback' => false,
+                ],
+            ];
+            $manifest = new StaticExportManifest(
+                $releaseId,
+                $siteKey,
+                $languages,
+                $mode,
+                count($routes) + count($ignored),
+                0,
+                count($ignored),
+                0,
+                0,
+                $this->errors,
+                $this->warnings,
+                gmdate('c'),
+                $publicDir,
+                $this->cmsVersion(),
+                round(microtime(true) - $started, 3),
+                'failed',
+                null,
+                $trigger,
+                $routePath,
+                ['static' => null, 'editorial' => null],
+            );
+            if (!$dryRun) {
+                $this->prepareReleaseDirectory($releaseDir, $publicDir);
+                $this->writer->write($releaseDir, $manifest, $report);
+            }
+            return [
+                'release_dir' => $releaseDir,
+                'public_dir' => $publicDir,
+                'manifest' => $manifest->toArray(),
+                'report' => $report,
+            ];
+        }
 
         if (!$dryRun) {
             $this->prepareReleaseDirectory($releaseDir, $publicDir);
@@ -96,12 +166,22 @@ final class StaticExportService
 
         $completeExport = $routePath === null;
         if (!$dryRun && $completeExport && $routes !== []) {
-            $firstSite = $this->source->siteById($routes[0]->siteId);
-            if ($firstSite) {
-                $this->writeFile($publicDir . '/sitemap.xml', $this->renderer->renderSitemapXml($routes, $firstSite + $this->siteRuntimeDefaults($firstSite), $lang));
-                $this->writeFile($publicDir . '/robots.txt', $this->renderer->renderRobotsTxt());
-                $files[] = 'sitemap.xml';
-                $files[] = 'robots.txt';
+            foreach ($this->routesBySite($routes) as $siteRoutes) {
+                $firstRoute = $siteRoutes[0] ?? null;
+                if (!$firstRoute instanceof StaticExportRoute) {
+                    continue;
+                }
+                $site = $this->source->siteById($firstRoute->siteId);
+                if (!$site) {
+                    continue;
+                }
+                $sitePrefix = trim((string) ($firstRoute->metadata['site_output_prefix'] ?? ''), '/');
+                $siteOutputDir = $sitePrefix !== '' ? $publicDir . '/' . $sitePrefix : $publicDir;
+                $siteFilePrefix = $sitePrefix !== '' ? $sitePrefix . '/' : '';
+                $this->writeFile($siteOutputDir . '/sitemap.xml', $this->renderer->renderSitemapXml($siteRoutes, $site + $this->siteRuntimeDefaults($site), $lang));
+                $this->writeFile($siteOutputDir . '/robots.txt', $this->renderer->renderRobotsTxt());
+                $files[] = $siteFilePrefix . 'sitemap.xml';
+                $files[] = $siteFilePrefix . 'robots.txt';
             }
             $this->writeRedirectFiles($releaseDir, $this->source->listRedirects($siteKey));
             $this->writeTombstoneFiles($releaseDir, $this->source->listTombstones($siteKey));
@@ -163,6 +243,7 @@ final class StaticExportService
             'zip_path' => $zipPath,
             'redirects' => $this->source->listRedirects($siteKey),
             'tombstones' => $this->source->listTombstones($siteKey),
+            'output_plan' => $outputPlan,
             'errors' => $this->errors,
             'warnings' => $this->warnings,
             'artifacts' => ['static' => $staticArtifact, 'editorial' => $editorialArtifact],
@@ -221,6 +302,141 @@ final class StaticExportService
             'manifest' => $manifest->toArray(),
             'report' => $report,
         ];
+    }
+
+    /** @param list<StaticExportRoute> $routes @return array<string,mixed> */
+    private function analyzeOutputPlan(array $routes): array
+    {
+        $byOutput = [];
+        $invalid = [];
+        $sites = [];
+        foreach ($routes as $route) {
+            $output = $this->normalizeOutputPath($route->outputPath);
+            $routeRef = [
+                'site_id' => $route->siteId,
+                'site_key' => $route->siteKey,
+                'language_code' => $route->languageCode,
+                'path' => $route->path,
+                'output_path' => $route->outputPath,
+                'route_type' => $route->routeType,
+                'resource_type' => $route->resourceType,
+                'resource_id' => $route->resourceId,
+            ];
+            $reason = $this->invalidOutputPathReason($output);
+            if ($reason !== null) {
+                $invalid[] = $routeRef + ['reason' => $reason];
+            }
+            $byOutput[$output][] = $routeRef;
+
+            $siteKey = $route->siteKey !== '' ? $route->siteKey : 'site-' . $route->siteId;
+            if (!isset($sites[$siteKey])) {
+                $sites[$siteKey] = [
+                    'site_id' => $route->siteId,
+                    'site_key' => $route->siteKey,
+                    'domain_host' => $route->metadata['site_domain_host'] ?? null,
+                    'base_path' => $route->metadata['site_base_path'] ?? '',
+                    'output_prefix' => $route->metadata['site_output_prefix'] ?? strtok($output, '/') ?: '',
+                    'languages' => [],
+                    'routes' => 0,
+                ];
+            }
+            $sites[$siteKey]['routes']++;
+            $sites[$siteKey]['languages'][$route->languageCode] = true;
+        }
+
+        $collisions = [];
+        foreach ($byOutput as $outputPath => $routeRefs) {
+            if (count($routeRefs) <= 1) {
+                continue;
+            }
+            $collisions[] = [
+                'output_path' => $outputPath,
+                'route_count' => count($routeRefs),
+                'routes' => $routeRefs,
+            ];
+        }
+        foreach ($sites as &$site) {
+            $languages = array_keys($site['languages']);
+            sort($languages);
+            $site['languages'] = $languages;
+        }
+        unset($site);
+        usort($sites, static fn(array $a, array $b): int => ((int) $a['site_id']) <=> ((int) $b['site_id']));
+
+        return [
+            'strategy' => 'domain_base_path_then_site_key',
+            'guarantee' => 'Chaque output_path HTML est préfixé par le domaine/base_path primaire du site, avec fallback site_key lorsque le domaine est absent.',
+            'sites' => array_values($sites),
+            'routes_planned' => count($routes),
+            'output_paths_total' => count($routes),
+            'unique_output_paths' => count($byOutput),
+            'collision_count' => count($collisions),
+            'colliding_routes_count' => array_sum(array_map(static fn(array $collision): int => (int) $collision['route_count'], $collisions)),
+            'collisions' => $collisions,
+            'invalid_output_path_count' => count($invalid),
+            'invalid_output_paths' => $invalid,
+            'blocking' => $collisions !== [] || $invalid !== [],
+        ];
+    }
+
+    /** @param array<string,mixed> $outputPlan */
+    private function outputPlanHasBlockingIssues(array $outputPlan): bool
+    {
+        return (bool) ($outputPlan['blocking'] ?? false);
+    }
+
+    /** @param array<string,mixed> $outputPlan */
+    private function appendOutputPlanErrors(array $outputPlan): void
+    {
+        foreach (($outputPlan['collisions'] ?? []) as $collision) {
+            $routes = [];
+            foreach (($collision['routes'] ?? []) as $route) {
+                $routes[] = sprintf('%s:%s:%s', (string) ($route['site_key'] ?? ''), (string) ($route['language_code'] ?? ''), (string) ($route['path'] ?? ''));
+            }
+            $this->errors[] = sprintf('Collision output_path non résolue: %s (%s)', (string) ($collision['output_path'] ?? ''), implode(', ', $routes));
+        }
+        foreach (($outputPlan['invalid_output_paths'] ?? []) as $invalid) {
+            $this->errors[] = sprintf('output_path invalide: %s (%s)', (string) ($invalid['output_path'] ?? ''), (string) ($invalid['reason'] ?? 'invalid'));
+        }
+    }
+
+    private function normalizeOutputPath(string $outputPath): string
+    {
+        $outputPath = trim(str_replace('\\', '/', $outputPath));
+        $outputPath = preg_replace('#/+#', '/', $outputPath) ?? $outputPath;
+        return ltrim($outputPath, '/');
+    }
+
+    private function invalidOutputPathReason(string $outputPath): ?string
+    {
+        if ($outputPath === '') {
+            return 'empty_output_path';
+        }
+        if (str_starts_with($outputPath, '/')) {
+            return 'absolute_output_path';
+        }
+        $parts = array_filter(explode('/', $outputPath), static fn(string $part): bool => $part !== '');
+        if (in_array('..', $parts, true) || in_array('.', $parts, true)) {
+            return 'path_traversal_segment';
+        }
+        if (preg_match('#(^|/)(admin|api|preview|backend|tools|database|ops|_debug|_internal)(/|$)#i', $outputPath)) {
+            return 'internal_output_path';
+        }
+        if (preg_match('#\.(sqlite|sqlite-wal|sqlite-shm|sqlite-journal|log|bak|zip|tmp|env)$#i', $outputPath)) {
+            return 'sensitive_or_technical_output_file';
+        }
+        return null;
+    }
+
+    /** @param list<StaticExportRoute> $routes @return list<list<StaticExportRoute>> */
+    private function routesBySite(array $routes): array
+    {
+        $groups = [];
+        foreach ($routes as $route) {
+            $groups[$route->siteId][] = $route;
+        }
+        ksort($groups);
+        return array_values($groups);
     }
 
     /** @param list<StaticExportRoute> $routes */
@@ -325,7 +541,7 @@ CSS;
         if ($formRuntimeRequired) {
             $html = $this->injectStaticFormRuntime($html, $route->outputPath);
         }
-        $html = $this->makeLocalReferencesRelative($html, $route->outputPath, $routeTargets);
+        $html = $this->makeLocalReferencesRelative($html, $route, $routeTargets);
         return ['html' => $html, 'warnings' => $warnings, 'forms' => $forms, 'form_runtime_required' => $formRuntimeRequired];
     }
 
@@ -445,23 +661,23 @@ JS;
 ");
     }
 
-    /** @param array<string,string> $routeTargets */
-    private function makeLocalReferencesRelative(string $html, string $outputPath, array $routeTargets): string
+    /** @param array<string,mixed> $routeTargets */
+    private function makeLocalReferencesRelative(string $html, StaticExportRoute $route, array $routeTargets): string
     {
         $self = $this;
-        return preg_replace_callback('/\b(src|href|poster|action|srcset)=("|\')([^"\']+)(\2)/i', static function (array $match) use ($self, $outputPath, $routeTargets): string {
+        return preg_replace_callback('/\b(src|href|poster|action|srcset)=("|\')([^"\']+)(\2)/i', static function (array $match) use ($self, $route, $routeTargets): string {
             $attribute = strtolower((string) $match[1]);
             $quote = $match[2];
             $value = html_entity_decode((string) $match[3], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $rewritten = $attribute === 'srcset'
-                ? $self->rewriteSrcsetReferences($value, $outputPath, $routeTargets)
-                : $self->rewriteLocalReference($value, $outputPath, $routeTargets);
+                ? $self->rewriteSrcsetReferences($value, $route, $routeTargets)
+                : $self->rewriteLocalReference($value, $route, $routeTargets);
             return $match[1] . '=' . $quote . htmlspecialchars($rewritten, ENT_QUOTES | ENT_HTML5, 'UTF-8') . $quote;
         }, $html) ?? $html;
     }
 
-    /** @param array<string,string> $routeTargets */
-    private function rewriteSrcsetReferences(string $value, string $outputPath, array $routeTargets): string
+    /** @param array<string,mixed> $routeTargets */
+    private function rewriteSrcsetReferences(string $value, StaticExportRoute $route, array $routeTargets): string
     {
         $parts = array_map('trim', explode(',', $value));
         $rewritten = [];
@@ -472,13 +688,13 @@ JS;
             $segments = preg_split('/\s+/', $part, 2);
             $url = $segments[0] ?? '';
             $descriptor = $segments[1] ?? '';
-            $rewritten[] = trim($this->rewriteLocalReference($url, $outputPath, $routeTargets) . ' ' . $descriptor);
+            $rewritten[] = trim($this->rewriteLocalReference($url, $route, $routeTargets) . ' ' . $descriptor);
         }
         return implode(', ', $rewritten);
     }
 
-    /** @param array<string,string> $routeTargets */
-    private function rewriteLocalReference(string $value, string $outputPath, array $routeTargets): string
+    /** @param array<string,mixed> $routeTargets */
+    private function rewriteLocalReference(string $value, StaticExportRoute $route, array $routeTargets): string
     {
         $trimmed = trim($value);
         if ($trimmed === '' || str_starts_with($trimmed, '#') || preg_match('#^(https?:)?//#i', $trimmed) || str_starts_with($trimmed, 'data:') || str_starts_with($trimmed, 'mailto:') || str_starts_with($trimmed, 'tel:')) {
@@ -489,8 +705,8 @@ JS;
             return $value;
         }
         $path = (string) $parts['path'];
-        $target = $this->publicPathToExportTarget($path, $routeTargets);
-        $relative = $this->relativePath($outputPath, $target);
+        $target = $this->publicPathToExportTarget($path, $routeTargets, $route);
+        $relative = $this->relativePath($route->outputPath, $target);
         if (isset($parts['query']) && $parts['query'] !== '') {
             $relative .= '?' . $parts['query'];
         }
@@ -500,91 +716,132 @@ JS;
         return $relative;
     }
 
-    /** @param array<string,string> $routeTargets */
-    private function publicPathToExportTarget(string $path, array $routeTargets): string
+    /** @param array<string,mixed> $routeTargets */
+    private function publicPathToExportTarget(string $path, array $routeTargets, StaticExportRoute $route): string
     {
-        $clean = $this->stripRuntimeBasePath('/' . ltrim($path, '/'));
-        $clean = $this->stripKnownExportBasePath($clean, $routeTargets);
-        if ($clean === '/') {
-            return $routeTargets['/'] ?? 'index.html';
+        $clean = '/' . ltrim($path, '/');
+        $direct = $this->lookupRouteTarget($clean, $routeTargets, $route);
+        if ($direct !== null) {
+            return $direct;
         }
 
-        if (isset($routeTargets[$clean])) {
-            return $routeTargets[$clean];
+        foreach ($this->candidatePublicPaths($clean, $route) as $candidate) {
+            $target = $this->lookupRouteTarget($candidate, $routeTargets, $route);
+            if ($target !== null) {
+                return $target;
+            }
         }
 
-        $relative = ltrim($clean, '/');
+        $assetPath = $this->stripKnownStaticPrefixes($clean, $route);
+        $relative = ltrim($assetPath, '/');
         if (!is_file(base_path($relative))) {
             $parts = explode('/', $relative, 2);
             if (count($parts) === 2 && in_array(explode('/', $parts[1], 2)[0], ['frontend', 'storage'], true)) {
                 $relative = $parts[1];
-                $clean = '/' . $relative;
+                $assetPath = '/' . $relative;
             }
         }
-        $extension = pathinfo($clean, PATHINFO_EXTENSION);
+        $extension = pathinfo($assetPath, PATHINFO_EXTENSION);
         if ($extension !== '') {
-            return ltrim($clean, '/');
+            return ltrim($assetPath, '/');
         }
-        return trim($clean, '/') . '/index.html';
+        return trim($assetPath, '/') . '/index.html';
     }
 
-
-    /** @param list<StaticExportRoute> $routes @return array<string,string> */
+    /** @param list<StaticExportRoute> $routes @return array<string,mixed> */
     private function routeTargets(array $routes): array
     {
-        $targets = [];
+        $siteTargets = [];
+        $globalCandidates = [];
         foreach ($routes as $route) {
             $path = '/' . trim($route->path, '/');
             $path = $path === '/' ? '/' : rtrim($path, '/');
             $prefix = trim((string) ($route->metadata['url_prefix'] ?? ''), '/');
             $localizedPath = SqlStaticExportSource::localizedPublicPath($path, $prefix);
-            $targets[$localizedPath] = $route->outputPath;
-            if ($prefix === '') {
-                $targets[$path] = $route->outputPath;
+            $basePath = (string) ($route->metadata['site_base_path'] ?? '');
+            $keys = array_values(array_unique(array_filter([
+                $localizedPath,
+                $prefix === '' ? $path : null,
+                $basePath !== '' ? rtrim($basePath . ($localizedPath === '/' ? '' : $localizedPath), '/') ?: '/' : null,
+            ], static fn(?string $value): bool => $value !== null && $value !== '')));
+            foreach ($keys as $key) {
+                $normalized = '/' . trim($key, '/');
+                $normalized = $normalized === '//' ? '/' : $normalized;
+                $siteTargets[$route->siteKey][$normalized] = $route->outputPath;
+                $globalCandidates[$normalized][] = $route->outputPath;
             }
         }
-        return $targets;
+
+        $global = [];
+        foreach ($globalCandidates as $path => $outputs) {
+            $unique = array_values(array_unique($outputs));
+            if (count($unique) === 1) {
+                $global[$path] = $unique[0];
+            }
+        }
+        return ['site' => $siteTargets, 'global' => $global];
     }
 
-    /** @param array<string,string> $routeTargets */
-    private function stripKnownExportBasePath(string $path, array $routeTargets): string
+    /** @param array<string,mixed> $routeTargets */
+    private function lookupRouteTarget(string $path, array $routeTargets, StaticExportRoute $route): ?string
+    {
+        $path = '/' . trim($path, '/');
+        $path = $path === '//' ? '/' : rtrim($path, '/');
+        if ($path === '') {
+            $path = '/';
+        }
+        $siteTargets = $routeTargets['site'][$route->siteKey] ?? [];
+        if (isset($siteTargets[$path])) {
+            return (string) $siteTargets[$path];
+        }
+        $globalTargets = $routeTargets['global'] ?? [];
+        return isset($globalTargets[$path]) ? (string) $globalTargets[$path] : null;
+    }
+
+    /** @return list<string> */
+    private function candidatePublicPaths(string $path, StaticExportRoute $route): array
     {
         $path = '/' . ltrim($path, '/');
-        if ($path === '/' || isset($routeTargets[$path])) {
-            return $path;
+        $candidates = [$path];
+        $basePath = (string) ($route->metadata['site_base_path'] ?? '');
+        if ($basePath !== '' && ($path === $basePath || str_starts_with($path, rtrim($basePath, '/') . '/'))) {
+            $candidate = substr($path, strlen(rtrim($basePath, '/')));
+            $candidates[] = $candidate === '' ? '/' : $candidate;
         }
+        $runtimeStripped = $this->stripRuntimeBasePath($path);
+        if ($runtimeStripped !== $path) {
+            $candidates[] = $runtimeStripped;
+        }
+        return array_values(array_unique(array_map(static function (string $candidate): string {
+            $candidate = '/' . trim($candidate, '/');
+            return $candidate === '//' ? '/' : rtrim($candidate, '/');
+        }, $candidates)));
+    }
 
+    private function stripKnownStaticPrefixes(string $path, StaticExportRoute $route): string
+    {
+        $path = '/' . ltrim($path, '/');
+        $basePath = (string) ($route->metadata['site_base_path'] ?? '');
+        if ($basePath !== '' && str_starts_with($path, rtrim($basePath, '/') . '/')) {
+            $stripped = substr($path, strlen(rtrim($basePath, '/')));
+            if ($this->isStaticAssetCandidate($stripped)) {
+                return $stripped;
+            }
+        }
+        $runtimeStripped = $this->stripRuntimeBasePath($path);
+        if ($runtimeStripped !== $path && $this->isStaticAssetCandidate($runtimeStripped)) {
+            return $runtimeStripped;
+        }
         $relative = ltrim($path, '/');
         $parts = explode('/', $relative, 2);
-        if ($parts[0] === '') {
-            return $path;
+        if (count($parts) === 2 && $this->isStaticAssetCandidate('/' . $parts[1])) {
+            return '/' . $parts[1];
         }
-
-        $installDir = basename(str_replace('\\', '/', rtrim(base_path(), '/')));
-        if ($installDir !== '' && $parts[0] === $installDir) {
-            $candidate = count($parts) === 2 ? '/' . ltrim($parts[1], '/') : '/';
-            if ($this->isExportTargetCandidate($candidate, $routeTargets)) {
-                return $candidate;
-            }
-        }
-
-        if (count($parts) === 2) {
-            $candidate = '/' . ltrim($parts[1], '/');
-            if ($this->isExportTargetCandidate($candidate, $routeTargets)) {
-                return $candidate;
-            }
-        }
-
         return $path;
     }
 
-
-    /** @param array<string,string> $routeTargets */
-    private function isExportTargetCandidate(string $candidate, array $routeTargets): bool
+    private function isStaticAssetCandidate(string $candidate): bool
     {
-        if ($candidate === '/' || isset($routeTargets[$candidate])) {
-            return true;
-        }
         $candidateRelative = ltrim($candidate, '/');
         return is_file(base_path($candidateRelative))
             || str_starts_with($candidateRelative, 'frontend/')

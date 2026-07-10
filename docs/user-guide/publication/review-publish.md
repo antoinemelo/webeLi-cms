@@ -5,32 +5,26 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-permissions:
-  - content.approve
-  - content.publish
-  - admin.entries.publish
-source_paths:
   - backend/routes/api.php
   - backend/src/Publishing
   - backend/src/Content
   - `python3 tools/cms.py test`
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Réviser et publier un contenu
 
 ## Résultat attendu
 
-Réviser et publier un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Réviser et publier un contenu.
 
 ## Public et droits
 

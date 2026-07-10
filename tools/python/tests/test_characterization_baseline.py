@@ -11,7 +11,7 @@ class CharacterizationBaseline(unittest.TestCase):
  @classmethod
  def tearDownClass(cls): cls.con.close()
  def tables(self): return {r[0] for r in self.con.execute("select name from sqlite_master where type='table'")}
- def test_five_sqlite_databases_exist(self): self.assertEqual({'core.sqlite','iam.sqlite','forms.sqlite','cookies.sqlite','ai.sqlite'},{p.name for p in (ROOT/'storage/database').glob('*.sqlite')})
+ def test_system_sqlite_databases_exist(self): self.assertEqual({'core.sqlite','iam.sqlite','forms.sqlite','cookies.sqlite','ai.sqlite','business.sqlite','sale.sqlite'},{p.name for p in (ROOT/'storage/database').glob('*.sqlite')})
  def test_blueprint_representations_are_converged(self):
   forbidden='schema_'+'blueprints'; self.assertNotIn(forbidden,self.tables())
   self.assertTrue({'blueprints','blueprint_versions','blueprint_sections','blueprint_fields','schema_field_types','content_types','fields'}.issubset(self.tables()))

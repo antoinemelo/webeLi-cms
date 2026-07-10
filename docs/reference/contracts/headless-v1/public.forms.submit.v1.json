@@ -5,7 +5,7 @@
   "description": "Valide et enregistre une soumission selon les règles du module Forms.",
   "method": "POST",
   "source": "canonical public application use case",
-  "security": "Public endpoint governed by bearer, CORS and rate-limit configuration.",
+  "security": "Public endpoint: no bearer token is required; CORS, rate-limit and form anti-spam controls still apply.",
   "path": "/api/v1/forms/{key}/submit",
   "query_params": {
     "lang": {

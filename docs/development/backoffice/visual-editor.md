@@ -3,15 +3,11 @@ title: Éditeur visuel intégré
 audience:
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 owners:
   - core
 document_type: guide
-permissions:
-  - contents.read
-  - contents.update
 source_paths:
   - backend/src/Application/Api/Admin/VisualEditingApiController.php
   - backend/src/Application/VisualEditing/VisualEditingMapBuilder.php
@@ -28,7 +24,18 @@ generated: false
 
 L’éditeur visuel permet de modifier un contenu depuis son rendu dans le thème, sans remplacer l’éditeur structuré. Le back-office charge une prévisualisation dans une iframe, identifie les champs et les blocs rendus par Twig, puis enregistre les changements par l’API administrative.
 
-Cette page décrit le contrat technique de cette intégration. Pour le parcours éditorial, consultez le guide de création et de modification des contenus.
+Cette page décrit le contrat technique de cette intégration. Pour le parcours éditorial, consultez le guide utilisateur [Utiliser l’éditeur visuel](../../user-guide/content/visual-editor.md).
+
+## Positionnement
+
+L’éditeur visuel fournit une édition in-context contrôlée : l’utilisateur voit la page dans son thème, sélectionne une zone éditable, modifie la valeur associée, puis enregistre dans la révision de travail. Il ne doit pas permettre de casser la structure du contenu ni de contourner les règles de validation du blueprint.
+
+Différence avec un constructeur de page libre :
+
+- la structure autorisée vient du blueprint ;
+- les zones éditables viennent des attributs `data-amcms-*` rendus par Twig ;
+- la publication reste pilotée par le workflow commun ;
+- les champs non rendus ou complexes restent dans l’éditeur structuré.
 
 ## Composants principaux
 
@@ -39,7 +46,7 @@ Le dispositif repose sur quatre ensembles :
 - `VisualEditingApiController.php` expose la carte éditable, la prévisualisation, la résolution d’une cible et les opérations d’écriture ;
 - les templates Twig portent les attributs `data-amcms-*` nécessaires pour relier un élément rendu à son champ, son bloc et son état éditorial.
 
-L’éditeur structuré reste la solution de référence pour les modifications complexes, les champs non rendus directement et la réorganisation complète des blocs.
+L’éditeur structuré reste la solution de référence pour les modifications complexes, les champs non rendus directement et la réorganisation complète des blocs. L’éditeur visuel n’est pas un page builder libre : il expose uniquement les champs et blocs déclarés par les blueprints et rendus comme éditables par les templates Twig.
 
 ## Cycle d’ouverture
 

@@ -1,8 +1,19 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
-from tools.python.qualification.run_all import Result, _exit_code, steps
+from tools.python.commands import qualify
+from tools.python.qualification.run_all import (
+    E2E_INPUTS,
+    FRONTEND_BUILD_INPUTS,
+    ROOT,
+    Result,
+    _display_path,
+    _exit_code,
+    parse_args,
+    steps,
+)
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
@@ -47,6 +58,10 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual(1, _exit_code([passed, failed]))
         self.assertEqual(0, _exit_code([passed]))
 
+    def test_report_paths_outside_repository_are_printable(self):
+        self.assertEqual("storage/report.json", _display_path(ROOT / "storage/report.json"))
+        self.assertTrue(_display_path(Path("/tmp/dec-report.json")).endswith("/tmp/dec-report.json"))
+
     def test_frontend_steps_use_node_entrypoints_not_bin_wrappers(self):
         registry = {step.id: step for step in steps()}
         build = registry["frontend-build"]
@@ -68,6 +83,28 @@ class QualificationOrchestratorTest(unittest.TestCase):
             "frontend/admin-vue/node_modules/.bin/playwright",
             e2e.files,
         )
+        self.assertEqual((), e2e.env_vars)
+        self.assertIn("e2e", e2e.command)
+        self.assertIn("--use-built-assets", e2e.command)
+
+    def test_qualification_cache_is_explicit_and_forceable(self):
+        args = parse_args(["--profile", "release", "--no-cache"])
+        self.assertTrue(args.no_cache)
+        self.assertIn("frontend/admin-vue/src", FRONTEND_BUILD_INPUTS)
+        self.assertIn("frontend/admin-vue/tests/e2e", E2E_INPUTS)
+        self.assertIn("backend/src", E2E_INPUTS)
+
+        class Parser:
+            def __init__(self) -> None:
+                self.options: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+            def add_argument(self, *args: object, **kwargs: object) -> None:
+                self.options.append((args, kwargs))
+
+        parser = Parser()
+        qualify.configure(parser)  # type: ignore[arg-type]
+        option_names = {name for args, _kwargs in parser.options for name in args}
+        self.assertIn("--no-cache", option_names)
 
 
 if __name__ == "__main__":

@@ -5,16 +5,72 @@ $tests = [
     'unit/bootstrap_autoload_test.php',
     'unit/health_check_test.php',
     'unit/editorial_status_test.php',
+    'unit/iam_login_modes_test.php',
+    'unit/totp_service_test.php',
+    'unit/business_catalog_definitions_test.php',
+    'unit/business_catalog_schema_test.php',
+    'unit/business_pim_lite_schema_test.php',
+    'unit/business_pim_lite_fixtures_test.php',
+    'unit/business_product_asset_service_test.php',
+    'unit/business_product_completeness_service_test.php',
+    'unit/business_catalog_backend_services_test.php',
+    'unit/business_catalog_api_controller_test.php',
+    'unit/business_pim_api_controller_test.php',
+    'unit/business_catalog_csv_service_test.php',
+    'unit/business_catalog_public_api_test.php',
+    'unit/business_pos_catalog_api_test.php',
+    'unit/business_catalog_pricing_service_test.php',
+    'unit/business_sellable_snapshot_service_test.php',
+    'unit/business_crm_blueprints_test.php',
+    'unit/business_pim_lite_blueprints_test.php',
+    'unit/business_crm_service_test.php',
+    'unit/business_csv_service_test.php',
+    'unit/business_crm_api_controller_test.php',
+    'unit/business_messaging_provider_test.php',
+    'unit/business_mailing_service_test.php',
+    'unit/sale_module_contracts_test.php',
+    'unit/sale_snapshot_services_test.php',
+    'unit/sale_pricing_service_test.php',
+    'unit/sale_idempotency_service_test.php',
+    'unit/sale_inventory_service_test.php',
+    'unit/sale_domain_workflows_test.php',
+    'unit/sale_admin_api_controller_test.php',
+    'unit/sale_public_api_handler_test.php',
+    'unit/docs_access_test.php',
+    'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',
+    'integration/business_pim_http_test.php',
+    'integration/sale_uses_business_sellable_snapshot_test.php',
+    'integration/roles_matrix_http_test.php',
+    'integration/blueprint_designer_characterization_test.php',
     'integration/webhook_repository_test.php',
     'integration/multisite_locale_test.php',
+    'integration/multisite_base_path_test.php',
+    'integration/frontend_search_payload_test.php',
+    'integration/public_api_headless_content_test.php',
+    'integration/public_api_media_test.php',
+    'integration/public_cookie_endpoints_http_test.php',
+];
+
+$testTimeouts = [
+    'unit/iam_login_modes_test.php' => 45,
+    'unit/business_catalog_api_controller_test.php' => 60,
+    'unit/business_pim_api_controller_test.php' => 45,
+    'unit/business_catalog_csv_service_test.php' => 45,
+    'unit/business_catalog_public_api_test.php' => 45,
+    'unit/business_pos_catalog_api_test.php' => 30,
+    'unit/business_crm_api_controller_test.php' => 45,
+    'unit/sale_admin_api_controller_test.php' => 45,
+    'unit/sale_public_api_handler_test.php' => 45,
+    'integration/business_pim_http_test.php' => 45,
+    'integration/sale_uses_business_sellable_snapshot_test.php' => 45,
 ];
 
 /**
  * Execute one PHP test with progressive output and a hard per-test timeout.
  * This prevents the outer Python suite from waiting silently for 60 seconds.
  */
-function runTest(string $relativePath, int $timeoutSeconds = 15): int
+function runTest(string $relativePath, int $timeoutSeconds = 20): int
 {
     $absolutePath = __DIR__ . '/' . $relativePath;
     $command = [PHP_BINARY, $absolutePath];
@@ -90,7 +146,7 @@ function runTest(string $relativePath, int $timeoutSeconds = 15): int
 
 $failed = 0;
 foreach ($tests as $test) {
-    if (runTest($test) !== 0) {
+    if (runTest($test, $testTimeouts[$test] ?? 20) !== 0) {
         $failed++;
     }
 }

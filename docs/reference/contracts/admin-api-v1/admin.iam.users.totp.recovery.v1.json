@@ -19,7 +19,9 @@
   "response": {
     "data": {
       "user": "iam user summary",
-      "recovery_codes": "empty array for email-based 2FA",
+      "recovery_codes": [
+        "new one-use recovery codes displayed only in this response"
+      ],
       "message": "..."
     },
     "meta": {

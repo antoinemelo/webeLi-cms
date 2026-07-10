@@ -144,6 +144,7 @@ def feature_records() -> list[dict[str, Any]]:
         ("multisite-multilingual", "sites", "supported", ["database/schema/core.sql", "tools/python/validation/content/site_locale.py"], "Not every domain and language combination is covered."),
         ("content-types-blueprints-fields-blocks", "content-model", "supported", ["database/schema/core.sql", "backend/src/Application/Schema/NativeFieldBlueprintRegistry.php"], "Third-party extension compatibility is not fully qualified."),
         ("drafts-revisions-preview", "workflow", "supported", ["backend/src/Domain/Content/ContentRevision.php", "backend/src/Application/Api/Admin/PreviewApiController.php"], "Concurrent editing behavior requires targeted tests."),
+        ("visual-editor-in-context", "editing", "partial", ["frontend/admin-vue/src/components/editor/VisualEditorShell.vue", "frontend/theme-default/assets/js/visual-editing-bridge.js", "backend/src/Application/Api/Admin/VisualEditingApiController.php", "backend/routes/api.php"], "The controlled visual editor is implemented and documented; a full browser E2E path must still verify selection, save, revision, publication, language, media and locks."),
         ("publication-projections", "workflow", "supported", ["backend/src/Application/Publication/PublishedProjectionPipeline.php", "tools/python/validation/content/contracts.py"], "High-concurrency publication is not benchmarked."),
         ("media-variants-local-storage", "media", "supported", ["backend/src/Application/Media/GenerateMediaVariants.php", "backend/src/Application/Media/Storage/LocalStorageDriver.php"], "Malware scanning is not demonstrated."),
         ("media-s3-storage", "media", "partial", ["backend/src/Application/Media/Storage/S3StorageDriver.php", "tools/python/validation/operations/media.py"], "External provider integration was not executed by this generator."),
@@ -209,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest = evidence_record(
         "cms-evaluation-manifest", status="supported", source=["backend/composer.json", "frontend/admin-vue/package.json", "database/", "tools/cms.py", "docs/evaluation/"], confidence="high",
         limitations=["Generated inventories prove source presence and structure, not complete end-to-end usability."],
-        product_name="DEC CMS", evaluated_version=git_value("describe", "--tags", "--always") or "working-tree", generated_at=DATE,
+        product_name="DEC CMS", generated_at=DATE,
         commit=git_value("rev-parse", "HEAD"), dirty=(git_value("status", "--porcelain") not in (None, "")),
         scope=["runtime", "backoffice", "public-api", "databases", "python-tooling", "documentation", "release"],
         technologies=["PHP 8.2+", "Twig 3", "Vue 3", "TypeScript", "Pinia", "Vite", "SQLite", "Python 3"],

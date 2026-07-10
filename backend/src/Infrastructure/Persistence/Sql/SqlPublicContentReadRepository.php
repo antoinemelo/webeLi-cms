@@ -232,7 +232,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
     
             $whereSql = implode(' AND ', $where);
             $fromSql = "FROM content_entries ce
-                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.is_active = 1
+                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.api_enabled = 1
                 JOIN public_content_snapshots pcs ON pcs.site_id = ce.site_id
                    AND pcs.resource_type = 'content_entry'
                    AND pcs.resource_id = ce.id
@@ -356,7 +356,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
                    AND cep.published_revision_id = pcs.source_published_revision_id
                    AND cep.workflow_status = 'published'
                 JOIN content_entries ce ON ce.id = sd.resource_id AND ce.site_id = sd.site_id AND ce.is_active = 1 AND ce.status = 'published'
-                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.is_active = 1
+                JOIN content_types ct ON ct.id = ce.content_type_id AND ct.api_enabled = 1
                 JOIN routes r ON r.site_id = sd.site_id
                    AND r.resource_type = sd.resource_type
                    AND r.resource_id = sd.resource_id
@@ -399,15 +399,23 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
         {
             $limit = max(1, min(100, $limit));
             $offset = max(0, $offset);
-            $params = ['site_id' => $siteId, 'language' => $languageCode];
+
+            $filterParams = ['site_id' => $siteId];
             $where = ["ma.site_id = :site_id", "ma.lifecycle_status = 'ready'", "ma.validation_status = 'valid'", 'ma.public_path IS NOT NULL'];
             if ($type !== '') {
                 $where[] = 'ma.media_type = :media_type';
-                $params['media_type'] = $type;
+                $filterParams['media_type'] = $type;
             }
+
             $whereSql = implode(' AND ', $where);
-            $totalRow = $this->db->one("SELECT COUNT(*) AS total FROM media_assets ma WHERE $whereSql", $params);
+            $totalRow = $this->db->one("SELECT COUNT(*) AS total FROM media_assets ma WHERE $whereSql", $filterParams);
             $total = (int) ($totalRow['total'] ?? 0);
+
+            $selectParams = $filterParams + [
+                'language' => $languageCode,
+                'limit' => $limit,
+                'offset' => $offset,
+            ];
             $rows = $this->db->all(
                 "SELECT ma.*, mal.alt_text, mal.caption, mal.title AS localized_title
                  FROM media_assets ma
@@ -415,7 +423,7 @@ final class SqlPublicContentReadRepository implements PublicContentReadRepositor
                  WHERE $whereSql
                  ORDER BY ma.updated_at DESC, ma.id DESC
                  LIMIT :limit OFFSET :offset",
-                $params + ['limit' => $limit, 'offset' => $offset]
+                $selectParams
             );
             $items = array_map(static function (array $row): array {
                 $publicPath = trim((string) ($row['public_path'] ?? $row['path'] ?? ''));

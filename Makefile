@@ -2,6 +2,7 @@
 
 PYTHON ?= python3
 RELEASE_NAME ?=
+VERIFY_ARCHIVE ?=
 
 help:
 	@printf '%s\n' \
@@ -10,7 +11,8 @@ help:
 	  'make release-minor RELEASE_NAME="..."  Prépare une mineure, audit obligatoire, package et preuves' \
 	  'make release-major RELEASE_NAME="..."  Prépare une majeure, audit obligatoire, package et preuves' \
 	  'make audit-release                      Lance manuellement le profil d audit release' \
-	  'make verify-release                     Vérifie la dernière archive de release'
+	  'make verify-release                     Vérifie la dernière archive de release' \
+	  'make verify-release VERIFY_ARCHIVE=...  Vérifie une archive ZIP précise'
 
 patch:
 	@test -n "$(RELEASE_NAME)" || (echo 'ERREUR: RELEASE_NAME est obligatoire.' >&2; exit 2)
@@ -34,4 +36,4 @@ audit-release:
 	$(PYTHON) tools/cms.py audit --profile release --build
 
 verify-release:
-	$(PYTHON) tools/cms.py release --verify-archive
+	$(PYTHON) tools/cms.py release --verify-archive $(if $(VERIFY_ARCHIVE),--archive "$(VERIFY_ARCHIVE)",)

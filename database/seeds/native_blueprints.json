@@ -3109,370 +3109,9 @@
             "visibility": "form",
             "editable": true
           }
-        },
-        {
-          "field_key": "blocks",
-          "label": "Blocs de contenu",
-          "field_type": "json",
-          "tab_key": "content",
-          "is_required": false,
-          "is_localized": true,
-          "field_purpose": "page_builder",
-          "help_text": "Builder léger : blocs simples publiés uniquement s’ils sont actifs et en état publié.",
-          "width": 100,
-          "public": true,
-          "headless": {
-            "public": true,
-            "projection": "blocks"
-          },
-          "interface_key": "replicator",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "hero_title",
-          "label": "Titre du hero",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 100,
-          "help_text": "Titre d’accroche optionnel.",
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "hero_text",
-          "label": "Texte du hero",
-          "field_type": "textarea",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 280
-          },
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "hero_image",
-          "label": "Image du hero",
-          "field_type": "media",
-          "tab_key": "hero",
-          "is_localized": false,
-          "width": 100,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": true,
-          "headless": {
-            "public": true,
-            "preferred_media_set": "hero"
-          },
-          "interface_key": "assets",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "hero_cta_label",
-          "label": "Libellé du bouton",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 50,
-          "conditions": [
-            {
-              "field": "hero_cta_url",
-              "operator": "not_empty"
-            }
-          ],
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "hero_cta_url",
-          "label": "Lien du bouton",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 50,
-          "public": true,
-          "interface_key": "link",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "seo_title",
-          "label": "Titre SEO",
-          "field_type": "text",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 70
-          },
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "seo_description",
-          "label": "Meta description",
-          "field_type": "textarea",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 180
-          },
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "robots",
-          "label": "Robots",
-          "field_type": "select",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "options": {
-            "choices": {
-              "index,follow": "index,follow",
-              "noindex,follow": "noindex,follow",
-              "noindex,nofollow": "noindex,nofollow"
-            }
-          },
-          "default": "index,follow",
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "og_image",
-          "label": "Image Open Graph",
-          "field_type": "media",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": false,
-          "interface_key": "assets",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
         }
       ],
-      "editor_tabs": [
-        {
-          "key": "content",
-          "label": "Contenu",
-          "fields": [
-            "title",
-            "blocks"
-          ],
-          "sort_order": 10
-        },
-        {
-          "key": "hero",
-          "label": "Hero",
-          "fields": [
-            "hero_title",
-            "hero_text",
-            "hero_image",
-            "hero_cta_label",
-            "hero_cta_url"
-          ],
-          "sort_order": 20
-        },
-        {
-          "key": "seo",
-          "label": "SEO",
-          "fields": [
-            "seo_title",
-            "seo_description",
-            "robots",
-            "og_image"
-          ],
-          "sort_order": 80
-        },
-        {
-          "key": "settings",
-          "label": "Réglages",
-          "fields": [
-            "slug"
-          ],
-          "sort_order": 100
-        }
-      ],
+      "editor_tabs": [],
       "seo_policy": {
         "enabled": true,
         "source": "document.seo",
@@ -3616,41 +3255,6 @@
           "is_hidden": true
         },
         {
-          "field_key": "blocks",
-          "label": "Blocs de contenu",
-          "field_type": "json",
-          "tab_key": "content",
-          "is_required": false,
-          "is_localized": true,
-          "field_purpose": "page_builder",
-          "help_text": "Builder léger : blocs simples publiés uniquement s’ils sont actifs et en état publié.",
-          "width": 100,
-          "public": true,
-          "headless": {
-            "public": true,
-            "projection": "blocks"
-          },
-          "interface_key": "replicator",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
           "field_key": "excerpt",
           "label": "Chapeau",
           "field_type": "textarea",
@@ -3727,301 +3331,6 @@
           "is_editable": true,
           "editable": true,
           "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "hero_title",
-          "label": "Titre du hero",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 100,
-          "help_text": "Titre d’accroche optionnel.",
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "hero_text",
-          "label": "Texte du hero",
-          "field_type": "textarea",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 280
-          },
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "hero_image",
-          "label": "Image du hero",
-          "field_type": "media",
-          "tab_key": "hero",
-          "is_localized": false,
-          "width": 100,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": true,
-          "headless": {
-            "public": true,
-            "preferred_media_set": "hero"
-          },
-          "interface_key": "assets",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "hero_cta_label",
-          "label": "Libellé du bouton",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 50,
-          "conditions": [
-            {
-              "field": "hero_cta_url",
-              "operator": "not_empty"
-            }
-          ],
-          "public": true,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "hero_cta_url",
-          "label": "Lien du bouton",
-          "field_type": "text",
-          "tab_key": "hero",
-          "is_localized": true,
-          "width": 50,
-          "public": true,
-          "interface_key": "link",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "field_purpose": "content",
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "seo_title",
-          "label": "Titre SEO",
-          "field_type": "text",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 70
-          },
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "seo_description",
-          "label": "Meta description",
-          "field_type": "textarea",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 180
-          },
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "robots",
-          "label": "Robots",
-          "field_type": "select",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "options": {
-            "choices": {
-              "index,follow": "index,follow",
-              "noindex,follow": "noindex,follow",
-              "noindex,nofollow": "noindex,nofollow"
-            }
-          },
-          "default": "index,follow",
-          "public": false,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "hidden",
-            "visibility": "hidden",
-            "editable": true
-          },
-          "is_hidden": true
-        },
-        {
-          "field_key": "og_image",
-          "label": "Image Open Graph",
-          "field_type": "media",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": false,
-          "interface_key": "assets",
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "hidden",
-          "visibility": "hidden",
-          "is_editable": true,
-          "editable": true,
           "config": {
             "field_scope": "editorial",
             "scope": "editorial",
@@ -4429,41 +3738,6 @@
           }
         },
         {
-          "field_key": "blocks",
-          "label": "Blocs de contenu",
-          "field_type": "json",
-          "tab_key": "content",
-          "is_required": false,
-          "is_localized": true,
-          "field_purpose": "page_builder",
-          "help_text": "Builder léger : blocs simples publiés uniquement s’ils sont actifs et en état publié.",
-          "width": 100,
-          "public": true,
-          "headless": {
-            "public": true,
-            "projection": "blocks"
-          },
-          "interface_key": "replicator",
-          "sort_order": 20,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
           "field_key": "archive_source",
           "label": "Source de l’archive",
           "field_type": "select",
@@ -4592,139 +3866,6 @@
             "visibility": "form",
             "editable": true
           }
-        },
-        {
-          "field_key": "seo_title",
-          "label": "Titre SEO",
-          "field_type": "text",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 70
-          },
-          "public": false,
-          "sort_order": 10,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "seo_description",
-          "label": "Meta description",
-          "field_type": "textarea",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 180
-          },
-          "public": false,
-          "sort_order": 20,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "robots",
-          "label": "Robots",
-          "field_type": "select",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "options": {
-            "choices": {
-              "index,follow": "index,follow",
-              "noindex,follow": "noindex,follow",
-              "noindex,nofollow": "noindex,nofollow"
-            }
-          },
-          "default": "index,follow",
-          "public": false,
-          "sort_order": 30,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "og_image",
-          "label": "Image Open Graph",
-          "field_type": "media",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": false,
-          "interface_key": "assets",
-          "sort_order": 40,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
         }
       ],
       "editor_tabs": [
@@ -4732,33 +3873,12 @@
           "key": "content",
           "label": "Structure",
           "fields": [
-            "title",
-            "blocks",
             "archive_source",
             "items_per_page",
             "show_published_date",
             "show_excerpt"
           ],
           "sort_order": 10
-        },
-        {
-          "key": "seo",
-          "label": "SEO",
-          "fields": [
-            "seo_title",
-            "seo_description",
-            "robots",
-            "og_image"
-          ],
-          "sort_order": 80
-        },
-        {
-          "key": "settings",
-          "label": "Réglages",
-          "fields": [
-            "slug"
-          ],
-          "sort_order": 100
         }
       ],
       "seo_policy": {
@@ -4904,41 +4024,6 @@
           }
         },
         {
-          "field_key": "blocks",
-          "label": "Blocs de contenu",
-          "field_type": "json",
-          "tab_key": "content",
-          "is_required": false,
-          "is_localized": true,
-          "field_purpose": "page_builder",
-          "help_text": "Builder léger : blocs simples publiés uniquement s’ils sont actifs et en état publié.",
-          "width": 100,
-          "public": true,
-          "headless": {
-            "public": true,
-            "projection": "blocks"
-          },
-          "interface_key": "replicator",
-          "sort_order": 20,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
           "field_key": "archive_source",
           "label": "Source de l’archive",
           "field_type": "select",
@@ -5067,139 +4152,6 @@
             "visibility": "form",
             "editable": true
           }
-        },
-        {
-          "field_key": "seo_title",
-          "label": "Titre SEO",
-          "field_type": "text",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 70
-          },
-          "public": false,
-          "sort_order": 10,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "seo_description",
-          "label": "Meta description",
-          "field_type": "textarea",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": true,
-          "width": 100,
-          "validation": {
-            "max_length": 180
-          },
-          "public": false,
-          "sort_order": 20,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "robots",
-          "label": "Robots",
-          "field_type": "select",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "options": {
-            "choices": {
-              "index,follow": "index,follow",
-              "noindex,follow": "noindex,follow",
-              "noindex,nofollow": "noindex,nofollow"
-            }
-          },
-          "default": "index,follow",
-          "public": false,
-          "sort_order": 30,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
-        },
-        {
-          "field_key": "og_image",
-          "label": "Image Open Graph",
-          "field_type": "media",
-          "tab_key": "seo",
-          "field_purpose": "seo",
-          "is_localized": false,
-          "width": 50,
-          "validation": {
-            "max_items": 1,
-            "allowed_mime": [
-              "image/*"
-            ]
-          },
-          "public": false,
-          "interface_key": "assets",
-          "sort_order": 40,
-          "field_scope": "editorial",
-          "scope": "editorial",
-          "value_source": "content",
-          "source": "content",
-          "ui_visibility": "form",
-          "visibility": "form",
-          "is_editable": true,
-          "editable": true,
-          "config": {
-            "field_scope": "editorial",
-            "scope": "editorial",
-            "value_source": "content",
-            "source": "content",
-            "ui_visibility": "form",
-            "visibility": "form",
-            "editable": true
-          }
         }
       ],
       "editor_tabs": [
@@ -5207,33 +4159,12 @@
           "key": "content",
           "label": "Structure",
           "fields": [
-            "title",
-            "blocks",
             "archive_source",
             "items_per_page",
             "show_published_date",
             "show_excerpt"
           ],
           "sort_order": 10
-        },
-        {
-          "key": "seo",
-          "label": "SEO",
-          "fields": [
-            "seo_title",
-            "seo_description",
-            "robots",
-            "og_image"
-          ],
-          "sort_order": 80
-        },
-        {
-          "key": "settings",
-          "label": "Réglages",
-          "fields": [
-            "slug"
-          ],
-          "sort_order": 100
         }
       ],
       "seo_policy": {
@@ -5380,16 +4311,20 @@
               "label": "Lecture routes"
             },
             {
+              "value": "media:read",
+              "label": "Lecture médias"
+            },
+            {
+              "value": "search:read",
+              "label": "Lecture recherche"
+            },
+            {
               "value": "menus:read",
               "label": "Lecture menus"
             },
             {
               "value": "taxonomies:read",
               "label": "Lecture taxonomies"
-            },
-            {
-              "value": "media:read",
-              "label": "Lecture médias"
             },
             {
               "value": "*",
@@ -5763,16 +4698,16 @@
         "enabled": false
       }
     },
-    "iam_email_2fa": {
-      "label": "Connexion par code email",
-      "description": "Activation ou désactivation de la connexion par code email depuis la configuration avancée d’un utilisateur.",
+    "iam_login_mode": {
+      "label": "Mode de connexion IAM",
+      "description": "Choix du mode de connexion password, email_code ou totp depuis la fiche utilisateur.",
       "schema_version": 1,
       "resource_type": "system",
       "capabilities": {
         "user_scoped": true,
         "sensitive": true,
         "audited": true,
-        "passwordless_when_enabled": true
+        "passwordless_when_enabled": false
       },
       "editor_tabs": [
         {
@@ -5782,7 +4717,7 @@
             "title",
             "user_id",
             "email",
-            "totp_enabled"
+            "login_mode"
           ],
           "sort_order": 10
         }
@@ -5802,7 +4737,7 @@
           "is_system": true,
           "is_deletable": false,
           "sort_order": 1,
-          "default": "Connexion par code email",
+          "default": "Mode de connexion IAM",
           "help_text": "Titre système stable utilisé par la gouvernance des blueprints."
         },
         {
@@ -5832,12 +4767,17 @@
           "value_source": "context"
         },
         {
-          "field_key": "totp_enabled",
-          "label": "Connexion par code email",
-          "field_type": "toggle",
+          "field_key": "login_mode",
+          "label": "Mode de connexion",
+          "field_type": "select",
           "tab_key": "advanced",
-          "default": false,
-          "help_text": "Si actif, le login demande uniquement le code email après saisie de l’adresse, sans mot de passe."
+          "default": "password",
+          "options": [
+            {"value": "password", "label": "Mot de passe classique"},
+            {"value": "email_code", "label": "Code par e-mail"},
+            {"value": "totp", "label": "Mot de passe + application TOTP"}
+          ],
+          "help_text": "login_mode est la source de vérité. Le code par e-mail n’est pas un TOTP."
         }
       ],
       "validation": {

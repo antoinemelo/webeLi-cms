@@ -5,33 +5,26 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-permissions:
-  - content.read
-  - content.create
-  - content.update
-  - content.draft.create
-source_paths:
   - backend/routes/api.php
   - backend/src/Content
   - database/schema/core.sql
   - admin-app/src
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Créer, modifier et prévisualiser un contenu
 
 ## Résultat attendu
 
-Créer, modifier et prévisualiser un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Créer, modifier et prévisualiser un contenu avec l’éditeur structuré, puis contrôler le rendu dans la prévisualisation ou dans l’[éditeur visuel](visual-editor.md) lorsque les champs sont exposés par le thème.
 
 ## Public et droits
 
@@ -47,17 +40,19 @@ avoir choisi le site, la langue et un type de contenu dont le blueprint est acti
 2. Renseignez le titre, le slug ou chemin proposé, les champs obligatoires du blueprint et les blocs autorisés.
 3. Enregistrez le brouillon. Le serveur crée ou met à jour une révision ; la projection publique n’est pas remplacée.
 4. Modifiez l’entrée puis utilisez **Prévisualiser**. L’aperçu repose sur une URL signée et montre la révision visée.
-5. Corrigez les erreurs de validation affichées par champ avant de transmettre au publicateur.
+5. Lorsque vous voulez corriger le contenu dans son contexte de rendu, ouvrez l’onglet **Visuel**, sélectionnez une zone éditable, enregistrez la modification puis vérifiez la prévisualisation rechargée.
+6. Corrigez les erreurs de validation affichées par champ avant de transmettre au publicateur.
 
 ## Résultat observable
 
-Une entrée et une révision de brouillon existent. L’API publique continue de servir la dernière projection publiée tant qu’aucune publication n’a lieu.
+Une entrée et une révision de brouillon existent. Les modifications réalisées dans l’éditeur structuré ou dans l’éditeur visuel restent dans la révision de travail. L’API publique continue de servir la dernière projection publiée tant qu’aucune publication n’a lieu.
 
 ## Erreurs fréquentes
 
 - **Champ absent :** vérifiez la version active du blueprint.
 - **Slug refusé :** il doit être unique dans la portée site/langue/route.
 - **Aperçu expiré :** régénérez l’URL signée.
+- **Zone non sélectionnable en mode visuel :** le champ n’est probablement pas exposé comme éditable dans le template. Utilisez l’éditeur structuré ou demandez l’ajout des attributs Twig nécessaires.
 
 ## Limites
 

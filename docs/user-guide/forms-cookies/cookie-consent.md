@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Modules/Cookies
+  - database/modules/cookies.sql
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - cookies.read
-  - cookies.manage
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Modules/Cookies
-  - database/modules/cookies.sql
 generated: false
 ---
 # Configurer et vérifier le consentement aux cookies
 
 ## Résultat attendu
 
-Configurer et vérifier le consentement aux cookies. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Configurer et vérifier le consentement aux cookies.
 
 ## Public et droits
 

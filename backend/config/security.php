@@ -37,6 +37,10 @@ $adminCsp = $stringEnv(
     'SECURITY_CSP_ADMIN',
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self'; upgrade-insecure-requests"
 );
+$previewCsp = $stringEnv(
+    'SECURITY_CSP_PREVIEW',
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' https: data: blob:; font-src 'self' https: data:; style-src 'self' 'unsafe-inline' https:; script-src 'self'; connect-src 'self'; frame-src 'self' https://www.youtube.com https://youtube.com https://youtu.be https://player.vimeo.com https://vimeo.com https://www.openstreetmap.org https://openstreetmap.org; upgrade-insecure-requests"
+);
 
 return [
     'enabled' => $boolEnv('SECURITY_HEADERS_ENABLED', true),
@@ -75,6 +79,20 @@ return [
             'x_frame_options' => $stringEnv('SECURITY_X_FRAME_OPTIONS_ADMIN', 'SAMEORIGIN'),
             'cross_origin_resource_policy' => $stringEnv('SECURITY_CORP_ADMIN', 'same-origin'),
             'extra' => [
+                'X-Robots-Tag' => 'noindex, nofollow, noarchive',
+            ],
+        ],
+        'preview' => [
+            'content_security_policy' => $previewCsp,
+            'referrer_policy' => $stringEnv('SECURITY_REFERRER_POLICY_PREVIEW', 'same-origin'),
+            // The visual editor embeds signed previews in an admin iframe.
+            // CSP frame-ancestors is the enforcement mechanism; X-Frame-Options
+            // is intentionally omitted because it breaks local/proxied test
+            // origins even when the signed preview URL is valid.
+            'x_frame_options' => '',
+            'cross_origin_resource_policy' => $stringEnv('SECURITY_CORP_PREVIEW', 'same-site'),
+            'extra' => [
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, private, max-age=0',
                 'X-Robots-Tag' => 'noindex, nofollow, noarchive',
             ],
         ],

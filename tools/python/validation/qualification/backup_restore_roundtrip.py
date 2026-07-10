@@ -52,7 +52,12 @@ def validate(mode: str = "slow") -> ValidationReport:
             restore = _load_restore_module()
             extract = Path(tmp) / "validated"
             extract.mkdir()
-            manifest = restore.validate_archive(archive, extract)
+            validated = restore.validate_archive(archive, extract)
+            # d7_restore_sqlite.validate_archive historically returned only the
+            # manifest. Since module-aware backups it returns (manifest, entries)
+            # so callers can restore additional database files safely. Keep this
+            # validator compatible with both contracts.
+            manifest = validated[0] if isinstance(validated, tuple) else validated
             report.checked(2)
             if int(manifest.get("schema_version", 0)) < 2:
                 report.add("BKP-205", "Version de manifeste de sauvegarde obsolète", details={"schema_version": manifest.get("schema_version")})

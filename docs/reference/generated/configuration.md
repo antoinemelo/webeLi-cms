@@ -5,7 +5,6 @@ audience:
   - installer
   - evaluator
 status: stable
-version: 1.0
 source_of_truth: generated
 generator: tools/python/generators/generate_documentation.py
 owners:
@@ -47,6 +46,8 @@ generated: true
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_WINDOW` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_SALE_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_SALE_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_BASE_URL` | `backend/config/app.php` |
@@ -57,6 +58,12 @@ generated: true
 | `APP_TIMEZONE` | `backend/config/app.php` |
 | `APP_TWIG_CACHE` | `backend/config/app.php` |
 | `APP_WORKER_MAX_ATTEMPTS` | `backend/config/app.php` |
+| `BUSINESS_TELEGRAM_BOT_TOKEN` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_TELEGRAM_ENABLED` | `backend/src/Modules/Business/Messaging/TelegramBotProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_ACCESS_TOKEN` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_API_VERSION` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_ENABLED` | `backend/src/Modules/Business/Messaging/WhatsAppCloudApiProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `BUSINESS_WHATSAPP_PHONE_NUMBER_ID` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `CMS_TOTP_KEY` | `backend/src/Repository/AuthRepository.php` |
 | `DEC_CMS_AUDIT_INTERNAL` | `tools/python/operations/deployment/d_deploy.py` |
 | `FTP_PASSIVE` | `tools/python/operations/deployment/d11_ci_release.py` |

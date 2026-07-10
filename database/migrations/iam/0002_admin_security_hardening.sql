@@ -24,6 +24,6 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES 
 INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES ('security.webhooks.manage', 'Gérer les webhooks', 'Créer, modifier, activer, désactiver et supprimer les webhooks de publication.');
 INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES ('security.cors.read', 'Lire le CORS par site', 'Consulter les origines CORS autorisées pour l’API headless du site.');
 INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES ('security.cors.manage', 'Gérer le CORS par site', 'Modifier les origines CORS autorisées pour l’API headless du site.');
-INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES ('users.email_2fa.manage', 'Gérer la connexion par code email', 'Activer ou désactiver la connexion par code email depuis la fiche utilisateur.');
+INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES ('users.email_2fa.manage', 'Gérer les modes de connexion IAM', 'Modifier le mode de connexion password, email_code ou totp depuis la fiche utilisateur.');
 INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
 SELECT r.id, p.id FROM iam_roles r JOIN iam_permissions p ON p.permission_key IN ('security.tokens.read','security.tokens.manage','security.webhooks.read','security.webhooks.manage','security.cors.read','security.cors.manage','users.email_2fa.manage') WHERE r.role_key='super_admin';

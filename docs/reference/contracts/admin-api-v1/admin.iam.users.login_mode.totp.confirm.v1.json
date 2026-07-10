@@ -1,0 +1,46 @@
+{
+  "contract": "admin.iam.users.login_mode.totp.confirm.v1",
+  "methods": [
+    "POST"
+  ],
+  "permission": "users.email_2fa.manage",
+  "headers": {
+    "write_requests": {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": "required",
+      "X-Contract-Version": "admin-api-v1"
+    }
+  },
+  "request": {
+    "POST": {
+      "secret": "Base32 secret returned by prepare",
+      "code": "6 digit TOTP code"
+    }
+  },
+  "response": {
+    "data": {
+      "user": "iam user summary including login_mode=totp",
+      "login_mode": "totp",
+      "recovery_codes": [
+        "one-use recovery codes displayed only in this response"
+      ],
+      "message": "Mode mot de passe + application TOTP activé et sessions révoquées."
+    },
+    "meta": {
+      "contract": "admin.iam.users.login_mode.totp.confirm.v1",
+      "request_id": "...",
+      "contract_version": "admin-api-v1"
+    }
+  },
+  "errors": [
+    "AUTH_REQUIRED",
+    "AUTHZ_FORBIDDEN",
+    "CSRF_TOKEN_REJECTED",
+    "VALIDATION_FAILED",
+    "INTERNAL_SERVER_ERROR"
+  ],
+  "supported_versions": [
+    "admin-api-v1"
+  ],
+  "path": "/admin/api/iam/users/{id}/login-mode/totp/confirm"
+}

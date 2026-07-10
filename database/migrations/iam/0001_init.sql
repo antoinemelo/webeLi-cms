@@ -18,6 +18,7 @@ CREATE TABLE iam_users (
     password_reset_requested_at TEXT,
     password_reset_sent_at TEXT,
     last_password_change_at TEXT,
+    login_mode TEXT NOT NULL DEFAULT 'password' CHECK(login_mode IN ('password', 'email_code', 'totp')),
     totp_enabled INTEGER NOT NULL DEFAULT 0 CHECK(totp_enabled IN (0, 1)),
     totp_required INTEGER NOT NULL DEFAULT 0 CHECK(totp_required IN (0, 1)),
     totp_secret_protected TEXT,
@@ -145,6 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_iam_user_site_roles_user_site ON iam_user_site_ro
 CREATE INDEX IF NOT EXISTS idx_iam_user_site_roles_site_role ON iam_user_site_roles(site_id, role_id);
 CREATE INDEX IF NOT EXISTS idx_iam_users_active ON iam_users(is_active);
 CREATE INDEX IF NOT EXISTS idx_iam_users_email_normalized ON iam_users(email_normalized);
+CREATE INDEX IF NOT EXISTS idx_iam_users_login_mode ON iam_users(login_mode);
 CREATE INDEX IF NOT EXISTS idx_iam_users_password_reset_selector ON iam_users(password_reset_selector);
 CREATE INDEX IF NOT EXISTS idx_iam_users_password_reset_expires ON iam_users(password_reset_expires_at);
 CREATE INDEX IF NOT EXISTS idx_iam_users_totp_enabled ON iam_users(totp_enabled);

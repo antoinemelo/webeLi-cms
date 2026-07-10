@@ -5,28 +5,24 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-source_paths:
-  - backend/src
-  - backend/routes/api.php
-  - admin-app/src
 generated: false
 ---
 # Résoudre les erreurs fréquentes du back-office
 
 ## Résultat attendu
 
-Résoudre les erreurs fréquentes du back-office. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Résoudre les erreurs fréquentes du back-office.
 
 ## Public et droits
 

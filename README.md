@@ -15,14 +15,30 @@ DEC CMS est un CMS PHP/Twig multisite et multilingue avec back-office Vue, conte
 
 ## Commandes principales
 
-Depuis la racine du projet :
+Deux contextes sont volontairement séparés :
+
+- **Archive release installée** : contrôles non destructifs et autonomes, sans tests source ni dépendances de build.
+- **Dépôt source complet** : contrôles de développement, tests automatisés, qualification et packaging.
+
+Depuis une archive release installée :
 
 ```bash
-python3 tools/cms.py rebuild
+python3 tools/cms.py smoke
 python3 tools/cms.py validate
-python3 tools/cms.py test
 python3 tools/cms.py docs check
+```
+
+Depuis le dépôt source complet :
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py test
+python3 tools/cms.py qualify --profile complete
 python3 tools/cms.py release --package --verify-archive --include-vendor
 ```
+
+`python3 tools/cms.py test` est réservé au dépôt source complet. Si les tests source sont absents, la commande signale explicitement d'utiliser les contrôles release ci-dessus.
+
+Pour une installation existante avec contenu, la mise à jour normale passe par sauvegarde, migrations incrémentales et validation ; voir [`docs/operations/existing-database-update.md`](docs/operations/existing-database-update.md). `python3 tools/cms.py rebuild` reste disponible pour le développement, les tests et la récupération contrôlée, mais ne doit pas servir à mettre à jour une instance contenant des données utiles.
 
 La procédure d’installation publique est décrite dans [`docs/installation/README.md`](docs/installation/README.md). Une release destinée à être installée sans Composer doit être créée avec `--include-vendor`.

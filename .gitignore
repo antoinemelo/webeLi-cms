@@ -48,6 +48,10 @@ tools/tests/*_credentials.csv
 tools/tests/*.zip
 tools/tests/webeLi-evidence-*/
 
+# Artefacts Playwright locaux
+frontend/admin-vue/test-results/
+frontend/admin-vue/playwright-report/
+
 # Rapports locaux de qualification
 storage/qualification/*
 !storage/qualification/.gitkeep

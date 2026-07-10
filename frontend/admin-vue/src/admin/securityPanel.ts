@@ -13,7 +13,7 @@
     tokens: 'API headless publique : tokens Bearer, documentation, OpenAPI et exemples front-end pour le site sélectionné.',
     webhooks: 'Configuration des webhooks de publication signés par site.'
   };
-  const HEADLESS_PUBLIC_SCOPES = ['headless:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'];
+  const HEADLESS_PUBLIC_SCOPES = ['headless:read', 'routes:read', 'content:read', 'media:read', 'search:read', 'menus:read', 'taxonomies:read'];
 
   const h = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const dataBody = (data) => JSON.stringify({data});
@@ -182,13 +182,11 @@
     return `${location.origin}${pathBase}`.replace(/\/+$/, '');
   }
   function publicApiBaseUrl(siteId){ return absolutePublicPath('/api/v1', siteId); }
-  const PUBLIC_API_DOCS_INDEX = 'docs/public-api/index.html';
-  const PUBLIC_API_OPENAPI = 'docs/public-api/openapi.v1.json';
-  // Public API docs, OpenAPI and code examples are site-aware: a selected sub-site
-  // such as /mod/site_a must generate /mod/site_a/api/v1 and /mod/site_a/docs/public-api/*.
+  // Public API endpoints are site-aware: a selected sub-site such as /site_a
+  // must generate the same site-aware base path before /api/v1 and /api/v1/openapi.*.
   function publicDocsUrl(file='index.html', siteId){ return absolutePublicPath(`/docs/public-api/${file}`, siteId); }
-  function openApiUrl(siteId){ return publicDocsUrl('openapi.v1.json', siteId); }
-  function openApiYamlUrl(siteId){ return publicDocsUrl('openapi.v1.yaml', siteId); }
+  function openApiUrl(siteId){ return absolutePublicPath('/api/v1/openapi.json', siteId); }
+  function openApiYamlUrl(siteId){ return absolutePublicPath('/api/v1/openapi.yaml', siteId); }
   function selectedSiteKey(siteId){
     const site = selectedSite(siteId);
     return String(site?.site_key || site?.key || site?.slug || 'main');
@@ -196,14 +194,14 @@
   function selectedLang(){ return String(adminContext?.current_content_language_code || adminContext?.current_language_code || adminContext?.site?.default_language_code || adminContext?.language || adminContext?.lang || adminContext?.locale || 'fr').slice(0, 2) || 'fr'; }
   function headlessScopes(state){
     const raw = Array.isArray(state?.available_scopes) ? state.available_scopes : [];
-    const normalized = new Set([...HEADLESS_PUBLIC_SCOPES, ...raw.filter(scope => /^(headless|content|media|search|menus|taxonomies):read$/.test(String(scope)))]);
+    const normalized = new Set([...HEADLESS_PUBLIC_SCOPES, ...raw.filter(scope => /^(headless|routes|content|media|search|menus|taxonomies):read$/.test(String(scope)))]);
     return [...normalized];
   }
   function codeBlock(title, code){
     return `<div class="amcms-headless-code-card"><h4>${h(title)}</h4><pre class="amcms-headless-code"><code>${h(code)}</code></pre><div class="amcms-security-actions"><button type="button" class="amcms-security-btn" data-copy-snippet="${h(code)}">Copier</button></div></div>`;
   }
   function headlessDocLinksHtml(siteId){
-    return `<div class="amcms-headless-links"><a class="amcms-security-btn" href="${h(publicDocsUrl('index.html', siteId))}" target="_blank" rel="noopener">Documentation</a><a class="amcms-security-btn" href="${h(openApiUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 JSON</a><a class="amcms-security-btn" href="${h(openApiYamlUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 YAML</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-next/README.md', siteId))}" target="_blank" rel="noopener">Next</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-nuxt/README.md', siteId))}" target="_blank" rel="noopener">Nuxt</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-astro/README.md', siteId))}" target="_blank" rel="noopener">Astro</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-vanilla/README.md', siteId))}" target="_blank" rel="noopener">Vanilla</a></div>`;
+    return `<div class="amcms-headless-links"><a class="amcms-security-btn" href="${h(openApiUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 JSON</a><a class="amcms-security-btn" href="${h(openApiYamlUrl(siteId))}" target="_blank" rel="noopener">OpenAPI v1 YAML</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-next/README.md', siteId))}" target="_blank" rel="noopener">Next</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-nuxt/README.md', siteId))}" target="_blank" rel="noopener">Nuxt</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-astro/README.md', siteId))}" target="_blank" rel="noopener">Astro</a><a class="amcms-security-btn" href="${h(absolutePublicPath('/examples/headless-vanilla/README.md', siteId))}" target="_blank" rel="noopener">Vanilla</a></div>`;
   }
   function headlessIntroHtml(siteId, state){
     const apiUrl = publicApiBaseUrl(siteId);
@@ -255,7 +253,7 @@
     const cors = (state?.cors || []).find(c => Number(c.site_id) === Number(siteId)) || {origins:[]};
     const origins = Array.isArray(cors.origins) ? cors.origins : [];
     const originsHtml = origins.length ? origins.map(origin => `<li><code>${h(origin)}</code></li>`).join('') : '<li class="amcms-security-muted">Aucune origine spécifique configurée pour ce site.</li>';
-    return `<section data-amcms-cors-relations="1" class="amcms-security-card"><h3 class="amcms-security-title">CORS par site — API headless publique</h3><p class="amcms-security-muted">CORS indique quels domaines front-end ont le droit d’appeler l’API publique depuis un navigateur. Ajoutez ici les origines exactes de vos fronts, par exemple <code>https://www.example.ch</code>. Un token Bearer reste nécessaire si l’endpoint le demande.</p><div class="amcms-headless-note"><strong>Exposition publique</strong><br>Seuls les contenus publiés sont exposés par l’API headless v1. Les contenus brouillons, l’administration et les mutations publiques ne sont pas exposés.</div><h4>Origines CORS actuelles</h4><ul class="amcms-headless-inline-list">${originsHtml}</ul><div class="amcms-headless-kv"><strong>URL de base API</strong><code>${h(publicApiBaseUrl(siteId))}</code><strong>OpenAPI JSON</strong><code>${h(openApiUrl(siteId))}</code><strong>OpenAPI YAML</strong><code>${h(openApiYamlUrl(siteId))}</code></div>${headlessDocLinksHtml(siteId)}</section>`;
+    return `<section data-amcms-cors-relations="1" class="amcms-security-card"><h3 class="amcms-security-title">CORS par site — API headless publique</h3><p class="amcms-security-muted">CORS indique quels domaines front-end ont le droit d’appeler l’API publique depuis un navigateur. Ajoutez ici les origines exactes de vos fronts, par exemple <code>https://www.example.ch</code>. Un token Bearer reste nécessaire si l’endpoint le demande.</p><div class="amcms-headless-note"><strong>Exposition publique</strong><br>Seuls les contenus publiés sont exposés par l’API headless v1. Les contenus brouillons, l’administration et les mutations publiques ne sont pas exposés.</div><h4>Origines CORS actuelles</h4><ul class="amcms-headless-inline-list">${originsHtml}</ul><div class="amcms-headless-kv"><strong>URL de base API</strong><a href="${h(publicApiBaseUrl(siteId))}" target="_blank" rel="noopener"><code>${h(publicApiBaseUrl(siteId))}</code></a><strong>OpenAPI JSON</strong><code>${h(openApiUrl(siteId))}</code><strong>OpenAPI YAML</strong><code>${h(openApiYamlUrl(siteId))}</code></div>${headlessDocLinksHtml(siteId)}</section>`;
   }
 
   function injectStyles(){
@@ -382,35 +380,8 @@
   }
 
   async function injectTotpInUserAdvanced(){
-    if (!canManageEmail2fa()) return;
-    const advanced = findUserAdvancedContainer();
-    if (!advanced || advanced.querySelector('[data-amcms-user-totp]')) return;
-    const email = currentEditorEmail();
-    if (!email || !isIamUsersRoute()) return;
-    const users = usersCache.length ? usersCache : await loadUsers().catch(()=>[]);
-    const user = users.find(u => String(u.email || '').toLowerCase() === email);
-    if (!user) return;
-    const card = document.createElement('section');
-    card.dataset.amcmsUserTotp = '1';
-    card.className = 'amcms-security-card';
-    card.innerHTML = `<p>Connexion par code email : <span class="amcms-security-pill ${user.totp_enabled ? 'ok' : 'off'}">${user.totp_enabled ? 'active' : 'inactive'}</span></p><div data-amcms-security-message class="amcms-security-muted"></div><div class="amcms-security-actions">${user.totp_enabled ? `<button type="button" class="amcms-security-btn danger" data-totp-disable="${user.id}">Désactiver la connexion par code email</button>` : `<button type="button" class="amcms-security-btn primary" data-totp-enable="${user.id}">Activer la connexion par code email</button>`}</div>`;
-    advanced.appendChild(card);
-    card.querySelector('[data-totp-enable]')?.addEventListener('click', () => enableTotp(card, user.id));
-    card.querySelector('[data-totp-disable]')?.addEventListener('click', async () => {
-      if (!confirm('Désactiver la connexion par code email pour cet utilisateur et révoquer ses sessions ?')) return;
-      try { await api(`/iam/users/${user.id}/totp/disable`, {method:'POST', body:dataBody({})}); usersCache = []; message(card, 'Connexion par code email désactivée. Rechargez la fiche pour voir le nouveau statut.'); } catch(e){ message(card, e.message, false); }
-    });
-  }
-
-  async function enableTotp(root, id){
-    if (!confirm('Activer la connexion par code email pour cet utilisateur ? Au login, un code sera envoyé par email et le mot de passe ne sera plus demandé.')) return;
-    try{
-      await api(`/iam/users/${id}/totp/enable`, {method:'POST', body:dataBody({required:true, mode:'email'})});
-      usersCache = [];
-      message(root, 'Connexion par code email activée. Rechargez la fiche pour voir le nouveau statut.');
-    } catch(e){
-      message(root, e.message || 'Activation 2FA impossible.', false);
-    }
+    // Native IAM users view owns login_mode/password/email_code/totp controls.
+    // The former injected email-code control is intentionally deprecated.
   }
 
 

@@ -3,13 +3,11 @@ title: Tester, valider et maintenir la documentation
 audience:
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: code
 owners:
   - core
 document_type: guide
-permissions:
 source_paths:
   - tools/cms.py
   - tools/python/generators
@@ -44,4 +42,6 @@ Les qualifications lentes couvrent notamment l’intégrité des bases actives, 
 
 ## Tests spécialisés
 
+- [Tests du module Business CRM](business-crm.md) : schema, migrations, permissions, memos, mailing, messaging et CSV sans API externe.
+- [Tests PIM-lite Opérations](business-pim-lite.md) : schema PIM, assets, attributs, completude, snapshot vendable, routes admin protegees et frontiere Vente.
 - [Tests de charge traçables](load-testing.md) : campagnes HTTP manuelles sous `tools/tests/`, hors suites automatisées `tools/cms.py test`.

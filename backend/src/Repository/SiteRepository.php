@@ -55,7 +55,8 @@ final class SiteRepository implements SiteReadRepository
                 return $site + [
                     'base_url' => (string) ($_SERVER['CMS_SITE_CANONICAL_BASE_URL'] ?? ''),
                     'current_base_url' => (string) ($_SERVER['CMS_SITE_CURRENT_BASE_URL'] ?? ''),
-                    'matched_base_path' => (string) ($_SERVER['CMS_SITE_BASE_PATH'] ?? ''),
+                    'matched_base_path' => (string) ($_SERVER['CMS_SITE_DOMAIN_BASE_PATH'] ?? $_SERVER['CMS_SITE_BASE_PATH'] ?? ''),
+                    'matched_request_base_path' => (string) ($_SERVER['CMS_SITE_BASE_PATH'] ?? ''),
                     'is_canonical_domain' => (string) ($_SERVER['CMS_SITE_IS_CANONICAL_DOMAIN'] ?? '') === '1',
                     'should_redirect_https' => (string) ($_SERVER['CMS_SITE_SHOULD_REDIRECT_HTTPS'] ?? '') === '1',
                 ];
@@ -343,7 +344,7 @@ final class SiteRepository implements SiteReadRepository
             'current_base_url' => $currentBase,
             'matched_domain_id' => $domain['id'] ?? null,
             'matched_host' => $domain['host'] ?? null,
-            'matched_base_path' => $domain ? self::normalizeBasePath((string) ($domain['base_path'] ?? '')) : '',
+            'matched_base_path' => $domain ? self::publicBasePath((string) ($domain['base_path'] ?? '')) : '',
             'matched_request_base_path' => $domain ? self::effectiveRequestBasePath((string) ($domain['base_path'] ?? '')) : '',
             'matched_scheme' => $domain['scheme'] ?? null,
             'is_canonical_domain' => $domain && $primary && (int) $domain['id'] === (int) $primary['id'],
@@ -385,11 +386,33 @@ final class SiteRepository implements SiteReadRepository
         return self::normalizeBasePath($basePath);
     }
 
+    /**
+     * Public URLs must always include APP_BASE_PATH when the CMS is installed
+     * below a subdirectory such as /mod. The database may contain either the
+     * full public path (/mod/site-a) or the request-visible site path (/site-a);
+     * this helper accepts both forms and never double-prefixes the app base.
+     */
+    private static function publicBasePath(string $domainBasePath): string
+    {
+        $basePath = self::normalizeBasePath($domainBasePath);
+        $appBasePath = self::normalizeBasePath(function_exists('app_base_path') ? app_base_path() : '');
+        if ($appBasePath === '') {
+            return $basePath;
+        }
+        if ($basePath === '' || $basePath === '/') {
+            return $appBasePath;
+        }
+        if ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/')) {
+            return $basePath;
+        }
+        return self::normalizeBasePath($appBasePath . '/' . ltrim($basePath, '/'));
+    }
+
     private static function domainBaseUrl(array $domain): string
     {
         $scheme = (string) ($domain['scheme'] ?? 'https');
         $host = self::normalizeHost((string) ($domain['host'] ?? 'localhost'));
-        $basePath = self::normalizeBasePath((string) ($domain['base_path'] ?? ''));
+        $basePath = self::publicBasePath((string) ($domain['base_path'] ?? ''));
         return rtrim($scheme . '://' . $host . $basePath, '/');
     }
 

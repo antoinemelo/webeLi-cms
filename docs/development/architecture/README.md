@@ -3,7 +3,6 @@ title: Architecture du CMS
 audience:
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 owners:
@@ -47,6 +46,24 @@ Une requête entre par les routes PHP, reçoit un contexte de site et de langue,
 ## Documents spécialisés
 
 - [Métadonnées d’affichage des articles](article-display-metadata.md)
+- [Specification fonctionnelle Business Catalogue](business-catalog-functional-spec.md)
+- [Audit PIM-lite Opérations / Catalogue / Vente](business-pim-lite-audit.md)
+- [Stratégie PIM-lite Opérations / Catalogue+](business-pim-lite-strategy.md)
+- [Architecture PIM-lite Opérations](business-pim-lite.md)
+- [Schéma PIM-lite Opérations](business-pim-lite-schema.md)
+- [Snapshot vendable Business vers Vente](business-sellable-snapshot.md)
+- [Assets produit Business PIM-lite](business-product-assets.md)
+- [Revue finale PIM-lite Opérations](business-pim-lite-final-review.md)
+- [Backend Business Catalogue](business-catalog-backend.md)
+- [Migrations Business Catalogue](business-catalog-migrations.md)
+- [Modele prix et variantes Business Catalogue](business-catalog-pricing.md)
+- [Garde-fous de refonte Business CRM](business-crm-redesign-guardrails.md)
+- [Architecture du module Business CRM](business-module.md)
+- [Plan d'architecture du module Business CRM](business-module-plan.md)
+- [Garde-fous du module Vente](sale-module-guardrails.md)
+- [Audit préalable Opérations CRM et Catalogue pour Vente](sale-module-audit-existing.md)
+- [Plan d'architecture du module Vente](sale-module-plan.md)
+- [Module Vente](sale-module.md)
 - [Formulaires comme module système](forms-as-system-module.md)
 - [Gouvernance des modules](module-admin-governance.md)
 - [Blueprints de modules](module-blueprints.md)

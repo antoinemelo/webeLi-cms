@@ -1,0 +1,1073 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { adminApi, apiErrorMessage } from '@/api/client';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import BusinessPageHeader from './business/BusinessPageHeader.vue';
+import SalePosView from './SalePosView.vue';
+
+type Row = Record<string, unknown>;
+type Dashboard = {
+  orders?: number;
+  active_carts?: number;
+  paid_total_minor?: number;
+  today_sales_minor?: number;
+  channels?: number;
+  recent_orders?: Row[];
+  recent_payments?: Row[];
+  open_cash_sessions?: Row[];
+};
+type Order = Row & {
+  id: number;
+  order_number?: string;
+  source?: string;
+  status?: string;
+  payment_status?: string;
+  currency?: string;
+  grand_total_minor?: number;
+  paid_total_minor?: number;
+  placed_at?: string;
+  lines?: Row[];
+};
+type Channel = Row & { id: number; code?: string; name?: string; channel_type?: string; status?: string; is_public?: number; currency?: string; price_tax_included?: number };
+type OrderColumnKey = 'number' | 'date' | 'source' | 'total' | 'payment' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+const route = useRoute();
+const router = useRouter();
+
+const loading = ref(false);
+const saving = ref(false);
+const error = ref('');
+const notice = ref('');
+const dashboard = ref<Dashboard>({});
+const orders = ref<Order[]>([]);
+const selectedOrder = ref<Order | null>(null);
+const orderPayments = ref<Row[]>([]);
+const orderEvents = ref<Row[]>([]);
+const channels = ref<Channel[]>([]);
+const paymentMethods = ref<Row[]>([]);
+const sessions = ref<Row[]>([]);
+const paymentAmount = ref(0);
+const cancelReason = ref('');
+const orderSearch = ref('');
+const orderFilter = ref({ source: '', status: '', payment_status: '' });
+const orderPage = ref(1);
+const orderPageSize = ref<number | 'all'>(25);
+const orderSort = ref<{ key: OrderColumnKey; direction: SortDirection }>({ key: 'date', direction: 'desc' });
+const visibleOrderColumns = ref<Record<OrderColumnKey, boolean>>({
+  number: true,
+  date: true,
+  source: true,
+  total: true,
+  payment: true,
+  status: true
+});
+
+const tabs = [
+  { key: 'dashboard', label: 'Tableau de bord', path: '/sale' },
+  { key: 'orders', label: 'Commandes', path: '/sale/orders' },
+  { key: 'pos', label: 'POS', path: '/sale/pos' },
+  { key: 'settings', label: 'Réglages', path: '/sale/settings' }
+];
+const orderColumns: Array<{ key: OrderColumnKey; label: string }> = [
+  { key: 'number', label: 'Numéro' },
+  { key: 'date', label: 'Date' },
+  { key: 'source', label: 'Source' },
+  { key: 'total', label: 'Total' },
+  { key: 'payment', label: 'Paiement' },
+  { key: 'status', label: 'Statut' }
+];
+const orderPageSizeOptions: Array<number | 'all'> = [10, 25, 50, 'all'];
+const orderSourceOptions = ['ecommerce', 'pos', 'admin'];
+const orderStatusOptions = ['placed', 'confirmed', 'completed', 'cancelled'];
+const orderPaymentStatusOptions = ['unpaid', 'pending', 'partially_paid', 'paid', 'failed'];
+
+const activeTab = computed(() => {
+  if (route.path.includes('/sale/orders')) return 'orders';
+  if (route.path.includes('/sale/pos')) return 'pos';
+  if (route.path.includes('/sale/settings')) return 'settings';
+  return 'dashboard';
+});
+const filteredOrders = computed(() => {
+  const q = orderSearch.value.trim().toLowerCase();
+  return orders.value.filter((order) => {
+    if (orderFilter.value.source && String(order.source || '') !== orderFilter.value.source) return false;
+    if (orderFilter.value.status && String(order.status || '') !== orderFilter.value.status) return false;
+    if (orderFilter.value.payment_status && String(order.payment_status || '') !== orderFilter.value.payment_status) return false;
+    if (!q) return true;
+    return [
+      order.order_number,
+      shortDate(order.placed_at),
+      order.source,
+      statusLabel(order.source),
+      statusLabel(order.payment_status),
+      statusLabel(order.status),
+      money(order.grand_total_minor, order.currency)
+    ].join(' ').toLowerCase().includes(q);
+  });
+});
+const sortedOrders = computed(() => {
+  const direction = orderSort.value.direction === 'asc' ? 1 : -1;
+  return [...filteredOrders.value].sort((a, b) => {
+    const left = orderSortValue(a, orderSort.value.key);
+    const right = orderSortValue(b, orderSort.value.key);
+    if (typeof left === 'number' && typeof right === 'number') return (left - right) * direction;
+    return String(left).localeCompare(String(right), 'fr', { numeric: true, sensitivity: 'base' }) * direction;
+  });
+});
+const orderPageCount = computed(() => {
+  if (orderPageSize.value === 'all') return 1;
+  return Math.max(1, Math.ceil(filteredOrders.value.length / orderPageSize.value));
+});
+const paginatedOrders = computed(() => {
+  if (orderPageSize.value === 'all') return sortedOrders.value;
+  const start = (orderPage.value - 1) * orderPageSize.value;
+  return sortedOrders.value.slice(start, start + orderPageSize.value);
+});
+const orderPaginationLabel = computed(() => {
+  const total = filteredOrders.value.length;
+  if (total === 0) return '0 commande';
+  if (orderPageSize.value === 'all') return `${total} commande(s)`;
+  const start = (orderPage.value - 1) * orderPageSize.value + 1;
+  const end = Math.min(total, start + orderPageSize.value - 1);
+  return `${start}-${end} sur ${total} commande(s)`;
+});
+
+function money(minor?: unknown, currency?: unknown): string {
+  return `${(Number(minor || 0) / 100).toFixed(2)} ${String(currency || 'CHF')}`;
+}
+
+function shortDate(value?: unknown): string {
+  const text = String(value || '');
+  return text ? text.replace('T', ' ').slice(0, 16) : '-';
+}
+
+function statusLabel(value?: unknown): string {
+  const labels: Record<string, string> = {
+    draft: 'Brouillon',
+    active: 'Actif',
+    placed: 'Placée',
+    confirmed: 'Confirmée',
+    completed: 'Terminée',
+    cancelled: 'Annulée',
+    unpaid: 'Non payé',
+    pending: 'En attente',
+    partially_paid: 'Partiel',
+    paid: 'Payé',
+    failed: 'Échec',
+    ecommerce: 'E-commerce',
+    pos: 'POS',
+    admin: 'Admin'
+  };
+  const key = String(value || '');
+  return labels[key] || key || '-';
+}
+
+function saleCatalogPdfUrl(channel: Channel): string {
+  return adminApi.href('/sale/catalog/export.pdf', { channel_id: channel.id, catalog_channel: 'catalogue' });
+}
+
+async function go(path: string): Promise<void> {
+  if (path === '/sale/pos') {
+    await router.push(path);
+    return;
+  }
+  await router.push(path);
+}
+
+async function loadDashboard(): Promise<void> {
+  const response = await adminApi.get<Dashboard>('/sale/dashboard');
+  dashboard.value = response.data;
+}
+
+async function loadOrders(): Promise<void> {
+  const response = await adminApi.get<{ orders: Order[] }>('/sale/orders', {
+    limit: 100,
+    q: orderSearch.value.trim(),
+    status: orderFilter.value.status,
+    payment_status: orderFilter.value.payment_status
+  });
+  orders.value = response.data.orders || [];
+  if (selectedOrder.value && !orders.value.some((order) => order.id === selectedOrder.value?.id)) {
+    selectedOrder.value = null;
+    orderPayments.value = [];
+    orderEvents.value = [];
+  }
+  if (!selectedOrder.value && orders.value[0]) {
+    await selectOrder(orders.value[0]);
+  }
+}
+
+async function loadSettings(): Promise<void> {
+  const [channelResponse, methodResponse, sessionResponse] = await Promise.all([
+    adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
+    adminApi.get<{ payment_methods: Row[] }>('/sale/payment-methods'),
+    adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions')
+  ]);
+  channels.value = channelResponse.data.channels || [];
+  paymentMethods.value = methodResponse.data.payment_methods || [];
+  sessions.value = sessionResponse.data.sessions || [];
+}
+
+async function load(): Promise<void> {
+  loading.value = true;
+  error.value = '';
+  try {
+    if (activeTab.value === 'dashboard') await loadDashboard();
+    if (activeTab.value === 'orders') await loadOrders();
+    if (activeTab.value === 'settings') await loadSettings();
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function selectOrder(order: Order): Promise<void> {
+  error.value = '';
+  selectedOrder.value = order;
+  try {
+    const [orderResponse, paymentsResponse, eventsResponse] = await Promise.all([
+      adminApi.get<{ order: Order }>(`/sale/orders/${order.id}`),
+      adminApi.get<{ payments: Row[] }>(`/sale/orders/${order.id}/payments`),
+      adminApi.get<{ events: Row[] }>(`/sale/orders/${order.id}/events`)
+    ]);
+    selectedOrder.value = orderResponse.data.order;
+    orderPayments.value = paymentsResponse.data.payments || [];
+    orderEvents.value = eventsResponse.data.events || [];
+    const due = Math.max(0, Number(selectedOrder.value.grand_total_minor || 0) - Number(selectedOrder.value.paid_total_minor || 0));
+    paymentAmount.value = due;
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  }
+}
+
+async function recordPayment(): Promise<void> {
+  if (!selectedOrder.value?.id || paymentAmount.value < 1) return;
+  saving.value = true;
+  error.value = '';
+  notice.value = '';
+  try {
+    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/payments`, { amount_minor: Math.round(paymentAmount.value) });
+    notice.value = 'Paiement enregistré.';
+    selectedOrder.value = response.data.order;
+    await selectOrder(selectedOrder.value);
+    await loadOrders();
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function cancelOrder(): Promise<void> {
+  if (!selectedOrder.value?.id || !confirm('Annuler cette commande ?')) return;
+  saving.value = true;
+  error.value = '';
+  notice.value = '';
+  try {
+    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/cancel`, { reason: cancelReason.value || 'Annulation back-office' });
+    notice.value = 'Commande annulée.';
+    selectedOrder.value = response.data.order;
+    await loadOrders();
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function printReceipt(): Promise<void> {
+  if (!selectedOrder.value?.id) return;
+  try {
+    const response = await adminApi.get<{ receipt: Row | null }>(`/sale/orders/${selectedOrder.value.id}/receipt`);
+    const printable = String(response.data.receipt?.printable_text || `Commande ${selectedOrder.value.order_number || selectedOrder.value.id}\nTotal ${money(selectedOrder.value.grand_total_minor, selectedOrder.value.currency)}`);
+    const win = window.open('', 'sale-order-receipt', 'popup,width=360,height=640');
+    if (!win) {
+      error.value = 'Impossible de préparer le ticket à imprimer.';
+      return;
+    }
+    win.document.open();
+    win.document.write(receiptPrintHtml(printable));
+    win.document.close();
+    win.focus();
+    win.addEventListener('afterprint', () => {
+      win.close();
+    }, { once: true });
+    setTimeout(() => {
+      win.focus();
+      win.print();
+    }, 100);
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  }
+}
+
+function receiptPrintHtml(text: string): string {
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Ticket</title>
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    * { box-sizing: border-box; }
+    body {
+      color: #111827;
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.35;
+      margin: 0;
+      width: 72mm;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body><pre>${escapeHtml(text)}</pre></body>
+</html>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function orderColumnVisible(key: OrderColumnKey): boolean {
+  return visibleOrderColumns.value[key];
+}
+
+function orderSortValue(order: Order, key: OrderColumnKey): string | number {
+  if (key === 'number') return String(order.order_number || order.id || '');
+  if (key === 'date') return Date.parse(String(order.placed_at || '')) || 0;
+  if (key === 'source') return statusLabel(order.source);
+  if (key === 'total') return Number(order.grand_total_minor || 0);
+  if (key === 'payment') return statusLabel(order.payment_status);
+  return statusLabel(order.status);
+}
+
+function orderSortLabel(key: OrderColumnKey): string {
+  const column = orderColumns.find((item) => item.key === key);
+  if (orderSort.value.key !== key) return `Trier par ${column?.label || key}`;
+  return `Tri ${column?.label || key} ${orderSort.value.direction === 'asc' ? 'ascendant' : 'descendant'}`;
+}
+
+function setOrderSort(key: OrderColumnKey): void {
+  if (orderSort.value.key === key) {
+    orderSort.value = { key, direction: orderSort.value.direction === 'asc' ? 'desc' : 'asc' };
+  } else {
+    orderSort.value = { key, direction: key === 'date' || key === 'total' ? 'desc' : 'asc' };
+  }
+  orderPage.value = 1;
+}
+
+function orderPageSizeLabel(size: number | 'all'): string {
+  return size === 'all' ? 'Toutes' : String(size);
+}
+
+function onOrderPageSizeChange(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value;
+  orderPageSize.value = value === 'all' ? 'all' : Number(value);
+  orderPage.value = 1;
+}
+
+function setOrderPage(page: number): void {
+  orderPage.value = Math.min(orderPageCount.value, Math.max(1, page));
+}
+
+function applyOrderFilters(): void {
+  orderPage.value = 1;
+  void loadOrders();
+}
+
+function resetOrderFilters(): void {
+  orderSearch.value = '';
+  orderFilter.value = { source: '', status: '', payment_status: '' };
+  orderPage.value = 1;
+  void loadOrders();
+}
+
+function closeSaleMenus(): void {
+  document.querySelectorAll<HTMLDetailsElement>('.sale-menu[open]').forEach((menu) => {
+    menu.removeAttribute('open');
+  });
+}
+
+function csvCell(value: unknown): string {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`;
+}
+
+function exportOrdersCsv(): void {
+  const header = ['Numéro', 'Date', 'Source', 'Total', 'Paiement', 'Statut'];
+  const rows = sortedOrders.value.map((order) => [
+    order.order_number || order.id,
+    shortDate(order.placed_at),
+    statusLabel(order.source),
+    money(order.grand_total_minor, order.currency),
+    statusLabel(order.payment_status),
+    statusLabel(order.status)
+  ]);
+  const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `commandes-vente-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  closeSaleMenus();
+}
+
+watch(() => route.path, () => { void load(); });
+watch(() => [filteredOrders.value.length, orderPageSize.value], () => {
+  if (orderPage.value > orderPageCount.value) orderPage.value = orderPageCount.value;
+});
+onMounted(load);
+</script>
+
+<template>
+  <section class="page-stack sale-admin">
+    <PageHeader title="Vente" intro="Commandes, POS, paiements et stock transactionnel." />
+
+    <nav class="editor-tabs sale-tabs" aria-label="Navigation Vente">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        type="button"
+        :class="['editor-tab', { active: activeTab === tab.key }]"
+        @click="go(tab.path)"
+      >
+        {{ tab.label }}
+      </button>
+    </nav>
+
+    <div v-if="notice" class="alert alert-success py-2">{{ notice }}</div>
+    <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+
+    <section v-if="activeTab === 'dashboard'" class="sale-admin__panel">
+      <div class="sale-admin__metrics">
+        <div class="sale-admin__metric">
+          <span>Ventes du jour</span>
+          <strong>{{ money(dashboard.today_sales_minor) }}</strong>
+        </div>
+        <div class="sale-admin__metric">
+          <span>Commandes</span>
+          <strong>{{ dashboard.orders || 0 }}</strong>
+        </div>
+        <div class="sale-admin__metric">
+          <span>Paniers actifs</span>
+          <strong>{{ dashboard.active_carts || 0 }}</strong>
+        </div>
+        <div class="sale-admin__metric">
+          <span>Payé total</span>
+          <strong>{{ money(dashboard.paid_total_minor) }}</strong>
+        </div>
+      </div>
+
+      <div class="sale-admin__grid">
+        <section class="sale-admin__section">
+          <div class="sale-admin__section-head">
+            <h2>Commandes récentes</h2>
+          </div>
+          <div v-if="!(dashboard.recent_orders || []).length" class="text-muted">Aucune commande.</div>
+          <button v-for="order in dashboard.recent_orders || []" :key="String(order.id)" class="sale-admin__list-row" type="button" @click="go('/sale/orders')">
+            <span>{{ order.order_number }}</span>
+            <b>{{ money(order.grand_total_minor, order.currency) }}</b>
+            <small>{{ statusLabel(order.payment_status) }}</small>
+          </button>
+        </section>
+
+        <section class="sale-admin__section">
+          <h2>Paiements récents</h2>
+          <div v-if="!(dashboard.recent_payments || []).length" class="text-muted">Aucun paiement.</div>
+          <div v-for="payment in dashboard.recent_payments || []" :key="String(payment.id)" class="sale-admin__list-row">
+            <span>{{ payment.order_number }}</span>
+            <b>{{ money(payment.amount_minor, payment.currency) }}</b>
+            <small>{{ statusLabel(payment.status) }}</small>
+          </div>
+        </section>
+
+        <section class="sale-admin__section">
+          <h2>Sessions caisse ouvertes</h2>
+          <div v-if="!(dashboard.open_cash_sessions || []).length" class="text-muted">Aucune session ouverte.</div>
+          <div v-for="session in dashboard.open_cash_sessions || []" :key="String(session.id)" class="sale-admin__list-row">
+            <span>{{ session.register_name || session.register_code }}</span>
+            <b>{{ money(session.expected_cash_minor, session.currency) }}</b>
+            <small>{{ shortDate(session.opened_at) }}</small>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section v-if="activeTab === 'orders'" class="sale-admin__panel sale-admin__orders">
+      <section class="sale-admin__section sale-orders-list">
+        <BusinessPageHeader eyebrow="Vente" title="Commandes" />
+
+        <form class="sale-toolbar" @submit.prevent="applyOrderFilters">
+          <div class="sale-search-control">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            <input v-model="orderSearch" type="search" placeholder="Recherche commande, source, paiement" @keyup.enter="applyOrderFilters">
+            <button v-if="orderSearch" type="button" aria-label="Effacer la recherche" @click="orderSearch = ''; applyOrderFilters()">×</button>
+          </div>
+          <div class="sale-toolbar-buttons">
+            <details class="sale-menu sale-menu--filters">
+              <summary class="sale-icon-summary" aria-label="Filtres commandes" title="Filtres">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="sale-menu-panel sale-filter-panel">
+                <strong>Filtres</strong>
+                <label>
+                  <select v-model="orderFilter.source" aria-label="Source">
+                    <option value="">Toutes sources</option>
+                    <option v-for="source in orderSourceOptions" :key="source" :value="source">{{ statusLabel(source) }}</option>
+                  </select>
+                </label>
+                <label>
+                  <select v-model="orderFilter.payment_status" aria-label="Paiement">
+                    <option value="">Tous paiements</option>
+                    <option v-for="status in orderPaymentStatusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                  </select>
+                </label>
+                <label>
+                  <select v-model="orderFilter.status" aria-label="Statut">
+                    <option value="">Tous statuts</option>
+                    <option v-for="status in orderStatusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                  </select>
+                </label>
+                <div class="sale-filter-actions">
+                  <button class="btn small" type="submit" :disabled="loading">Appliquer</button>
+                  <button class="btn ghost small" type="button" :disabled="loading" @click="resetOrderFilters">Réinitialiser</button>
+                </div>
+              </div>
+            </details>
+            <details class="sale-menu sale-menu--columns">
+              <summary class="sale-icon-summary" aria-label="Colonnes commandes" title="Colonnes">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm5 0v14m6-14v14" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              </summary>
+              <div class="sale-menu-panel sale-column-panel">
+                <strong>Colonnes</strong>
+                <label v-for="column in orderColumns" :key="column.key"><input v-model="visibleOrderColumns[column.key]" type="checkbox"> {{ column.label }}</label>
+              </div>
+            </details>
+            <details class="sale-menu sale-menu--exports">
+              <summary class="sale-icon-summary" aria-label="Import / Export commandes" title="Import / Export">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/></svg>
+              </summary>
+              <div class="sale-menu-panel">
+                <button type="button" :disabled="!filteredOrders.length" @click="exportOrdersCsv">Exporter commandes CSV</button>
+                <button type="button" disabled title="Prévu dans les contrats d’intégration">Importer commandes CSV</button>
+              </div>
+            </details>
+            <details class="sale-menu sale-menu--actions">
+              <summary aria-label="Actions commandes" title="Actions">...</summary>
+              <div class="sale-menu-panel">
+                <button type="button" :disabled="loading" @click="loadOrders(); closeSaleMenus()">Actualiser</button>
+              </div>
+            </details>
+          </div>
+        </form>
+
+        <div class="sale-admin__table-wrap">
+          <table class="table table-hover align-middle sale-orders-table">
+            <thead>
+              <tr>
+                <th v-if="orderColumnVisible('number')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('number')" @click="setOrderSort('number')">Numéro<span :class="{ active: orderSort.key === 'number' }">{{ orderSort.key === 'number' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('date')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('date')" @click="setOrderSort('date')">Date<span :class="{ active: orderSort.key === 'date' }">{{ orderSort.key === 'date' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('source')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('source')" @click="setOrderSort('source')">Source<span :class="{ active: orderSort.key === 'source' }">{{ orderSort.key === 'source' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('total')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('total')" @click="setOrderSort('total')">Total<span :class="{ active: orderSort.key === 'total' }">{{ orderSort.key === 'total' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('payment')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('payment')" @click="setOrderSort('payment')">Paiement<span :class="{ active: orderSort.key === 'payment' }">{{ orderSort.key === 'payment' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('status')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('status')" @click="setOrderSort('status')">Statut<span :class="{ active: orderSort.key === 'status' }">{{ orderSort.key === 'status' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in paginatedOrders" :key="order.id" :class="{ 'table-active': selectedOrder?.id === order.id }" @click="selectOrder(order)">
+                <td v-if="orderColumnVisible('number')"><strong>{{ order.order_number }}</strong></td>
+                <td v-if="orderColumnVisible('date')">{{ shortDate(order.placed_at) }}</td>
+                <td v-if="orderColumnVisible('source')">{{ statusLabel(order.source) }}</td>
+                <td v-if="orderColumnVisible('total')">{{ money(order.grand_total_minor, order.currency) }}</td>
+                <td v-if="orderColumnVisible('payment')">{{ statusLabel(order.payment_status) }}</td>
+                <td v-if="orderColumnVisible('status')">{{ statusLabel(order.status) }}</td>
+              </tr>
+              <tr v-if="!paginatedOrders.length && !loading">
+                <td :colspan="orderColumns.length" class="text-muted p-3">Aucune commande ne correspond aux filtres.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="sale-pagination" aria-label="Pagination commandes">
+          <label>
+            Lignes
+            <select class="select" :value="orderPageSize" @change="onOrderPageSizeChange">
+              <option v-for="size in orderPageSizeOptions" :key="String(size)" :value="size">{{ orderPageSizeLabel(size) }}</option>
+            </select>
+          </label>
+          <span>{{ orderPaginationLabel }}</span>
+          <div class="sale-pagination-actions">
+            <button class="btn ghost btn-sm" type="button" :disabled="orderPage <= 1 || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage - 1)">Précédent</button>
+            <strong>Page {{ orderPage }} / {{ orderPageCount }}</strong>
+            <button class="btn ghost btn-sm" type="button" :disabled="orderPage >= orderPageCount || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage + 1)">Suivant</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sale-admin__detail" v-if="selectedOrder">
+        <div class="sale-admin__section-head">
+          <div>
+            <h2>{{ selectedOrder.order_number }}</h2>
+            <p>{{ statusLabel(selectedOrder.source) }} · {{ shortDate(selectedOrder.placed_at) }}</p>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">Imprimer reçu</button>
+        </div>
+
+        <div class="sale-admin__totals">
+          <span>Total</span>
+          <strong>{{ money(selectedOrder.grand_total_minor, selectedOrder.currency) }}</strong>
+          <span>Payé</span>
+          <strong>{{ money(selectedOrder.paid_total_minor, selectedOrder.currency) }}</strong>
+        </div>
+
+        <h3>Lignes</h3>
+        <div v-for="line in selectedOrder.lines || []" :key="String(line.id)" class="sale-admin__line">
+          <span>{{ line.product_name }} <small>{{ line.sku }}</small></span>
+          <b>{{ line.quantity }} × {{ money(line.unit_price_minor, line.currency) }}</b>
+        </div>
+
+        <h3>Paiements</h3>
+        <div v-if="!orderPayments.length" class="text-muted">Aucun paiement.</div>
+        <div v-for="payment in orderPayments" :key="String(payment.id)" class="sale-admin__line">
+          <span>{{ statusLabel(payment.transaction_type) }} · {{ statusLabel(payment.status) }}</span>
+          <b>{{ money(payment.amount_minor, payment.currency) }}</b>
+        </div>
+
+        <div class="sale-admin__actions-block">
+          <label class="form-label">Montant paiement manuel</label>
+          <div class="input-group">
+            <input v-model.number="paymentAmount" class="form-control" type="number" min="1" step="1">
+            <button class="btn btn-primary" type="button" :disabled="saving || paymentAmount < 1" @click="recordPayment">Enregistrer</button>
+          </div>
+        </div>
+
+        <div class="sale-admin__actions-block">
+          <label class="form-label">Raison d’annulation</label>
+          <input v-model="cancelReason" class="form-control" type="text" placeholder="Optionnel">
+          <button class="btn btn-outline-danger mt-2" type="button" :disabled="saving || selectedOrder.status === 'cancelled'" @click="cancelOrder">Annuler la commande</button>
+        </div>
+
+        <h3>Événements</h3>
+        <div v-if="!orderEvents.length" class="text-muted">Aucun événement.</div>
+        <div v-for="event in orderEvents" :key="String(event.id)" class="sale-admin__line">
+          <span>{{ event.event_type }}</span>
+          <small>{{ shortDate(event.created_at) }}</small>
+        </div>
+      </aside>
+    </section>
+
+    <section v-if="activeTab === 'pos'" class="sale-admin__panel sale-admin__pos">
+      <SalePosView embedded />
+    </section>
+
+    <section v-if="activeTab === 'settings'" class="sale-admin__panel">
+      <div class="sale-admin__grid">
+        <section class="sale-admin__section">
+          <h2>Canaux</h2>
+          <div v-for="channel in channels" :key="channel.id" class="sale-admin__list-row">
+            <span>{{ channel.name }} <small>{{ channel.code }}</small></span>
+            <b>{{ statusLabel(channel.channel_type) }}</b>
+            <small>{{ statusLabel(channel.status) }} · {{ channel.is_public ? 'Public' : 'Privé' }} · {{ channel.price_tax_included ? 'TTC' : 'HT' }}</small>
+            <a class="btn btn-sm btn-outline-secondary" :href="saleCatalogPdfUrl(channel)">Brochure</a>
+          </div>
+        </section>
+        <section class="sale-admin__section">
+          <h2>Moyens de paiement</h2>
+          <div v-for="method in paymentMethods" :key="String(method.id)" class="sale-admin__list-row">
+            <span>{{ method.name }}</span>
+            <b>{{ method.method_type }}</b>
+            <small>{{ statusLabel(method.status) }}</small>
+          </div>
+          <div v-if="!paymentMethods.length" class="text-muted">Aucun moyen configuré.</div>
+        </section>
+        <section class="sale-admin__section">
+          <h2>Sessions POS</h2>
+          <div v-for="session in sessions" :key="String(session.id)" class="sale-admin__list-row">
+            <span>{{ session.register_id }}</span>
+            <b>{{ money(session.expected_cash_minor, session.currency) }}</b>
+            <small>{{ statusLabel(session.status) }}</small>
+          </div>
+          <div v-if="!sessions.length" class="text-muted">Aucune session.</div>
+        </section>
+      </div>
+    </section>
+  </section>
+</template>
+
+<style scoped>
+.sale-admin {
+  --sale-border: #d0d5dd;
+}
+.sale-admin__section-head,
+.sale-admin__list-row,
+.sale-admin__line {
+  align-items: center;
+  display: flex;
+  gap: .75rem;
+}
+.sale-admin__section h2,
+.sale-admin__detail h2,
+.sale-admin__detail h3 {
+  margin: 0;
+}
+.sale-tabs {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  scrollbar-width: none;
+}
+.sale-tabs .editor-tab {
+  flex: 0 1 auto;
+}
+.sale-admin__panel {
+  display: grid;
+  gap: 1rem;
+}
+.sale-admin__metrics {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.sale-admin__metric,
+.sale-admin__section,
+.sale-admin__detail {
+  background: #fff;
+  border: 1px solid var(--sale-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.sale-admin__metric {
+  display: grid;
+  gap: .25rem;
+}
+.sale-admin__metric span,
+.sale-admin__list-row small,
+.sale-admin__line small,
+.sale-admin__section-head p {
+  color: #667085;
+}
+.sale-admin__metric strong {
+  font-size: 1.35rem;
+}
+.sale-admin__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.sale-admin__section {
+  display: grid;
+  gap: .75rem;
+}
+.sale-admin__section-head {
+  justify-content: space-between;
+}
+.sale-admin__list-row {
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #edf0f3;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: .35rem 0;
+  text-align: left;
+  width: 100%;
+}
+.sale-admin__list-row span {
+  display: grid;
+}
+.sale-admin__orders {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+}
+.sale-orders-list {
+  min-width: 0;
+}
+.sale-toolbar,
+.sale-toolbar-buttons {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+.sale-toolbar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+}
+.sale-toolbar-buttons {
+  justify-content: flex-end;
+}
+.sale-search-control {
+  align-items: center;
+  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04), inset 0 1px 0 rgba(255, 255, 255, .85);
+  display: grid;
+  gap: .55rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 2.75rem;
+  padding: .25rem .45rem .25rem .85rem;
+}
+.sale-search-control:focus-within {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .08);
+}
+.sale-search-control svg {
+  color: #64748b;
+  height: 1.05rem;
+  width: 1.05rem;
+}
+.sale-search-control input {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 0;
+  box-shadow: none !important;
+  color: #0f172a;
+  font: inherit;
+  min-height: 2.1rem;
+  min-width: 0;
+  outline: 0 !important;
+  width: 100%;
+}
+.sale-search-control button {
+  background: #e2e8f0;
+  border: 0;
+  border-radius: 999px;
+  color: #334155;
+  height: 1.85rem;
+  line-height: 1;
+  width: 1.85rem;
+}
+.sale-menu {
+  position: relative;
+  z-index: 3;
+}
+.sale-menu[open] {
+  z-index: 20;
+}
+.sale-menu summary {
+  align-items: center;
+  border: 1px solid var(--sale-border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+  list-style: none;
+  min-height: 2.1rem;
+  min-width: 2.1rem;
+  user-select: none;
+}
+.sale-menu summary::-webkit-details-marker {
+  display: none;
+}
+.sale-icon-summary svg {
+  fill: currentColor;
+  height: 1.1rem;
+  width: 1.1rem;
+}
+.sale-menu-panel {
+  background: #fff;
+  border: 1px solid var(--sale-border);
+  border-radius: 8px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, .16);
+  display: grid;
+  gap: .2rem;
+  margin-top: .35rem;
+  min-width: 170px;
+  padding: .35rem;
+  position: absolute;
+  right: 0;
+  z-index: 8;
+}
+.sale-menu-panel button,
+.sale-menu-panel a {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #344054;
+  padding: .45rem .55rem;
+  text-align: left;
+  text-decoration: none;
+}
+.sale-menu-panel button:not(:disabled):hover,
+.sale-menu-panel a:hover {
+  background: #f2f4f7;
+}
+.sale-menu-panel button:disabled {
+  color: #98a2b3;
+}
+.sale-filter-panel {
+  min-width: 260px;
+}
+.sale-filter-panel label {
+  color: #344054;
+  display: grid;
+  gap: .25rem;
+  padding: .35rem .45rem;
+}
+.sale-filter-panel select,
+.sale-column-panel label {
+  border: 1px solid var(--sale-border);
+  border-radius: 6px;
+  min-height: 2.25rem;
+  padding: .4rem .55rem;
+}
+.sale-filter-actions {
+  display: flex;
+  gap: .45rem;
+  padding: .35rem .45rem;
+}
+.sale-column-panel {
+  min-width: 210px;
+}
+.sale-column-panel strong,
+.sale-filter-panel strong {
+  color: #344054;
+  font-size: .82rem;
+  padding: .3rem .45rem;
+}
+.sale-column-panel label {
+  align-items: center;
+  border: 0;
+  color: #344054;
+  display: grid;
+  gap: .45rem;
+  grid-template-columns: auto 1fr;
+}
+.sale-admin__table-wrap {
+  background: #fff;
+  border: 1px solid var(--sale-border);
+  border-radius: 8px;
+  overflow: auto;
+}
+.sale-admin__table-wrap table {
+  margin-bottom: 0;
+}
+.sale-admin__table-wrap tbody tr {
+  cursor: pointer;
+}
+.sale-orders-table th {
+  color: #475467;
+  font-size: .78rem;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.sale-orders-table td {
+  vertical-align: middle;
+}
+.sale-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: .35rem;
+  padding: 0;
+  text-align: left;
+  text-transform: inherit;
+}
+.sale-sort-button span {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #98a2b3;
+  display: inline-flex;
+  font-size: .68rem;
+  height: 1.05rem;
+  justify-content: center;
+  line-height: 1;
+  width: 1.05rem;
+}
+.sale-sort-button span.active {
+  border-color: #0f172a;
+  color: #0f172a;
+}
+.sale-pagination {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  justify-content: space-between;
+  padding: .75rem .1rem 0;
+}
+.sale-pagination label,
+.sale-pagination-actions {
+  align-items: center;
+  display: inline-flex;
+  gap: .5rem;
+}
+.sale-pagination label {
+  color: #667085;
+  font-size: .84rem;
+  font-weight: 700;
+}
+.sale-pagination .select {
+  min-width: 5.5rem;
+}
+.sale-pagination > span,
+.sale-pagination-actions strong {
+  color: #475467;
+  font-size: .84rem;
+  white-space: nowrap;
+}
+.sale-admin__detail {
+  display: grid;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+.sale-admin__totals {
+  border-bottom: 1px solid #edf0f3;
+  border-top: 1px solid #edf0f3;
+  display: grid;
+  gap: .4rem;
+  grid-template-columns: 1fr auto;
+  padding: .75rem 0;
+}
+.sale-admin__line {
+  border-bottom: 1px solid #edf0f3;
+  justify-content: space-between;
+  padding-bottom: .5rem;
+}
+.sale-admin__line span {
+  display: grid;
+}
+.sale-admin__actions-block {
+  display: grid;
+  gap: .4rem;
+}
+@media (max-width: 980px) {
+  .sale-admin__orders {
+    grid-template-columns: 1fr;
+  }
+  .sale-admin__detail {
+    position: static;
+  }
+}
+@media (max-width: 760px) {
+  .sale-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .sale-toolbar-buttons {
+    justify-content: flex-start;
+  }
+}
+</style>

@@ -4,7 +4,6 @@ audience:
   - evaluator
   - developer
 status: stable
-version: 1.1
 last_verified: 2026-06-15
 source_of_truth: manual
 source_paths:
@@ -39,6 +38,28 @@ Contrôle conseillé :
 composer dump-autoload --working-dir backend --optimize --strict-psr
 python3 tools/cms.py rebuild
 ```
+
+Cette commande recrée les bases de la copie de test utilisée pour l’audit. Elle ne correspond pas à une procédure de mise à jour d’une instance de production avec contenu.
+
+
+## Timeout global pendant un audit release
+
+Un audit `release` peut dépasser les 10 minutes dans un environnement local ou
+conteneurisé, surtout lorsque l’image est reconstruite, que l’admin Vue est
+compilé et que la release est empaquetée avec `vendor/`. Ce cas ne doit pas
+être confondu avec un échec d’étape : consultez d’abord
+`storage/audit-results/<timestamp>/summary.tsv`.
+
+La façade applique maintenant une borne globale dédiée au profil `release`
+(7200 secondes par défaut). Pour un poste plus lent, lancez :
+
+```bash
+python3 tools/cms.py audit --profile release --build --timeout 10800
+```
+
+Si le processus parent a été interrompu par timeout, un conteneur nommé
+`cms-audit-release` peut rester présent. Le lanceur officiel nettoie ce
+conteneur avant chaque nouvel audit.
 
 ## Preuve de sauvegarde et restauration
 

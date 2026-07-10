@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - database/schema/core.sql
+  - database/seeds/core_seed.sql
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - taxonomy.read
-  - taxonomy.manage
-source_paths:
-  - backend/routes/api.php
-  - database/schema/core.sql
-  - database/seeds/core_seed.sql
 generated: false
 ---
 # Gérer les taxonomies et leurs termes
 
 ## Résultat attendu
 
-Gérer les taxonomies et leurs termes. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Gérer les taxonomies et leurs termes.
 
 ## Public et droits
 

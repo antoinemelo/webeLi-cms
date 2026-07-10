@@ -16,12 +16,10 @@ import time
 import zipfile
 from pathlib import Path
 
-from tools.python.lib.database_inventory import native_database_names
+from tools.python.lib.database_inventory import database_specs, native_database_specs
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
-DB_DIR = ROOT / "storage" / "database"
 BACKUP_DIR = ROOT / "storage" / "backups" / "sqlite"
-DATABASES = native_database_names(backup=True)
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,7 +35,55 @@ def integrity_check(path: Path) -> str:
         return str(con.execute("PRAGMA integrity_check").fetchone()[0])
 
 
-def validate_archive(archive_path: Path, extract_dir: Path) -> dict:
+def _legacy_entries() -> dict[str, dict]:
+    return {
+        spec.name: {
+            "key": spec.key,
+            "name": spec.name,
+            "path": spec.path,
+            "kind": spec.kind,
+            "module_key": spec.module_key,
+            "member": f"database/{spec.name}",
+        }
+        for spec in native_database_specs(backup=True)
+    }
+
+
+def _entries_from_manifest(manifest: dict) -> dict[str, dict]:
+    databases = manifest.get("databases", {})
+    if not isinstance(databases, dict):
+        raise RuntimeError("backup-manifest.json invalide: databases doit être un objet.")
+
+    entries: dict[str, dict] = {}
+    if int(manifest.get("schema_version", 1)) < 3:
+        legacy = _legacy_entries()
+        for name, meta in databases.items():
+            if name not in legacy:
+                raise RuntimeError(f"Base inconnue dans une ancienne sauvegarde: {name}")
+            entries[name] = legacy[name]
+        return entries
+
+    for key, meta in databases.items():
+        if not isinstance(meta, dict):
+            raise RuntimeError(f"Entrée de base invalide dans la sauvegarde: {key}")
+        rel_path = str(meta.get("path", "")).replace("\\", "/").strip().lstrip("/")
+        name = str(meta.get("name") or Path(rel_path).name).strip()
+        if not key or not rel_path or not name:
+            raise RuntimeError(f"Entrée de base incomplète dans la sauvegarde: {key}")
+        if not rel_path.startswith("storage/database/"):
+            raise RuntimeError(f"Chemin de restauration refusé hors storage/database: {rel_path}")
+        entries[str(key)] = {
+            "key": str(key),
+            "name": name,
+            "path": rel_path,
+            "kind": meta.get("kind"),
+            "module_key": meta.get("module_key"),
+            "member": f"database/{name}",
+        }
+    return entries
+
+
+def validate_archive(archive_path: Path, extract_dir: Path) -> tuple[dict, dict[str, dict]]:
     if not archive_path.exists() or not zipfile.is_zipfile(archive_path):
         raise RuntimeError(f"Archive invalide: {archive_path}")
     with zipfile.ZipFile(archive_path) as archive:
@@ -45,27 +91,30 @@ def validate_archive(archive_path: Path, extract_dir: Path) -> dict:
         if "backup-manifest.json" not in names:
             raise RuntimeError("backup-manifest.json absent.")
         manifest = json.loads(archive.read("backup-manifest.json").decode("utf-8"))
-        for name in DATABASES:
-            member = f"database/{name}"
+        entries = _entries_from_manifest(manifest)
+        for entry in entries.values():
+            member = entry["member"]
             if member not in names:
                 raise RuntimeError(f"Base absente de la sauvegarde: {member}")
         archive.extractall(extract_dir)
-    for name in DATABASES:
-        path = extract_dir / "database" / name
+    for entry in entries.values():
+        path = extract_dir / entry["member"]
         integrity = integrity_check(path)
         if integrity != "ok":
-            raise RuntimeError(f"Base invalide dans la sauvegarde: {name} integrity_check={integrity}")
-    return manifest
+            raise RuntimeError(f"Base invalide dans la sauvegarde: {entry['key']} integrity_check={integrity}")
+    return manifest, entries
 
 
-def safety_copy() -> Path:
+def safety_copy(entries: dict[str, dict]) -> Path:
     stamp = time.strftime("%Y%m%d-%H%M%S")
     target = BACKUP_DIR / f"pre-restore-{stamp}"
     target.mkdir(parents=True, exist_ok=True)
-    for name in DATABASES:
-        source = DB_DIR / name
+    for entry in entries.values():
+        source = ROOT / entry["path"]
         if source.exists():
-            shutil.copy2(source, target / name)
+            destination = target / entry["path"]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
     return target
 
 
@@ -77,19 +126,21 @@ def main() -> int:
     archive_path = Path(args.archive).expanduser()
     if not archive_path.is_absolute():
         archive_path = ROOT / archive_path
-    DB_DIR.mkdir(parents=True, exist_ok=True)
+    (ROOT / "storage" / "database").mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="amcms-restore-") as tmp:
         tmp_path = Path(tmp)
-        manifest = validate_archive(archive_path, tmp_path)
+        manifest, entries = validate_archive(archive_path, tmp_path)
         if not args.no_safety_copy:
-            safety = safety_copy()
+            safety = safety_copy(entries)
             print(f"Copie de sécurité avant restauration: {safety}")
-        for name in DATABASES:
-            shutil.copy2(tmp_path / "database" / name, DB_DIR / name)
-        for name in DATABASES:
-            integrity = integrity_check(DB_DIR / name)
+        for entry in entries.values():
+            destination = ROOT / entry["path"]
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(tmp_path / entry["member"], destination)
+        for entry in entries.values():
+            integrity = integrity_check(ROOT / entry["path"])
             if integrity != "ok":
-                raise SystemExit(f"ERREUR: restauration invalide pour {name}: integrity_check={integrity}")
+                raise SystemExit(f"ERREUR: restauration invalide pour {entry['key']}: integrity_check={integrity}")
     print(f"Restore SQLite terminé depuis: {archive_path}")
     print(f"Version sauvegardée: {manifest.get('technical_version', 'inconnue')}")
     return 0

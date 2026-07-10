@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "key": "sale",
+  "name": "Vente",
+  "version": "0.1.0",
+  "type": "system",
+  "provider_class": "App\\Modules\\Sale\\SaleModuleProvider",
+  "provider_file": "backend/src/Modules/Sale/SaleModuleProvider.php",
+  "enabled_by_default": true,
+  "optional_integrations": [
+    "sellable_catalog",
+    "customer_snapshot",
+    "crm_activity_sink",
+    "cms_account_bridge"
+  ],
+  "databases": [
+    {
+      "key": "sale",
+      "path": "storage/database/sale.sqlite",
+      "schema": "database/modules/sale.sql",
+      "migrations": "database/migrations/sale"
+    }
+  ],
+  "protected_on_core_update": false
+}

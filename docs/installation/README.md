@@ -5,7 +5,6 @@ audience:
   - superadministrator
   - developer
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 owners:
@@ -23,4 +22,4 @@ Cette section décrit uniquement l’installation initiale d’une release. Les 
 4. [Valider le déploiement](../operations/deployment.md)
 5. [Mettre en place les sauvegardes](../operations/backup-restore.md)
 
-Une installation depuis les sources peut être reconstruite avec `python3 tools/cms.py rebuild`. Une release de production doit être préparée par la chaîne de release, et non par copie arbitraire du répertoire de développement.
+Une installation neuve depuis les sources peut être initialisée avec `python3 tools/cms.py init` ou reconstruite en développement avec `python3 tools/cms.py rebuild`. Une instance existante avec contenu doit être mise à jour par sauvegarde et migrations incrémentales, pas par reconstruction. Une release de production doit être préparée par la chaîne de release, et non par copie arbitraire du répertoire de développement.

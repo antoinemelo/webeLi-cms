@@ -5,31 +5,26 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-permissions:
-  - seo.read
-  - seo.manage
-source_paths:
   - backend/routes/api.php
   - backend/src/Seo
   - frontend
   - database/schema/core.sql
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Optimiser le SEO d’un contenu
 
 ## Résultat attendu
 
-Optimiser le SEO d’un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Optimiser le SEO d’un contenu.
 
 ## Public et droits
 

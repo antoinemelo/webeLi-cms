@@ -3,13 +3,11 @@ title: Quickstart API headless v1
 audience:
   - api-integrator
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-26
 source_of_truth: contract
 owners:
   - api
 document_type: guide
-permissions: []
 source_paths:
   - backend/routes
   - backend/src
@@ -45,6 +43,8 @@ async function getJson(path) {
 ```
 
 L’en-tête `Authorization` est nécessaire lorsque l’authentification publique par token est activée. Lorsque cette protection est désactivée côté installation, les endpoints de lecture peuvent répondre sans token.
+
+Les scopes de lecture reconnus sont `headless:read`, `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read`, `catalog:read` et `pos.catalog.read`. L’alias `headless:read` couvre les scopes spécialisés de lecture publique ; `content:read` couvre aussi `routes:read` par compatibilité. Le catalogue POS exige explicitement `pos.catalog.read`.
 
 ## Paramètres de contexte
 

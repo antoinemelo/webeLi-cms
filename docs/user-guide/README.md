@@ -4,9 +4,10 @@ audience:
   - editor
   - publisher
   - seo
+  - administrator
+  - superadministrator
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-21
 source_of_truth: manual
 owners:
   - core
@@ -17,9 +18,12 @@ generated: false
 
 Le guide suit les parcours du back-office. Les menus visibles dépendent du rôle, des permissions et du site actif ; masquer une action dans l’interface ne remplace jamais l’autorisation côté serveur.
 
+Si vous ne savez pas par où commencer, utilisez [Choisir son parcours documentaire](../getting-started/choose-your-path.md). La page regroupe les lectures utiles pour les profils éditeur, publicateur, SEO, administrateur et superadministrateur.
+
 ## Contenus
 
 - [Créer, modifier et prévisualiser](content/create-edit.md)
+- [Utiliser l’éditeur visuel](content/visual-editor.md)
 - [Champs, fieldsets et blocs](content/fields-and-blocks.md)
 - [Statuts, révisions et recherche éditoriale](content/statuses-revisions-search.md)
 
@@ -43,9 +47,11 @@ Le guide suit les parcours du back-office. Les menus visibles dépendent du rôl
 - [Formulaires, recherche, imports, exports et IA](forms-cookies/forms-search-import-export-ai.md)
 - [Consentement cookies](forms-cookies/cookie-consent.md)
 - [Assistant IA](ai-assistant/use.md)
+- [Business CRM](business/README.md)
 
 ## Compte et dépannage
 
 - [Connexion, profil et contexte](getting-started/sign-in-profile-context.md)
+- [Consulter la documentation dans le back-office](getting-started/backoffice-docs.md)
 - [Sécurité du compte et 2FA](getting-started/account-security-2fa.md)
 - [Dépannage utilisateur](troubleshooting.md)

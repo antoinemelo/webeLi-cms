@@ -512,8 +512,10 @@ def normalize_content_blueprint(cursor: sqlite3.Cursor, blueprint_id: int, schem
             )
             sync_field_rules(cursor, scope="blueprint_field", row_id=int(cursor.lastrowid), validation=validation, conditions=conditions)
 
-    # Champs système et SEO stables, non supprimables. Ils sont explicites même si
-    # les projections publiques les stockent dans content/seo plutôt que dans fields.
+    # Champs système stables. Les champs SEO restent déclarés pour le modèle et les
+    # contrats, mais ils sont exposés par l’éditeur SEO natif, pas comme champs de
+    # formulaire blueprint. Cela évite les onglets/sections dupliqués dans l’édition
+    # d’une page ou d’un article.
     system_fields = [
         ("title", "text", "Titre", "system", True, True, 10, "system_editable", "content", "form"),
         ("slug", "slug", "Slug", "system", True, True, 20, "system_editable", "content", "form"),
@@ -522,13 +524,13 @@ def normalize_content_blueprint(cursor: sqlite3.Cursor, blueprint_id: int, schem
         ("language", "select", "Langue", "system", True, False, 910, "system_context", "context", "summary"),
         ("site", "sites", "Site", "system", True, False, 920, "system_context", "context", "summary"),
         ("revision_state", "select", "Révision", "system", False, False, 930, "system_context", "workflow", "summary"),
-        ("seo_title", "text", "SEO title", "seo", False, True, 10, "editorial", "content", "form"),
-        ("seo_description", "textarea", "Meta description", "seo", False, True, 20, "editorial", "content", "form"),
-        ("canonical_url", "text", "Canonical URL", "seo", False, True, 30, "editorial", "content", "form"),
-        ("robots", "select", "Robots", "seo", False, False, 40, "editorial", "content", "form"),
-        ("og_title", "text", "Open Graph title", "seo", False, True, 50, "editorial", "content", "form"),
-        ("og_description", "textarea", "Open Graph description", "seo", False, True, 60, "editorial", "content", "form"),
-        ("og_image", "media", "Open Graph image", "seo", False, False, 70, "editorial", "content", "form"),
+        ("seo_title", "text", "SEO title", "seo", False, True, 10, "editorial", "content", "native"),
+        ("seo_description", "textarea", "Meta description", "seo", False, True, 20, "editorial", "content", "native"),
+        ("canonical_url", "text", "Canonical URL", "seo", False, True, 30, "editorial", "content", "native"),
+        ("robots", "select", "Robots", "seo", False, False, 40, "editorial", "content", "native"),
+        ("og_title", "text", "Open Graph title", "seo", False, True, 50, "editorial", "content", "native"),
+        ("og_description", "textarea", "Open Graph description", "seo", False, True, 60, "editorial", "content", "native"),
+        ("og_image", "media", "Open Graph image", "seo", False, False, 70, "editorial", "content", "native"),
     ]
     for handle, ftype, label, purpose, required, localized, order, scope, source, visibility in system_fields:
         section_key = "seo" if purpose == "seo" else "settings"

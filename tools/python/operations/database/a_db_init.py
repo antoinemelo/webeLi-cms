@@ -21,23 +21,26 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
-CORE_DB = BASE / "storage" / "database" / "core.sqlite"
-IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
-FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
-COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
-AI_DB = BASE / "storage" / "database" / "ai.sqlite"
-CORE_SQL = BASE / "database" / "schema" / "core.sql"
-IAM_SQL = BASE / "database" / "iam.sql"
-FORMS_SQL = BASE / "database" / "modules" / "forms.sql"
-COOKIES_SQL = BASE / "database" / "modules" / "cookies.sql"
-AI_SQL = BASE / "database" / "modules" / "ai.sql"
+if str(BASE) not in sys.path:
+    sys.path.insert(0, str(BASE))
+from tools.python.lib.database_inventory import database_specs
+DATABASE_SPECS = database_specs(root=BASE)
+DATABASES = {spec.key: spec.absolute_path(BASE) for spec in DATABASE_SPECS}
+SCHEMAS = {spec.key: spec.absolute_schema_path(BASE) for spec in DATABASE_SPECS}
+CORE_DB = DATABASES["core"]
+IAM_DB = DATABASES["iam"]
+FORMS_DB = DATABASES["forms"]
+COOKIES_DB = DATABASES["cookies"]
+AI_DB = DATABASES["ai"]
 COOKIES_REFERENCE_SEED = BASE / "database" / "seeds" / "cookies_seed.sql"
 AI_DEFAULT_SEED = BASE / "database" / "seeds" / "default" / "ai_default_seed.sql"
 CORE_REFERENCE_SEED = BASE / "database" / "seeds" / "core_seed.sql"
 IAM_REFERENCE_SEED = BASE / "database" / "seeds" / "iam_seed.sql"
 SEED_SCRIPT = BASE / "tools" / "python" / "operations" / "database" / "b0_db_seed.py"
 SQLITE_BUSY_TIMEOUT_MS = 5000
+MIGRATION_DIR = BASE / "database" / "migrations"
 
 PRIVATE_HTACCESS = """Options -Indexes
 
@@ -105,6 +108,42 @@ def run_sql_file(connection: sqlite3.Connection, sql_path: Path) -> None:
     connection.commit()
 
 
+SCHEMA_MIGRATIONS_SQL = """
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    migration TEXT NOT NULL UNIQUE,
+    migrated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+
+def ensure_schema_migrations(connection: sqlite3.Connection) -> None:
+    """Garantit le registre de migrations minimal dans chaque base native."""
+    connection.execute(SCHEMA_MIGRATIONS_SQL)
+    connection.commit()
+
+
+def mark_current_schema_migrations(connection: sqlite3.Connection, scope: str | None) -> None:
+    """Marque les migrations SQL déjà intégrées au schéma source courant.
+
+    Une reconstruction from scratch part des schémas complets du dépôt, pas
+    d'un historique ancien. Les fichiers déjà présents dans
+    database/migrations/<scope>/ sont donc considérés comme inclus dans ce
+    schéma neuf afin d'éviter de les rejouer immédiatement après l'init.
+    """
+    if not scope:
+        return
+    directory = MIGRATION_DIR / scope
+    if not directory.is_dir():
+        return
+    for path in sorted(directory.glob("*.sql")):
+        connection.execute(
+            "INSERT OR IGNORE INTO schema_migrations(migration, migrated_at) VALUES(?, CURRENT_TIMESTAMP)",
+            (path.name,),
+        )
+    connection.commit()
+
+
 def ensure_storage_dirs() -> None:
     """Crée les répertoires runtime et rétablit leurs garde-fous serveur.
 
@@ -124,7 +163,7 @@ def ensure_storage_dirs() -> None:
             protection.write_text(PRIVATE_HTACCESS, encoding="utf-8")
 
 
-def create_structure(db_path: Path, schema_path: Path) -> None:
+def create_structure(db_path: Path, schema_path: Path, migration_scope: str | None = None) -> None:
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema SQL introuvable: {schema_path}")
 
@@ -135,6 +174,8 @@ def create_structure(db_path: Path, schema_path: Path) -> None:
     con = connect_sqlite(db_path)
     try:
         run_sql_file(con, schema_path)
+        ensure_schema_migrations(con)
+        mark_current_schema_migrations(con, migration_scope)
     finally:
         con.close()
 
@@ -192,17 +233,19 @@ def main() -> int:
         # --with-reference-seed uniquement pour les bases techniques minimales.
         raise SystemExit("Utilisez --with-reference-seed avec --structures-only, ou lancez le seed complet par defaut.")
 
-    create_structure(CORE_DB, CORE_SQL)
-    create_structure(IAM_DB, IAM_SQL)
-    create_structure(FORMS_DB, FORMS_SQL)
-    create_structure(COOKIES_DB, COOKIES_SQL)
-    create_structure(AI_DB, AI_SQL)
+    initialized: list[str] = []
+    for spec in DATABASE_SPECS:
+        schema_path = SCHEMAS[spec.key]
+        if schema_path is None:
+            raise FileNotFoundError(f"Schema SQL non declaré pour {spec.key}")
+        create_structure(DATABASES[spec.key], schema_path, spec.migration_scope)
+        initialized.append(spec.key)
 
-    print("Database structures initialized from SQL schemas: core, iam, forms, cookies, ai.", flush=True)
+    print("Database structures initialized from SQL schemas: " + ", ".join(initialized) + ".", flush=True)
 
     if args.with_reference_seed:
         apply_reference_seeds()
-        print("Reference/minimal seeds applied: core, iam, cookies, ai. Forms remains empty.", flush=True)
+        print("Reference/minimal seeds applied: core, iam, cookies, ai. Module databases without reference seeds remain empty.", flush=True)
         return 0
 
     if args.structures_only:

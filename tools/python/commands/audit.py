@@ -32,6 +32,25 @@ def configure(parser):
         "--results-dir",
         help="Répertoire des preuves, relatif à la racine du CMS ou absolu.",
     )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=None,
+        help=(
+            "Borne maximale de l'audit en secondes. "
+            "Par défaut: 7200 pour le profil release, sinon --command-timeout."
+        ),
+    )
+
+
+def _effective_timeout(profile: str, requested: int | None) -> int | None:
+    if requested is not None:
+        if requested <= 0:
+            raise ValueError("--timeout doit être strictement positif")
+        return requested
+    if profile == "release":
+        return 7200
+    return None
 
 
 def run(ctx, args):
@@ -53,4 +72,4 @@ def run(ctx, args):
             results = ctx.root / results
         command.extend(["--results-dir", str(results.resolve())])
 
-    return execute(ctx, command)
+    return execute(ctx, command, timeout=_effective_timeout(args.profile, args.timeout))

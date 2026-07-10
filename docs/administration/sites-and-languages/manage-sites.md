@@ -4,26 +4,21 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: code
 source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
-
-owners:
-  - administration
-document_type: guide
-permissions:
-  - settings.read
-  - settings.manage
-source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/ConfigurationApiController.php
   - backend/src/Application/Api/Admin/MultisiteApiController.php
   - backend/src/Application/Configuration/ConfigurationRepository.php
   - frontend/admin-vue/src/views/system/SystemConfigurationView.vue
+
+owners:
+  - administration
+document_type: guide
 generated: false
 ---
 # Gérer les sites et les langues
@@ -73,6 +68,8 @@ Dans **Configuration > Multisite** :
 5. rechargez la page pour confirmer que le contexte est encore résolu correctement.
 
 Un chemin de base doit commencer par `/` lorsqu’il n’est pas vide. N’ajoutez pas de slash final et n’utilisez ni espace, ni segment `.` ou `..`, ni double slash.
+
+Si le CMS est lui-même installé dans un sous-répertoire, par exemple `APP_BASE_PATH=/mod`, le sous-site peut être saisi comme chemin logique `/site-a`. Les URL publiques générées par le back-office, les boutons d’ouverture et les contrats d’API doivent alors pointer vers `/mod/site-a`. Une base déjà enregistrée sous la forme complète `/mod/site-a` reste acceptée et ne doit pas être préfixée une seconde fois.
 
 ### Créer un sous-site
 

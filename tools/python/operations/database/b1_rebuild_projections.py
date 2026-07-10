@@ -12,7 +12,6 @@ réindexation locale, audit SEO. Il délègue à la console PHP officielle, qui 
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.python.lib.processes import cms_subprocess_env
+from tools.python.cms.runtime import resolve_php_binary
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 CONSOLE = ROOT / "backend" / "bin" / "console"
@@ -47,10 +47,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    php = shutil.which("php")
-
-    if php is None:
-        print("ERREUR: PHP CLI est requis pour la maintenance des projections.", file=sys.stderr)
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        print(f"ERREUR: {exc}", file=sys.stderr)
         return 2
 
     if not CONSOLE.exists():

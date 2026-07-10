@@ -5,31 +5,26 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-permissions:
-  - profile.read
-  - profile.update
-source_paths:
   - backend/routes/admin.php
   - backend/routes/api.php
   - admin-app/src
   - database/seeds/iam_seed.sql
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Se connecter et choisir son contexte
 
 ## Résultat attendu
 
-Se connecter et choisir son contexte. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Se connecter et choisir son contexte.
 
 ## Public et droits
 

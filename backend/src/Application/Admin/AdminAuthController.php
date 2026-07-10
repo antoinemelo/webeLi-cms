@@ -50,7 +50,7 @@ final class AdminAuthController
                         $lookup = $this->auth->loginChallengeForEmail($email);
                         $challenge = (string) $lookup['challenge'];
                         $email = (string) $lookup['email'];
-                        if ($challenge === 'email_2fa') {
+                        if ($challenge === 'email_code') {
                             $created = $this->auth->createEmailTwoFactorChallenge($email, [
                                 'ip' => $ip,
                                 'user_agent' => (string) ($this->request->server['HTTP_USER_AGENT'] ?? ''),
@@ -62,8 +62,8 @@ final class AdminAuthController
                                 $notice = 'code_sent';
                             }
                         }
-                    } elseif ($challenge === 'email_2fa') {
-                        $loginResult = $this->auth->verifyEmailTwoFactorCode($email, (string) $this->request->input('totp_code', ''), [
+                    } elseif ($challenge === 'email_code' || $challenge === 'email_2fa') {
+                        $loginResult = $this->auth->verifyEmailTwoFactorCode($email, (string) ($this->request->input('email_code', '') ?: $this->request->input('totp_code', '')), [
                             'ip' => $ip,
                             'user_agent' => (string) ($this->request->server['HTTP_USER_AGENT'] ?? ''),
                         ]);
@@ -71,24 +71,28 @@ final class AdminAuthController
                             $limiter->clear($rateKey);
                             return redirect(admin_url_path('/admin/app'));
                         }
-                        $challenge = 'email_2fa';
+                        $challenge = 'email_code';
                         $error = match ($loginResult['status']) {
-                            'totp_required' => 'Code requis pour ce compte.',
-                            'expired_totp' => 'Code expiré. Revenez à l’étape précédente pour recevoir un nouveau code.',
-                            'invalid_totp' => 'Code invalide ou déjà utilisé.',
+                            'email_code_required' => 'Code requis pour ce compte.',
+                            'expired_email_code' => 'Code expiré. Revenez à l’étape précédente pour recevoir un nouveau code.',
+                            'invalid_email_code' => 'Code invalide ou déjà utilisé.',
                             default => 'Identifiants invalides.',
                         };
                     } else {
-                        $loginResult = $this->auth->attempt($email, (string) $this->request->input('password', ''), [
+                        $loginResult = $this->auth->attemptWithTotp($email, (string) $this->request->input('password', ''), (string) $this->request->input('totp_code', ''), [
                             'ip' => $ip,
                             'user_agent' => (string) ($this->request->server['HTTP_USER_AGENT'] ?? ''),
                         ]);
-                        if ($loginResult === true) {
+                        if (($loginResult['status'] ?? '') === 'ok') {
                             $limiter->clear($rateKey);
                             return redirect(admin_url_path('/admin/app'));
                         }
-                        $challenge = 'password';
-                        $error = 'Identifiants invalides.';
+                        $challenge = $challenge === 'totp' ? 'totp' : 'password';
+                        $error = match ($loginResult['status'] ?? '') {
+                            'totp_required' => 'Code TOTP requis pour ce compte.',
+                            'invalid_totp' => 'Code TOTP invalide.',
+                            default => 'Identifiants invalides.',
+                        };
                     }
                 } catch (\InvalidArgumentException) {
                     $error = 'Identifiants invalides.';
@@ -245,14 +249,16 @@ Ce code expire dans 10 minutes. Si vous n’êtes pas à l’origine de cette de
         $title = 'Connexion';
         $hint = $isEmailStep ? '' : 'Compte : ' . $email;
         $hintHtml = $hint !== '' ? '<p class="hint">' . e($hint) . '</p>' : '';
-        $buttonLabel = $isEmailStep ? 'Continuer' : ($challenge === 'email_2fa' ? 'Valider le code' : 'Se connecter');
+        $buttonLabel = $isEmailStep ? 'Continuer' : ($challenge === 'email_code' ? 'Valider le code' : 'Se connecter');
         $backLink = $isEmailStep ? '' : '<p class="secondary-link"><a href="' . $action . '">Changer d’email</a></p>';
         $credentialFields = '';
 
         if ($isEmailStep) {
             $credentialFields = '<input type="hidden" name="challenge" value="email"><p class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="username" value="' . $emailValue . '" required autofocus></p>';
-        } elseif ($challenge === 'email_2fa') {
-            $credentialFields = '<input type="hidden" name="challenge" value="email_2fa"><input type="hidden" name="email" value="' . $emailValue . '"><p class="field"><label for="totp_code">Code reçu par email</label><input id="totp_code" name="totp_code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,6}" minlength="4" maxlength="6" placeholder="123456" required autofocus></p>';
+        } elseif ($challenge === 'email_code') {
+            $credentialFields = '<input type="hidden" name="challenge" value="email_code"><input type="hidden" name="email" value="' . $emailValue . '"><p class="field"><label for="email_code">Code reçu par email</label><input id="email_code" name="email_code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,6}" minlength="4" maxlength="6" placeholder="123456" required autofocus></p>';
+        } elseif ($challenge === 'totp') {
+            $credentialFields = '<input type="hidden" name="challenge" value="totp"><input type="hidden" name="email" value="' . $emailValue . '"><p class="field"><label for="password">Mot de passe</label><span class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" required autofocus><button class="password-toggle" type="button" data-password-toggle="password" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="password-toggle__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8ZM1.173 8A13.133 13.133 0 0 1 8 3.5 13.133 13.133 0 0 1 14.827 8 13.133 13.133 0 0 1 8 12.5 13.133 13.133 0 0 1 1.173 8Z"/><path d="M8 5.5A2.5 2.5 0 1 1 8 10.5 2.5 2.5 0 0 1 8 5.5ZM8 6.5A1.5 1.5 0 1 0 8 9.5 1.5 1.5 0 0 0 8 6.5Z"/></svg></button></span></p><p class="field"><label for="totp_code">Code TOTP ou code de récupération</label><input id="totp_code" name="totp_code" type="text" inputmode="text" autocomplete="one-time-code" minlength="6" maxlength="32" placeholder="123456 ou ABC12-DEF34" required></p>';
         } else {
             $credentialFields = '<input type="hidden" name="challenge" value="password"><input type="hidden" name="email" value="' . $emailValue . '"><p class="field"><label for="password">Mot de passe</label><span class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" required autofocus><button class="password-toggle" type="button" data-password-toggle="password" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="password-toggle__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8ZM1.173 8A13.133 13.133 0 0 1 8 3.5 13.133 13.133 0 0 1 14.827 8 13.133 13.133 0 0 1 8 12.5 13.133 13.133 0 0 1 1.173 8Z"/><path d="M8 5.5A2.5 2.5 0 1 1 8 10.5 2.5 2.5 0 0 1 8 5.5ZM8 6.5A1.5 1.5 0 1 0 8 9.5 1.5 1.5 0 0 0 8 6.5Z"/></svg></button></span></p>';
         }

@@ -4,21 +4,18 @@ audience:
   - installer
   - superadministrator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: configuration
 source_paths:
   - backend/composer.json
   - frontend/admin-vue/package.json
   - config
+  - ops/.env.example
+  - config/app.php
 
 owners:
   - operations
 document_type: procedure
-permissions:
-source_paths:
-  - ops/.env.example
-  - config/app.php
 generated: false
 ---
 # Configurer l’instance

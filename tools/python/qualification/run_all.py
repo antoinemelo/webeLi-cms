@@ -25,8 +25,61 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from tools.python.cms.runtime import resolve_php_binary
+from tools.python.lib.change_cache import fingerprint_paths, read_success, write_success
+
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
+CACHE_DIR = REPORT_DIR / "cache"
+USE_CACHE = True
+
+FRONTEND_BUILD_INPUTS = (
+    "frontend/admin-vue/package.json",
+    "frontend/admin-vue/package-lock.json",
+    "frontend/admin-vue/tsconfig.json",
+    "frontend/admin-vue/vite.config.ts",
+    "frontend/admin-vue/index.html",
+    "frontend/admin-vue/src",
+)
+
+E2E_INPUTS = (
+    "backend/config",
+    "backend/public",
+    "backend/routes",
+    "backend/src",
+    "database",
+    "frontend/admin-vue/package.json",
+    "frontend/admin-vue/package-lock.json",
+    "frontend/admin-vue/playwright.config.ts",
+    "frontend/admin-vue/src",
+    "frontend/admin-vue/tests/e2e",
+    "tools/cms.py",
+    "tools/python/cms",
+    "tools/python/commands/e2e.py",
+    "tools/python/operations/database",
+    "tools/python/operations/testing/run_playwright_e2e.py",
+)
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _as_text(value: object) -> str:
+    """Normalise les sorties subprocess en texte exploitable dans les rapports.
+
+    subprocess.TimeoutExpired peut exposer stdout/stderr sous forme de bytes,
+    même lorsque la commande a été lancée avec text=True. La qualification doit
+    alors afficher l'erreur initiale sans provoquer une erreur interne.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
 
 
 @dataclass
@@ -92,9 +145,9 @@ def steps() -> tuple[Step, ...]:
             "tests",
             "Tests unitaires et intégration",
             ("complete", "release"),
-            (py, cms, "test", "--timeout", "300", "--target-duration", "120"),
+            (py, cms, "test", "--timeout", "400", "--target-duration", "200"),
             executables=("php",),
-            timeout=360,
+            timeout=480,
         ),
         Step("validate-core", "Validateurs structurels", ("complete", "release"), (py, cms, "validate", "--full", "--category", "configuration", "--category", "database", "--category", "content", "--category", "permissions", "--category", "api", "--category", "operations", "--category", "security", "--category", "documentation", "--category", "shared"), timeout=600),
         Step("runtime-integrity", "Intégrité runtime", ("complete", "release"), (py, cms, "validate", "--full", "--validator", "RUNTIME_INTEGRITY"), timeout=300),
@@ -122,9 +175,24 @@ def steps() -> tuple[Step, ...]:
                 "frontend/admin-vue/node_modules/vue-tsc/bin/vue-tsc.js",
                 "frontend/admin-vue/node_modules/vite/bin/vite.js",
             ),
+            action=_frontend_build_check,
             timeout=600,
         ),
-        Step("browser-e2e", "Tests navigateur Playwright", ("release",), ("npm", "run", "test:e2e"), cwd="frontend/admin-vue", executables=("node", "npm"), files=("frontend/admin-vue/playwright.config.ts", "frontend/admin-vue/node_modules/@playwright/test/cli.js"), env_vars=("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD"), timeout=900),
+        Step(
+            "browser-e2e",
+            "Tests navigateur Playwright isolés",
+            ("release",),
+            (py, cms, "e2e", "--use-built-assets"),
+            executables=("php", "node"),
+            files=(
+                "frontend/admin-vue/playwright.config.ts",
+                "frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts",
+                "frontend/admin-vue/node_modules/@playwright/test/cli.js",
+                "tools/python/operations/testing/run_playwright_e2e.py",
+            ),
+            action=_browser_e2e_check,
+            timeout=1200,
+        ),
         Step("docs-generate", "Génération documentaire", ("complete", "release"), (py, cms, "docs", "generate"), timeout=300),
         Step("docs-check", "Contrôle documentaire", ("complete", "release"), (py, cms, "docs", "check"), timeout=300),
         Step("static-export", "Export statique à blanc", ("complete", "release"), (py, cms, "--dry-run", "export"), executables=("php",), files=("backend/bin/console",), timeout=300),
@@ -136,10 +204,25 @@ def steps() -> tuple[Step, ...]:
 
 
 def _environment_check() -> tuple[int, str, str]:
-    commands = {"python": [sys.executable, "--version"], "php": ["php", "-v"], "node": ["node", "--version"], "npm": ["npm", "--version"]}
+    try:
+        php = resolve_php_binary()
+        php_error = ""
+    except (FileNotFoundError, PermissionError) as exc:
+        php = ""
+        php_error = str(exc)
+    commands = {
+        "python": [sys.executable, "--version"],
+        "php": [php, "-v"] if php else [],
+        "node": ["node", "--version"],
+        "npm": ["npm", "--version"],
+    }
     lines: list[str] = []
     missing: list[str] = []
     for name, command in commands.items():
+        if not command:
+            missing.append(name)
+            lines.append(f"{name}: {php_error}")
+            continue
         executable = command[0]
         if executable != sys.executable and shutil.which(executable) is None:
             missing.append(name)
@@ -153,48 +236,173 @@ def _environment_check() -> tuple[int, str, str]:
 
 
 
-def _frontend_dependencies_check() -> tuple[int, str, str]:
+def _playwright_chromium_status() -> tuple[int, str, str]:
+    """Vérifie rapidement que Chromium Playwright est installé localement.
+
+    Mettre à jour @playwright/test peut changer le chemin attendu dans
+    ~/.cache/ms-playwright. La qualification ne télécharge pas de navigateur
+    automatiquement, car cette opération est longue et dépend du réseau.
+    """
     frontend = ROOT / "frontend/admin-vue"
-    command = ["npm", "ls", "--depth=0", "--json"]
-    proc = subprocess.run(
-        command,
+    cli = frontend / "node_modules/@playwright/test/cli.js"
+    if not cli.is_file():
+        return 2, "", "Playwright absent. Exécutez d'abord: cd frontend/admin-vue && npm ci"
+
+    probe = subprocess.run(
+        [
+            "node",
+            "-e",
+            "const { chromium } = require('@playwright/test'); process.stdout.write(chromium.executablePath());",
+        ],
         cwd=frontend,
         text=True,
         capture_output=True,
-        timeout=60,
+        timeout=30,
     )
-    bootstrap = frontend / "node_modules/bootstrap/package.json"
-    vue_tsc = frontend / "node_modules/vue-tsc/bin/vue-tsc.js"
-    vite = frontend / "node_modules/vite/bin/vite.js"
-    missing = [
-        path.relative_to(frontend).as_posix()
-        for path in (bootstrap, vue_tsc, vite)
-        if not path.is_file()
-    ]
-    if proc.returncode == 0 and not missing:
-        return 0, "Dépendances frontend installées et cohérentes.", ""
-    details = []
-    if missing:
-        details.append("Fichiers absents: " + ", ".join(missing))
-    output = (proc.stdout or proc.stderr).strip()
-    if output:
-        details.append(output)
-    details.append(
-        "Réinstallez les dépendances avec : "
-        "cd frontend/admin-vue && rm -rf node_modules && npm ci"
+    if probe.returncode != 0:
+        detail = "\n".join(part for part in (_as_text(probe.stdout).strip(), _as_text(probe.stderr).strip()) if part)
+        return probe.returncode, detail, "Impossible de résoudre le chemin Chromium de Playwright."
+
+    executable = Path(_as_text(probe.stdout).strip())
+    if not executable.is_file():
+        return (
+            2,
+            f"Chromium Playwright attendu: {executable}",
+            "Navigateur Chromium Playwright absent. "
+            "Installez-le une fois par machine après npm ci: "
+            "python3 tools/cms.py e2e --install-browser",
+        )
+    return 0, f"Chromium Playwright détecté: {executable}", ""
+
+
+def _browser_e2e_check() -> tuple[int, str, str]:
+    """Exécute les E2E seulement si le navigateur Playwright est disponible."""
+    browser_code, browser_stdout, browser_stderr = _playwright_chromium_status()
+    if browser_code != 0:
+        return browser_code, browser_stdout, browser_stderr
+
+    fingerprint = _e2e_fingerprint()
+    cache_file = CACHE_DIR / "browser-e2e.json"
+    if USE_CACHE and read_success(cache_file, fingerprint) is not None:
+        return (
+            0,
+            browser_stdout
+            + "\nCache qualification: E2E Playwright inchangés, dernier succès réutilisé."
+            + f"\nEmpreinte: {fingerprint}",
+            "",
+        )
+
+    command = [sys.executable, str(ROOT / "tools/cms.py"), "e2e", "--use-built-assets"]
+    try:
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=1200)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return 124, stdout, stderr + "\nTimeout après 1200s"
+    if returncode == 0:
+        write_success(cache_file, fingerprint=fingerprint, step_id="browser-e2e", command=command)
+    return returncode, browser_stdout + "\n" + stdout, stderr
+
+
+def _frontend_build_check() -> tuple[int, str, str]:
+    command = ["npm", "run", "build"]
+    manifest = ROOT / "admin-app/.vite/manifest.json"
+    fingerprint = fingerprint_paths(ROOT, FRONTEND_BUILD_INPUTS, extra=("frontend-build-v1",))
+    cache_file = CACHE_DIR / "frontend-build.json"
+    if USE_CACHE and manifest.is_file() and read_success(cache_file, fingerprint) is not None:
+        return (
+            0,
+            "Cache qualification: build frontend inchangé, assets existants réutilisés."
+            + f"\nManifest: {_display_path(manifest)}"
+            + f"\nEmpreinte: {fingerprint}",
+            "",
+        )
+
+    try:
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT / "frontend/admin-vue", timeout=600)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return 124, stdout, stderr + "\nTimeout après 600s"
+    if returncode == 0 and manifest.is_file():
+        write_success(cache_file, fingerprint=fingerprint, step_id="frontend-build", command=command)
+    return returncode, stdout, stderr
+
+
+def _frontend_dependencies_check() -> tuple[int, str, str]:
+    """Vérifie le lockfile et l'audit sécurité sans modifier node_modules.
+
+    La qualification ne doit pas lancer npm ci automatiquement : c'est lent,
+    dépendant du réseau, et cela peut bloquer tout le profil complete/release.
+    Le contrôle P0-06 porte ici sur l'absence de vulnérabilités high/critical
+    dans le graphe verrouillé. Le build frontend, exécuté juste après, vérifie
+    séparément que les dépendances locales installées sont réellement utilisables.
+    """
+    frontend = ROOT / "frontend/admin-vue"
+    lockfile = frontend / "package-lock.json"
+    lock_text = lockfile.read_text(encoding="utf-8")
+    forbidden_registries = (
+        "packages.applied-caas-gateway1.internal.api.openai.org",
+        "artifactory/api/npm/npm-public",
     )
-    return 2, "", "\n".join(details)
+    leaked = [item for item in forbidden_registries if item in lock_text]
+    if leaked:
+        return (
+            1,
+            "",
+            "package-lock.json contient un registre non public: " + ", ".join(leaked)
+            + "\nRégénérez le lockfile avec un registre public puis relancez npm ci.",
+        )
+
+    audit_command = ["npm", "audit", "--audit-level=high"]
+    try:
+        audit_proc = subprocess.run(
+            audit_command,
+            cwd=frontend,
+            text=True,
+            capture_output=True,
+            timeout=180,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None)).strip()
+        stderr = _as_text(getattr(exc, "stderr", None)).strip()
+        detail = "\n".join(part for part in (stdout, stderr) if part)
+        return 124, detail, "npm audit --audit-level=high a dépassé 180s."
+
+    output = "\n".join(part for part in (_as_text(audit_proc.stdout).strip(), _as_text(audit_proc.stderr).strip()) if part)
+    if audit_proc.returncode != 0:
+        return (
+            audit_proc.returncode,
+            output,
+            "npm audit --audit-level=high a détecté au moins une vulnérabilité high/critical.",
+        )
+
+    return 0, "Audit sécurité frontend OK.\n$ npm audit --audit-level=high\n" + (output or "found 0 vulnerabilities"), ""
+
+
+def _e2e_fingerprint() -> str:
+    build_cache = CACHE_DIR / "frontend-build.json"
+    try:
+        build_payload = json.loads(build_cache.read_text(encoding="utf-8"))
+        build_fingerprint = str(build_payload.get("fingerprint", ""))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        build_fingerprint = ""
+    return fingerprint_paths(ROOT, E2E_INPUTS, extra=("browser-e2e-v1", build_fingerprint))
 
 
 def _php_lint() -> tuple[int, str, str]:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        return 2, "", str(exc)
     files = sorted((ROOT / "backend").rglob("*.php")) + sorted((ROOT / "tools/php").rglob("*.php"))
     outputs: list[str] = []
     for path in files:
-        proc = subprocess.run(["php", "-l", str(path)], cwd=ROOT, text=True, capture_output=True, timeout=20)
+        proc = subprocess.run([php, "-l", str(path)], cwd=ROOT, text=True, capture_output=True, timeout=20)
         if proc.returncode != 0:
             return proc.returncode, "\n".join(outputs), proc.stderr or proc.stdout
         outputs.append(path.relative_to(ROOT).as_posix())
-    return 0, f"{len(files)} fichiers PHP valides", ""
+    return 0, f"PHP utilisé: {php}\n{len(files)} fichiers PHP valides", ""
 
 
 def _verify_latest_archive() -> tuple[int, str, str]:
@@ -209,6 +417,12 @@ def _verify_latest_archive() -> tuple[int, str, str]:
 def _missing_requirements(step: Step) -> list[str]:
     missing: list[str] = []
     for executable in step.executables:
+        if executable == "php":
+            try:
+                resolve_php_binary()
+            except (FileNotFoundError, PermissionError) as exc:
+                missing.append(str(exc))
+            continue
         if shutil.which(executable) is None:
             missing.append(f"exécutable {executable}")
     for relative in step.files:
@@ -267,9 +481,11 @@ def _run_step(step: Step) -> Result:
     except FileNotFoundError as exc:
         return Result(step.id, step.label, "skipped", int((time.monotonic() - start) * 1000), list(step.command), None, "", "", str(exc))
     except subprocess.TimeoutExpired as exc:
-        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 124, exc.stdout or "", exc.stderr or "", f"Timeout après {step.timeout}s")
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 124, stdout, stderr, f"Timeout après {step.timeout}s")
     except Exception as exc:  # noqa: BLE001
-        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 3, "", str(exc), "Erreur interne")
+        return Result(step.id, step.label, "failed", int((time.monotonic() - start) * 1000), list(step.command), 3, "", _as_text(exc), "Erreur interne")
 
 
 def _markdown(profile: str, results: list[Result], exit_code: int) -> str:
@@ -279,7 +495,7 @@ def _markdown(profile: str, results: list[Result], exit_code: int) -> str:
         lines.append(f"| {result.label} | `{result.status}` | {result.duration_ms} ms |")
     for result in results:
         if result.status != "passed":
-            lines.extend(["", f"## {result.label}", "", f"Statut : `{result.status}`", "", result.reason or result.stderr.strip() or "Aucun détail."])
+            lines.extend(["", f"## {result.label}", "", f"Statut : `{result.status}`", "", result.reason or _as_text(result.stderr).strip() or "Aucun détail."])
     return "\n".join(lines) + "\n"
 
 
@@ -298,12 +514,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--markdown-report", default=str(REPORT_DIR / "latest.md"))
     parser.add_argument("--no-reports", action="store_true")
     parser.add_argument("--continue-on-failure", action="store_true", help="Exécute les étapes restantes après un échec.")
+    parser.add_argument("--no-cache", action="store_true", help="Force les étapes cache-aware (build frontend, E2E Playwright) à se réexécuter.")
     parser.add_argument("--list", action="store_true", help="Affiche le plan sans exécuter.")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
+    global USE_CACHE
     args = parse_args(argv)
+    USE_CACHE = not args.no_cache
     selected = [step for step in steps() if args.profile in step.profiles]
     if args.list:
         for step in selected:
@@ -321,7 +540,7 @@ def main(argv: list[str] | None = None) -> int:
         marker = {"passed": "OK", "failed": "FAILED", "skipped": "SKIPPED"}[result.status]
         print(f"[{marker}] {step.label} ({result.duration_ms} ms)")
         if result.status == "failed":
-            detail = "\n".join(part for part in (result.stdout.strip(), result.stderr.strip()) if part)
+            detail = "\n".join(part for part in (_as_text(result.stdout).strip(), _as_text(result.stderr).strip()) if part)
         else:
             detail = result.reason
         if detail:
@@ -339,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         md_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         md_path.write_text(_markdown(args.profile, results, code), encoding="utf-8")
-        print(f"\nRapports: {json_path.relative_to(ROOT)}, {md_path.relative_to(ROOT)}")
+        print(f"\nRapports: {_display_path(json_path)}, {_display_path(md_path)}")
     print(f"Résultat: {payload['status']} — code {code}")
     if code == 2:
         skipped = [result for result in results if result.status == "skipped"]

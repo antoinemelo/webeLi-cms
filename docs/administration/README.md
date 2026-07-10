@@ -4,7 +4,6 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 owners:
@@ -30,6 +29,8 @@ Cet espace couvre les réglages fonctionnels persistants. Les opérations de sau
 
 ## Intégrations et sécurité
 
+- [Configurer le module Business](business/configuration.md)
+- [API admin du catalogue Business](business/catalog-admin-api.md)
 - [Tokens, CORS et webhooks](security/tokens-cors-webhooks.md)
 - [API headless dans le back-office](headless-api-ux.md)
 - [Imports, exports éditoriaux et export statique](imports-exports/editorial-static.md)

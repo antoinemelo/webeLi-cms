@@ -5,13 +5,11 @@ audience:
   - developer
   - evaluator
 status: stable
-version: 1.0
 last_verified: 2026-06-13
 source_of_truth: generated
 owners:
   - operations
 document_type: reference
-permissions:
 source_paths:
   - ops/.env.example
 generated: true

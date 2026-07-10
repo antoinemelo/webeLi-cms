@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Transmettre Authorization à PHP/FastCGI pour l'API headless Bearer lorsque
+# le document root pointe directement sur backend/public.
+SetEnvIfNoCase Authorization "^(.*)$" HTTP_AUTHORIZATION=$1
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]

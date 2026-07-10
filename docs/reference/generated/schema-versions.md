@@ -5,7 +5,6 @@ audience:
   - installer
   - evaluator
 status: stable
-version: 1.0
 source_of_truth: generated
 generator: tools/python/generators/generate_documentation.py
 owners:
@@ -19,6 +18,13 @@ generated: true
 
 | Source | Version |
 |---|---|
+| `database/migrations/business/0001_init.sql` | `0001_init` |
+| `database/migrations/business/0002_catalog_pricing.sql` | `0002_catalog_pricing` |
+| `database/migrations/business/0003_catalog_schema.sql` | `0003_catalog_schema` |
+| `database/migrations/business/0004_catalog_demo_seed.sql` | `0004_catalog_demo_seed` |
+| `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
+| `database/migrations/business/0005_variant_sales_note.sql` | `0005_variant_sales_note` |
+| `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
 | `database/migrations/core/072_action_runs.sql` | `072_action_runs` |
@@ -30,3 +36,7 @@ generated: true
 | `database/migrations/iam/0004_totp_2fa.sql` | `0004_totp_2fa` |
 | `database/migrations/iam/0005_ai_assistant_permissions.sql` | `0005_ai_assistant_permissions` |
 | `database/migrations/iam/0006_imports_exports_permissions.sql` | `0006_imports_exports_permissions` |
+| `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |
+| `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
+| `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
+| `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |

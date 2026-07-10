@@ -2,9 +2,7 @@
 title: Évaluer objectivement le CMS
 audience:
   - evaluator
-  - ai-evaluator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
@@ -25,11 +23,12 @@ Cet espace fournit un parcours de preuve sans recopier les guides opérationnels
 
 1. [Périmètre du produit](product-scope.md)
 2. [Matrice des capacités](feature-matrix.md)
-3. [Limites et risques](limitations.md)
-4. [Index des preuves](evidence-index.md)
-5. [Contrôles reproductibles](reproducible-checks.md)
-6. [Politique d’audit des releases](release-audit-policy.md)
-7. [Dépannage des preuves d’audit](audit-evidence-troubleshooting.md)
+3. [Éditeur visuel](visual-editor.md)
+4. [Limites et risques](limitations.md)
+5. [Index des preuves](evidence-index.md)
+6. [Contrôles reproductibles](reproducible-checks.md)
+7. [Politique d’audit des releases](release-audit-policy.md)
+8. [Dépannage des preuves d’audit](audit-evidence-troubleshooting.md)
 
 ## Sources à consulter
 

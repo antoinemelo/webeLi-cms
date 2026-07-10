@@ -379,7 +379,7 @@ watch(routePath, () => {
 
 <template>
   <PageHeader
-    title="Imports / Exports"
+    title="I/E des contenus"
     intro="Exports de publication et futurs imports éditoriaux, réunis dans une interface commune."
   />
 

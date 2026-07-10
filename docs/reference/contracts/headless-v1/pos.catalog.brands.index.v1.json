@@ -1,0 +1,24 @@
+{
+  "contract": "pos.catalog.brands.index.v1",
+  "kind": "schema",
+  "summary": "Lister les marques POS.",
+  "description": "Retourne les marques actives référencées par au moins un produit actif POS.",
+  "method": "GET",
+  "path": "/api/v1/pos/catalog/brands",
+  "source": "business_product_brands + business_products",
+  "security": "Protected by bearer scope pos.catalog.read.",
+  "query_params": {"lang": {"type": "string", "required": false}},
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"type": "object", "required": ["id", "name", "slug"], "additionalProperties": true}}}},
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      }
+    }
+  },
+  "errors": [{"status": 401, "code": "AUTH_REQUIRED"}, {"status": 403, "code": "AUTHZ_FORBIDDEN"}],
+  "examples": {"response": {"data": {"items": [{"id": 1, "name": "Demo Outdoor", "slug": "demo-outdoor"}]}, "meta": {"contract": "pos.catalog.brands.index.v1"}}}
+}

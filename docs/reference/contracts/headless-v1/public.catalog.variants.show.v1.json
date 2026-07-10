@@ -1,0 +1,33 @@
+{
+  "contract": "public.catalog.variants.show.v1",
+  "kind": "schema",
+  "summary": "Lire une variante publique active.",
+  "description": "Retourne une variante active rattachée à un produit actif, public, e-commerce et non archivé avec options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les prix d'achat, marges, attributs non publics, métadonnées asset internes et stocks exacts ne sont pas exposés.",
+  "method": "GET",
+  "path": "/api/v1/catalog/variants/{id}",
+  "source": "business_product_variants + business_products + business_product_assets + business_attributes publics",
+  "security": "Public read endpoint; may be protected by bearer scope catalog:read or headless:read.",
+  "query_params": {
+    "lang": {"type": "string", "required": false}
+  },
+  "path_params": {
+    "id": {"type": "integer", "required": true, "minimum": 1}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {"type": "object", "required": ["variant"], "properties": {"variant": {"type": "object", "additionalProperties": true}}},
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      }
+    }
+  },
+  "errors": [
+    {"status": 404, "description": "Variante publique introuvable."}
+  ],
+  "examples": {
+    "response": {"data": {"variant": {"id": 10, "sku": "TSHIRT-M", "main_asset": {"asset_id": 20, "media_id": 101, "role": "main", "url": "/media/101", "alt_text": "T-shirt M"}, "public_attributes": [{"code": "couleur", "name": "Couleur", "data_type": "text", "value": "Bleu"}], "is_sellable_public": true, "pricing": {"regular_sale_price": "38.50", "final_sale_price": "36.58", "currency": "CHF", "discount": null}}}, "meta": {"contract": "public.catalog.variants.show.v1"}}
+  }
+}

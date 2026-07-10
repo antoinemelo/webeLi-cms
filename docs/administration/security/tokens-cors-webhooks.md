@@ -4,29 +4,23 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.1
 last_verified: 2026-06-14
 source_of_truth: code
 source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
-
-owners:
-  - operations
-  - security
-document_type: guide
-permissions:
-  - security.tokens.manage
-  - security.webhooks.manage
-  - security.cors.manage
-source_paths:
   - backend/routes/api.php
   - backend/src/Application/Api/Admin/SecurityAdminApiController.php
   - backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php
   - frontend/admin-vue/src/admin/securityPanel.ts
   - database/migrations/iam
   - `python3 tools/cms.py validate --category security`
+
+owners:
+  - operations
+  - security
+document_type: guide
 generated: false
 ---
 # Sécuriser les accès API, les webhooks et le CORS

@@ -5,21 +5,17 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes
+  - frontend/admin-vue
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-source_paths:
-  - backend/routes
-  - backend/src
-  - frontend/admin-vue
 generated: false
 ---
 # Utiliser la recherche

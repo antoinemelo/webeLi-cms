@@ -2,26 +2,23 @@
 title: Utiliser la CLI et les outils Python
 audience:
   - developer
-  - operator
+  - administrator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: code
 source_paths:
   - backend/src
   - frontend/admin-vue/src
   - tools/python
+  - tools/cms.py
+  - tools/python/README.md
+  - tools/python/tool-manifest.json
+  - tools/python/generators/generate_documentation.py
 
 owners:
   - core
   - operations
 document_type: guide
-permissions:
-source_paths:
-  - tools/cms.py
-  - tools/python/README.md
-  - tools/python/tool-manifest.json
-  - tools/python/generators/generate_documentation.py
 generated: false
 ---
 # Utiliser la CLI et les outils Python
@@ -39,7 +36,7 @@ Utilisez-la pour les opérations courantes. Les scripts rangés sous `tools/pyth
 - Python 3 disponible sous la commande `python3` ;
 - exécution depuis la racine du projet, celle qui contient `tools/cms.py` ;
 - droits d’écriture sur `storage/` pour les commandes qui créent des bases, sauvegardes, exports ou releases ;
-- copie de sauvegarde avant une reconstruction ou une restauration.
+- copie de sauvegarde avant toute migration appliquée, restauration ou reconstruction contrôlée.
 
 Les chemins contenant des espaces sont acceptés lorsque vous utilisez les options prévues et que vous placez le chemin entre guillemets.
 
@@ -52,13 +49,14 @@ python3 tools/cms.py --help
 La CLI expose les familles suivantes :
 
 - `init` : créer les structures SQLite sans données métier ;
-- `rebuild` : reconstruire les bases et charger les seeds natifs ;
+- `rebuild` : reconstruire les bases et charger les seeds natifs, uniquement en développement/test/récupération contrôlée ;
 - `validate` : exécuter les validateurs ;
 - `test` : exécuter les tests Python ;
 - `export` : générer ou simuler un export statique ;
 - `backup` : créer ou restaurer une sauvegarde ;
+- `migrate` : planifier ou appliquer les migrations SQLite natives et les migrations de modules déclarées localement ;
+- `instance` : cloner ou mettre à jour une instance locale en conservant les chemins protégés ;
 - `release` : préparer ou vérifier une release ;
-- `instance` : cloner ou préparer une instance locale ;
 - `docs` : générer ou contrôler les références documentaires.
 
 Pour connaître les paramètres d’une famille :
@@ -90,6 +88,18 @@ python3 tools/cms.py --database-dir "/srv/Mon CMS/storage/database" validate
 
 Ne supposez pas qu’une option globale placée après la sous-commande sera comprise : suivez l’ordre affiché par `--help`.
 
+## Mettre à jour des bases existantes
+
+Pour une installation contenant déjà du contenu, utilisez les migrations incrémentales :
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py validate
+```
+
+Le plan est non mutatif. L’application crée ou exige un backup et applique seulement les migrations manquantes déclarées dans l’inventaire SQLite unifié. La procédure complète est décrite dans `docs/operations/existing-database-update.md`.
+
 ## Initialiser ou reconstruire les bases
 
 Pour créer les structures sans données métier :
@@ -98,22 +108,32 @@ Pour créer les structures sans données métier :
 python3 tools/cms.py init
 ```
 
-Pour repartir des schémas et seeds natifs :
+Pour repartir des schémas et seeds natifs dans un environnement où les données peuvent être perdues :
 
 ```bash
 python3 tools/cms.py rebuild
 ```
 
-`rebuild` est destructif pour les bases ciblées. Utilisez-le sur un environnement de développement ou après une sauvegarde vérifiée. Pour une instance contenant des données à conserver, suivez la procédure de mise à jour ou de restauration documentée au lieu de reconstruire sans contrôle.
+`rebuild` est destructif pour les bases ciblées. Utilisez-le sur un environnement de développement, de test ou de récupération contrôlée après sauvegarde vérifiée. Pour une instance contenant des données à conserver, suivez la procédure de mise à jour ou de restauration documentée au lieu de reconstruire sans contrôle.
 
-## Lancer les validateurs et les tests
+## Lancer les validateurs, smoke tests et tests source
+
+Dans une archive release installée, utilisez uniquement les contrôles autonomes :
 
 ```bash
+python3 tools/cms.py smoke
 python3 tools/cms.py validate
-python3 tools/cms.py test
+python3 tools/cms.py docs check
 ```
 
-Pour cibler ou comprendre les sélections disponibles, consultez l’aide de la sous-commande. En CI, préférez la sortie JSON afin de distinguer proprement succès, avertissements et erreurs.
+Dans le dépôt source complet, ajoutez les tests et la qualification :
+
+```bash
+python3 tools/cms.py test
+python3 tools/cms.py qualify --profile complete
+```
+
+`test` recherche les tests source sous `tools/python/tests`. Si ce répertoire est absent, la commande renvoie un code `2` avec un message qui rappelle d'utiliser `smoke`, `validate` et `docs check` pour une release. Pour cibler ou comprendre les sélections disponibles, consultez l’aide de la sous-commande. En CI, préférez la sortie JSON afin de distinguer proprement succès, avertissements et erreurs.
 
 Le validateur documentaire canonique peut aussi être exécuté directement lorsqu’un diagnostic précis est nécessaire :
 
@@ -140,7 +160,23 @@ python3 tools/cms.py docs check
 
 `docs generate` met à jour les références dérivées du code. `docs check` ne doit pas modifier les fichiers : il vérifie que les sorties générées sont à jour et que la gouvernance documentaire est respectée.
 
-Une contribution n’est pas terminée lorsque le code a changé mais que les références générées sont encore anciennes.
+Pour maintenir le manifeste racine de l’arborescence, utilisez la commande dédiée :
+
+```bash
+python3 tools/cms.py docs tree --source
+```
+
+Elle régénère `TREE.txt` depuis l’arbre source en excluant les répertoires volatils (`storage/`, caches, dépendances, archives locales). Pour documenter le contenu d’une release installable selon les règles du packager, utilisez :
+
+```bash
+python3 tools/cms.py docs tree --release
+```
+
+Ce second mode écrit par défaut `TREE.release.txt`. Les deux modes acceptent `--check`, `--stdout` et `--output` pour les usages CI ou diagnostic.
+
+Lors du packaging, `d2_package_release.py` rafraîchit automatiquement `TREE.txt` avant la copie, puis reconstruit `TREE.release.txt` depuis le staging final, après injection éventuelle des bases SQLite. Une archive de release ne dépend donc plus d’un manifeste TREE oublié ou obsolète.
+
+Une contribution n’est pas terminée lorsque le code a changé mais que les références générées ou `TREE.txt` sont encore anciens.
 
 
 ## Chaîne headless v1 à exécuter
@@ -192,26 +228,6 @@ Le flux attendu est toujours le même :
 
 Utilisez `--dry-run` lorsqu’il est proposé pour contrôler la sélection de fichiers avant de produire une archive distribuable.
 
-## Cloner une instance locale
-
-La commande `instance clone` prépare une copie locale dans un autre répertoire. Elle sépare le dossier créé de la configuration publique :
-
-```bash
-python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
-python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
-```
-
-Dans cet exemple, le dossier s'appelle `mod2`, mais `APP_BASE_PATH` reste `/mod`. Pour une future instance `/eve` préparée dans un dossier temporaire :
-
-```bash
-python3 tools/cms.py instance clone \
-  --destination ../eve2 \
-  --new-base-path /eve \
-  --new-public-base-url https://webe.li/eve
-```
-
-La commande copie les bases SQLite et les fichiers runtime locaux. Elle doit être utilisée pour des préparations contrôlées, pas comme substitut à une release publique.
-
 ## Sauvegarder et restaurer
 
 Consultez les actions disponibles :
@@ -221,6 +237,27 @@ python3 tools/cms.py backup --help
 ```
 
 Une sauvegarde n’est considérée comme exploitable qu’après un test de restauration dans un répertoire séparé. N’écrasez pas une instance en production pour vérifier une archive.
+
+## Planifier et appliquer les migrations SQLite
+
+Les migrations locales passent par la façade stable :
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py migrate --database ai --plan
+python3 tools/cms.py migrate --module forms --plan
+```
+
+Les bases natives migratables sont déclarées dans `tools/python/lib/database_inventory.py`. Chaque base possède son propre registre `schema_migrations`. Le retour arrière recommandé reste la restauration d’une sauvegarde SQLite vérifiée, pas une down migration SQL.
+
+Procédure courte :
+
+1. `python3 tools/cms.py backup` ;
+2. `python3 tools/cms.py migrate --plan` ;
+3. `python3 tools/cms.py migrate --apply --backup --yes` ;
+4. `python3 tools/cms.py validate --category database` ;
+5. restaurer le backup si un contrôle échoue.
 
 ## Bon usage dans les scripts et la CI
 

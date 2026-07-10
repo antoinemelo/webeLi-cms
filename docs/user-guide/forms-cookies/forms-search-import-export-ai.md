@@ -5,31 +5,26 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
-
-owners:
-  - editorial
-document_type: procedure
-permissions:
-  - forms.read/manage
-  - imports_exports.read/write/manage
-source_paths:
   - backend/src/Modules/Forms
   - backend/src/Modules/AiAssistant
   - backend/routes/api.php
   - database/modules
+
+owners:
+  - editorial
+document_type: procedure
 generated: false
 ---
 # Utiliser formulaires, recherche, imports, exports et assistant IA
 
 ## Résultat attendu
 
-Utiliser formulaires, recherche, imports, exports et assistant IA. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Utiliser formulaires, recherche, imports, exports et assistant IA.
 
 ## Public et droits
 
@@ -42,6 +37,10 @@ modules correspondants activés et configurés
 ## Formulaires
 
 Créez le formulaire, définissez ses champs, publiez son schéma puis contrôlez les soumissions et l’export CSV. Les données collectées doivent respecter la politique de confidentialité de l’exploitant.
+
+Sur le site public, un bloc formulaire embarque explicitement les URLs API `GET /api/v1/forms/{key}` et `POST /api/v1/forms/{key}/submit` avec le bon base path du site. Ces deux endpoints restent accessibles sans Bearer token, même lorsque l’API headless de lecture est protégée : le navigateur public ne doit jamais exposer un secret applicatif.
+
+Si la page affiche « Le formulaire est momentanément indisponible. », vérifiez en priorité que le formulaire est actif/publié, que la clé du bloc correspond à la clé du formulaire, que l’URL API générée contient le bon préfixe d’installation et que l’endpoint ne renvoie pas `AUTH_REQUIRED`.
 
 ## Recherche
 

@@ -4,28 +4,21 @@ audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-24
 source_of_truth: procedure
 source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
+  - backend/routes/api.php
+  - tools/cms.py
+  - tools/python
+  - docs/reference/contracts/editorial-package-1.0
 
 owners:
   - operations
   - core
 document_type: guide
-permissions:
-  - imports_exports.read
-  - imports_exports.write
-  - imports_exports.manage
-  - pdo_sqlite
-source_paths:
-  - backend/routes/api.php
-  - tools/cms.py
-  - tools/python
-  - docs/reference/contracts/editorial-package-1.0
 generated: false
 ---
 # Administrer imports, exports éditoriaux et export statique
@@ -38,4 +31,6 @@ Les paquets éditoriaux suivent les schémas sous `reference/contracts/editorial
 
 Sauvegardez avant import, validez le manifeste et interdisez les chemins sortant de la destination. Pour un export statique, testez routes, assets et liens dans le répertoire produit.
 
-L’exécution de l’export n’a pas pu être validée dans l’environnement d’audit, car PHP ne disposait pas de `pdo_sqlite`; la commande et son aide ont été vérifiées.
+L’export multisite écrit les routes HTML sous un préfixe isolé par domaine et `base_path` primaire du site, avec fallback sur `site_key`. Le rapport `static-export-report.json` contient un bloc `output_plan` à vérifier avant publication : `collision_count` et `invalid_output_path_count` doivent valoir `0`, et `output_paths_total` doit être égal à `unique_output_paths`.
+
+Une collision non résolue fait échouer l’export avant écriture des pages HTML. Les routes concernées sont listées dans `output_plan.collisions`, ce qui permet de corriger le domaine, le préfixe de langue, le `base_path` ou la route publiée avant de relancer l’export.

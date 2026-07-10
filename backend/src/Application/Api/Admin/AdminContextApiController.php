@@ -78,6 +78,15 @@ final class AdminContextApiController
             'security.cors.read',
             'security.cors.manage',
             'users.email_2fa.manage',
+            'business.crm.read',
+            'business.crm.manage',
+            'business.memo.read',
+            'business.memo.manage',
+            'business.memo.share',
+            'business.mailing.read',
+            'business.mailing.manage',
+            'business.messaging.send',
+            'business.messaging.admin',
         ];
 
         return Response::success([
@@ -109,6 +118,7 @@ final class AdminContextApiController
                 'multisite' => true,
                 'multilingual' => true,
                 'media' => true,
+                'docs' => true,
                 'menus' => true,
                 'taxonomies' => true,
                 'forms' => (bool) ($this->config['cms']['features']['forms'] ?? false),
@@ -230,24 +240,25 @@ final class AdminContextApiController
         );
 
         return array_map(function (array $row) use ($currentSite): array {
-            $requestBasePath = $this->requestBasePath((string) ($row['base_path'] ?? ''));
+            $storedBase = $this->normalizeBasePath((string) ($row['base_path'] ?? ''));
+            $requestBasePath = $this->requestBasePath($storedBase);
+            $publicBasePath = $this->publicBasePath($storedBase);
             $adminPath = admin_url_path_for_site($requestBasePath, '/admin/app');
             $publicPath = url_path($requestBasePath === '' ? '/' : $requestBasePath . '/');
             $scheme = (string) ($row['scheme'] ?? 'https');
             $host = $this->hostWithoutPort((string) ($row['host'] ?? ''));
-            $domainBase = $this->normalizeBasePath((string) ($row['base_path'] ?? ''));
 
             return [
                 'id' => (int) $row['id'],
                 'site_key' => (string) $row['site_key'],
                 'name' => (string) $row['name'],
                 'host' => $host,
-                'base_path' => $domainBase,
+                'base_path' => $publicBasePath,
                 'request_base_path' => $requestBasePath,
                 'default_language_code' => (string) $row['default_language_code'],
                 'admin_path' => $adminPath,
                 'public_path' => $publicPath,
-                'public_url' => rtrim($scheme . '://' . $host . $domainBase, '/'),
+                'public_url' => $host !== '' ? rtrim($scheme . '://' . $host . $publicBasePath, '/') : '',
                 'is_current' => (int) $row['id'] === (int) ($currentSite['id'] ?? 0),
             ];
         }, $rows);
@@ -286,20 +297,53 @@ final class AdminContextApiController
         return $this->normalizeBasePath($basePath);
     }
 
+    private function publicBasePath(string $domainBasePath): string
+    {
+        $basePath = $this->normalizeBasePath($domainBasePath);
+        $appBasePath = $this->normalizeBasePath(app_base_path());
+        if ($appBasePath === '') {
+            return $basePath;
+        }
+        if ($basePath === '' || $basePath === '/') {
+            return $appBasePath;
+        }
+        if ($basePath === $appBasePath || str_starts_with($basePath, $appBasePath . '/')) {
+            return $basePath;
+        }
+        return $this->normalizeBasePath($appBasePath . '/' . ltrim($basePath, '/'));
+    }
+
+    private function publicUrl(string $url, string $publicBasePath): string
+    {
+        $url = rtrim(trim($url), '/');
+        if ($url === '') {
+            return '';
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return $url;
+        }
+        $scheme = (string) ($parts['scheme'] ?? 'https');
+        $host = $this->hostWithoutPort((string) $parts['host']);
+        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        return rtrim($scheme . '://' . $host . $port . $publicBasePath, '/');
+    }
+
     /** @param array<string,mixed> $site @return array<string,mixed> */
     private function siteContract(array $site): array
     {
-        $domainBase = $this->normalizeBasePath((string) ($site['matched_base_path'] ?? $site['base_path'] ?? ''));
-        $requestBasePath = $this->requestBasePath($domainBase);
+        $storedBase = $this->normalizeBasePath((string) ($site['matched_base_path'] ?? $site['base_path'] ?? ''));
+        $publicBasePath = $this->publicBasePath($storedBase);
+        $requestBasePath = $this->requestBasePath($publicBasePath);
         $publicPath = url_path($requestBasePath === '' ? '/' : $requestBasePath . '/');
-        $publicUrl = rtrim((string) ($site['current_base_url'] ?? $site['base_url'] ?? ''), '/');
+        $publicUrl = $this->publicUrl((string) ($site['current_base_url'] ?? $site['base_url'] ?? ''), $publicBasePath);
 
         return [
             'id' => (int) ($site['id'] ?? 0),
             'site_key' => (string) ($site['site_key'] ?? ''),
             'name' => (string) ($site['name'] ?? ''),
             'host' => (string) ($site['matched_host'] ?? $site['host'] ?? ''),
-            'base_path' => $domainBase,
+            'base_path' => $publicBasePath,
             'request_base_path' => $requestBasePath,
             'default_language_code' => (string) ($site['default_language_code'] ?? ''),
             'is_active' => (bool) ($site['is_active'] ?? true),
@@ -341,6 +385,8 @@ final class AdminContextApiController
             ['key' => 'admin.security.webhooks.delete', 'method' => 'DELETE', 'path' => '/admin/api/security/webhooks/{id}'],
             ['key' => 'admin.security.cors.update', 'method' => 'PATCH', 'path' => '/admin/api/security/cors/{siteId}'],
             ['key' => 'admin.profile.show', 'method' => 'GET', 'path' => '/admin/api/profile'],
+            ['key' => 'admin.docs.index', 'method' => 'GET', 'path' => '/admin/api/docs'],
+            ['key' => 'admin.docs.show', 'method' => 'GET', 'path' => '/admin/api/docs/{id}'],
             ['key' => 'admin.modules.index', 'method' => 'GET', 'path' => '/admin/api/modules'],
             ['key' => 'admin.modules.show', 'method' => 'GET', 'path' => '/admin/api/modules/{key}'],
             ['key' => 'admin.modules.install', 'method' => 'POST', 'path' => '/admin/api/modules/{key}/install'],

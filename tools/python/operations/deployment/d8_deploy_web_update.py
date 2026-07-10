@@ -39,6 +39,8 @@ PROTECTED_PREFIXES = (
     "storage/cache/",
     "storage/backups/",
     "ops/.env",
+    "ops/modules.local.json",
+    "local/modules/",
     "vendor/",
     "backend/vendor/",
     "node_modules/",

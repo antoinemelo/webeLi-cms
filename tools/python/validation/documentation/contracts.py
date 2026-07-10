@@ -40,8 +40,33 @@ ALLOWED_SOURCE_TYPES = {
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 CLI_RE = re.compile(r"(?:python3|/usr/bin/python3)\s+tools/cms\.py\s+([a-z][a-z0-9-]*)(?:\s+([a-z][a-z0-9-]*))?")
-ALLOWED_DOC_ACTIONS = {"generate", "check", "evaluation-generate", "evaluation-check"}
+ALLOWED_DOC_ACTIONS = {"generate", "check", "tree", "evaluation-generate", "evaluation-check"}
 LEGACY_DIRS = ("docs/archive", "docs/history", "docs/internal")
+
+ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "DOCUMENT_EXTENSIONS", "inventaire explicite des formats documentaires exposés"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "documentationFiles", "indexation exhaustive des sources documentaires prises en charge"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "'permission_filtering' => false", "absence explicite de filtrage IAM documentaire"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "renderSourceDocument", "rendu sûr des références JSON, YAML, HTML source et texte"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "data-doc-id", "résolution serveur des liens Markdown internes"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "withResolvedMarkdownLinks", "enrichissement des liens Markdown rendus"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "resolveRequestedDocument", "résolution serveur robuste des identifiants ou chemins Markdown"),
+    ("backend/src/Application/Api/Admin/DocsApiController.php", "link_path", "secours serveur avec chemin de lien Markdown"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "documentIdFromRelativePath", "résolution client de secours des chemins Markdown"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "explicitDocumentIdFromHref", "navigation client via les liens #docs/<id>"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "from_id", "transmission du document source pour les liens relatifs"),
+    ("backend/routes/api.php", "/admin/api/docs/resolve", "endpoint stable de résolution des liens Markdown internes"),
+    ("backend/routes/api.php", "/admin/api/docs/{id:.+}", "compatibilité avec les anciens liens Markdown encodés dans le chemin"),
+)
+
+FORBIDDEN_DOC_ACCESS_RULES = (
+    "canAccessDocument",
+    "documentPermissions",
+    "superadmin_only",
+    "superadmin_documents",
+    "any_permission",
+    "siteContext",
+)
 
 
 def _front_matter(text: str) -> dict[str, object] | None:
@@ -115,6 +140,10 @@ def validate(mode: str = "fast") -> ValidationReport:
                     report.add("DOC-008", "source_paths doit être une liste", path=rel)
             if meta.get("generated") == "true" and not meta.get("generator"):
                 report.add("DOC-004", "Page générée sans générateur déclaré", path=rel)
+            if "permissions" in meta:
+                report.add("DOC-010", "La documentation ne doit déclarer aucune règle d’accès", path=rel)
+            if "version" in meta:
+                report.add("DOC-011", "La documentation ne doit pas être rattachée à une version spécifique", path=rel)
 
         for raw in LINK_RE.findall(text):
             target = raw.split("#", 1)[0].strip()
@@ -129,6 +158,31 @@ def validate(mode: str = "fast") -> ValidationReport:
         report.checked()
         if (ROOT / legacy).exists():
             report.add("DOC-005", "Ancien espace documentaire présent", path=legacy)
+
+    for rel, snippet, expected in ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS:
+        report.checked()
+        source_path = ROOT / rel
+        if not source_path.is_file():
+            report.add("DOC-009", "Source du viewer Docs absente", path=rel, expected=expected)
+            continue
+        if snippet not in source_path.read_text(encoding="utf-8", errors="ignore"):
+            report.add("DOC-009", "Protection des liens Markdown du viewer Docs incomplète", path=rel, expected=expected)
+
+    controller_path = ROOT / "backend/src/Application/Api/Admin/DocsApiController.php"
+    if controller_path.is_file():
+        controller_source = controller_path.read_text(encoding="utf-8", errors="ignore")
+        for rule in FORBIDDEN_DOC_ACCESS_RULES:
+            report.checked()
+            if rule in controller_source:
+                report.add("DOC-010", "Ancienne règle d’accès documentaire encore présente", path=str(controller_path.relative_to(ROOT)), rule=rule)
+
+    for path in sorted((ROOT / "docs").rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".json", ".yaml", ".yml", ".html"}:
+            continue
+        report.checked()
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if re.search(r"\bdec_v\d", text, flags=re.I):
+            report.add("DOC-011", "Identifiant de release spécifique présent dans la documentation", path=path.relative_to(ROOT).as_posix())
 
     available = _available_cli_commands()
     report.checked()

@@ -11,8 +11,7 @@ audience:
   - developer
   - evaluator
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-22
 source_of_truth: manual
 source_paths:
   - README.md
@@ -27,10 +26,22 @@ generated: false
 
 La documentation est organisée par tâche et par public. Les concepts et procédures sont rédigés manuellement. Les inventaires qui dérivent du code sont générés dans [`reference/generated/`](reference/generated/README.md) et ne doivent pas être recopiés ailleurs.
 
+Pour démarrer par profil, ouvrez [Choisir son parcours documentaire](getting-started/choose-your-path.md). Cette page oriente les éditeurs, publicateurs, responsables SEO, administrateurs, superadministrateurs, installateurs, intégrateurs API, développeurs et évaluateurs vers les guides utiles.
+
+## Accès depuis le back-office
+
+Dans le back-office, chaque utilisateur authentifié consulte toute la documentation depuis le menu principal **Actifs > Docs**. Aucun rôle, aucune permission et aucune affectation de site ne filtre le catalogue. Le viewer expose les pages Markdown ainsi que les références JSON, YAML, HTML source et texte présentes sous `docs/`. Les liens documentaires internes sont résolus vers leur cible indexée, y compris lorsqu’un lien relatif est converti par le viewer en identifiant technique.
+
+
+## Capacités éditoriales clés
+
+Le CMS combine un modèle de contenu structuré et une édition visuelle contrôlée. Les blueprints définissent les champs, blocs et règles de validation ; l’éditeur visuel permet de relire et modifier les zones exposées par les templates dans le rendu réel du site. Cette approche vise à garder une structure de données propre tout en offrant une expérience concrète aux équipes éditoriales.
+
 ## Espaces documentaires
 
 | Besoin | Espace canonique |
 |---|---|
+| Partir du bon profil | [Choisir son parcours documentaire](getting-started/choose-your-path.md) |
 | Découvrir et installer localement | [Prise en main](getting-started/README.md) |
 | Créer, réviser et publier | [Guide utilisateur](user-guide/README.md) |
 | Administrer sites, langues, rôles et modules | [Administration](administration/README.md) |
@@ -48,6 +59,7 @@ La documentation est organisée par tâche et par public. Les concepts et procé
 - L’OpenAPI public sous [`public-api/`](public-api/) est la référence des endpoints publics.
 - Les contrats JSON sous [`reference/contracts/`](reference/contracts/) sont la référence des réponses de l’API administrative interne.
 - Les limites connues sont regroupées dans [`evaluation/limitations.md`](evaluation/limitations.md).
+- Les commandes et contrôles de release sont liés depuis leurs pages canoniques ; ils ne doivent pas être recopiés dans chaque guide.
 
 ## Vérification
 
@@ -56,4 +68,4 @@ python3 tools/cms.py docs generate
 python3 tools/cms.py docs check
 ```
 
-`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale et les références vers des commandes CLI existantes. Il ne vérifie aucune formulation marketing ni phrase exacte.
+`docs check` vérifie la fraîcheur des pages générées, les liens locaux, le front matter, la navigation principale, les références vers des commandes CLI existantes, l’absence de filtrage IAM documentaire et les garde-fous du viewer du back-office. Il ne vérifie aucune formulation marketing ni phrase exacte.

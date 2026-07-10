@@ -13,6 +13,8 @@ return [
         'navigation',
         'workflow',
         'forms',
+        'business',
+        'sale',
         // Shell applicatif activé pour publier l'entrée de navigation dans Modules.
         // L'IA elle-même reste désactivée par défaut dans ai.sqlite (ai.enabled = false).
         'ai-assistant',
@@ -23,9 +25,27 @@ return [
     // Il n'est pas nécessaire de modifier le routeur Vue pour chaque module.
     'providers' => [
         App\Modules\Forms\FormsModuleProvider::class,
+        App\Modules\Business\BusinessModuleProvider::class,
+        App\Modules\Sale\SaleModuleProvider::class,
         App\Modules\AiAssistant\AiAssistantModuleProvider::class,
         // App\Modules\Example\ExampleModuleProvider::class,
     ],
+
+    // Manifestes système livrés avec le noyau. Ces fichiers rendent les modules
+    // lisibles par PHP et par les outils Python sans remplacer le contrat
+    // historique `providers`. Un manifeste présent ne déclenche aucune
+    // installation automatique.
+    'system_manifest_paths' => [
+        base_path('backend/src/Modules/Forms/module.json'),
+        base_path('backend/src/Modules/Business/module.json'),
+        base_path('backend/src/Modules/Sale/module.json'),
+        base_path('backend/src/Modules/AiAssistant/module.json'),
+    ],
+
+    // Les modules clients sont déclarés localement dans ops/modules.local.json.
+    // Ce fichier d'instance n'est pas livré par défaut et doit pointer vers
+    // local/modules/<module-key>/module.json.
+    'local_modules_config' => base_path('ops/modules.local.json'),
 
     // Les providers listés ci-dessus ne doivent pas être installés/activés
     // implicitement, sauf si leur key est également présente dans enabled.

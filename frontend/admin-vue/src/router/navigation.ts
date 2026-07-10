@@ -11,7 +11,7 @@ export type SectionLink = {
 };
 
 export type MainNavigationItem = {
-  key: 'dashboard' | 'studio' | 'modules' | 'media';
+  key: 'dashboard' | 'studio' | 'modules' | 'assets';
   label: string;
   route: string;
   permission?: PermissionKey;
@@ -22,7 +22,7 @@ export type MainNavigationItem = {
 export const contentLinks: SectionLink[] = [
   { label: 'Pages', route: '/contents/pages', permission: 'content.read', hint: 'Arborescence, URL, brouillons, preview et publication.' },
   { label: 'Articles', route: '/contents/articles', permission: 'content.read', hint: 'Actualités, billets, statuts et SEO éditorial.' },
-  { label: 'Imports / Exports', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.' },
+  { label: 'I/E des contenus', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.' },
   { label: 'Archives de pages', route: '/contents/page_archives', permission: 'content.archive', hint: 'Pages spécialisées qui listent ou redirigent des contenus de type page.' },
   { label: 'Archives d’articles', route: '/contents/article_archives', permission: 'content.archive', hint: 'Pages spécialisées pour listes, archives et agrégations d’articles.' }
 ];
@@ -30,8 +30,8 @@ export const contentLinks: SectionLink[] = [
 export const structureLinks: SectionLink[] = [
   { label: 'Menus', route: '/menus', permission: 'menu.read', hint: 'Navigation publique et emplacements.' },
   { label: 'Taxonomies', route: '/taxonomies', permission: 'taxonomy.read', hint: 'Catégories, tags et vocabulaires.' },
-  { label: 'Blueprints', route: '/blueprints', permission: 'blueprints.read', hint: 'Modèles éditoriaux, champs, tabs et fieldsets réutilisables.' },
-  { label: 'Modèles blueprints', navLabel: 'Modèles blueprints', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et modèles déclarés par les modules.' },
+  { label: 'Structures de contenu', route: '/blueprints', permission: 'blueprints.read', hint: 'Structures éditoriales, champs, onglets et groupes réutilisables.' },
+  { label: 'Structures des modules', navLabel: 'Structures des modules', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et structures déclarées par les modules.' },
   { label: 'Cookies', route: '/cookies', permission: 'cookies.read', hint: 'Consentements, services tiers, bannière et scripts conditionnels.' }
 ];
 
@@ -41,7 +41,9 @@ export const studioLinks: SectionLink[] = [
 ];
 
 
-export const moduleWorkbenchLinks: SectionLink[] = [];
+export const moduleWorkbenchLinks: SectionLink[] = [
+  { label: 'Vente', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read'], hint: 'Commandes, POS, paiements et stock transactionnel.' }
+];
 
 export const iamLinks: SectionLink[] = [
   { label: 'Utilisateurs', route: '/iam/users', permission: 'users.read', hint: 'Comptes, statuts, accès par site et réinitialisation de mot de passe.' },
@@ -59,11 +61,16 @@ export const dashboardLinks: SectionLink[] = [
   { label: 'Maintenance', route: '/maintenance', permission: 'maintenance.manage', hint: 'Cache, recherche, logs et audits.' }
 ];
 
+export const assetLinks: SectionLink[] = [
+  { label: 'Médias', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.' },
+  { label: 'Docs', route: '/docs', hint: 'Toute la documentation du CMS.' }
+];
+
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
-  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage'], children: moduleWorkbenchLinks },
-  { key: 'media', label: 'Médias', route: '/media', permission: 'media.read' }
+  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use'], children: moduleWorkbenchLinks },
+  { key: 'assets', label: 'Actifs', route: '/media', children: assetLinks }
 ];
 
 export type AdminSearchAction = SectionLink & {
@@ -79,7 +86,7 @@ function searchAction(key: string, section: string, link: SectionLink, keywords:
 export const adminSearchActions: AdminSearchAction[] = [
   searchAction('dashboard.open', 'Navigation', { label: 'Cockpit', route: '/' }, ['accueil', 'dashboard', 'tableau de bord']),
   searchAction('studio.open', 'Navigation', { label: 'Studio', route: '/studio', permission: 'content.read', hint: 'Ouvrir le studio éditorial.' }, ['contenu', 'édition']),
-  searchAction('static.exports.open', 'Production éditoriale', { label: 'Imports / Exports', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter une page, une langue ou un site en HTML statique.' }, ['export', 'statique', 'release']),
+  searchAction('static.exports.open', 'Production éditoriale', { label: 'I/E des contenus', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter une page, une langue ou un site en HTML statique.' }, ['import', 'export', 'statique', 'release']),
   ...contentLinks.flatMap((link) => {
     const archive = link.route.includes('archive');
     const plural = link.route.includes('article') ? 'articles' : 'pages';
@@ -89,7 +96,8 @@ export const adminSearchActions: AdminSearchAction[] = [
       searchAction(`${archive ? 'archives.' : ''}${plural}.create`, 'Créer', { label: archive ? `Créer une archive de ${plural}` : `Créer ${singular === 'article' ? 'un article' : 'une page'}`, route: `${link.route}/new`, permission: archive ? 'content.archive' : 'content.create', hint: archive ? `Ajouter une archive de ${plural}.` : `Ajouter ${singular === 'article' ? 'un article' : 'une page'}.` }, ['créer', 'ajouter', 'nouveau', singular, plural, archive ? 'archive' : ''])
     ];
   }),
-  searchAction('media.open', 'Médias', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload']),
+  searchAction('media.open', 'Actifs', { label: 'Bibliothèque médias', route: '/media', permission: 'media.read', hint: 'Images, documents et fichiers.' }, ['image', 'fichier', 'upload', 'actifs']),
+  searchAction('docs.open', 'Actifs', { label: 'Documentation', route: '/docs', hint: 'Toute la documentation du CMS.' }, ['docs', 'documentation', 'guide', 'aide']),
   ...moduleWorkbenchLinks.map((link) => searchAction(`modules.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Modules', link, ['module', 'extension', 'métier', 'blueprint'])),
   ...structureLinks.map((link) => searchAction(`structure.${link.route.replace(/^\//, '').replace(/\//g, '.')}`, 'Structure', link, ['navigation', 'classement'])),
   searchAction('seo.audit', 'Qualité', { label: 'Audit SEO & IA', navLabel: 'Audit', route: '/seo/audit', permission: 'content.read', hint: 'Scores, problèmes et recommandations.' }, ['seo', 'ia', 'score', 'audit', 'recommandations']),

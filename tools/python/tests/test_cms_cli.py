@@ -11,7 +11,7 @@ class CmsCliTest(unittest.TestCase):
 
     def test_help_for_all_commands(self):
         self.assertEqual(self.run_cli('--help').returncode,0)
-        for command in ('init','rebuild','validate','qualify','test','export','backup','release'):
+        for command in ('init','rebuild','validate','qualify','test','export','backup','release','business'):
             result=self.run_cli(command,'--help')
             self.assertEqual(result.returncode,0,(command,result.stderr))
 
@@ -54,7 +54,8 @@ class CmsCliTest(unittest.TestCase):
             self.assertTrue(evidence[0].with_suffix(evidence[0].suffix+'.sha256').is_file())
 
     def test_missing_external_dependency_returns_reliable_error(self):
-        env=dict(**__import__('os').environ, CMS_PHP_BINARY='/definitely/missing/php')
+        env=__import__('os').environ.copy()
+        env['CMS_PHP_BINARY'] = '/definitely/missing/php'
         result=subprocess.run([sys.executable,str(CLI),'--json','--dry-run','export'],cwd=ROOT,text=True,capture_output=True,env=env)
         self.assertEqual(result.returncode,2)
 

@@ -8,6 +8,7 @@ use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFilter;
 use Twig\TwigFunction;
+use App\Security\EditorialBlockSecurityPolicy;
 
 final class Renderer
 {
@@ -48,7 +49,9 @@ final class Renderer
         $twig->addFunction(new TwigFunction('url', fn(string $path = '/') => url_path($path)));
         $twig->addFunction(new TwigFunction('localized_url', fn(string $path = '/', string $languageCode = '') => localized_path($path, $languageCode)));
         $twig->addFunction(new TwigFunction('absolute_url', fn(string $path = '/', string $baseUrl = '') => absolute_url($path, $baseUrl)));
+        $twig->addFunction(new TwigFunction('public_api_url', fn(string $path = '') => public_api_url_path($path)));
         $twig->addFunction(new TwigFunction('asset', fn(string $path = '') => asset_path($path)));
+        $twig->addFunction(new TwigFunction('iframe_src_allowed', fn(string $url = '') => EditorialBlockSecurityPolicy::defaults()->isIframeSrcAllowed($url)));
         $twig->addFilter(new TwigFilter('markdown_to_html', fn(string $markdown = '') => MarkdownRenderer::toHtml($markdown), ['is_safe' => ['html']]));
 
         foreach ($this->globals as $key => $value) {

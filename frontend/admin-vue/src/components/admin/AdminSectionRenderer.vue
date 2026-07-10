@@ -18,8 +18,8 @@ function blockEyebrow(type: AdminSection['blocks'][number]['type']): string {
       <div class="section-block-head">
         <div>
           <p class="eyebrow">{{ blockEyebrow(block.type) }}</p>
-          <h2>
-            {{ block.title }}
+          <h2 class="section-block-title">
+            <span>{{ block.title }}</span>
             <InfoHint v-if="block.description" :text="block.description" placement="end" />
           </h2>
         </div>

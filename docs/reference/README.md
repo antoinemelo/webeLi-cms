@@ -5,7 +5,6 @@ audience:
   - installer
   - evaluator
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
@@ -32,10 +31,12 @@ generated: false
 - [Versions de schéma](generated/schema-versions.md)
 - [Validateurs](generated/validators.md)
 - [Contenu de release](generated/release-contents.md)
+- [Smoke E2E éditorial](editorial-e2e-flow.md)
 
 ## Contrats versionnés
 
 - [Contrats de l’API administrative v1](contracts/admin-api-v1/README.md)
 - [OpenAPI public](../public-api/openapi.v1.json)
+- [Politique des adresses de démonstration](demo-data-policy.md)
 
 Les pages générées ne doivent pas être corrigées manuellement. Modifiez leur source puis lancez `python3 tools/cms.py docs generate`.

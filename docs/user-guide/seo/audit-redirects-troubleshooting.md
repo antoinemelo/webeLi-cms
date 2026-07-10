@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Seo
+  - `python3 tools/cms.py validate --category content`
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - seo.read
-  - seo.manage
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Seo
-  - `python3 tools/cms.py validate --category content`
 generated: false
 ---
 # Utiliser l’audit SEO et les redirections
 
 ## Résultat attendu
 
-Utiliser l’audit SEO et les redirections. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Utiliser l’audit SEO et les redirections.
 
 ## Public et droits
 

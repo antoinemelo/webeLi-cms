@@ -9,11 +9,13 @@ import InfoHint from '@/components/ui/InfoHint.vue';
 
 type Role = { id:number; role_key:string; name:string; description?:string };
 type SiteOption = { id:number; site_key:string; name:string; default_language_code?:string; is_active?:boolean; host?:string; base_path?:string };
-type User = { id:number; email:string; first_name:string; last_name:string; name:string; locale:string; is_active:boolean; disabled_at?:string|null; disabled_reason?:string|null; active_session_count:number; roles?:number[]; role_ids?:number[]; site_roles?:Array<{site_id:number;role_id:number}>; sessions?:Array<Record<string, unknown>>; last_login_at?:string|null; created_at?:string; updated_at?:string };
+type LoginMode = 'password' | 'email_code' | 'totp';
+type User = { id:number; email:string; first_name:string; last_name:string; name:string; locale:string; is_active:boolean; disabled_at?:string|null; disabled_reason?:string|null; active_session_count:number; login_mode?:LoginMode; email_code_enabled?:boolean; totp_enabled?:boolean; roles?:number[]; role_ids?:number[]; site_roles?:Array<{site_id:number;role_id:number}>; sessions?:Array<Record<string, unknown>>; last_login_at?:string|null; created_at?:string; updated_at?:string };
 type UsersPayload = { users: User[] };
 type RolesPayload = { roles: Role[] };
 type SitesPayload = { sites: SiteOption[] };
 type UserPayload = { user: User; message?: string };
+type TotpSetup = { user_id:number; email:string; secret:string; manual_entry_key:string; otpauth_uri:string; qr_payload:string; algorithm:string; digits:number; period:number };
 
 const context = useAdminContextStore();
 const loading = ref(false);
@@ -33,6 +35,11 @@ const siteRoleDraft = ref({ site_id: 1, role_id: 0 });
 const showInitialPassword = ref(false);
 const showAdvancedConfiguration = ref(false);
 const initialPasswordInput = ref<HTMLInputElement | null>(null);
+const loginMode = ref<LoginMode>('password');
+const pendingLoginMode = ref<LoginMode>('password');
+const totpSetup = ref<TotpSetup | null>(null);
+const totpConfirmCode = ref('');
+const recoveryCodes = ref<string[]>([]);
 
 const activeCount = computed(() => users.value.filter((u) => u.is_active).length);
 const inactiveCount = computed(() => users.value.filter((u) => !u.is_active).length);
@@ -59,6 +66,7 @@ const hasAssignedRole = computed(() => form.value.role_ids.length > 0 || form.va
 const roleRequiredMessage = computed(() => !selected.value && !hasAssignedRole.value ? 'Attribuez au moins un rôle global ou un accès par site avant de créer le compte.' : '');
 const roleCounts = computed(() => roles.value.map((role) => ({ ...role, count: users.value.filter((u) => (u.roles || u.role_ids || []).includes(role.id) || (u.site_roles || []).some((sr) => sr.role_id === role.id)).length })).filter((r) => r.count > 0));
 const visibleUsers = computed(() => users.value.filter((u) => showInactive.value || u.is_active));
+const canManageLoginMode = computed(() => context.can('users.email_2fa.manage') || context.can('users.manage'));
 
 function listQuery(extra: Record<string, string|number|boolean|undefined|null> = {}) { return isSiteScopedAdmin.value ? { site_id: currentSiteId.value, ...extra } : { ...extra }; }
 function scopedPath(path: string): string { return isSiteScopedAdmin.value ? `${path}?site_id=${currentSiteId.value}` : path; }
@@ -112,6 +120,11 @@ function newUser(): void {
   siteRoleDraft.value = { site_id: currentSiteId.value, role_id: roles.value[0]?.id || 0 };
   showInitialPassword.value = false;
   showAdvancedConfiguration.value = false;
+  loginMode.value = 'password';
+  pendingLoginMode.value = 'password';
+  totpSetup.value = null;
+  totpConfirmCode.value = '';
+  recoveryCodes.value = [];
 }
 
 async function edit(id: number, notify = true): Promise<void> {
@@ -120,6 +133,11 @@ async function edit(id: number, notify = true): Promise<void> {
   try {
     const res = await adminApi.get<UserPayload>(`/iam/users/${id}`, listQuery());
     selected.value = res.data.user;
+    loginMode.value = selected.value.login_mode || (selected.value.totp_enabled ? 'totp' : 'password');
+    pendingLoginMode.value = loginMode.value;
+    totpSetup.value = null;
+    totpConfirmCode.value = '';
+    recoveryCodes.value = [];
     form.value = {
       email: selected.value.email,
       first_name: selected.value.first_name,
@@ -135,6 +153,82 @@ async function edit(id: number, notify = true): Promise<void> {
     showInitialPassword.value = false;
     showAdvancedConfiguration.value = false;
   } catch (err) { error.value = apiErrorMessage(err, 'Utilisateur introuvable.'); }
+}
+
+function loginModeLabel(mode: LoginMode): string {
+  if (mode === 'email_code') return 'Code par e-mail';
+  if (mode === 'totp') return 'Mot de passe + application TOTP';
+  return 'Mot de passe classique';
+}
+
+async function applyLoginMode(): Promise<void> {
+  if (!selected.value || !canManageLoginMode.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    if (pendingLoginMode.value === 'totp') {
+      const res = await adminApi.post<{totp: TotpSetup; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/prepare`), { issuer: 'DEC CMS' });
+      totpSetup.value = res.data.totp;
+      totpConfirmCode.value = '';
+      recoveryCodes.value = [];
+      message.value = res.data.message || 'Secret TOTP préparé. Confirmez un code pour activer.';
+      return;
+    }
+    const res = await adminApi.patch<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode`), { login_mode: pendingLoginMode.value });
+    selected.value = res.data.user;
+    loginMode.value = res.data.login_mode;
+    pendingLoginMode.value = res.data.login_mode;
+    totpSetup.value = null;
+    recoveryCodes.value = [];
+    message.value = res.data.message || 'Mode de connexion mis à jour.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Changement du mode de connexion impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function confirmTotp(): Promise<void> {
+  if (!selected.value || !totpSetup.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; login_mode: LoginMode; recovery_codes: string[]; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/confirm`), { secret: totpSetup.value.secret, code: totpConfirmCode.value });
+    selected.value = res.data.user;
+    loginMode.value = 'totp';
+    pendingLoginMode.value = 'totp';
+    totpSetup.value = null;
+    totpConfirmCode.value = '';
+    recoveryCodes.value = res.data.recovery_codes || [];
+    message.value = res.data.message || 'TOTP activé.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Confirmation TOTP impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function disableTotp(): Promise<void> {
+  if (!selected.value) return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; login_mode: LoginMode; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/login-mode/totp/disable`), {});
+    selected.value = res.data.user;
+    loginMode.value = 'password';
+    pendingLoginMode.value = 'password';
+    totpSetup.value = null;
+    recoveryCodes.value = [];
+    message.value = res.data.message || 'TOTP désactivé.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Désactivation TOTP impossible.'); }
+  finally { saving.value = false; }
+}
+
+async function regenerateRecoveryCodes(): Promise<void> {
+  if (!selected.value || loginMode.value !== 'totp') return;
+  saving.value = true; error.value = ''; message.value = '';
+  try {
+    const res = await adminApi.post<{user: User; recovery_codes: string[]; message?: string}>(scopedPath(`/iam/users/${selected.value.id}/totp/recovery-codes`), {});
+    selected.value = res.data.user;
+    recoveryCodes.value = res.data.recovery_codes || [];
+    message.value = res.data.message || 'Codes de récupération régénérés.';
+    await load();
+  } catch (err) { error.value = apiErrorMessage(err, 'Régénération des codes impossible.'); }
+  finally { saving.value = false; }
 }
 
 async function save(): Promise<void> {
@@ -292,34 +386,70 @@ onMounted(() => { newUser(); load(); });
             <span>Configuration avancée</span>
           </summary>
           <label class="field"><span>Locale</span><input v-model="form.locale" class="input" placeholder="fr-CH"></label>
+
+          <section v-if="selected" class="iam-subpanel">
+            <div class="split-head">
+              <div>
+                <h3>Mode de connexion</h3>
+                <p class="muted">Mode actuel : {{ loginModeLabel(loginMode) }}</p>
+              </div>
+              <span class="badge">{{ loginMode }}</span>
+            </div>
+            <div class="role-grid role-grid--compact">
+              <label><input v-model="pendingLoginMode" type="radio" value="password" :disabled="!canManageLoginMode"> <span>Mot de passe classique</span><small>Connexion avec le mot de passe du compte.</small></label>
+              <label><input v-model="pendingLoginMode" type="radio" value="email_code" :disabled="!canManageLoginMode"> <span>Code par e-mail</span><small>Code temporaire envoyé par e-mail. Ce n’est pas un TOTP.</small></label>
+              <label><input v-model="pendingLoginMode" type="radio" value="totp" :disabled="!canManageLoginMode"> <span>Mot de passe + application TOTP</span><small>Application d’authentification standard, URI otpauth.</small></label>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn ghost" :disabled="saving || !canManageLoginMode || pendingLoginMode === loginMode" @click="applyLoginMode">{{ pendingLoginMode === 'totp' ? 'Préparer TOTP' : 'Appliquer le mode' }}</button>
+              <button v-if="loginMode === 'totp'" type="button" class="btn danger" :disabled="saving || !canManageLoginMode" @click="disableTotp">Désactiver TOTP</button>
+              <button v-if="loginMode === 'totp'" type="button" class="btn ghost" :disabled="saving || !canManageLoginMode" @click="regenerateRecoveryCodes">Régénérer les codes de récupération</button>
+            </div>
+            <div v-if="totpSetup" class="iam-subpanel">
+              <div class="split-head"><div><h3>Activation TOTP</h3><p class="muted">Scannez le payload otpauth avec une application compatible ou saisissez le secret manuel.</p></div></div>
+              <label class="field"><span>Secret manuel</span><input class="input" :value="totpSetup.manual_entry_key" readonly></label>
+              <label class="field"><span>URI otpauth / payload QR</span><textarea class="input" rows="3" :value="totpSetup.otpauth_uri" readonly></textarea></label>
+              <p class="muted">Paramètres : {{ totpSetup.digits }} chiffres, {{ totpSetup.period }} secondes, {{ totpSetup.algorithm }}.</p>
+              <label class="field"><span>Code de confirmation</span><input v-model="totpConfirmCode" class="input" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="123456"></label>
+              <div class="form-actions">
+                <button type="button" class="btn primary" :disabled="saving || totpConfirmCode.length !== 6" @click="confirmTotp">Confirmer et activer TOTP</button>
+              </div>
+            </div>
+            <div v-if="recoveryCodes.length" class="iam-subpanel">
+              <div class="split-head"><div><h3>Codes de récupération</h3><p class="muted">Copiez ces codes maintenant. Ils ne seront plus affichés et chacun n’est utilisable qu’une seule fois.</p></div></div>
+              <textarea class="input" rows="6" :value="recoveryCodes.join('\n')" readonly></textarea>
+            </div>
+          </section>
+
+          <section v-if="!isSiteScopedAdmin" class="iam-subpanel">
+            <div class="split-head"><div><h3>Rôles globaux <InfoHint text="À réserver aux comptes d’administration transversale." placement="end" /></h3></div><span class="badge">{{ selectedRoleNames.length }}</span></div>
+            <div class="role-grid role-grid--compact">
+              <label v-for="role in roles" :key="role.id"><input v-model="form.role_ids" type="checkbox" :value="role.id"> <span>{{ role.name }}</span><small>{{ role.role_key }}</small></label>
+            </div>
+          </section>
+
+          <section class="iam-subpanel">
+            <div class="split-head"><div><h3>Accès par site <InfoHint text="Attribuez un rôle à un site précis sans donner un accès global." placement="end" /></h3></div></div>
+            <div class="iam-site-role-builder">
+              <input v-if="isSiteScopedAdmin" class="input" :value="siteName(currentSiteId)" readonly aria-label="Site courant">
+              <select v-else v-model.number="siteRoleDraft.site_id" class="select" aria-label="Site">
+                <option :value="0">Site…</option>
+                <option v-for="site in siteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
+              </select>
+              <select v-model.number="siteRoleDraft.role_id" class="select"><option :value="0">Rôle…</option><option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option></select>
+              <button type="button" class="btn ghost" @click="addSiteRole">Ajouter</button>
+            </div>
+            <div v-if="form.site_roles.length" class="token-row token-row--wrap">
+              <span v-for="(sr,index) in form.site_roles" :key="`${sr.site_id}-${sr.role_id}-${index}`" class="token token--closable">{{ siteName(sr.site_id) }} · {{ roleName(sr.role_id) || `rôle #${sr.role_id}` }} <button type="button" @click="removeSiteRole(index)">×</button></span>
+            </div>
+            <p v-else class="muted">Aucun rôle limité par site.</p>
+            <p v-if="roleRequiredMessage" class="alert alert-warning iam-role-required" role="alert">{{ roleRequiredMessage }}</p>
+          </section>
         </details>
+        <p v-if="roleRequiredMessage && !showAdvancedConfiguration" class="alert alert-warning iam-role-required" role="alert">Ouvrez la configuration avancée pour attribuer au moins un rôle global ou un accès par site avant de créer le compte.</p>
+
         <label class="checkline iam-active-toggle"><input v-model="form.is_active" type="checkbox"> Compte actif</label>
         <label v-if="!form.is_active" class="field"><span>Motif de désactivation</span><input v-model="form.disabled_reason" class="input" placeholder="Optionnel, journalisé côté audit"></label>
-
-        <section v-if="!isSiteScopedAdmin" class="iam-subpanel">
-          <div class="split-head"><div><h3>Rôles globaux <InfoHint text="À réserver aux comptes d’administration transversale." placement="end" /></h3></div><span class="badge">{{ selectedRoleNames.length }}</span></div>
-          <div class="role-grid role-grid--compact">
-            <label v-for="role in roles" :key="role.id"><input v-model="form.role_ids" type="checkbox" :value="role.id"> <span>{{ role.name }}</span><small>{{ role.role_key }}</small></label>
-          </div>
-        </section>
-
-        <section class="iam-subpanel">
-          <div class="split-head"><div><h3>Accès par site <InfoHint text="Attribuez un rôle à un site précis sans donner un accès global." placement="end" /></h3></div></div>
-          <div class="iam-site-role-builder">
-            <input v-if="isSiteScopedAdmin" class="input" :value="siteName(currentSiteId)" readonly aria-label="Site courant">
-            <select v-else v-model.number="siteRoleDraft.site_id" class="select" aria-label="Site">
-              <option :value="0">Site…</option>
-              <option v-for="site in siteOptions" :key="site.id" :value="site.id">{{ siteOptionLabel(site) }}</option>
-            </select>
-            <select v-model.number="siteRoleDraft.role_id" class="select"><option :value="0">Rôle…</option><option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option></select>
-            <button type="button" class="btn ghost" @click="addSiteRole">Ajouter</button>
-          </div>
-          <div v-if="form.site_roles.length" class="token-row token-row--wrap">
-            <span v-for="(sr,index) in form.site_roles" :key="`${sr.site_id}-${sr.role_id}-${index}`" class="token token--closable">{{ siteName(sr.site_id) }} · {{ roleName(sr.role_id) || `rôle #${sr.role_id}` }} <button type="button" @click="removeSiteRole(index)">×</button></span>
-          </div>
-          <p v-else class="muted">Aucun rôle limité par site.</p>
-          <p v-if="roleRequiredMessage" class="alert alert-warning iam-role-required" role="alert">{{ roleRequiredMessage }}</p>
-        </section>
 
         <div class="form-actions">
           <button class="btn primary" :disabled="saving || Boolean(roleRequiredMessage)">Enregistrer</button>

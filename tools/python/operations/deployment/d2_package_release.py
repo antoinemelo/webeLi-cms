@@ -7,6 +7,7 @@ if str(_DEC_CMS_PROJECT_ROOT) not in _dec_sys.path:
     _dec_sys.path.insert(0, str(_DEC_CMS_PROJECT_ROOT))
 
 import argparse
+import subprocess
 import shutil
 import sqlite3
 import zipfile
@@ -22,7 +23,7 @@ from tools.python.lib.deploylib import (
     write_json,
 )
 from tools.python.lib.release_metadata import load_release_metadata
-from tools.python.lib.database_inventory import native_database_names
+from tools.python.lib.database_inventory import database_names
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 DIST_DIR = ROOT / "storage" / "exports"
@@ -33,12 +34,97 @@ DEFAULT_EXCLUDES = [
     ".git/*",
     ".DS_Store",
     "Thumbs.db",
+    # Hygiène de release: aucun environnement local, cache Python, test
+    # interne ou artefact compressé ne doit partir en production.
+    ".venv",
+    ".venv/*",
+    ".venv/**",
+    "venv",
+    "venv/*",
+    "venv/**",
+    "**/.venv",
+    "**/.venv/*",
+    "**/.venv/**",
+    "**/venv",
+    "**/venv/*",
+    "**/venv/**",
+    "__pycache__",
+    "__pycache__/*",
+    "**/__pycache__",
+    "**/__pycache__/*",
+    "**/__pycache__/**",
+    ".pytest_cache",
+    ".pytest_cache/*",
+    ".pytest_cache/**",
+    "**/.pytest_cache",
+    "**/.pytest_cache/*",
+    "**/.pytest_cache/**",
+    ".mypy_cache",
+    ".mypy_cache/*",
+    ".mypy_cache/**",
+    "**/.mypy_cache",
+    "**/.mypy_cache/*",
+    "**/.mypy_cache/**",
+    ".ruff_cache",
+    ".ruff_cache/*",
+    ".ruff_cache/**",
+    "**/.ruff_cache",
+    "**/.ruff_cache/*",
+    "**/.ruff_cache/**",
+    "tools/python/tests",
+    "tools/python/tests/*",
+    "tools/python/tests/**",
+    "tools/tests",
+    "tools/tests/*",
+    "tools/tests/**",
+    "tools/php/tests",
+    "tools/php/tests/*",
+    "tools/php/tests/**",
+    "tools/php/test_*.php",
+    "frontend/admin-vue/tests",
+    "frontend/admin-vue/tests/*",
+    "frontend/admin-vue/tests/**",
+    "frontend/admin-vue/test-results",
+    "frontend/admin-vue/test-results/*",
+    "frontend/admin-vue/test-results/**",
+    "*.zip",
+    "**/*.zip",
+    "*.tar",
+    "**/*.tar",
+    "*.tgz",
+    "**/*.tgz",
+    "*.tar.gz",
+    "**/*.tar.gz",
+    "*.bak",
+    "**/*.bak",
+    "*.backup",
+    "**/*.backup",
+    "*.tmp",
+    "**/*.tmp",
+    "*.sqlite-wal",
+    "**/*.sqlite-wal",
+    "*.sqlite-shm",
+    "**/*.sqlite-shm",
     "vendor",
     "vendor/*",
     "backend/vendor",
     "backend/vendor/*",
     "admin-app/assets/*.js.map",
+    # Fichiers de configuration locale interdits. Une release distribue les
+    # exemples, jamais le fichier ops/.env rempli avec des secrets d'instance.
+    ".env",
+    ".env.*",
+    "backend/.env",
+    "backend/.env.*",
+    "frontend/.env",
+    "frontend/.env.*",
     "ops/.env",
+    "ops/.env.local",
+    "ops/.env.dev",
+    "ops/.env.test",
+    "ops/.env.backup",
+    "ops/*.env.bak",
+    "ops/*.env.save",
     "ops/ftp.deploy.json",
     "backend/storage",
     "backend/storage/*",
@@ -48,7 +134,6 @@ DEFAULT_EXCLUDES = [
     "storage/backups/*",
     "storage/backups/**",
     "storage/uploads/*",
-    "storage/security/*",
     # Règle stricte: une release ne transporte jamais ses exports locaux,
     # ses anciens ZIP ni son propre staging. Les seuls fichiers tolérés
     # sous storage/exports sont les garde-fous .gitkeep/.htaccess.
@@ -91,7 +176,6 @@ KEEP_FILES = {
     "storage/cache/.gitkeep",
     "storage/logs/.gitkeep",
     "storage/uploads/.gitkeep",
-    "storage/security/.gitkeep",
     "storage/exports/.gitkeep",
     "storage/exports/.htaccess",
     "storage/exports/static/.gitkeep",
@@ -116,7 +200,111 @@ FORBIDDEN_STAGE_FILES = (
     "storage/exports/last_deployment_report.json",
 )
 
-REQUIRED_SQLITE_DATABASES = native_database_names(release=True)
+FORBIDDEN_STAGE_PREFIXES = (
+    "tools/python/tests/",
+    "tools/tests/",
+    "tools/php/tests/",
+    "frontend/admin-vue/tests/",
+    "frontend/admin-vue/test-results/",
+    "storage/qualification/",
+    "storage/audit-results/",
+)
+
+FORBIDDEN_STAGE_PARTS = {
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+}
+
+FORBIDDEN_STAGE_SUFFIXES = (
+    ".pyc",
+    ".pyo",
+    ".zip",
+    ".tar",
+    ".tgz",
+    ".tar.gz",
+    ".bak",
+    ".backup",
+    ".tmp",
+    ".sqlite-wal",
+    ".sqlite-shm",
+    ".sqlite-journal",
+)
+
+REQUIRED_SQLITE_DATABASES = database_names(root=ROOT, release=True)
+RELEASE_VERIFIED_COMMANDS = [
+    "python3 tools/cms.py smoke",
+    "python3 tools/cms.py validate",
+    "python3 tools/cms.py docs check",
+    "python3 tools/cms.py test (code 2 explicite si les tests source sont absents)",
+]
+
+
+def run_required_command(label: str, command: list[str]) -> None:
+    completed = subprocess.run(command, cwd=str(ROOT), text=True)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"{label} en échec avant packaging (code {completed.returncode}): "
+            + " ".join(command)
+        )
+
+
+def ensure_generated_artifacts_fresh() -> None:
+    """Rafraîchit les artefacts générés qui doivent être frais dans l'archive.
+
+    Le packaging est un point d'entrée public: il ne doit pas dépendre d'une
+    discipline manuelle préalable ni produire une archive qui nécessite
+    `docs generate` juste après extraction.
+    """
+    cms = ROOT / "tools" / "cms.py"
+    run_required_command("Génération documentation", [_dec_sys.executable, str(cms), "docs", "generate"])
+    run_required_command("Génération documentation d'évaluation", [_dec_sys.executable, str(cms), "docs", "evaluation-generate"])
+    run_required_command("Contrôle documentation", [_dec_sys.executable, str(cms), "docs", "check"])
+    run_required_command("Contrôle documentation d'évaluation", [_dec_sys.executable, str(cms), "docs", "evaluation-check"])
+
+
+def generate_tree_manifest(mode: str, root: Path, output: Path, *, include_databases: bool) -> None:
+    """Rafraîchit les manifestes TREE pendant le packaging.
+
+    Le générateur est lancé en sous-processus pour éviter un import circulaire:
+    generate_tree_manifest.py réutilise les règles DEFAULT_EXCLUDES/KEEP_FILES de
+    ce module afin que TREE.release.txt décrive exactement la release packagée.
+    """
+    script = ROOT / "tools" / "python" / "generators" / "generate_tree_manifest.py"
+    if not script.is_file():
+        raise RuntimeError(f"Générateur TREE introuvable: {script}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.touch(exist_ok=True)
+    command = [
+        _dec_sys.executable,
+        str(script),
+        f"--{mode}",
+        "--root",
+        str(root),
+        "--output",
+        str(output),
+    ]
+    if mode == "release" and not include_databases:
+        command.append("--exclude-databases")
+    completed = subprocess.run(command, cwd=str(ROOT), text=True)
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"Génération TREE en échec ({mode}, code {completed.returncode}): "
+            + " ".join(command)
+        )
+
+
+def is_forbidden_stage_file(rel: str) -> bool:
+    parts = set(rel.split("/"))
+    return (
+        any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_FILES)
+        or any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_PREFIXES)
+        or bool(parts & FORBIDDEN_STAGE_PARTS)
+        or rel.endswith(FORBIDDEN_STAGE_SUFFIXES)
+    )
 
 
 def assert_clean_stage(stage_dir: Path) -> None:
@@ -135,7 +323,7 @@ def assert_clean_stage(stage_dir: Path) -> None:
             continue
         if rel.startswith("storage/exports/"):
             offenders.append(rel)
-        elif any(rel.startswith(prefix) for prefix in FORBIDDEN_STAGE_FILES):
+        elif is_forbidden_stage_file(rel):
             offenders.append(rel)
 
     if offenders:
@@ -284,10 +472,21 @@ def main() -> int:
     package_name = args.name or release_metadata.package_name()
     release_id = args.release_id or default_release_id(package_name, ROOT)
     include_databases = not args.exclude_databases
+
+    ensure_generated_artifacts_fresh()
+
+    # Le manifeste source doit être frais avant la copie: sinon l’archive de
+    # release embarquerait un TREE.txt déjà obsolète.
+    generate_tree_manifest("source", ROOT, ROOT / "TREE.txt", include_databases=include_databases)
+
     copy_tree(ROOT, stage_dir, DEFAULT_EXCLUDES, include_databases=include_databases, include_vendor=args.include_vendor)
     if include_databases:
         inject_stage_databases(stage_dir)
         validate_stage_databases(stage_dir)
+
+    # Le manifeste release est calculé depuis le staging final, après injection
+    # contrôlée des bases SQLite, pour refléter l’archive installable réelle.
+    generate_tree_manifest("release", stage_dir, stage_dir / "TREE.release.txt", include_databases=include_databases)
 
     manifest = build_release_manifest(
         stage_dir,
@@ -306,10 +505,15 @@ def main() -> int:
             "--include-vendor inclut uniquement les dépendances PHP de runtime (vendor/, backend/vendor/ et le chemin Twig configuré).",
             "Les node_modules du back-office restent toujours exclus: seuls les assets admin compilés sont distribués.",
             "Les fichiers sensibles ou de debug (ops/ftp.deploy.json, *.js.map) sont exclus des releases standard.",
+            "Les environnements virtuels, caches Python, tests source locaux et archives temporaires sont exclus des releases de production.",
+            "Les commandes release supportées dans une archive installée sont smoke, validate et docs check; elles ne doivent pas dépendre des tests source exclus.",
             f"L'archive ZIP contient le dossier racine {release_metadata.package_root}/.",
         ],
         release_metadata=release_metadata.to_dict(),
     )
+    manifest["release_root_prefix"] = release_metadata.package_root
+    manifest["generated_docs_fresh"] = True
+    manifest["verified_commands"] = RELEASE_VERIFIED_COMMANDS
     manifest_path = stage_dir / "storage" / "deployments" / "release-manifest.json"
     write_json(manifest_path, manifest)
     assert_clean_stage(stage_dir)

@@ -6,7 +6,9 @@ namespace App\Application\Frontend;
 
 use App\Application\Cookies\CookieConsentRepository;
 use App\Application\Content\BlockDocumentNormalizer;
+use App\Application\Content\Read\PublicContentReadRepository;
 use App\Application\Media\Storage\MediaUrlGenerator;
+use App\Application\Search\PublicSearchReadRepository;
 use App\Core\Database;
 
 final class ResolvePublicRoute
@@ -14,7 +16,8 @@ final class ResolvePublicRoute
     private MediaUrlGenerator $mediaUrls;
 
     public function __construct(
-        private readonly \App\Application\Content\Read\PublicContentReadRepository $content,
+        private readonly PublicContentReadRepository $content,
+        private readonly PublicSearchReadRepository $search,
         private readonly \App\Application\Routing\PublicRouteReadRepository $routes,
         private readonly SiteReadRepository $sites,
         private readonly TaxonomyReadRepository $taxonomies,
@@ -306,7 +309,7 @@ final class ResolvePublicRoute
             'taxonomy' => $this->safeFilterSlug((string) ($queryParams['taxonomy'] ?? '')),
             'term' => $this->safeFilterSlug((string) ($queryParams['term'] ?? '')),
         ];
-        $results = $query !== '' ? $this->content->searchDocuments($query, $languageCode, (int) $site['id'], $filters) : [];
+        $results = $query !== '' ? $this->search->searchDocuments($query, $languageCode, (int) $site['id'], $filters) : [];
         return $this->basePayload($site, $languageCode, '/search', $ui['search_title']) + [
             'title' => $ui['search_title'],
             'search_query' => $query,

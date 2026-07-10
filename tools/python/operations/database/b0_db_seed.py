@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sqlite3
 import subprocess
 import sys
@@ -25,6 +24,7 @@ BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
+from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.processes import cms_subprocess_env
 CORE_DB = BASE / "storage" / "database" / "core.sqlite"
 IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
@@ -91,8 +91,8 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
     """Synchronise la politique IAM native des modules.
 
     Les droits de gouvernance `modules.*` sont réservés au rôle super_admin.
-    Le rôle admin conserve uniquement l'exploitation du module Forms
-    (`forms.read` / `forms.manage`) afin de gérer les formulaires.
+    Le rôle admin conserve l'exploitation des modules métier officiels
+    (`forms.*` et `business.*`) sans obtenir `modules.manage`.
     """
     i = iam.cursor()
     for key, name, description in [
@@ -100,6 +100,15 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         ("modules.manage", "Gérer les modules", "Installer, activer, désactiver, migrer et diagnostiquer les modules."),
         ("forms.read", "Lire les formulaires", "Lire formulaires et soumissions."),
         ("forms.manage", "Gérer les formulaires", "Créer et configurer les formulaires."),
+        ("business.crm.read", "Lire le CRM Business", "Lire les entreprises, contacts, tags, consentements et données CRM autorisées."),
+        ("business.crm.manage", "Gérer le CRM Business", "Créer, modifier et archiver entreprises, contacts, tags et consentements."),
+        ("business.memo.read", "Lire les mémos CRM", "Consulter les mémos CRM accessibles et leurs partages internes."),
+        ("business.memo.manage", "Gérer les mémos CRM", "Créer, modifier, commenter et archiver les mémos CRM."),
+        ("business.memo.share", "Partager les mémos CRM", "Créer ou révoquer des partages internes et liens publics de mémos."),
+        ("business.mailing.read", "Lire le mailing Business", "Consulter listes, campagnes et historiques de diffusion."),
+        ("business.mailing.manage", "Gérer le mailing Business", "Gérer listes, campagnes simples, destinataires et désabonnements."),
+        ("business.messaging.send", "Envoyer des messages Business", "Planifier ou déclencher un envoi après contrôle du consentement."),
+        ("business.messaging.admin", "Administrer le messaging Business", "Configurer providers, templates et outbox messaging sans stocker de secret en clair."),
     ]:
         i.execute(
             """
@@ -121,7 +130,13 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
         SELECT r.id, p.id
         FROM iam_roles r
-        JOIN iam_permissions p ON p.permission_key IN ('forms.read','forms.manage')
+        JOIN iam_permissions p ON p.permission_key IN (
+            'forms.read','forms.manage',
+            'business.crm.read','business.crm.manage',
+            'business.memo.read','business.memo.manage','business.memo.share',
+            'business.mailing.read','business.mailing.manage',
+            'business.messaging.send','business.messaging.admin'
+        )
         WHERE r.role_key='admin'
         """
     )
@@ -130,7 +145,7 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
         SELECT r.id, p.id
         FROM iam_roles r
-        JOIN iam_permissions p ON p.permission_key IN ('modules.read','modules.manage','forms.read','forms.manage')
+        CROSS JOIN iam_permissions p
         WHERE r.role_key='super_admin'
         """
     )
@@ -1451,10 +1466,15 @@ def rebuild_public_projections(required: bool = True) -> int:
         print(f"ERREUR: {exc}", file=sys.stderr)
         return 1
 
-    php = shutil.which("php")
-    if php is None or not CONSOLE.exists():
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
         message = (
-            "PHP CLI ou backend/bin/console introuvable: les projections ne sont pas reconstruites. "
+            f"{php_error or 'backend/bin/console introuvable'}: les projections ne sont pas reconstruites. "
             "Installez PHP CLI ou relancez avec --skip-projections si vous voulez seulement injecter les donnees."
         )
         if required:
@@ -1645,7 +1665,7 @@ def demo_page_blocks(lang: str, title: str, summary: str, body: str, entry_key: 
                 "anchor": "",
                 "data": {
                     "items": [
-                        {"label": labels["contact_cta"], "url": "mailto:contact@webe.li", "style": "primary", "target": "_self"},
+                        {"label": labels["contact_cta"], "url": "mailto:contact@example.test", "style": "primary", "target": "_self"},
                     ]
                 },
                 "sort_order": 2,

@@ -53,7 +53,7 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('security.webhooks.manage', 'Gérer les webhooks', 'Créer, modifier, activer, désactiver et supprimer les webhooks de publication.'),
 ('security.cors.read', 'Lire le CORS par site', 'Consulter les origines CORS autorisées pour l’API headless du site.'),
 ('security.cors.manage', 'Gérer le CORS par site', 'Modifier les origines CORS autorisées pour l’API headless du site.'),
-('users.email_2fa.manage', 'Gérer la connexion par code email', 'Activer ou désactiver la connexion par code email depuis la fiche utilisateur.'),
+('users.email_2fa.manage', 'Gérer les modes de connexion IAM', 'Modifier le mode de connexion password, email_code ou totp depuis la fiche utilisateur.'),
 ('themes.read', 'Lire les thèmes', 'Consulter les thèmes.'),
 ('themes.manage', 'Gérer les thèmes', 'Configurer les thèmes.'),
 ('modules.read', 'Lire les modules', 'Consulter le catalogue, l’état, les dépendances et le diagnostic des modules.'),
@@ -75,6 +75,15 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('imports_exports.read', 'Lire l’historique des imports et exports', 'Accéder à la page Imports / Exports et consulter uniquement l’historique filesystem.'),
 ('imports_exports.write', 'Créer et télécharger les exports', 'Créer, relancer et télécharger les exports statiques.'),
 ('imports_exports.manage', 'Gérer les imports et exports', 'Inclut les opérations d’écriture et permet de supprimer ou nettoyer les releases.'),
+('business.crm.read', 'Lire le CRM Business', 'Lire les entreprises, contacts, tags, consentements et données CRM autorisées.'),
+('business.crm.manage', 'Gérer le CRM Business', 'Créer, modifier et archiver entreprises, contacts, tags et consentements.'),
+('business.memo.read', 'Lire les mémos CRM', 'Consulter les mémos CRM accessibles et leurs partages internes.'),
+('business.memo.manage', 'Gérer les mémos CRM', 'Créer, modifier, commenter et archiver les mémos CRM.'),
+('business.memo.share', 'Partager les mémos CRM', 'Créer ou révoquer des partages internes et liens publics de mémos.'),
+('business.mailing.read', 'Lire le mailing Business', 'Consulter listes, campagnes et historiques de diffusion.'),
+('business.mailing.manage', 'Gérer le mailing Business', 'Gérer listes, campagnes simples, destinataires et désabonnements.'),
+('business.messaging.send', 'Envoyer des messages Business', 'Planifier ou déclencher un envoi après contrôle du consentement.'),
+('business.messaging.admin', 'Administrer le messaging Business', 'Configurer providers, templates et outbox messaging sans stocker de secret en clair.'),
 ('profile.read', 'Lire son profil', 'Consulter son propre profil.'),
 ('profile.update', 'Modifier son profil', 'Modifier ses données personnelles autorisées.');
 
@@ -85,6 +94,14 @@ INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
 SELECT r.id, p.id FROM iam_roles r JOIN iam_permissions p ON p.permission_key IN (
 'content.read','content.create','content.update','content.revisions.save','content.revisions.restore','content.revisions.prune','content.update_primary_language','content.translate','content.duplicate','content.delete','content.approve','content.publish','content.unpublish','content.archive','content.preview','content.order',
 'media.read','media.upload','media.update','media.delete','taxonomy.read','taxonomy.manage','menu.read','menu.manage','fields.read','blueprints.read','blueprints.manage','seo.read','seo.simple','seo.manage','seo.audit','settings.read','settings.manage','themes.read','themes.manage','forms.read','forms.manage','cookies.read','cookies.manage','deployments.read','imports_exports.read','imports_exports.write','imports_exports.manage'
+) WHERE r.role_key='admin';
+
+INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
+SELECT r.id, p.id FROM iam_roles r JOIN iam_permissions p ON p.permission_key IN (
+'business.crm.read','business.crm.manage',
+'business.memo.read','business.memo.manage','business.memo.share',
+'business.mailing.read','business.mailing.manage',
+'business.messaging.send','business.messaging.admin'
 ) WHERE r.role_key='admin';
 
 INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)

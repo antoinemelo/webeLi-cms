@@ -12,6 +12,81 @@ tags:
     name: "Headless v1"
     description: "API publique headless v1."
 paths:
+  "/api/v1":
+    get:
+      operationId: "get_public_discovery_v1"
+      summary: "Découvrir l’API headless publique."
+      description: "Retourne les URLs stables de santé et des spécifications OpenAPI pour le site courant."
+      tags:
+        - "Headless v1"
+      security: []
+      parameters: []
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "name"
+                      - "status"
+                      - "base_path"
+                      - "health"
+                      - "openapi"
+                    properties:
+                      name:
+                        type: "string"
+                      status:
+                        type: "string"
+                        enum:
+                          - "available"
+                      base_path:
+                        type: "string"
+                      health:
+                        type: "string"
+                      openapi:
+                        type: "object"
+                        required:
+                          - "json"
+                          - "yaml"
+                        properties:
+                          json:
+                            type: "string"
+                          yaml:
+                            type: "string"
+                  meta:
+                    type: "object"
+                    required:
+                      - "contract"
+                      - "request_id"
+                    properties:
+                      contract:
+                        type: "string"
+                        const: "public.discovery.v1"
+                      request_id:
+                        type: "string"
+                    additionalProperties: true
+              examples:
+                default:
+                  value:
+                    data:
+                      name: "DEC CMS Public Headless API"
+                      status: "available"
+                      base_path: "/mod/api/v1"
+                      health: "/mod/api/v1/health"
+                      openapi:
+                        json: "/mod/api/v1/openapi.json"
+                        yaml: "/mod/api/v1/openapi.yaml"
+                    meta:
+                      contract: "public.discovery.v1"
+                      request_id: "20260622120000-abc"
   "/api/v1/content":
     get:
       operationId: "get_public_content_index_v1"
@@ -561,9 +636,7 @@ paths:
       description: "Retourne catégories, services et textes publics pour le site et la langue."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "lang"
@@ -607,9 +680,7 @@ paths:
       description: "Enregistre le choix de consentement sans exposer de donnée sensible."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "lang"
@@ -671,9 +742,7 @@ paths:
       description: "Retourne uniquement la définition publique active du formulaire."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "lang"
@@ -746,9 +815,7 @@ paths:
       description: "Valide et enregistre une soumission selon les règles du module Forms."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "lang"
@@ -829,9 +896,7 @@ paths:
       description: "Retourne un statut minimal dans le contexte site/langue résolu, sans lire de contenu éditorial."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "site"
@@ -1059,9 +1124,7 @@ paths:
       description: "Retourne une liste paginée de médias publics, avec filtre optionnel par media_type."
       tags:
         - "Headless v1"
-      security:
-        -
-          BearerAuth: []
+      security: []
       parameters:
         -
           name: "site"

@@ -11,13 +11,23 @@
     "data": {
       "fieldset_key": "seo_basic",
       "label": "SEO de base",
+      "fields_count": 1,
+      "usage_count": 1,
       "fields": [
         {
           "field_handle": "seo_title",
           "field_type": "text"
         }
       ],
-      "used_by": []
+      "used_by": [
+        {
+          "blueprint_key": "page",
+          "label": "Page",
+          "resource_type": "content_type",
+          "site_id": null,
+          "scope": "global"
+        }
+      ]
     },
     "meta": {
       "contract": "admin.fieldsets.show.v1",

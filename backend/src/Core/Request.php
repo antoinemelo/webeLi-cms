@@ -92,6 +92,24 @@ final class Request
         if (isset($this->server[$key])) {
             return (string) $this->server[$key];
         }
+        if ($normalized === 'AUTHORIZATION') {
+            foreach (['REDIRECT_HTTP_AUTHORIZATION', 'AUTHORIZATION'] as $fallbackKey) {
+                if (isset($this->server[$fallbackKey]) && (string) $this->server[$fallbackKey] !== '') {
+                    return (string) $this->server[$fallbackKey];
+                }
+            }
+            $headers = [];
+            if (function_exists('getallheaders')) {
+                $headers = getallheaders() ?: [];
+            } elseif (function_exists('apache_request_headers')) {
+                $headers = apache_request_headers() ?: [];
+            }
+            foreach ($headers as $headerName => $value) {
+                if (strcasecmp((string) $headerName, 'Authorization') === 0) {
+                    return (string) $value;
+                }
+            }
+        }
         if ($normalized === 'CONTENT_TYPE' && isset($this->server['CONTENT_TYPE'])) {
             return (string) $this->server['CONTENT_TYPE'];
         }

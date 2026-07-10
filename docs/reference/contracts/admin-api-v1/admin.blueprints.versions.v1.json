@@ -3,6 +3,11 @@
   "method": "GET",
   "path": "/admin/api/blueprints/{key}/versions",
   "permission": "blueprints.read",
+  "query": {
+    "site_id": "Site courant utilisé pour l’autorisation et la portée locale.",
+    "resource_type": "Type de ressource de la structure.",
+    "scope": "global|site — sélection exacte lorsque plusieurs portées partagent la même clé."
+  },
   "response": {
     "data": [
       {

@@ -5,7 +5,6 @@ audience:
   - installer
   - evaluator
 status: stable
-version: 1.0
 source_of_truth: generated
 generator: tools/python/generators/generate_documentation.py
 owners:
@@ -23,32 +22,38 @@ generated: true
 usage: tools/cms.py [-h] [--root ROOT] [--database-dir DATABASE_DIR] [--json]
                     [--dry-run] [--command-timeout COMMAND_TIMEOUT]
                     [--evidence-dir EVIDENCE_DIR]
-                    {init,rebuild,validate,qualify,audit,test,export,backup,release,docs,instance}
+                    {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs,business}
                     ...
 
 Façade stable des outils de maintenance DEC CMS.
 
 positional arguments:
-  {init,rebuild,validate,qualify,audit,test,export,backup,release,docs,instance}
+  {init,rebuild,validate,qualify,audit,test,e2e,export,backup,migrate,instance,release,smoke,docs,business}
     init                Créer les structures SQLite sans données métier.
-    rebuild             Reconstruire les bases et appliquer les seeds natifs.
+    rebuild             Développement/test: reconstruire les bases et appliquer
+                        les seeds natifs.
     validate            Exécuter les validateurs du CMS.
     qualify             Qualifier globalement le CMS selon un profil.
-    audit               Produire des preuves reproductibles dans le conteneur
-                        d audit.
+    audit               Produire des preuves reproductibles dans le conteneur d
+                        audit.
     test                Exécuter les tests automatisés Python.
+    e2e                 Exécuter Playwright sur une instance CMS isolée.
     export              Générer ou simuler un export statique.
     backup              Créer ou restaurer une sauvegarde SQLite.
+    migrate             Planifier ou appliquer les migrations SQLite natives et
+                        de modules.
+    instance            Gérer les instances locales du CMS.
     release             Préparer et vérifier une release.
+    smoke               Smoke test structurel non destructif d’une archive
+                        release installée.
     docs                Générer ou vérifier la documentation de référence.
-    instance            Préparer ou cloner une instance locale.
+    business            Commandes ciblées du module Business.
 
 options:
   -h, --help            show this help message and exit
   --root ROOT           Racine du projet CMS (défaut: répertoire courant).
   --database-dir DATABASE_DIR
-                        Répertoire des bases SQLite (défaut:
-                        storage/database).
+                        Répertoire des bases SQLite (défaut: storage/database).
   --json                Produit une enveloppe JSON stable.
   --dry-run             Affiche les actions sans modifier le projet.
   --command-timeout COMMAND_TIMEOUT
@@ -94,9 +99,8 @@ options:
                         Domaine à exécuter; répétable.
   --validator VALIDATOR
                         Identifiant stable du validateur; répétable.
-  --full                Ajoute les qualifications déterministes plus
-                        coûteuses, notamment la reconstruction temporaire des
-                        bases.
+  --full                Ajoute les qualifications déterministes plus coûteuses,
+                        notamment la reconstruction temporaire des bases.
   --with-slow           Ajoute aux contrôles complets les qualifications
                         longues, notamment le round-trip
                         sauvegarde/restauration.
@@ -112,7 +116,7 @@ options:
 usage: tools/cms.py qualify [-h] [--profile {quick,complete,release}]
                             [--json-report JSON_REPORT]
                             [--markdown-report MARKDOWN_REPORT] [--no-reports]
-                            [--continue-on-failure] [--list]
+                            [--continue-on-failure] [--no-cache] [--list]
 
 options:
   -h, --help            show this help message and exit
@@ -121,6 +125,8 @@ options:
   --markdown-report MARKDOWN_REPORT
   --no-reports
   --continue-on-failure
+  --no-cache            Force le build frontend et les E2E Playwright même si
+                        leurs fichiers sont inchangés.
   --list
 ```
 
@@ -129,7 +135,7 @@ options:
 ```text
 usage: tools/cms.py audit [-h] [--profile {quick,full,release}] [--build]
                           [--pull] [--engine {auto,podman,docker}]
-                          [--results-dir RESULTS_DIR]
+                          [--results-dir RESULTS_DIR] [--timeout TIMEOUT]
 
 options:
   -h, --help            show this help message and exit
@@ -138,22 +144,22 @@ options:
                         conteneur.
   --build               Force la reconstruction de l'image d'audit avant
                         l'exécution.
-  --pull                Actualise les images de base pendant la
-                        reconstruction.
+  --pull                Actualise les images de base pendant la reconstruction.
   --engine {auto,podman,docker}
                         Moteur de conteneurs à utiliser (défaut : détection
                         automatique).
   --results-dir RESULTS_DIR
                         Répertoire des preuves, relatif à la racine du CMS ou
                         absolu.
+  --timeout TIMEOUT     Borne maximale de l'audit en secondes. Par défaut: 7200
+                        pour le profil release, sinon --command-timeout.
 ```
 
 ## `tools/cms.py test`
 
 ```text
 usage: tools/cms.py test [-h] [--pattern PATTERN] [--verbose] [--e2e]
-                         [--timeout TIMEOUT]
-                         [--target-duration TARGET_DURATION]
+                         [--timeout TIMEOUT] [--target-duration TARGET_DURATION]
 
 options:
   -h, --help            show this help message and exit
@@ -161,11 +167,22 @@ options:
   --verbose
   --e2e                 Exécute aussi les scénarios Playwright (serveur et
                         identifiants E2E requis).
-  --timeout TIMEOUT     Durée maximale de la suite Python en secondes (défaut
-                        : 300).
+  --timeout TIMEOUT     Durée maximale de la suite Python en secondes (défaut :
+                        400).
   --target-duration TARGET_DURATION
                         Durée cible en secondes ; son dépassement produit un
-                        avertissement (défaut : 120).
+                        avertissement (défaut : 200).
+```
+
+## `tools/cms.py smoke`
+
+```text
+usage: tools/cms.py smoke [-h] [--structural-only]
+
+options:
+  -h, --help         show this help message and exit
+  --structural-only  Conservé pour compatibilité: le smoke test release est
+                     volontairement structurel et non destructif.
 ```
 
 ## `tools/cms.py export`
@@ -197,15 +214,110 @@ options:
   --no-safety-copy
 ```
 
+## `tools/cms.py migrate`
+
+```text
+usage: tools/cms.py migrate [-h]
+                            [--all | --database {core,iam,forms,cookies,ai,business,sale} | --module {ai-assistant,business,forms,sale}]
+                            [--plan | --apply] [--backup]
+                            [--no-backup-i-understand-the-risk] [--yes]
+
+options:
+  -h, --help            show this help message and exit
+  --all                 Traite toutes les bases SQLite migratables connues
+                        (défaut).
+  --database {core,iam,forms,cookies,ai,business,sale}
+                        Traite une seule base par clé ou scope.
+  --module {ai-assistant,business,forms,sale}
+                        Traite les bases déclarées par un module.
+  --plan                Affiche les migrations disponibles et manquantes sans
+                        les appliquer.
+  --apply               Applique les migrations manquantes après confirmation
+                        interne.
+  --backup              Crée une sauvegarde SQLite avant application.
+  --no-backup-i-understand-the-risk
+                        Applique sans sauvegarde préalable; option
+                        volontairement explicite et déconseillée.
+  --yes                 Confirme explicitement l’application des migrations.
+```
+
+## `tools/cms.py instance`
+
+```text
+usage: tools/cms.py instance [-h] {clone,update} ...
+
+positional arguments:
+  {clone,update}
+    clone         Cloner une instance locale dans un autre répertoire.
+    update        Mettre à jour une instance client locale depuis une release.
+
+options:
+  -h, --help      show this help message and exit
+```
+
+## `tools/cms.py instance clone`
+
+```text
+usage: tools/cms.py instance clone [-h] [--source SOURCE] --destination
+                                   DESTINATION [--old-base-path OLD_BASE_PATH]
+                                   [--new-base-path NEW_BASE_PATH]
+                                   [--new-public-base-url NEW_PUBLIC_BASE_URL]
+                                   [--force] [--include-dev-admin-vue]
+                                   [--include-docs]
+
+options:
+  -h, --help            show this help message and exit
+  --source SOURCE       Répertoire source. Par défaut: racine CMS courante.
+  --destination DESTINATION
+                        Répertoire destination à créer, par exemple ../mod2 ou
+                        ../eve.
+  --old-base-path OLD_BASE_PATH
+                        APP_BASE_PATH public source. Par défaut: nom du
+                        répertoire source.
+  --new-base-path NEW_BASE_PATH, --target-base-path NEW_BASE_PATH
+                        APP_BASE_PATH public cible. Par défaut: nom du
+                        répertoire destination.
+  --new-public-base-url NEW_PUBLIC_BASE_URL
+                        APP_PUBLIC_BASE_URL exact à écrire dans ops/.env.
+  --force               Remplace la destination si elle existe.
+  --include-dev-admin-vue
+                        Inclut les sources frontend/admin-vue.
+  --include-docs        Inclut docs/, README.md et TREE.txt.
+```
+
+## `tools/cms.py instance update`
+
+```text
+usage: tools/cms.py instance update [-h] --source SOURCE --target TARGET
+                                    (--plan | --apply) [--backup] [--yes]
+                                    [--delete-obsolete] [--maintenance-flag]
+                                    [--json]
+
+options:
+  -h, --help          show this help message and exit
+  --source SOURCE     Archive ZIP ou dossier racine de release à déployer.
+  --target TARGET     Dossier racine de l'instance client à mettre à jour.
+  --plan              Affiche le plan fichiers/migrations sans modifier la
+                      cible.
+  --apply             Applique la mise à jour après plan, backup et
+                      confirmation.
+  --backup            Crée un backup SQLite avant application.
+  --yes               Confirme explicitement l'application.
+  --delete-obsolete   Supprime les fichiers absents de la release, hors chemins
+                      protégés.
+  --maintenance-flag  Crée storage/maintenance.flag pendant la copie fichiers.
+  --json              Affiche un résumé JSON stable.
+```
+
 ## `tools/cms.py release`
 
 ```text
-usage: tools/cms.py release [-h] [--ci] [--interactive-prepare]
-                            [--build-admin] [--run-essential-validators]
-                            [--package] [--verify-archive]
-                            [--deploy {ftp,sftp}] [--skip-preflight]
-                            [--exclude-databases] [--include-vendor]
-                            [--no-zip] [--clean-stage]
+usage: tools/cms.py release [-h] [--ci] [--interactive-prepare] [--build-admin]
+                            [--run-essential-validators] [--package]
+                            [--verify-archive] [--deploy {ftp,sftp}]
+                            [--archive ARCHIVE] [--skip-composer]
+                            [--skip-preflight] [--exclude-databases]
+                            [--include-vendor] [--no-zip] [--clean-stage]
 
 options:
   -h, --help            show this help message and exit
@@ -218,6 +330,10 @@ options:
   --package
   --verify-archive
   --deploy {ftp,sftp}
+  --archive ARCHIVE     Archive ZIP à vérifier avec --verify-archive en mode
+                        vérification autonome.
+  --skip-composer       N'exécute pas composer install dans la chaîne CI
+                        release.
   --skip-preflight
   --exclude-databases
   --include-vendor
@@ -229,22 +345,78 @@ options:
 
 ```text
 usage: tools/cms.py docs [-h]
-                         {generate,check,evaluation-generate,evaluation-check}
+                         {generate,check,evaluation-generate,tree,evaluation-check}
                          ...
 
 positional arguments:
-  {generate,check,evaluation-generate,evaluation-check}
-    generate            Régénérer les références, OpenAPI et types SDK
-                        publics.
-    check               Vérifier la fraîcheur des références, OpenAPI, types
-                        SDK et gouvernance documentaire.
+  {generate,check,evaluation-generate,tree,evaluation-check}
+    generate            Régénérer les références, OpenAPI et types SDK publics.
+    check               Vérifier la fraîcheur des références, OpenAPI, types SDK
+                        et gouvernance documentaire.
     evaluation-generate
                         Régénérer les données machine-readable de l’espace
                         d’évaluation.
+    tree                Générer ou vérifier TREE.txt / TREE.release.txt.
     evaluation-check    Vérifier les données et preuves de l’espace
                         d’évaluation.
 
 options:
   -h, --help            show this help message and exit
+```
+
+## `tools/cms.py docs generate`
+
+```text
+usage: tools/cms.py docs generate [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs check`
+
+```text
+usage: tools/cms.py docs check [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs tree`
+
+```text
+usage: tools/cms.py docs tree [-h] [--source | --release] [--root ROOT]
+                              [--output OUTPUT] [--stdout] [--check]
+                              [--exclude-databases]
+
+options:
+  -h, --help           show this help message and exit
+  --source             Mode source: TREE.txt, sans storage/, dépendances ni
+                       artefacts locaux.
+  --release            Mode release: TREE.release.txt, selon les règles de
+                       packaging.
+  --root ROOT          Racine à scanner. Défaut: racine du projet courant.
+  --output OUTPUT      Fichier de sortie explicite.
+  --stdout             Écrire le manifeste sur stdout.
+  --check              Comparer sans modifier.
+  --exclude-databases  En mode release, exclure les bases SQLite.
+```
+
+## `tools/cms.py docs evaluation-generate`
+
+```text
+usage: tools/cms.py docs evaluation-generate [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
+## `tools/cms.py docs evaluation-check`
+
+```text
+usage: tools/cms.py docs evaluation-check [-h]
+
+options:
+  -h, --help  show this help message and exit
 ```
 

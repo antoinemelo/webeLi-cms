@@ -105,6 +105,9 @@ final class SecurityHeaders
         if (str_starts_with($path, '/api/')) {
             return 'api';
         }
+        if ($path === '/preview' || str_starts_with($path, '/preview/') || (bool) preg_match('#/(?:[a-z]{2}(?:-[a-z]{2})?/)?preview(?:/|$)#i', $path)) {
+            return 'preview';
+        }
         return 'front';
     }
 

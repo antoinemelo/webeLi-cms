@@ -12,4 +12,12 @@ def validate(mode: str="fast") -> ValidationReport:
     for p in (ROOT/"backend/src/Application").rglob("*.php"):
         text=p.read_text(errors="ignore"); r.checked()
         if "new PDO(" in text or "sqlite3" in text.lower(): r.add("ARCH-002","Accès direct au stockage depuis la couche Application",path=p.relative_to(ROOT).as_posix())
+
+    allowed_local_module_refs={
+        "backend/src/Module/ModuleRegistry.php",
+    }
+    for p in (ROOT/"backend/src").rglob("*.php"):
+        rel=p.relative_to(ROOT).as_posix(); text=p.read_text(encoding="utf-8",errors="ignore"); r.checked()
+        if "local/modules" in text and rel not in allowed_local_module_refs:
+            r.add("ARCH-003","Référence noyau non autorisée vers local/modules",path=rel)
     return r

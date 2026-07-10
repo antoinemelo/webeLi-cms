@@ -40,18 +40,47 @@ const rowCount = computed(() => entries.rows.length);
 async function load() { await entries.list({ type: contentType.value, status: status.value, q: q.value }, context.siteId, context.languageCode); }
 function edit(row: Record<string, unknown>) { router.push(`/contents/${props.typeKey}/${row.id}`); }
 function create() { router.push(`/contents/${props.typeKey}/new`); }
+function normalizeSlashPath(value: unknown): string {
+  const path = String(value || '').trim();
+  if (!path || path === '/') return '';
+  return `/${path.replace(/^\/+|\/+$/g, '')}`.replace(/\/{2,}/g, '/');
+}
+
+function joinSlashPaths(base: string, path: string): string {
+  const cleanBase = normalizeSlashPath(base);
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (!cleanBase) return cleanPath || '/';
+  if (cleanPath === cleanBase || cleanPath.startsWith(`${cleanBase}/`)) return cleanPath;
+  return `${cleanBase}${cleanPath}`.replace(/\/{2,}/g, '/') || '/';
+}
+
+function publicBasePath(): string {
+  const site = context.context?.site;
+  const explicitPublicPath = normalizeSlashPath(site?.public_path);
+  if (explicitPublicPath) return explicitPublicPath;
+
+  const explicitPublicUrl = String(site?.public_url || '').trim();
+  if (explicitPublicUrl) {
+    try {
+      const parsed = new URL(explicitPublicUrl, window.location.origin);
+      if (parsed.origin === window.location.origin) {
+        const path = normalizeSlashPath(parsed.pathname);
+        if (path) return path;
+      }
+    } catch {
+      // Continue with path-based fallbacks.
+    }
+  }
+
+  const appBase = normalizeSlashPath(window.__AMCMS_ADMIN__?.basePath || '');
+  const sitePath = normalizeSlashPath(site?.request_base_path || site?.base_path || '');
+  return joinSlashPaths(appBase, sitePath === '' ? '/' : sitePath).replace(/\/$/, '');
+}
+
 function withPublicBasePath(path: string): string {
   if (!path) return '';
   if (/^(https?:)?\/\//i.test(path) || /^(mailto|tel):/i.test(path)) return path;
-
-  const base = String(context.context?.site?.base_path || window.__AMCMS_ADMIN__?.basePath || '').trim();
-  const normalizedBase = base === '/' ? '' : `/${base.replace(/^\/+|\/+$/g, '')}`;
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-  if (!normalizedBase) return normalizedPath || '/';
-  if (normalizedPath === normalizedBase || normalizedPath.startsWith(`${normalizedBase}/`)) return normalizedPath;
-
-  return `${normalizedBase}${normalizedPath}`.replace(/\/{2,}/g, '/');
+  return joinSlashPaths(publicBasePath(), path);
 }
 
 function openPath(path: unknown, event: MouseEvent) {

@@ -1,72 +1,86 @@
 ---
-title: Gérer les sessions et la connexion par code email
+title: Gérer les sessions et les modes de connexion IAM
 audience:
   - administrator
   - superadministrator
 status: stable
-version: 1.0
-last_verified: 2026-06-14
+last_verified: 2026-06-25
 source_of_truth: code
 source_paths:
   - backend/src
   - frontend/admin-vue/src
   - database
+  - backend/src/Application/Iam/IamAdminRepository.php
+  - backend/src/Application/Api/Admin/IamAdminApiController.php
+  - frontend/admin-vue/src/views/iam/IamUsersView.vue
+  - database/migrations/iam
+  - `python3 tools/cms.py test`
 
 owners:
   - operations
   - security
 document_type: guide
-permissions:
-  - sessions.read
-  - sessions.manage
-  - users.email_2fa.manage
-source_paths:
-  - backend/src/Application/Iam/IamAdminRepository.php
-  - backend/src/Application/Api/Admin/IamAdminApiController.php
-  - frontend/admin-vue/src/admin/securityPanel.ts
-  - database/migrations/iam
-  - `python3 tools/cms.py test`
 generated: false
 ---
-# Gérer les sessions et la connexion par code email
+# Gérer les sessions et les modes de connexion IAM
 
-Cette procédure s’adresse aux administrateurs autorisés à gérer les comptes et leurs sessions. Elle explique comment activer la **2FA par email**, contrôler les connexions ouvertes et réagir lorsqu’un utilisateur ne peut plus accéder au back-office.
+Cette procédure s’adresse aux administrateurs autorisés à gérer les comptes et leurs sessions. Elle explique les trois modes `login_mode` disponibles, le contrôle des connexions ouvertes et la réaction lorsqu’un utilisateur ne peut plus accéder au back-office.
 
 ## Permissions nécessaires
 
 - `sessions.read` pour consulter les sessions ;
 - `sessions.manage` pour les révoquer ;
-- `users.email_2fa.manage` pour activer ou désactiver la connexion par code email sur un compte.
+- `users.email_2fa.manage` pour modifier le mode de connexion d’un compte. Le nom de permission est conservé par compatibilité, mais le modèle métier est `login_mode`.
 
 Vérifiez également que vous intervenez sur le bon utilisateur et dans le bon contexte de site avant toute modification.
 
-## Fonctionnement de la connexion par code email
+## Modes de connexion
 
-Lorsque cette option est active, l’utilisateur saisit son adresse de connexion. Le CMS crée alors un défi temporaire dans `iam_email_2fa_challenges` et envoie un **code numérique envoyé** à l’adresse enregistrée sur le compte.
+- `password` : connexion classique par mot de passe, sans challenge supplémentaire.
+- `email_code` : code temporaire envoyé par e-mail, sans mot de passe pendant ce parcours. Ce mode n’est pas un TOTP.
+- `totp` : mot de passe + code TOTP standard RFC 6238, compatible application d’authentification via URI `otpauth://totp/...`.
 
-Pendant ce parcours, le **mot de passe n’est pas demandé**. Le code est limité dans le temps, ne peut être utilisé qu’une fois et les tentatives sont comptabilisées. Cette méthode dépend donc du bon fonctionnement de l’envoi d’emails et de l’accès de l’utilisateur à sa boîte de réception.
+`login_mode` est la source de vérité. Les anciens champs `totp_enabled` et `totp_required` peuvent encore apparaître dans les réponses pour compatibilité, mais ils ne doivent plus être utilisés pour décider si un compte passe par le code e-mail ou par un vrai TOTP.
 
-## Activer la 2FA par email
+## Fonctionnement de la connexion par code e-mail
+
+Lorsque `login_mode=email_code`, l’utilisateur saisit son adresse de connexion. Le CMS crée alors un défi temporaire dans `iam_email_2fa_challenges` et envoie un code numérique à l’adresse enregistrée sur le compte.
+
+Pendant ce parcours, le mot de passe n’est pas demandé. Le code est limité dans le temps, ne peut être utilisé qu’une fois et les tentatives sont comptabilisées. Cette méthode dépend du bon fonctionnement de l’envoi d’e-mails et de l’accès de l’utilisateur à sa boîte de réception.
+
+## Fonctionnement du TOTP
+
+Lorsque `login_mode=totp`, l’utilisateur saisit son mot de passe puis un code à 6 chiffres généré par une application d’authentification. Le secret est généré en Base32, activé uniquement après confirmation d’un premier code valide, puis stocké chiffré au repos. Après activation, le secret n’est plus renvoyé par l’API.
+
+L’activation TOTP génère aussi des codes de récupération à usage unique. Ils sont affichés une seule fois, au moment de l’activation ou de la régénération. Le CMS stocke uniquement leurs hashes dans `iam_users.totp_recovery_codes_json`; un code utilisé est supprimé immédiatement.
+
+## Changer le mode de connexion
 
 1. Ouvrez **Utilisateurs**, puis la fiche du compte concerné.
-2. Accédez à **Configuration avancée**.
+2. Ouvrez **Configuration avancée**, puis accédez à **Mode de connexion**.
 3. Vérifiez que l’adresse email est correcte et que le compte est actif.
-4. Dans **Connexion par code email**, choisissez **Activer la connexion par code email**.
-5. Confirmez l’opération.
-6. Demandez à l’utilisateur de fermer sa session, puis de tester une nouvelle connexion.
-7. Contrôlez qu’il reçoit le code et qu’il peut terminer la connexion.
+4. Choisissez **Mot de passe classique**, **Code par e-mail** ou **Mot de passe + application TOTP**.
+5. Pour `totp`, préparez le secret, scannez l’URI `otpauth` ou saisissez le secret manuel dans l’application, puis confirmez un code courant.
+6. Copiez les codes de récupération affichés et transmettez-les par un canal approprié si le compte n’est pas le vôtre.
+7. Confirmez l’opération et demandez à l’utilisateur de tester une nouvelle connexion.
 
-L’activation ne fournit aucun secret à copier et ne nécessite pas d’application d’authentification. Le facteur repose sur l’adresse email associée au compte.
+Chaque changement de mode révoque les sessions actives de l’utilisateur.
 
-## Désactiver la connexion par code email
+## Désactiver ou remplacer le TOTP
 
 1. Ouvrez la fiche de l’utilisateur.
-2. Accédez à **Configuration avancée**.
-3. Dans **Connexion par code email**, choisissez **Désactiver la connexion par code email**.
-4. Confirmez l’opération.
-5. Demandez à l’utilisateur de tester le mode de connexion qui reste autorisé pour son compte.
+2. Ouvrez **Configuration avancée**, puis accédez à **Mode de connexion**.
+3. Choisissez **Mot de passe classique** ou **Code par e-mail**, ou préparez une rotation TOTP.
+4. Confirmez l’opération. Les sessions actives sont révoquées.
 
-Ne désactivez pas ce mode sans vérifier que l’utilisateur dispose encore d’un moyen valide de se connecter.
+Ne désactivez pas un mode sans vérifier que l’utilisateur dispose encore d’un moyen valide de se connecter.
+
+## Régénérer les codes de récupération TOTP
+
+1. Ouvrez la fiche d’un utilisateur en mode `totp`.
+2. Choisissez **Régénérer les codes de récupération**.
+3. Copiez immédiatement la nouvelle liste. Les anciens codes deviennent invalides.
+4. Contrôlez le journal d’audit si la régénération répond à un incident.
 
 ## Consulter et révoquer les sessions
 

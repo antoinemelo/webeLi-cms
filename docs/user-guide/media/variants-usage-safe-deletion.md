@@ -5,29 +5,24 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Media
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - media.update
-  - media.delete
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Media
 generated: false
 ---
 # Générer des variantes et supprimer un média sans casser un contenu
 
 ## Résultat attendu
 
-Générer des variantes et supprimer un média sans casser un contenu. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Générer des variantes et supprimer un média sans casser un contenu.
 
 ## Public et droits
 

@@ -32,10 +32,12 @@ final class SqlStaticExportSource implements StaticExportSourceContract
             $params['route_path'] = $this->stripKnownLanguagePrefix($this->normalizePath($routePath), $siteKey);
         }
 
-        $sql = "SELECT r.*, s.site_key, sl.url_prefix, sl.hreflang_code, sl.is_default
+        $sql = "SELECT r.*, s.site_key, sl.url_prefix, sl.hreflang_code, sl.is_default,
+                       sd.scheme AS primary_scheme, sd.host AS primary_host, sd.base_path AS primary_base_path
                 FROM routes r
                 JOIN sites s ON s.id = r.site_id
                 JOIN site_languages sl ON sl.site_id = r.site_id AND sl.language_code = r.language_code
+                LEFT JOIN site_domains sd ON sd.site_id = s.id AND sd.is_active = 1 AND sd.is_primary = 1
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY s.site_key, sl.sort_order, CASE WHEN r.full_path = '/' THEN 0 ELSE 1 END, r.full_path";
         $routes = [];
@@ -49,7 +51,13 @@ final class SqlStaticExportSource implements StaticExportSourceContract
                 (string) $row['site_key'],
                 (string) $row['language_code'],
                 $path,
-                self::htmlOutputPath($path, (string) ($row['url_prefix'] ?? '')),
+                self::htmlOutputPath(
+                    $path,
+                    (string) ($row['url_prefix'] ?? ''),
+                    (string) $row['site_key'],
+                    (string) ($row['primary_host'] ?? ''),
+                    (string) ($row['primary_base_path'] ?? ''),
+                ),
                 (string) $row['route_type'],
                 (string) $row['resource_type'],
                 (int) $row['resource_id'],
@@ -62,6 +70,13 @@ final class SqlStaticExportSource implements StaticExportSourceContract
                     'hreflang_code' => $row['hreflang_code'] ?? null,
                     'is_default_language' => (int) ($row['is_default'] ?? 0) === 1,
                     'source_published_revision_id' => $row['source_published_revision_id'] ?? null,
+                    'site_output_prefix' => self::siteOutputPrefix(
+                        (string) $row['site_key'],
+                        (string) ($row['primary_host'] ?? ''),
+                        (string) ($row['primary_base_path'] ?? ''),
+                    ),
+                    'site_domain_host' => $row['primary_host'] ?? null,
+                    'site_base_path' => self::normalizeBasePath((string) ($row['primary_base_path'] ?? '')),
                 ],
             );
         }
@@ -438,12 +453,16 @@ final class SqlStaticExportSource implements StaticExportSourceContract
         return $path === '//' ? '/' : $path;
     }
 
-    public static function htmlOutputPath(string $path, string $urlPrefix = ''): string
+    public static function htmlOutputPath(string $path, string $urlPrefix = '', string $siteKey = '', string $host = '', string $basePath = ''): string
     {
         $path = '/' . trim($path, '/');
         $path = $path === '//' ? '/' : $path;
         $prefix = trim($urlPrefix, '/');
         $segments = [];
+        $sitePrefix = self::siteOutputPrefix($siteKey, $host, $basePath);
+        if ($sitePrefix !== '') {
+            $segments[] = $sitePrefix;
+        }
         if ($prefix !== '') {
             $segments[] = $prefix;
         }
@@ -454,6 +473,43 @@ final class SqlStaticExportSource implements StaticExportSourceContract
             return 'index.html';
         }
         return implode('/', $segments) . '/index.html';
+    }
+
+    public static function siteOutputPrefix(string $siteKey = '', string $host = '', string $basePath = ''): string
+    {
+        $host = trim(strtolower($host));
+        $basePath = self::normalizeBasePath($basePath);
+        $segments = [];
+        if ($host !== '') {
+            $segments[] = self::safePathSegment($host);
+        }
+        foreach (explode('/', trim($basePath, '/')) as $segment) {
+            if ($segment !== '') {
+                $segments[] = self::safePathSegment($segment);
+            }
+        }
+        if ($segments === []) {
+            $fallback = trim($siteKey) !== '' ? $siteKey : 'site';
+            $segments[] = self::safePathSegment($fallback);
+        }
+        return implode('/', array_values(array_filter($segments, static fn(string $part): bool => $part !== '')));
+    }
+
+    public static function normalizeBasePath(string $basePath): string
+    {
+        $basePath = trim($basePath);
+        if ($basePath === '' || $basePath === '/') {
+            return '';
+        }
+        return '/' . trim($basePath, '/');
+    }
+
+    private static function safePathSegment(string $value): string
+    {
+        $value = strtolower(trim($value));
+        $value = preg_replace('/[^a-z0-9._-]+/i', '-', $value) ?? '';
+        $value = trim($value, '.-_');
+        return $value !== '' ? $value : 'site';
     }
 
     public static function localizedPublicPath(string $path, string $urlPrefix = ''): string

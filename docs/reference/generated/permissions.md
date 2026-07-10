@@ -5,7 +5,6 @@ audience:
   - installer
   - evaluator
 status: stable
-version: 1.0
 source_of_truth: generated
 generator: tools/python/generators/generate_documentation.py
 owners:
@@ -34,6 +33,7 @@ generated: true
 | `admin.forms.delete` |
 | `admin.forms.write` |
 | `admin.iam.roles.update` |
+| `admin.iam.users.login_mode.update` |
 | `admin.iam.users.update` |
 | `admin.imports_exports.delete` |
 | `admin.media.folders.update` |
@@ -57,6 +57,20 @@ generated: true
 | `audit.read` |
 | `blueprints.manage` |
 | `blueprints.read` |
+| `business.catalog.discounts.write` |
+| `business.catalog.prices.read` |
+| `business.catalog.prices.write` |
+| `business.catalog.purchase_prices.read` |
+| `business.catalog.read` |
+| `business.catalog.stock.write` |
+| `business.catalog.write` |
+| `business.crm.manage` |
+| `business.crm.read` |
+| `business.mailing.manage` |
+| `business.mailing.read` |
+| `business.memo.manage` |
+| `business.memo.read` |
+| `business.messaging.admin` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |
@@ -83,14 +97,32 @@ generated: true
 | `media.delete` |
 | `media.read` |
 | `media.update` |
+| `memo.comment.update` |
 | `menu.manage` |
 | `menu.read` |
 | `modules.manage` |
 | `modules.read` |
+| `pos.catalog.read` |
 | `profile.read` |
 | `profile.update` |
+| `refund.create` |
+| `relation.delete` |
+| `relations.restore` |
 | `roles.manage` |
 | `roles.read` |
+| `sale.cash.manage` |
+| `sale.manage` |
+| `sale.orders.manage` |
+| `sale.orders.read` |
+| `sale.payments.manage` |
+| `sale.payments.read` |
+| `sale.pos.manage` |
+| `sale.read` |
+| `sale.refunds.manage` |
+| `sale.reports.read` |
+| `sale.settings.manage` |
+| `sale.stock.manage` |
+| `sale.stock.read` |
 | `security.cors.manage` |
 | `security.cors.read` |
 | `security.tokens.manage` |

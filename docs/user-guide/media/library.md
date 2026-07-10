@@ -5,30 +5,25 @@ audience:
   - publisher
   - seo
 status: stable
-version: 1.0
 last_verified: 2026-06-14
 source_of_truth: manual
 source_paths:
   - backend/src
   - frontend/admin-vue/src
+  - backend/routes/api.php
+  - backend/src/Media
+  - admin-app/src
 
 owners:
   - editorial
 document_type: procedure
-permissions:
-  - media.read
-  - media.update
-source_paths:
-  - backend/routes/api.php
-  - backend/src/Media
-  - admin-app/src
 generated: false
 ---
 # Téléverser, classer et documenter les médias
 
 ## Résultat attendu
 
-Téléverser, classer et documenter les médias. La procédure décrit uniquement les fonctions visibles dans la version `dec_v05-e14n`.
+Téléverser, classer et documenter les médias.
 
 ## Public et droits
 
@@ -40,7 +35,7 @@ Téléverser, classer et documenter les médias. La procédure décrit uniquemen
 un format et une taille acceptés par la configuration
 ## Procédure
 
-1. Ouvrez la médiathèque dans le bon site.
+1. Ouvrez **Actifs > Médias** dans le bon site.
 2. Créez ou choisissez un dossier, puis téléversez le fichier.
 3. Renseignez un nom compréhensible, le texte alternatif, la légende et les informations utiles.
 4. Attachez le média au contenu depuis le champ ou le bloc prévu.
