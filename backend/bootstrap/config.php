@@ -12,5 +12,6 @@ return [
     'seo' => require __DIR__ . '/../config/seo.php',
     'security' => require __DIR__ . '/../config/security.php',
     'themes' => require __DIR__ . '/../config/themes.php',
+    'updates' => require __DIR__ . '/../config/updates.php',
     'workflow' => require __DIR__ . '/../config/workflow.php',
 ];

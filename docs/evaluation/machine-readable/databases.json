@@ -33,6 +33,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/ai/0001_baseline.sql"
+    ],
+    "id": "database-source-database-migrations-ai-0001-baseline-sql-f7c8199391",
+    "kind": "migration",
+    "last_verified": "2026-07-10",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/ai/0001_baseline.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/business/0001_init.sql"
     ],
     "id": "database-source-database-migrations-business-0001-init-sql-8980c69b4d",
@@ -215,6 +233,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/cookies/0001_baseline.sql"
+    ],
+    "id": "database-source-database-migrations-cookies-0001-baseline-sql-66184d89c4",
+    "kind": "migration",
+    "last_verified": "2026-07-10",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/cookies/0001_baseline.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/core/070_module_resource_blueprints.sql"
     ],
     "id": "database-source-database-migrations-core-070-module-resource-blueprints-sql-ab642eecfc",
@@ -306,6 +342,24 @@
     "tables": [
       "cross_database_operations"
     ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/forms/0001_baseline.sql"
+    ],
+    "id": "database-source-database-migrations-forms-0001-baseline-sql-5d5340a785",
+    "kind": "migration",
+    "last_verified": "2026-07-10",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/forms/0001_baseline.sql"
+    ],
+    "status": "supported",
+    "tables": [],
     "views": []
   },
   {

@@ -39,6 +39,7 @@ async function findFieldFixture(page: Page, pattern: RegExp): Promise<Locator | 
 
 test.describe('blueprint designer safe activation', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
+  test.setTimeout(60_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);

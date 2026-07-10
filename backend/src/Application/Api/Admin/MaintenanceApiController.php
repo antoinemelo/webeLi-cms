@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
+use App\Application\Maintenance\VersionInventoryService;
 use App\Application\Publication\PublishedProjectionPipeline;
 use App\Core\Database;
 use App\Core\Request;
@@ -26,6 +27,7 @@ final class MaintenanceApiController
         private readonly AuthRepository $auth,
         private readonly Authorization $authorization,
         private readonly PublishedProjectionPipeline $projectionPipeline,
+        private readonly VersionInventoryService $versions,
     ) {}
 
     public function index(): Response
@@ -41,6 +43,7 @@ final class MaintenanceApiController
             'status' => $this->status($siteId, $languageCode),
             'audit_logs' => $this->auditLogs(),
             'runtime_logs' => $this->runtimeLogs(),
+            'versions' => $this->versions->maintenancePayload(),
             'actions' => $this->actions(),
         ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
     }

@@ -18,6 +18,7 @@ generated: true
 
 | Source | Version |
 |---|---|
+| `database/migrations/ai/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/business/0001_init.sql` | `0001_init` |
 | `database/migrations/business/0002_catalog_pricing.sql` | `0002_catalog_pricing` |
 | `database/migrations/business/0003_catalog_schema.sql` | `0003_catalog_schema` |
@@ -25,11 +26,13 @@ generated: true
 | `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
 | `database/migrations/business/0005_variant_sales_note.sql` | `0005_variant_sales_note` |
 | `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
+| `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
 | `database/migrations/core/072_action_runs.sql` | `072_action_runs` |
 | `database/migrations/core/073_backfill_ai_module_blueprint_storage.sql` | `073_backfill_ai_module_blueprint_storage` |
 | `database/migrations/core/075_cross_database_operations.sql` | `075_cross_database_operations` |
+| `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |
 | `database/migrations/iam/0003_api_tokens.sql` | `0003_api_tokens` |

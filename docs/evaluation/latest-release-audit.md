@@ -19,12 +19,12 @@ generator: tools/python/operations/deployment/d13_bind_release_evidence.py
 
 Ce document est généré automatiquement pour une release **mineure ou majeure**. Les patchs ne déclenchent pas ce processus et conservent la qualification locale standard.
 
-- Type : `minor`
+- Type : `major`
 - Audit : `PASS`
 - Profil : `release`
-- Date UTC : `2026-07-10T05:33:57Z`
-- SHA-256 release : `6a77fb0494bbcf52c25d59ccec90b37042ee7542ea5f3d47990c15a8e9903545`
-- SHA-256 preuves : `8c9ae5019c91068aa58be01c53219e4ff1475378b3482af6032d81bad34f6b8d`
+- Date UTC : `2026-07-10T10:21:24Z`
+- SHA-256 release : `cfe216bb2412132d4c2b7a1875b6fa683507a6322baf1a3436d9777402524833`
+- SHA-256 preuves : `1bae750dff6495a452c1350f79e328b87428494b2551bdc0c499e95fbe0570ef`
 - Étapes démontrées : 21
 
 ## Vérification indépendante

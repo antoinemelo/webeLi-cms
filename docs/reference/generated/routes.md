@@ -266,6 +266,7 @@ generated: true
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/updates/manifest.json` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/{path:.+}` | HTML/runtime | `backend/routes/web.php` |
 | `PATCH` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |

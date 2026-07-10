@@ -1,0 +1,2 @@
+-- Baseline schema marker for cookies.sqlite.
+-- The base schema is defined in database/modules/cookies.sql.

@@ -50,13 +50,23 @@ generated: true
 | `APP_PUBLIC_API_RATE_LIMIT_SALE_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW` | `backend/config/app.php` |
-| `APP_PUBLIC_BASE_URL` | `backend/config/app.php` |
+| `APP_PUBLIC_BASE_URL` | `backend/config/app.php`, `backend/src/Application/Maintenance/VersionInventoryService.php` |
 | `APP_SESSION_IDLE_TIMEOUT` | `backend/config/app.php` |
 | `APP_SESSION_NAME` | `backend/config/app.php` |
 | `APP_TEMPLATE_ENGINE` | `backend/config/app.php` |
 | `APP_THEME` | `backend/config/app.php` |
 | `APP_TIMEZONE` | `backend/config/app.php` |
 | `APP_TWIG_CACHE` | `backend/config/app.php` |
+| `APP_UPDATES_DEV_GIT_BRANCH` | `backend/config/updates.php` |
+| `APP_UPDATES_DEV_INSTANCE_URL` | `backend/config/updates.php` |
+| `APP_UPDATES_DEV_MANIFEST_URL` | `backend/config/updates.php` |
+| `APP_UPDATES_ENABLED` | `backend/config/updates.php` |
+| `APP_UPDATES_GITHUB_REPO` | `backend/config/updates.php` |
+| `APP_UPDATES_GITHUB_TOKEN` | `backend/src/Application/Maintenance/VersionInventoryService.php` |
+| `APP_UPDATES_HTTP_TIMEOUT` | `backend/config/updates.php` |
+| `APP_UPDATES_STABLE_GIT_BRANCH` | `backend/config/updates.php` |
+| `APP_UPDATES_STABLE_INSTANCE_URL` | `backend/config/updates.php` |
+| `APP_UPDATES_STABLE_MANIFEST_URL` | `backend/config/updates.php` |
 | `APP_WORKER_MAX_ATTEMPTS` | `backend/config/app.php` |
 | `BUSINESS_TELEGRAM_BOT_TOKEN` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `BUSINESS_TELEGRAM_ENABLED` | `backend/src/Modules/Business/Messaging/TelegramBotProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
