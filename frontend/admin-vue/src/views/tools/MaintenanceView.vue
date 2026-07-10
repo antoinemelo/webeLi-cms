@@ -261,7 +261,7 @@ function buildVersionRows(): VersionRow[] {
     ...stableModules.keys()
   ]);
 
-  [...moduleKeys].sort().forEach((key) => {
+  [...moduleKeys].map((key) => {
     const local = localModules.get(key) ?? null;
     const devModule = devModules.get(key) ?? null;
     const stableModule = stableModules.get(key) ?? null;
@@ -269,7 +269,7 @@ function buildVersionRows(): VersionRow[] {
       HIDDEN_SYSTEM_MODULE_KEYS.has(key)
       && [local, devModule, stableModule].some((module) => module?.type === 'system')
     ) {
-      return;
+      return null;
     }
     const installed = moduleLabel(local);
     const devVersion = moduleLabel(devModule);
@@ -284,7 +284,7 @@ function buildVersionRows(): VersionRow[] {
     ].filter(Boolean);
     const missing = !local ? 'Absent localement' : (!devModule && !stableModule ? 'Absent des canaux' : '');
     const status = versionAvailabilityStatus(available, newer, missing);
-    rows.push({
+    return {
       key,
       name: local?.name || devModule?.name || stableModule?.name || key,
       type: 'module',
@@ -294,8 +294,10 @@ function buildVersionRows(): VersionRow[] {
       status: status.status,
       statusClass: status.statusClass,
       detail: local?.enabled === false ? 'désactivé' : local?.installed === false ? 'non installé' : local?.type || ''
-    });
-  });
+    };
+  }).filter((row): row is VersionRow => row !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }))
+    .forEach((row) => rows.push(row));
 
   return rows;
 }
@@ -311,7 +313,7 @@ function buildDatabaseRows(): DatabaseRow[] {
     ...stableDatabases.keys()
   ]);
 
-  return [...keys].sort().map((key) => {
+  return [...keys].map((key) => {
     const local = localDatabases.get(key) ?? null;
     const dev = devDatabases.get(key) ?? null;
     const stable = stableDatabases.get(key) ?? null;
@@ -344,7 +346,7 @@ function buildDatabaseRows(): DatabaseRow[] {
       statusClass: status.statusClass,
       detail: [local?.kind, local?.path].filter(Boolean).join(' · ')
     };
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 }
 
 async function runAction(action: 'clear-cache' | 'reindex-search' | 'clear-audit' | 'clear-runtime'): Promise<void> {

@@ -152,13 +152,13 @@ async function createCrmFixture(page: Page): Promise<CrmFixture> {
 
 test.describe('business CRM UX smoke', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
+  test.setTimeout(60_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
   });
 
   test('covers relations, memo, message and consent entry points without public CRM headless exposure', async ({ page }) => {
-    test.setTimeout(60000);
     const { stamp, companyName, companyEmail, contactName, contactEmail, contactId } = await createCrmFixture(page);
 
     await page.goto(cmsPath('/admin/app/business'));

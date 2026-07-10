@@ -1,0 +1,2 @@
+-- Baseline schema marker for forms.sqlite.
+-- The base schema is defined in database/modules/forms.sql.

@@ -1,0 +1,2 @@
+-- Baseline schema marker for ai.sqlite.
+-- The base schema is defined in database/modules/ai.sql.
