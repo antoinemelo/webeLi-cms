@@ -207,7 +207,7 @@ final class CatalogCsvService
             }
             $clauses[] = 'NOT EXISTS (
                 SELECT 1 FROM business_product_completeness_scores cs
-                WHERE cs.product_id = p.id AND cs.variant_id IS NULL AND cs.channel = "all" AND cs.score >= 100
+                WHERE cs.product_id = p.id AND cs.variant_id IS NULL AND cs.channel = \'all\' AND cs.score >= 100
             )';
         }
 

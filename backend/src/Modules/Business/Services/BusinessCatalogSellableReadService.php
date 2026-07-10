@@ -369,7 +369,7 @@ final class BusinessCatalogSellableReadService
         $db = $this->pricingRepository->rawDatabase();
         $row = $db->one(
             'SELECT * FROM business_product_completeness_scores
-             WHERE product_id = :product_id AND variant_id = :variant_id AND channel IN (:channel, "all")
+             WHERE product_id = :product_id AND variant_id = :variant_id AND channel IN (:channel, \'all\')
              ORDER BY CASE channel WHEN :channel THEN 0 ELSE 1 END
              LIMIT 1',
             ['product_id' => $productId, 'variant_id' => $variantId, 'channel' => $this->pimChannel($channel)]
@@ -519,7 +519,7 @@ final class BusinessCatalogSellableReadService
              INNER JOIN business_attributes a ON a.id = v.attribute_id
              WHERE v.' . $owner . ' = :owner_id
                 AND a.archived_at IS NULL
-                AND v.language IN ("und", :language)
+                AND v.language IN (\'und\', :language)
              ORDER BY a.sort_order ASC, a.code ASC, CASE v.language WHEN :language THEN 0 ELSE 1 END',
             ['owner_id' => $ownerId, 'language' => $language]
         );

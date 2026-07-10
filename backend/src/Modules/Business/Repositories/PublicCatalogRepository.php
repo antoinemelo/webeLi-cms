@@ -256,7 +256,7 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
              WHERE v.' . $owner . ' = :owner_id
                AND a.is_public = 1
                AND a.archived_at IS NULL
-               AND v.language IN (:language, "und")
+               AND v.language IN (:language, \'und\')
              ORDER BY a.sort_order ASC, a.name ASC,
                       CASE v.language WHEN :language THEN 0 ELSE 1 END',
             [

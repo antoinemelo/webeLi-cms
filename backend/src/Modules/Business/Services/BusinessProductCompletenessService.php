@@ -350,7 +350,7 @@ final class BusinessProductCompletenessService
             'SELECT 1 FROM business_product_assets
              WHERE product_id = ?
                AND archived_at IS NULL
-               AND role <> "internal"
+               AND role <> \'internal\'
              LIMIT 1',
             [$productId]
         ) !== null;
@@ -383,9 +383,9 @@ final class BusinessProductCompletenessService
              WHERE ' . $owner . ' = ?
                AND attribute_id = ?
                AND (
-                   (value_text IS NOT NULL AND trim(value_text) <> "")
+                   (value_text IS NOT NULL AND trim(value_text) <> \'\')
                    OR value_number IS NOT NULL
-                   OR (value_json IS NOT NULL AND trim(value_json) NOT IN ("", "[]", "{}", "null"))
+                   OR (value_json IS NOT NULL AND trim(value_json) NOT IN (\'\', \'[]\', \'{}\', \'null\'))
                )
              LIMIT 1',
             [$this->id($ownerId, $owner), $this->id($attributeId, 'attribute_id')]

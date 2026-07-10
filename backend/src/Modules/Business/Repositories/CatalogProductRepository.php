@@ -114,10 +114,10 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                     (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
-                    (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> "internal") AS image_count,
-                    (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS completeness_score,
-                    (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS is_sellable_summary,
-                    (SELECT s.missing_json FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS missing_summary_json
+                    (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\') AS image_count,
+                    (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS completeness_score,
+                    (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS is_sellable_summary,
+                    (SELECT s.missing_json FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS missing_summary_json
              FROM business_products WHERE ' . $sqlWhere . ' ORDER BY updated_at DESC, id DESC LIMIT :limit OFFSET :offset',
             $params + ['limit' => $limit, 'offset' => $offset]
         );
@@ -246,10 +246,10 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                     (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
-                    (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> "internal") AS image_count,
-                    (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS completeness_score,
-                    (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS is_sellable_summary,
-                    (SELECT s.missing_json FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = "all" LIMIT 1) AS missing_summary_json
+                    (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\') AS image_count,
+                    (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS completeness_score,
+                    (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS is_sellable_summary,
+                    (SELECT s.missing_json FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS missing_summary_json
              FROM business_products WHERE site_id = ? AND id = ?' . ($includeArchived ? '' : ' AND archived_at IS NULL') . ' LIMIT 1',
             [$this->requireSiteId($siteId), $id]
         );
