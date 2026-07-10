@@ -6,7 +6,7 @@ audience:
   - administrator
   - developer
 status: stable
-last_verified: 2026-07-08
+last_verified: 2026-07-10
 source_of_truth: generated
 source_paths:
   - tools/python/operations/deployment/d13_bind_release_evidence.py
@@ -22,9 +22,9 @@ Ce document est généré automatiquement pour une release **mineure ou majeure*
 - Type : `minor`
 - Audit : `PASS`
 - Profil : `release`
-- Date UTC : `2026-07-08T09:46:42Z`
-- SHA-256 release : `616d36bf00f6a1e12fc91f0e5c1722be20a2465f79b2ca2af4d8b8a1d66f4669`
-- SHA-256 preuves : `a22f9ed73cd4c91dce440b87ee3b44346d99df5284b0711f86b9a2ab00f1bb66`
+- Date UTC : `2026-07-10T05:33:57Z`
+- SHA-256 release : `6a77fb0494bbcf52c25d59ccec90b37042ee7542ea5f3d47990c15a8e9903545`
+- SHA-256 preuves : `8c9ae5019c91068aa58be01c53219e4ff1475378b3482af6032d81bad34f6b8d`
 - Étapes démontrées : 21
 
 ## Vérification indépendante
