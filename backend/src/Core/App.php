@@ -39,6 +39,8 @@ use App\Application\Api\Admin\TaxonomyApiController;
 use App\Application\Api\Admin\VisualEditingApiController;
 use App\Application\Api\PublicHeadlessController;
 use App\Application\Api\ModuleHeadlessSchemaController;
+use App\Application\Frontend\UpdateManifestController;
+use App\Application\Maintenance\VersionInventoryService;
 use App\Application\PublicApi\PublicApiKernel;
 use App\Application\PublicApi\PublicContentApiHandler;
 use App\Application\PublicApi\PublicSearchApiHandler;
@@ -315,6 +317,7 @@ final class App
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
                 new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout()),
             ),
+            UpdateManifestController::class => new UpdateManifestController(new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
             AdminContextApiController::class => new AdminContextApiController($this->config, $this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleNavigation(), $services->moduleContracts()),
             AiAssistantApiController::class => new AiAssistantApiController(
@@ -465,7 +468,7 @@ final class App
             MenuApiController::class => new MenuApiController($this->request, $services->menus(), $services->sites(), $services->auth(), $services->authorization()),
             MediaApiController::class => new MediaApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->logger()),
             DocsApiController::class => new DocsApiController($this->request, $services->auth()),
-            MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline()),
+            MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline(), new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
             FormApiController::class => new FormApiController($this->request, $services->forms(), $services->sites(), $services->auth(), $services->authorization()),
             CookieConsentApiController::class => new CookieConsentApiController($this->request, $services->cookies(), $services->sites(), $services->auth(), $services->authorization()),
             SeoAuditApiController::class => new SeoAuditApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->seoAudit()),

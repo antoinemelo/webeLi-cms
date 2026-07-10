@@ -29,6 +29,7 @@ Cet espace couvre les réglages fonctionnels persistants. Les opérations de sau
 
 ## Intégrations et sécurité
 
+- [Maintenance et versions installées](maintenance.md)
 - [Configurer le module Business](business/configuration.md)
 - [API admin du catalogue Business](business/catalog-admin-api.md)
 - [Tokens, CORS et webhooks](security/tokens-cors-webhooks.md)

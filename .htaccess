@@ -25,6 +25,11 @@ RewriteRule ^(?:[^/]+/)*docs/public-api/(index\.html|openapi\.v1\.json|openapi\.
 RewriteRule ^api/v1/openapi\.(json|yaml)$ index.php [QSA,L]
 RewriteRule ^(?:[^/]+/)*api/v1/openapi\.(json|yaml)$ index.php [QSA,L]
 
+# Manifeste public de versions et migrations utilisé par les canaux de mise à jour.
+# Cette route JSON est produite par le front controller et doit rester accessible.
+RewriteRule ^updates/manifest\.json$ index.php [QSA,L]
+RewriteRule ^(?:[^/]+/)*updates/manifest\.json$ index.php [QSA,L]
+
 # Bloquer les fichiers sensibles, temporaires, archives et JSON non explicitement exposés.
 RewriteRule \.(?:sqlite(?:-(?:wal|shm|journal))?|db|sql|log|bak|backup|ini|env|yml|yaml|jsonl?|zip|tar|tgz|gz)$ - [F,L]
 
