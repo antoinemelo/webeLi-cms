@@ -23,14 +23,14 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "0c1a33b00da73bee189a2005b7ad6b840decc52f",
+  "commit": "44d09a97604636cc12211fafb1102b219cfff330",
   "confidence": "high",
   "databases": [
     "core",
     "iam",
     "modules"
   ],
-  "dirty": true,
+  "dirty": false,
   "evaluation_documents": [
     "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",

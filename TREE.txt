@@ -1106,6 +1106,7 @@ frontend/theme-aurora/templates/partials/header.twig
 frontend/theme-aurora/templates/partials/language-switch.twig
 frontend/theme-aurora/templates/partials/language-switcher.twig
 frontend/theme-aurora/templates/partials/navigation.twig
+frontend/theme-aurora/templates/partials/product-content-links.twig
 frontend/theme-aurora/templates/partials/site-footer.twig
 frontend/theme-aurora/templates/partials/site-header.twig
 frontend/theme-aurora/templates/partials/social-share.twig
@@ -1151,6 +1152,7 @@ frontend/theme-default/templates/partials/header.twig
 frontend/theme-default/templates/partials/language-switch.twig
 frontend/theme-default/templates/partials/language-switcher.twig
 frontend/theme-default/templates/partials/navigation.twig
+frontend/theme-default/templates/partials/product-content-links.twig
 frontend/theme-default/templates/partials/site-footer.twig
 frontend/theme-default/templates/partials/site-header.twig
 frontend/theme-default/templates/partials/social-share.twig
@@ -1196,6 +1198,7 @@ frontend/theme-pulse/templates/partials/header.twig
 frontend/theme-pulse/templates/partials/language-switch.twig
 frontend/theme-pulse/templates/partials/language-switcher.twig
 frontend/theme-pulse/templates/partials/navigation.twig
+frontend/theme-pulse/templates/partials/product-content-links.twig
 frontend/theme-pulse/templates/partials/site-footer.twig
 frontend/theme-pulse/templates/partials/site-header.twig
 frontend/theme-pulse/templates/partials/social-share.twig
