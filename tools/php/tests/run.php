@@ -28,6 +28,7 @@ $tests = [
     'unit/business_crm_api_controller_test.php',
     'unit/business_messaging_provider_test.php',
     'unit/business_mailing_service_test.php',
+    'unit/capability_registry_test.php',
     'unit/sale_module_contracts_test.php',
     'unit/sale_snapshot_services_test.php',
     'unit/sale_pricing_service_test.php',

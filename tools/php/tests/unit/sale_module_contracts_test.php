@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Core\Router;
+use App\Application\Capability\CapabilityDefinition;
 use App\Modules\Sale\SaleModuleProvider;
 
 $h = new TestHarness();
@@ -75,6 +76,20 @@ $h->assertSame('optional_port', $settings['integrations']['sellable_catalog'] ??
 $h->assertSame('optional_port', $settings['integrations']['customer_snapshot'] ?? null, 'customer snapshot stays an optional port');
 $h->assertSame('planned_optional_port', $settings['integrations']['crm_activity_sink'] ?? null, 'CRM integration stays planned');
 $h->assertSame('planned_optional_port', $settings['integrations']['cms_account_bridge'] ?? null, 'CMS integration stays planned');
+
+$capabilities = [];
+foreach ($provider->capabilities() as $capability) {
+    $definition = CapabilityDefinition::fromArray($capability);
+    $capabilities[$definition->key] = $definition;
+    $h->assertSame('sale', $definition->module, 'sale capability is owned by sale: ' . $definition->key);
+    $h->assertSame([], $definition->config['foreign_tables'] ?? null, 'sale capability has no direct foreign table access: ' . $definition->key);
+}
+foreach (['catalog.product.read', 'pricing.calculate', 'cart.validate', 'checkout.validate', 'payment.provider', 'order.after_place'] as $key) {
+    $h->assertTrue(isset($capabilities[$key]), 'sale capability is declared: ' . $key);
+}
+$h->assertSame('validator', $capabilities['cart.validate']->type ?? null, 'sale cart validation is a validator capability');
+$h->assertSame(false, $capabilities['cart.validate']->config['mutates_order'] ?? null, 'sale cart validator cannot mutate orders');
+$h->assertSame('outbox', $capabilities['order.after_place']->config['transport'] ?? null, 'sale after-order capability uses outbox');
 
 $permissionKeys = array_column($provider->permissions(), 'key');
 foreach ($expectedPermissions as $permission) {

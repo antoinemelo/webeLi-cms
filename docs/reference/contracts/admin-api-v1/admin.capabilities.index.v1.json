@@ -16,6 +16,12 @@
           "label": "string",
           "module": "string",
           "permission": "IAM permission key checked again by the executor",
+          "version": "semantic capability contract version, e.g. 1.0",
+          "type": "port | provider | workflow | event | validator",
+          "contract": "versioned provider/port contract id",
+          "config": "object; runtime-safe declaration details",
+          "active": "boolean",
+          "priority": "integer or null; deterministic ordering when set",
           "input_schema": "object",
           "output_schema": "object",
           "supports_dry_run": "boolean",
@@ -24,7 +30,9 @@
           "description": "string"
         }
       ],
-      "count": "integer"
+      "count": "integer",
+      "known_capabilities": "object keyed by allowed capability id with expected type, contract and minimum version",
+      "diagnostics": "array of rejected capability declarations with code, module, capability and message"
     },
     "meta": {
       "contract": "admin.capabilities.index.v1",

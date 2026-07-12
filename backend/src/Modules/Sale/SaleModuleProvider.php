@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Sale;
 
+use App\Application\Capability\DryRunResult;
+use App\Application\Capability\ModuleCapabilityHandlerProvider;
+use App\Application\Capability\ModuleCapabilityProvider;
 use App\Module\ModuleProvider;
 use App\Modules\Sale\Contracts\SaleAiContextContracts;
 use App\Modules\Sale\Contracts\SaleIntegrationEventContracts;
@@ -15,7 +18,7 @@ use App\Modules\Sale\Contracts\SaleIntegrationEventContracts;
  * recus, retours, remboursements et evenements dans sale.sqlite. Le catalogue
  * et le CRM restent fournis par Operations via des identifiants et snapshots.
  */
-final class SaleModuleProvider implements ModuleProvider
+final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvider, ModuleCapabilityHandlerProvider
 {
     public function key(): string { return 'sale'; }
 
@@ -82,6 +85,98 @@ final class SaleModuleProvider implements ModuleProvider
                 'public_ecommerce_enabled' => false,
                 'payment_providers' => ['cash', 'manual_card', 'external_terminal', 'bank_transfer', 'test'],
             ],
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function capabilities(): array
+    {
+        return [
+            $this->capability('catalog.product.read', 'Lire le catalogue vendable', 'port', 'catalog.product_reader.v1', 'sale.read', 100, [
+                'source' => 'SellableCatalogPort',
+                'foreign_tables' => [],
+                'mutates' => false,
+            ]),
+            $this->capability('pricing.calculate', 'Calculer un prix de vente', 'port', 'sale.pricing_calculator.v1', 'sale.orders.read', 110, [
+                'source' => 'SalePricingService',
+                'foreign_tables' => [],
+                'mutates' => false,
+            ]),
+            $this->capability('cart.validate', 'Valider un panier Vente', 'validator', 'sale.cart_validator.v1', 'sale.orders.manage', 120, [
+                'foreign_tables' => [],
+                'mutates_order' => false,
+                'mutates_payment' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'cart_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['cart_id'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('checkout.validate', 'Valider un checkout Vente', 'validator', 'sale.checkout_validator.v1', 'sale.orders.manage', 130, [
+                'foreign_tables' => [],
+                'mutates_order' => false,
+                'mutates_payment' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'cart_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['cart_id'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('payment.provider', 'Provider de paiement Vente', 'provider', 'sale.payment_provider.v1', 'sale.payments.manage', 140, [
+                'registry' => 'PaymentProviderRegistry',
+                'foreign_tables' => [],
+                'mutates_order' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'provider' => ['type' => 'string'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['provider'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('order.after_place', 'Réagir après placement de commande', 'event', 'sale.order_after_place.v1', 'sale.orders.manage', 150, [
+                'transport' => 'outbox',
+                'foreign_tables' => [],
+                'mutates_order' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'order_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['order_id'],
+                'additionalProperties' => false,
+            ]),
+        ];
+    }
+
+    /** @return array<string,callable> */
+    public function capabilityHandlers(): array
+    {
+        return [
+            'cart.validate' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'cart_id' => (int) $input['cart_id'],
+                'scope' => 'sale',
+            ], [], ['Validation déclarative uniquement; aucune mutation de commande.']),
+            'checkout.validate' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'cart_id' => (int) $input['cart_id'],
+                'scope' => 'sale',
+            ], [], ['Validation déclarative uniquement; création de commande réservée au workflow checkout.']),
+            'payment.provider' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'provider' => (string) $input['provider'],
+                'contract' => 'sale.payment_provider.v1',
+            ], [], ['Provider vérifié sans capture, autorisation ni transaction.']),
+            'order.after_place' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'order_id' => (int) $input['order_id'],
+                'transport' => 'outbox',
+            ], [], ['Événement après commande publié via outbox; pas de mutation synchrone externe.']),
         ];
     }
 
@@ -355,6 +450,37 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('public.sale.checkout.v1', 'POST', '/api/v1/sale/channels/{code}/checkout', 'anonymous', 'headless'),
             $this->integrationContract('integration.sale.events.v1', SaleIntegrationEventContracts::payloads()),
             $this->integrationContract('integration.sale.ai_contexts.v1', SaleAiContextContracts::contexts()),
+        ];
+    }
+
+    /** @param array<string,mixed> $config @param array<string,mixed> $inputSchema */
+    private function capability(
+        string $key,
+        string $label,
+        string $type,
+        string $contract,
+        string $permission,
+        int $priority,
+        array $config,
+        array $inputSchema = [],
+    ): array {
+        return [
+            'key' => $key,
+            'label' => $label,
+            'module' => 'sale',
+            'permission' => $permission,
+            'version' => '1.0',
+            'type' => $type,
+            'contract' => $contract,
+            'config' => $config,
+            'active' => true,
+            'priority' => $priority,
+            'input_schema' => $inputSchema,
+            'output_schema' => ['type' => 'object'],
+            'supports_dry_run' => true,
+            'requires_confirmation' => false,
+            'risk_level' => $type === 'provider' ? 'medium' : 'low',
+            'description' => 'Extension point contrôlé du module Vente; les tables étrangères ne sont pas modifiées directement.',
         ];
     }
 

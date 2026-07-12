@@ -27,6 +27,27 @@ final class CapabilityExecutor
             return $this->resultAndLog($definition, $key, $mode, 'forbidden', false, [], [], [['code' => 'permission_denied', 'message' => 'Permission insuffisante.', 'permission' => $definition->permission]], $input, $siteId);
         }
 
+        if (!$definition->active) {
+            return $this->resultAndLog($definition, $key, $mode, 'inactive', false, [], [], [['code' => 'capability_inactive', 'message' => 'Capability inactive.']], $input, $siteId);
+        }
+
+        $requestedContract = trim((string) ($input['contract'] ?? $input['provider_contract'] ?? ''));
+        if ($requestedContract !== '' && $definition->contract !== '' && $requestedContract !== $definition->contract) {
+            return $this->resultAndLog($definition, $key, $mode, 'incompatible_contract', false, [], [], [[
+                'code' => 'incompatible_contract',
+                'message' => 'Contrat provider incompatible.',
+                'expected' => $definition->contract,
+                'actual' => $requestedContract,
+            ]], $input, $siteId);
+        }
+
+        if ($mode === 'apply' && $definition->type === 'validator') {
+            return $this->resultAndLog($definition, $key, $mode, 'validator_apply_forbidden', false, [], [], [[
+                'code' => 'validator_apply_forbidden',
+                'message' => 'Un validateur ne peut pas appliquer de mutation.',
+            ]], $input, $siteId);
+        }
+
         if ($mode === 'dry_run' && !$definition->supportsDryRun) {
             return $this->resultAndLog($definition, $key, $mode, 'dry_run_not_supported', false, [], [], [['code' => 'dry_run_not_supported', 'message' => 'Cette capability ne supporte pas le dry-run.']], $input, $siteId);
         }
