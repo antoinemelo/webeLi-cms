@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\PublicApi;
 
+use App\Application\Business\StorefrontProjectionRepository;
 use App\Core\ErrorCode;
 use App\Core\Request;
 use App\Core\Response;
@@ -23,6 +24,7 @@ final class PublicCatalogApiHandler
         private readonly PublicCatalogRepository $catalog,
         private readonly CatalogPricingService $pricing,
         private readonly ?BusinessProductBundleService $bundles = null,
+        private readonly ?StorefrontProjectionRepository $storefront = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -83,6 +85,27 @@ final class PublicCatalogApiHandler
         return $this->json(['variant' => $this->variantPayload((int) $site['id'], $product, $variant, true, $languageCode)], 'public.catalog.variants.show.v1', $site, $languageCode);
     }
 
+    public function storefrontProducts(): Response
+    {
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        if ($channel<1 || $this->storefront===null) return $this->notFound('Projection Storefront indisponible.',[]);
+        $page=$this->storefront->products((int)$site['id'],$channel,$languageCode,$this->filters()+['limit'=>$this->limit(),'offset'=>$this->offset(),'sort'=>$this->request->query['sort']??'name']);
+        return $this->json($page,'public.storefront.products.index.v1',$site,$languageCode);
+    }
+
+    public function storefrontProduct(string $slug): Response
+    {
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        $product=$this->storefront?->product((int)$site['id'],$channel,$languageCode,$this->slug($slug));
+        return $product ? $this->json(['product'=>$product],'public.storefront.products.show.v1',$site,$languageCode) : $this->notFound('Produit projeté introuvable.',['slug'=>$slug]);
+    }
+
+    public function storefrontCollections(): Response
+    {
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        return $this->json(['items'=>$this->storefront?->collections((int)$site['id'],$channel,$languageCode)??[]],'public.storefront.collections.index.v1',$site,$languageCode);
+    }
+
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
@@ -100,7 +123,7 @@ final class PublicCatalogApiHandler
         return $this->responder->success($data, $contract, [
             'site_id' => (int) $site['id'],
             'language_code' => $languageCode,
-            'source' => 'business_catalog_public',
+            'source' => str_starts_with($contract, 'public.storefront.') ? 'core_storefront_projections' : 'business_catalog_public',
         ], 200, ['Cache-Control' => 'public, max-age=300, stale-while-revalidate=60']);
     }
 
@@ -313,9 +336,9 @@ final class PublicCatalogApiHandler
     private function filters(): array
     {
         $filters = [];
-        foreach (['q', 'brand', 'brand_id', 'category', 'category_id'] as $key) {
+        foreach (['q', 'brand', 'brand_id', 'category', 'category_id', 'collection_id'] as $key) {
             if (array_key_exists($key, $this->request->query)) {
-                $filters[$key] = $key === 'brand_id' || $key === 'category_id' ? (int) $this->request->query[$key] : $this->slug((string) $this->request->query[$key]);
+                $filters[$key] = in_array($key, ['brand_id','category_id','collection_id'], true) ? (int) $this->request->query[$key] : $this->slug((string) $this->request->query[$key]);
             }
         }
         return $filters;

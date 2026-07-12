@@ -31,6 +31,8 @@ generated: true
 | `database/migrations/business/0008_pim_quality_import_channels.sql` | `0008_pim_quality_import_channels` |
 | `database/migrations/business/0009_pim_channel_visibility_site_guard.sql` | `0009_pim_channel_visibility_site_guard` |
 | `database/migrations/business/0010_sales_channel_configs.sql` | `0010_sales_channel_configs` |
+| `database/migrations/business/0011_sellables_storefront_invalidation.sql` | `0011_sellables_storefront_invalidation` |
+| `database/migrations/business/0012_sellable_lifecycle_triggers.sql` | `0012_sellable_lifecycle_triggers` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
@@ -40,6 +42,7 @@ generated: true
 | `database/migrations/core/076_business_product_content_links.sql` | `076_business_product_content_links` |
 | `database/migrations/core/077_outbox_reliability.sql` | `077_outbox_reliability` |
 | `database/migrations/core/078_sales_channel_storefronts.sql` | `078_sales_channel_storefronts` |
+| `database/migrations/core/079_storefront_projections.sql` | `079_storefront_projections` |
 | `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |
@@ -59,3 +62,4 @@ generated: true
 | `database/migrations/sale/0006_customer_accounts_links.sql` | `0006_customer_accounts_links` |
 | `database/migrations/sale/0007_fulfillment_tax_v1.sql` | `0007_fulfillment_tax_v1` |
 | `database/migrations/sale/0008_sales_channel_contract.sql` | `0008_sales_channel_contract` |
+| `database/migrations/sale/0009_sellable_references.sql` | `0009_sellable_references` |

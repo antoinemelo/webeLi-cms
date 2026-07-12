@@ -317,7 +317,7 @@ final class App
                 new PublicSearchApiHandler($this->request, $services->publicSearch(), $services->sites()),
                 new PublicFormApiHandler($this->request, $services->forms(), $services->sites()),
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
-                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
+                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles(), $services->storefrontProjections()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
                 new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver()),
                 new PublicCustomerAccountApiHandler($this->request, $services->sites(), $services->saleCustomerAccounts()),
@@ -394,6 +394,7 @@ final class App
                 $services->productContentLinks(),
                 $services->businessPriceLists(),
                 $services->businessCommercialRelations(),
+                $services->storefrontProjectionBuilder(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,

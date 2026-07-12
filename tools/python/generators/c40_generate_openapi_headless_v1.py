@@ -332,6 +332,7 @@ def base_components() -> dict[str, Any]:
                 "type": "object",
                 "required": ["id", "business_variant_id", "quantity", "unit_price_minor", "currency", "line_total_minor"],
                 "properties": {
+                    "sellable_id": {"type": "integer"},
                     "id": {"type": "integer"},
                     "business_product_id": {"type": "integer"},
                     "business_variant_id": {"type": "integer"},

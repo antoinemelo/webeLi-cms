@@ -55,6 +55,9 @@ final class PublicHeadlessController
     public function catalogProducts(): Response { return $this->catalog->products(); }
     public function catalogProduct(string $slug): Response { return $this->catalog->product($slug); }
     public function catalogVariant(string|int $id): Response { return $this->catalog->variant($id); }
+    public function storefrontProducts(): Response { return $this->catalog->storefrontProducts(); }
+    public function storefrontProduct(string $slug): Response { return $this->catalog->storefrontProduct($slug); }
+    public function storefrontCollections(): Response { return $this->catalog->storefrontCollections(); }
     public function posCatalogBootstrap(): Response { return $this->posCatalog->bootstrap(); }
     public function posCatalogProducts(): Response { return $this->posCatalog->products(); }
     public function posCatalogVariants(): Response { return $this->posCatalog->variants(); }

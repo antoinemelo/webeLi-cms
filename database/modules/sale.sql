@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS sale_catalog_variant_refs (
     site_id INTEGER NOT NULL,
     business_product_id INTEGER NOT NULL,
     business_variant_id INTEGER NOT NULL,
+    sellable_id INTEGER,
     sku TEXT,
     barcode TEXT,
     product_name TEXT NOT NULL,
@@ -145,6 +146,7 @@ CREATE TABLE IF NOT EXISTS sale_catalog_variant_refs (
     synced_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     archived_at TEXT,
     UNIQUE(site_id, business_variant_id),
+    UNIQUE(site_id, sellable_id),
     CHECK(site_id > 0),
     CHECK(business_product_id > 0),
     CHECK(business_variant_id > 0),
@@ -229,6 +231,7 @@ CREATE TABLE IF NOT EXISTS sale_order_lines (
     line_number INTEGER NOT NULL,
     business_product_id INTEGER NOT NULL,
     business_variant_id INTEGER NOT NULL,
+    sellable_id INTEGER,
     sku TEXT,
     barcode TEXT,
     product_name TEXT NOT NULL,
@@ -268,6 +271,7 @@ CREATE INDEX IF NOT EXISTS idx_sale_order_lines_order
     ON sale_order_lines(order_id, line_number);
 CREATE INDEX IF NOT EXISTS idx_sale_order_lines_variant
     ON sale_order_lines(business_variant_id);
+CREATE INDEX IF NOT EXISTS idx_sale_order_lines_sellable ON sale_order_lines(sellable_id);
 
 CREATE TABLE IF NOT EXISTS sale_order_adjustments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -385,6 +389,7 @@ CREATE TABLE IF NOT EXISTS sale_cart_lines (
     line_key TEXT NOT NULL,
     business_product_id INTEGER NOT NULL,
     business_variant_id INTEGER NOT NULL,
+    sellable_id INTEGER,
     sku TEXT,
     barcode TEXT,
     product_name TEXT NOT NULL,
@@ -421,6 +426,7 @@ CREATE INDEX IF NOT EXISTS idx_sale_cart_lines_cart
     ON sale_cart_lines(cart_id);
 CREATE INDEX IF NOT EXISTS idx_sale_cart_lines_variant
     ON sale_cart_lines(business_variant_id);
+CREATE INDEX IF NOT EXISTS idx_sale_cart_lines_sellable ON sale_cart_lines(sellable_id);
 
 CREATE TABLE IF NOT EXISTS sale_cart_adjustments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

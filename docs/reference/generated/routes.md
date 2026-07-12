@@ -265,6 +265,9 @@ generated: true
 | `GET` | `/api/v1/route` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/routes` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/search` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/collections` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/products` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/products/{slug}` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies/{taxonomy}` | API publique | `backend/routes/api.php` |
 | `GET` | `/business/memos/share/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
@@ -396,6 +399,7 @@ generated: true
 | `POST` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/recalculate-completeness` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/storefront-projections/rebuild` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/archive` | API administrative | `backend/routes/api.php` |

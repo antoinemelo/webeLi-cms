@@ -86,17 +86,18 @@ final class SaleOrderRepository extends SaleRepositoryBase
         foreach ($lines as $line) {
             $this->rawDatabase()->run(
                 'INSERT INTO sale_order_lines(
-                    order_id, line_number, business_product_id, business_variant_id, sku, barcode,
+                    order_id, line_number, business_product_id, business_variant_id, sellable_id, sku, barcode,
                     product_name, variant_name, product_type, quantity, unit_price_minor,
                     regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                     tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
                     line_tax_minor, line_total_minor, snapshot_json
-                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     $orderId,
                     $lineNumber++,
                     (int) $line['business_product_id'],
                     (int) $line['business_variant_id'],
+                    (int) ($line['sellable_id'] ?? $line['business_variant_id']),
                     $line['sku'] ?? null,
                     $line['barcode'] ?? null,
                     (string) $line['product_name'],

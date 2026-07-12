@@ -134,6 +134,40 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         }, $rows);
     }
 
+    /** Hydrates commerce blocks from core projections only; stored revisions retain references and presentation options. */
+    public function hydrateStorefrontBlocks(array $blocks, int $siteId, string $locale): array
+    {
+        if (!$this->db->tableExists('storefront_product_projections')) return $blocks;
+        $channelId=(int)($this->db->one("SELECT channel_id FROM cms_sales_channel_storefronts WHERE site_id=? AND is_default=1 AND status='active' LIMIT 1",[$siteId])['channel_id']??0);
+        if ($channelId<1) return $blocks;
+        $products=[]; $sellables=[];
+        foreach ($this->db->all('SELECT dto_json FROM storefront_product_projections WHERE site_id=? AND channel_id=? AND locale=? AND is_indexable=1 ORDER BY slug',[$siteId,$channelId,$locale]) as $row) {
+            $dto=json_decode((string)$row['dto_json'],true)?:[]; $products[(int)($dto['product_id']??0)]=$dto;
+            foreach ((array)($dto['sellables']??[]) as $sellable) $sellables[(int)($sellable['sellable_id']??0)]=['product'=>$dto,'sellable'=>$sellable];
+        }
+        $collections=[];
+        foreach ($this->db->all('SELECT dto_json FROM storefront_collection_projections WHERE site_id=? AND channel_id=? AND locale=? ORDER BY slug',[$siteId,$channelId,$locale]) as $row) {
+            $dto=json_decode((string)$row['dto_json'],true)?:[]; $collections[(int)($dto['collection_id']??0)]=$dto;
+        }
+        foreach ($blocks as $index=>$block) {
+            if (!is_array($block)) continue; $type=(string)($block['type']??$block['block_type']??''); $data=is_array($block['data']??null)?$block['data']:[];
+            if (in_array($type,['featured_product','product_card','product_detail'],true)) {
+                $data['product']=$products[(int)($data['product_id']??0)]??null;
+            } elseif ($type==='product_grid') {
+                $ids=array_map('intval',(array)($data['product_ids']??[])); $collectionId=(int)($data['collection_id']??0);
+                $items=array_values(array_filter($products,static fn(array $p):bool=>($ids===[]||in_array((int)$p['product_id'],$ids,true))&&($collectionId<1||(int)($p['collection']['collection_id']??0)===$collectionId)));
+                $data['items']=array_slice($items,0,max(1,min(100,(int)($data['limit']??12))));
+            } elseif ($type==='collection_grid') {
+                $ids=array_map('intval',(array)($data['collection_ids']??[])); $items=array_values(array_filter($collections,static fn(array $c):bool=>$ids===[]||in_array((int)$c['collection_id'],$ids,true)));
+                $data['items']=array_slice($items,0,max(1,min(100,(int)($data['limit']??12))));
+            } elseif ($type==='add_to_cart') {
+                $data['resolved']=$sellables[(int)($data['sellable_id']??0)]??null;
+            }
+            $blocks[$index]['data']=$data;
+        }
+        return $blocks;
+    }
+
     /** @return array<string,mixed>|null */
     private function find(int $siteId, int $id): ?array
     {

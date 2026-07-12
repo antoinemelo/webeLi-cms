@@ -13,7 +13,7 @@ test.describe('M0-M4 release candidate commerce flow',()=>{
     const catalog=await body(await page.request.get(cmsPath('/api/v1/catalog/products?channel=ecommerce&limit=1')),'published catalog');
     const product=catalog.data.items[0]; const variantId=Number(product.variants[0].id); expect(variantId).toBeGreaterThan(0);
     const cart=await body(await page.request.post(cmsPath('/api/v1/sale/channels/web-main/cart'),{data:{data:{}}}),'cart'); const token=String(cart.data.cart.token);
-    await body(await page.request.post(cmsPath(`/api/v1/sale/channels/web-main/cart/${token}/lines`),{headers:{'Idempotency-Key':crypto.randomUUID()},data:{data:{business_variant_id:variantId,quantity:1}}}),'cart line');
+    await body(await page.request.post(cmsPath(`/api/v1/sale/channels/web-main/cart/${token}/lines`),{headers:{'Idempotency-Key':crypto.randomUUID()},data:{data:{sellable_id:variantId,quantity:1}}}),'cart line');
     await page.goto(cmsPath(`/checkout?channel=web-main&cart_token=${token}&lang=fr`)); await expect(page.getByText(product.name,{exact:false}).first()).toBeVisible();
     const identity={email:`m0-m4-${Date.now()}@example.test`,first_name:'Release',last_name:'Candidate'}; const address={line1:'Rue du Test 1',postal_code:'1000',city:'Lausanne',country_code:'CH'};
     const checkoutData={cart_token:token,identity,billing_address:address,shipping_address:address,shipping_same_as_billing:true,shipping_method:{code:'standard'},payment:{code:'manual'},terms_accepted:true,marketing_consent:false};

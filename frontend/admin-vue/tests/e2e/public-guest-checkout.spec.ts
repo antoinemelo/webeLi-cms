@@ -24,7 +24,7 @@ async function createCheckoutCart(page: Page): Promise<string> {
   const token = String(cart.data.cart.token);
   const lineResponse = await page.request.post(cmsPath(`/api/v1/sale/channels/web-main/cart/${encodeURIComponent(token)}/lines`), {
     headers: { 'Idempotency-Key': `e2e-line-${Date.now()}` },
-    data: { data: { business_variant_id: variantId, quantity: 1 } },
+    data: { data: { sellable_id: variantId, quantity: 1 } },
   });
   expect(lineResponse.status()).toBe(201);
   return token;

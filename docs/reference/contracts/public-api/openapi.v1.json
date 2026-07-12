@@ -5865,7 +5865,7 @@
       "post": {
         "operationId": "post_public_sale_cart_lines_store_v1",
         "summary": "Ajouter une ligne à un panier public.",
-        "description": "Ajoute une variante Business sellable à un panier public actif. Les prix sont recalculés côté serveur depuis le snapshot catalogue.",
+        "description": "Ajoute un sellable stable à un panier public actif. Les prix sont recalculés côté serveur depuis le snapshot catalogue.",
         "tags": [
           "Headless v1"
         ],
@@ -5934,6 +5934,7 @@
                         },
                         "line": {
                           "id": 20,
+                          "sellable_id": 3,
                           "business_variant_id": 3,
                           "quantity": 1,
                           "unit_price_minor": 2900,
@@ -6013,15 +6014,11 @@
                   "data": {
                     "type": "object",
                     "required": [
-                      "business_variant_id",
+                      "sellable_id",
                       "quantity"
                     ],
                     "properties": {
-                      "business_variant_id": {
-                        "type": "integer",
-                        "minimum": 1
-                      },
-                      "variant_id": {
+                      "sellable_id": {
                         "type": "integer",
                         "minimum": 1
                       },
@@ -6787,6 +6784,258 @@
         }
       }
     },
+    "/api/v1/storefront/collections": {
+      "get": {
+        "operationId": "get_public_storefront_collections_index_v1",
+        "summary": "Lister les collections Storefront.",
+        "description": "Collections publiques projetées par site, canal et locale.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "contract": "storefront.collection.v1",
+                            "collection_id": 1,
+                            "slug": "services"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "contract": "public.storefront.collections.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/products": {
+      "get": {
+        "operationId": "get_public_storefront_products_index_v1",
+        "summary": "Lister les projections produit Storefront.",
+        "description": "Lit exclusivement core.sqlite, par site, canal et locale. Supporte recherche, collection, tri et pagination.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "collection_id",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "newest"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "contract": "storefront.product.v1",
+                            "version": 1,
+                            "product_id": 1,
+                            "sellables": [
+                              {
+                                "sellable_id": 1
+                              }
+                            ]
+                          }
+                        ],
+                        "pagination": {
+                          "total": 1,
+                          "limit": 24,
+                          "offset": 0,
+                          "has_more": false
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.storefront.products.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storefront/products/{slug}": {
+      "get": {
+        "operationId": "get_public_storefront_products_show_v1",
+        "summary": "Lire une projection produit Storefront.",
+        "description": "DTO versionné commun au SSR et au headless, avec sellables, prix, disponibilité, médias, CTA et SEO.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "product": {
+                          "contract": "storefront.product.v1",
+                          "product_id": 1,
+                          "default_sellable_id": 1
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.storefront.products.show.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Projection absente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Projection absente.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/taxonomies": {
       "get": {
         "operationId": "get_public_taxonomies_index_v1",
@@ -7385,6 +7634,9 @@
           "line_total_minor"
         ],
         "properties": {
+          "sellable_id": {
+            "type": "integer"
+          },
           "id": {
             "type": "integer"
           },

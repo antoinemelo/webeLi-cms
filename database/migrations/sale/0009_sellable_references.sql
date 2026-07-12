@@ -1,0 +1,10 @@
+PRAGMA foreign_keys = ON;
+ALTER TABLE sale_catalog_variant_refs ADD COLUMN sellable_id INTEGER;
+ALTER TABLE sale_cart_lines ADD COLUMN sellable_id INTEGER;
+ALTER TABLE sale_order_lines ADD COLUMN sellable_id INTEGER;
+UPDATE sale_catalog_variant_refs SET sellable_id=business_variant_id WHERE sellable_id IS NULL;
+UPDATE sale_cart_lines SET sellable_id=business_variant_id WHERE sellable_id IS NULL;
+UPDATE sale_order_lines SET sellable_id=business_variant_id WHERE sellable_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_catalog_refs_sellable ON sale_catalog_variant_refs(site_id,sellable_id);
+CREATE INDEX IF NOT EXISTS idx_sale_cart_lines_sellable ON sale_cart_lines(sellable_id);
+CREATE INDEX IF NOT EXISTS idx_sale_order_lines_sellable ON sale_order_lines(sellable_id);

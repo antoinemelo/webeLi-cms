@@ -108,7 +108,11 @@ final class PublicSaleApiHandler
             $cart = $this->cartByToken($channel, $token);
             $payload = $this->payload();
             $payload['language'] = $languageCode;
-            $result = $this->cartService->addLine((int) $cart['id'], (int) ($payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
+            $sellableId = (int) ($payload['sellable_id'] ?? 0);
+            if ($sellableId < 1) {
+                throw new SaleValidationException('sale.sellable_id_required');
+            }
+            $result = $this->cartService->addLine((int) $cart['id'], $sellableId, (int) ($payload['quantity'] ?? 1), [
                 'idempotency_key' => $this->idempotencyKey($payload),
             ]);
             return $this->json([
@@ -425,6 +429,7 @@ final class PublicSaleApiHandler
             'id' => (int) ($line['id'] ?? 0),
             'business_product_id' => (int) ($line['business_product_id'] ?? 0),
             'business_variant_id' => (int) ($line['business_variant_id'] ?? 0),
+            'sellable_id' => (int) ($line['sellable_id'] ?? $line['business_variant_id'] ?? 0),
             'sku' => $line['sku'] ?? null,
             'barcode' => $line['barcode'] ?? null,
             'product_name' => (string) ($line['product_name'] ?? ''),

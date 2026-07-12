@@ -124,7 +124,7 @@ try {
     $h->assertSame(200, $showCart->status(), 'public ecommerce cart can be reloaded by token');
     $h->assertTrue(!str_contains($showCart->body(), 'cart_token_hash'), 'public ecommerce cart response does not expose token hash');
 
-    $addLine = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines', ['business_variant_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'public-sale-line'])->addLine('web-main', $token);
+    $addLine = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines', ['sellable_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'public-sale-line'])->addLine('web-main', $token);
     $h->assertSame(201, $addLine->status(), 'public ecommerce cart can add a line');
     $addLinePayload = json_decode($addLine->body(), true);
     $lineId = (int) ($addLinePayload['data']['line']['id'] ?? 0);
@@ -141,7 +141,7 @@ try {
     $afterDeletePayload = json_decode($deleteLine->body(), true);
     $h->assertSame(0, (int) ($afterDeletePayload['data']['cart']['grand_total_minor'] ?? -1), 'public ecommerce delete recalculates cart total');
 
-    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines', ['business_variant_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'public-sale-line-again'])->addLine('web-main', $token);
+    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines', ['sellable_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'public-sale-line-again'])->addLine('web-main', $token);
     $guestData = [
         'identity' => ['email' => 'guest@example.test', 'first_name' => 'Anne', 'last_name' => 'Invitée', 'phone' => '+41 79 000 00 00'],
         'billing_address' => ['line1' => 'Rue du Test 1', 'postal_code' => '1000', 'city' => 'Lausanne', 'country_code' => 'CH'],
@@ -205,7 +205,7 @@ try {
     $priceCartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');
     $priceCartBody = json_decode($priceCartResponse->body(), true);
     $priceToken = (string) ($priceCartBody['data']['cart']['token'] ?? '');
-    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/lines', ['business_variant_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'price-change-line'])->addLine('web-main', $priceToken);
+    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/lines', ['sellable_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'price-change-line'])->addLine('web-main', $priceToken);
     $businessDb->run('UPDATE business_product_base_prices SET amount=31 WHERE product_id=(SELECT product_id FROM business_product_variants WHERE id=?) AND price_kind=\'sale\'', [(int) $variant['id']]);
     $priceReview = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/checkout', ['step' => 'review'] + $guestData)->updateCheckout('web-main', $priceToken);
     $priceReviewBody = json_decode($priceReview->body(), true);
@@ -216,7 +216,7 @@ try {
     $unavailableCartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');
     $unavailableBody = json_decode($unavailableCartResponse->body(), true);
     $unavailableToken = (string) ($unavailableBody['data']['cart']['token'] ?? '');
-    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $unavailableToken . '/lines', ['business_variant_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'unavailable-line'])->addLine('web-main', $unavailableToken);
+    $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $unavailableToken . '/lines', ['sellable_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'unavailable-line'])->addLine('web-main', $unavailableToken);
     $businessDb->run("UPDATE business_product_variants SET status='draft' WHERE id=?", [(int) $variant['id']]);
     $unavailableReview = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $unavailableToken . '/checkout', ['step' => 'review'] + $guestData)->updateCheckout('web-main', $unavailableToken);
     $h->assertSame(422, $unavailableReview->status(), 'product unavailable before validation blocks checkout');
@@ -225,7 +225,7 @@ try {
     $otherCartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');
     $otherBody = json_decode($otherCartResponse->body(), true);
     $otherToken = (string) ($otherBody['data']['cart']['token'] ?? '');
-    $foreignLine = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/lines', ['business_variant_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'foreign-line'])->addLine('web-main', $priceToken);
+    $foreignLine = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/lines', ['sellable_id' => (int) $variant['id'], 'quantity' => 1, 'idempotency_key' => 'foreign-line'])->addLine('web-main', $priceToken);
     $foreignLineId = (int) (json_decode($foreignLine->body(), true)['data']['line']['id'] ?? 0);
     $foreignUpdate = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $otherToken . '/lines/' . $foreignLineId, ['quantity' => 2])->updateLine('web-main', $otherToken, $foreignLineId);
     $h->assertSame(404, $foreignUpdate->status(), 'a cart token cannot modify a line owned by another cart');

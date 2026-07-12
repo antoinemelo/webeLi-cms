@@ -136,6 +136,7 @@ final class SaleCatalogSnapshotService
             'site_id' => (int) $snapshot['site_id'],
             'business_product_id' => (int) $snapshot['business_product_id'],
             'business_variant_id' => (int) $snapshot['business_variant_id'],
+            'sellable_id' => (int) ($snapshot['sellable_id'] ?? $snapshot['business_variant_id']),
             'sku' => $snapshot['sku'] ?? null,
             'barcode' => $snapshot['barcode'] ?? null,
             'product_name' => (string) $snapshot['product_name'],
@@ -147,12 +148,12 @@ final class SaleCatalogSnapshotService
         ];
 
         $existing = $db->one(
-            'SELECT id FROM sale_catalog_variant_refs WHERE site_id = :site_id AND business_variant_id = :business_variant_id LIMIT 1',
-            ['site_id' => $payload['site_id'], 'business_variant_id' => $payload['business_variant_id']]
+            'SELECT id FROM sale_catalog_variant_refs WHERE site_id = :site_id AND sellable_id = :sellable_id LIMIT 1',
+            ['site_id' => $payload['site_id'], 'sellable_id' => $payload['sellable_id']]
         );
         if ($existing) {
             $updatePayload = $payload;
-            unset($updatePayload['site_id'], $updatePayload['business_variant_id']);
+            unset($updatePayload['site_id'], $updatePayload['business_variant_id'], $updatePayload['sellable_id']);
             $db->run(
                 'UPDATE sale_catalog_variant_refs
                  SET business_product_id = :business_product_id,
@@ -174,10 +175,10 @@ final class SaleCatalogSnapshotService
 
         $db->run(
             'INSERT INTO sale_catalog_variant_refs(
-                site_id, business_product_id, business_variant_id, sku, barcode,
+                site_id, business_product_id, business_variant_id, sellable_id, sku, barcode,
                 product_name, variant_name, product_type, track_stock, tax_class_id, last_snapshot_json
              ) VALUES(
-                :site_id, :business_product_id, :business_variant_id, :sku, :barcode,
+                :site_id, :business_product_id, :business_variant_id, :sellable_id, :sku, :barcode,
                 :product_name, :variant_name, :product_type, :track_stock, :tax_class_id, :last_snapshot_json
              )',
             $payload

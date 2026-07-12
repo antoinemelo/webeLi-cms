@@ -215,6 +215,8 @@ final class BusinessCatalogSellableReadService
         $isSellable = $missing === [];
 
         $snapshot = [
+            'contract' => 'storefront.sellable.v1',
+            'sellable_id' => (int) $row['business_variant_id'],
             'site_id' => $siteId,
             'product_id' => (int) $row['business_product_id'],
             'variant_id' => (int) $row['business_variant_id'],
@@ -694,6 +696,10 @@ final class BusinessCatalogSellableReadService
         if (trim((string) ($filters['product_type'] ?? '')) !== '') {
             $where[] = 'p.type = :product_type';
             $params['product_type'] = $this->productType((string) $filters['product_type']);
+        }
+        if ((int) ($filters['product_id'] ?? 0) > 0) {
+            $where[] = 'p.id = :product_id';
+            $params['product_id'] = (int) $filters['product_id'];
         }
         if (trim((string) ($filters['sku'] ?? '')) !== '') {
             $where[] = 'v.sku = :sku';

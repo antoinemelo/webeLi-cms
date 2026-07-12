@@ -1,0 +1,4 @@
+<header class="hero"><p class="eyebrow">Storefront</p><h1>{{ entry_title }}</h1></header>
+<form method="get" class="storefront-filters"><label>Recherche <input name="q" value="{{ request_query.q|default('') }}"></label><label>Tri <select name="sort"><option value="name">Nom</option><option value="newest">Nouveautés</option></select></label><button>Filtrer</button></form>
+{% include 'partials/storefront-block.twig' with {block_type:'collection_grid',data:{items:storefront_collections}} only %}
+{% include 'partials/storefront-block.twig' with {block_type:'product_grid',data:{items:storefront_products}} only %}

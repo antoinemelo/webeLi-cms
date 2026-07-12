@@ -198,6 +198,8 @@
       </div>
     {% endfor %}
   </section>
+{% elseif type in ['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'] %}
+  {% include 'partials/storefront-block.twig' with { block_type: type, data: data } only %}
 {% else %}
   {% set fallback_markdown_text = data.text|default(data.markdown|default(block.text|default(''))) %}
   <section{% if anchor %} id="{{ anchor }}"{% endif %}{{ block_attrs|raw }} class="{{ class_name }} prose-block"><div{{ edit_text|raw }}>{{ fallback_markdown_text|markdown_to_html|raw }}</div></section>

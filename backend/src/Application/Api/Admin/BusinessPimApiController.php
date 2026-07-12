@@ -6,6 +6,7 @@ namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorefrontProjectionService;
 use App\Core\ErrorCode;
 use App\Core\Request;
 use App\Core\Response;
@@ -34,7 +35,19 @@ final class BusinessPimApiController
         private readonly ProductContentLinkService $contentLinks,
         private readonly ?CatalogPriceListService $priceLists = null,
         private readonly ?CatalogCommercialRelationService $commercialRelations = null,
+        private readonly ?StorefrontProjectionService $storefrontProjections = null,
     ) {}
+
+    public function rebuildStorefrontProjections(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        try {
+            if ($this->storefrontProjections===null) throw new InvalidArgumentException('storefront.projection_service_unavailable');
+            $payload=$this->payload();
+            $result=$this->storefrontProjections->rebuild((int)$site['id'],isset($payload['channel_id'])?(int)$payload['channel_id']:null,(string)($payload['locale']??$languageCode));
+            return Response::success(['projection'=>$result],'admin.business.pim.storefront_projections.rebuild.v1',$this->meta($site,$languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
 
     public function priceLists(): Response
     {

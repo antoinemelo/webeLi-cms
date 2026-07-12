@@ -11,6 +11,7 @@ use App\Application\Media\Storage\MediaUrlGenerator;
 use App\Application\Search\PublicSearchReadRepository;
 use App\Core\Database;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorefrontProjectionRepository;
 
 final class ResolvePublicRoute
 {
@@ -26,12 +27,16 @@ final class ResolvePublicRoute
         private readonly ?CookieConsentRepository $cookies = null,
         private readonly ?BlockDocumentNormalizer $blocks = null,
         private readonly ?ProductContentLinkService $productContentLinks = null,
+        private readonly ?StorefrontProjectionRepository $storefront = null,
     ) {
         $this->mediaUrls = new MediaUrlGenerator($db);
     }
 
     public function execute(array $site, string $languageCode, string $path, array $query = []): array
     {
+        if ($storefront = $this->storefrontPayload($site,$languageCode,$path,$query)) {
+            return ['type'=>'payload','status'=>200,'payload'=>$storefront];
+        }
         if ($redirect = $this->routes->findRedirect((int) $site['id'], $path, $languageCode)) {
             return ['type' => 'redirect', 'to' => (string) $redirect['new_path'], 'status' => (int) $redirect['http_code']];
         }
@@ -55,6 +60,27 @@ final class ResolvePublicRoute
         }
 
         return ['type' => 'payload', 'status' => 200, 'payload' => $payload];
+    }
+
+    /** @return array<string,mixed>|null */
+    private function storefrontPayload(array $site,string $locale,string $path,array $query): ?array
+    {
+        if ($this->storefront===null || !($path==='/shop' || str_starts_with($path,'/shop/products/') || str_starts_with($path,'/shop/collections/'))) return null;
+        $siteId=(int)$site['id']; $channel=$this->storefront->defaultChannelId($siteId); if ($channel<1) return null;
+        if (preg_match('#^/shop/products/([a-z0-9_-]+)$#',$path,$m)) {
+            $product=$this->storefront->product($siteId,$channel,$locale,$m[1]); if (!$product) return null;
+            $base=$this->basePayload($site,$locale,$path,(string)$product['name']);
+            return $base+['template'=>'storefront-product','storefront_product'=>$product,'entry_title'=>$product['name'],'meta_title'=>$product['name'],'meta_description'=>$product['summary'],'meta_robots'=>$product['seo']['robots'],'canonical'=>localized_absolute_url($product['seo']['canonical'],$locale,(string)$site['base_url']),'json_ld'=>json_encode($product['seo']['json_ld'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),'resource'=>$product];
+        }
+        if (preg_match('#^/shop/collections/([a-z0-9_-]+)$#',$path,$m)) {
+            $collection=$this->storefront->collection($siteId,$channel,$locale,$m[1]); if (!$collection) return null;
+            $page=$this->storefront->products($siteId,$channel,$locale,['collection_id'=>$collection['collection_id'],'limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]);
+            $base=$this->basePayload($site,$locale,$path,(string)$collection['name']);
+            return $base+['template'=>'storefront-collection','storefront_collection'=>$collection,'storefront_products'=>$page['items'],'pagination'=>$page['pagination'],'entry_title'=>$collection['name'],'meta_title'=>$collection['name'],'meta_description'=>$collection['description'],'meta_robots'=>$collection['seo']['robots'],'canonical'=>localized_absolute_url($collection['seo']['canonical'],$locale,(string)$site['base_url']),'resource'=>['collection'=>$collection,'products'=>$page]];
+        }
+        $filters=['q'=>$query['q']??'','sort'=>$query['sort']??'name','limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))];
+        $page=$this->storefront->products($siteId,$channel,$locale,$filters); $base=$this->basePayload($site,$locale,$path,'Boutique');
+        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$this->storefront->collections($siteId,$channel,$locale),'pagination'=>$page['pagination'],'entry_title'=>'Boutique','meta_title'=>'Boutique','meta_description'=>'Catalogue de la boutique','meta_robots'=>'index,follow','canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page]];
     }
 
     public function entryPayload(array $site, string $languageCode, array $aggregate, bool $isPreview, array $query = []): array
@@ -83,6 +109,7 @@ final class ResolvePublicRoute
         }
 
         $blocks = $this->entryBlocks($aggregate, $site, $languageCode, $query);
+        $blocks = $this->productContentLinks?->hydrateStorefrontBlocks($blocks, (int)($site['id']??0), $languageCode) ?? $blocks;
         if ($isPreview) {
             $blocks = $this->annotatePreviewBlockStatuses($blocks, $aggregate);
         }

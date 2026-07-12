@@ -23,6 +23,8 @@ use App\Application\Content\UnpublishContentEntry;
 use App\Application\Content\ArchiveDeleteContentEntry;
 use App\Application\Content\ValidateEntryPayload;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorefrontProjectionRepository;
+use App\Application\Business\StorefrontProjectionService;
 use App\Application\Capability\ActionRunRepository;
 use App\Application\Consistency\CrossDatabaseOperationJournal;
 use App\Application\Capability\BlueprintActionContextService;
@@ -1041,6 +1043,22 @@ final class ServiceFactory
         ));
     }
 
+    public function storefrontProjections(): StorefrontProjectionRepository
+    {
+        return $this->once('storefront_projections', fn() => new StorefrontProjectionRepository($this->coreDb));
+    }
+
+    public function storefrontProjectionBuilder(): StorefrontProjectionService
+    {
+        return $this->once('storefront_projection_builder', fn() => new StorefrontProjectionService(
+            $this->coreDb,
+            $this->businessDatabaseConnection()->database(),
+            new ProductContentSourceRepository($this->businessDatabaseConnection()->database()),
+            $this->businessPublicCatalog(),
+            $this->businessCatalogSellables(),
+        ));
+    }
+
     public function businessPublicCatalog(): PublicCatalogRepository
     {
         return $this->once('business_public_catalog', fn() => new PublicCatalogRepository($this->businessDatabaseConnection()->database()));
@@ -1329,6 +1347,7 @@ final class ServiceFactory
             $this->cookies(),
             new BlockDocumentNormalizer(new EditorialBlockSecurityPolicy((array) ($this->config['cms']['editorial_security'] ?? []))),
             $this->productContentLinks(),
+            $this->storefrontProjections(),
         ));
     }
 

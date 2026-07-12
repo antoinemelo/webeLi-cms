@@ -2,7 +2,7 @@
   "contract": "public.sale.cart.lines.store.v1",
   "kind": "schema",
   "summary": "Ajouter une ligne à un panier public.",
-  "description": "Ajoute une variante Business sellable à un panier public actif. Les prix sont recalculés côté serveur depuis le snapshot catalogue.",
+  "description": "Ajoute un sellable stable à un panier public actif. Les prix sont recalculés côté serveur depuis le snapshot catalogue.",
   "method": "POST",
   "path": "/api/v1/sale/channels/{code}/cart/{token}/lines",
   "source": "sale_cart_lines + business sellable snapshot",
@@ -24,10 +24,9 @@
       "properties": {
         "data": {
           "type": "object",
-          "required": ["business_variant_id", "quantity"],
+          "required": ["sellable_id", "quantity"],
           "properties": {
-            "business_variant_id": {"type": "integer", "minimum": 1},
-            "variant_id": {"type": "integer", "minimum": 1},
+            "sellable_id": {"type": "integer", "minimum": 1},
             "quantity": {"type": "integer", "minimum": 1},
             "idempotency_key": {"type": "string"}
           },
@@ -62,11 +61,11 @@
     {"code": "VALIDATION_FAILED", "status": 422, "description": "Payload, stock ou idempotence invalide."}
   ],
   "examples": {
-    "request": {"data": {"business_variant_id": 3, "quantity": 1, "idempotency_key": "cart-line-1"}},
+    "request": {"data": {"sellable_id": 3, "quantity": 1, "idempotency_key": "cart-line-1"}},
     "response": {
       "data": {
         "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []},
-        "line": {"id": 20, "business_variant_id": 3, "quantity": 1, "unit_price_minor": 2900, "currency": "CHF", "line_total_minor": 2900}
+        "line": {"id": 20, "sellable_id": 3, "business_variant_id": 3, "quantity": 1, "unit_price_minor": 2900, "currency": "CHF", "line_total_minor": 2900}
       },
       "meta": {"contract": "public.sale.cart.lines.store.v1", "site_id": 1, "language_code": "fr"}
     }

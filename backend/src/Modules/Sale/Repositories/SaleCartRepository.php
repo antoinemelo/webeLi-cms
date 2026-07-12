@@ -193,17 +193,18 @@ final class SaleCartRepository extends SaleRepositoryBase
         $totals = $this->pricing->lineTotals($amounts, $quantity);
         $this->rawDatabase()->run(
             'INSERT INTO sale_cart_lines(
-                cart_id, line_key, business_product_id, business_variant_id, sku, barcode,
+                cart_id, line_key, business_product_id, business_variant_id, sellable_id, sku, barcode,
                 product_name, variant_name, product_type, quantity, unit_price_minor,
                 regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                 tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
                 line_tax_minor, line_total_minor, metadata_json
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $cartId,
                 $lineKey,
                 (int) $snapshot['business_product_id'],
                 (int) $snapshot['business_variant_id'],
+                (int) ($snapshot['sellable_id'] ?? $snapshot['business_variant_id']),
                 $snapshot['sku'] ?? null,
                 $snapshot['barcode'] ?? null,
                 (string) $snapshot['product_name'],

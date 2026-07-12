@@ -52,6 +52,14 @@ INSERT INTO editor_block_types(block_type, label, category, schema_json, sort_or
 ('plan', 'Plan', 'navigation', '{"fields":["title","source","taxonomy_key","limit","show_pagination","page_param"],"sources":["pages","articles","taxonomies"],"search":["title"]}', 120),
 ('articles', 'Articles', 'content', '{"fields":["title","limit","category","tag","show_more_button","more_label"],"search":["title","more_label"]}', 130);
 
+INSERT OR IGNORE INTO editor_block_types(block_type,label,category,schema_json,sort_order) VALUES
+('featured_product','Produit vedette','commerce','{"fields":["product_id","layout","show_price","show_availability","cta_label"],"required":["product_id"]}',200),
+('product_card','Carte produit','commerce','{"fields":["product_id","show_price","show_availability","cta_label"],"required":["product_id"]}',201),
+('product_grid','Grille produits','commerce','{"fields":["product_ids","collection_id","columns","limit","sort"],"required_any":[["product_ids","collection_id"]]}',202),
+('collection_grid','Grille collections','commerce','{"fields":["collection_ids","columns","limit"]}',203),
+('product_detail','Détail produit','commerce','{"fields":["product_id","show_media","show_variants","show_description"],"required":["product_id"]}',204),
+('add_to_cart','Ajout au panier','commerce','{"fields":["sellable_id","quantity","label"],"required":["sellable_id"]}',205);
+
 INSERT INTO content_types(module_id, type_key, name, singular_label, plural_label, has_layout, has_taxonomies, frontend_template)
 SELECT id, 'page', 'Page', 'Page', 'Pages', 1, 1, 'page.twig' FROM modules WHERE module_key='pages';
 

@@ -228,7 +228,7 @@ try {
     $invalid = sale_http_request(
         $baseUrl . '/api/v1/sale/channels/web-main/cart/' . rawurlencode($token) . '/lines',
         'POST',
-        sale_json_body(['business_variant_id' => (int) ($variant['id'] ?? 0), 'quantity' => 0]),
+        sale_json_body(['sellable_id' => (int) ($variant['id'] ?? 0), 'quantity' => 0]),
         ['Content-Type: application/json']
     );
     $h->assertSame(422, $invalid['status'], 'invalid Sale line payload returns 422');
@@ -238,7 +238,7 @@ try {
     $line = sale_http_request(
         $baseUrl . '/api/v1/sale/channels/web-main/cart/' . rawurlencode($token) . '/lines',
         'POST',
-        sale_json_body(['business_variant_id' => (int) ($variant['id'] ?? 0), 'quantity' => 1]),
+        sale_json_body(['sellable_id' => (int) ($variant['id'] ?? 0), 'quantity' => 1]),
         ['Content-Type: application/json', 'Idempotency-Key: ' . $idempotencyKey]
     );
     $h->assertSame(201, $line['status'], 'anonymous POST Sale line succeeds with Idempotency-Key header');
@@ -263,7 +263,7 @@ try {
     sale_http_request(
         $baseUrl . '/api/v1/sale/channels/web-main/cart/' . rawurlencode($token) . '/lines',
         'POST',
-        sale_json_body(['business_variant_id' => (int) ($variant['id'] ?? 0), 'quantity' => 1, 'idempotency_key' => 'sale-http-line-again']),
+        sale_json_body(['sellable_id' => (int) ($variant['id'] ?? 0), 'quantity' => 1, 'idempotency_key' => 'sale-http-line-again']),
         ['Content-Type: application/json']
     );
     $checkoutKey = 'sale-http-checkout-' . bin2hex(random_bytes(4));

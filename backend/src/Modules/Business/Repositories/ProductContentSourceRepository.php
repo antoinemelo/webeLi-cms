@@ -12,7 +12,7 @@ final class ProductContentSourceRepository extends BusinessRepositoryBase implem
     {
         $product = $this->database()->one(
             'SELECT p.id, p.site_id, p.type, p.status, p.visibility, p.sku_base, p.name, p.slug,
-                    p.short_description, p.unit, p.is_public, p.is_ecommerce_enabled, p.updated_at,
+                    p.short_description, p.description, p.category_id, p.unit, p.is_public, p.is_ecommerce_enabled, p.updated_at,
                     b.name AS brand_name, b.slug AS brand_slug,
                     c.name AS category_name, c.slug AS category_slug
              FROM business_products p

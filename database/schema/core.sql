@@ -3399,6 +3399,21 @@ CREATE TABLE IF NOT EXISTS business_product_public_projections (
 );
 CREATE INDEX IF NOT EXISTS idx_business_product_public_projections_content ON business_product_public_projections(site_id, content_entry_id, locale, is_active);
 
+CREATE TABLE IF NOT EXISTS storefront_product_projections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL,
+    product_id INTEGER NOT NULL, slug TEXT NOT NULL, collection_id INTEGER, dto_version INTEGER NOT NULL DEFAULT 1,
+    is_indexable INTEGER NOT NULL DEFAULT 1 CHECK(is_indexable IN (0,1)), dto_json TEXT NOT NULL CHECK(json_valid(dto_json)),
+    source_hash TEXT NOT NULL, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,channel_id,locale,product_id), UNIQUE(site_id,channel_id,locale,slug), FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_products_listing ON storefront_product_projections(site_id,channel_id,locale,collection_id,slug);
+CREATE TABLE IF NOT EXISTS storefront_collection_projections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL,
+    collection_id INTEGER NOT NULL, slug TEXT NOT NULL, dto_version INTEGER NOT NULL DEFAULT 1,
+    dto_json TEXT NOT NULL CHECK(json_valid(dto_json)), source_hash TEXT NOT NULL, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,channel_id,locale,collection_id), UNIQUE(site_id,channel_id,locale,slug), FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+
 CREATE TRIGGER IF NOT EXISTS trg_business_product_content_links_site_insert BEFORE INSERT ON business_product_content_links BEGIN
     SELECT RAISE(ABORT, 'content entry must belong to product link site') WHERE NOT EXISTS (SELECT 1 FROM content_entries ce WHERE ce.id=NEW.content_entry_id AND ce.site_id=NEW.site_id);
 END;

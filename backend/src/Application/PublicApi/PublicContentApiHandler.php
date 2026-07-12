@@ -87,6 +87,7 @@ final class PublicContentApiHandler
         $seo = is_array($aggregate['seo'] ?? null) ? $aggregate['seo'] : [];
         $fields = is_array($document['fields'] ?? null) ? $document['fields'] : [];
         $blocks = is_array($document['blocks'] ?? null) ? $document['blocks'] : [];
+        $blocks = $this->productContentLinks->hydrateStorefrontBlocks($blocks, (int)($entry['site_id']??0), (string)($publication['language_code']??$snapshot['language_code']??''));
 
         $displayPublishedAt = $this->displayPublishedAt($fields, (string) ($publication['published_at'] ?? $snapshot['published_at'] ?? ''));
         $displaySettings = $this->articleDisplaySettings($fields, (int) ($entry['site_id'] ?? 0));

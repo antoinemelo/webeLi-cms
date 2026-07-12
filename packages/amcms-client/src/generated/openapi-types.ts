@@ -320,6 +320,7 @@ export interface OpenApiPublicSaleCartLine {
   product_name?: string;
   quantity: number;
   regular_unit_price_minor?: number;
+  sellable_id?: number;
   sku?: null | string;
   tax_class_code?: string;
   tax_included?: boolean;
