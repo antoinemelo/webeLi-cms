@@ -19,6 +19,7 @@ use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
+use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Repository\SiteRepository;
 use InvalidArgumentException;
@@ -39,6 +40,7 @@ final class PublicSaleApiHandler
         private readonly SaleCheckoutService $checkout,
         private readonly SaleGuestCheckoutService $guestCheckout,
         private readonly ?SaleCustomerAccountService $customerAccounts = null,
+        private readonly ?SaleFulfillmentService $fulfillment = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -53,6 +55,7 @@ final class PublicSaleApiHandler
                 'channel' => $this->channelPayload($channel),
                 'cart' => ['enabled' => true, 'token_transport' => 'opaque_token'],
                 'checkout' => ['enabled' => true, 'idempotency_required' => true],
+                'fulfillment_methods' => $this->fulfillment?->availableMethods((int) $site['id'], $languageCode) ?? [],
             ], 'public.sale.channels.bootstrap.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -102,6 +105,7 @@ final class PublicSaleApiHandler
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
             $payload = $this->payload();
+            $payload['language'] = $languageCode;
             $result = $this->cartService->addLine((int) $cart['id'], (int) ($payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
                 'idempotency_key' => $this->idempotencyKey($payload),
             ]);
@@ -155,6 +159,7 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $payload = $this->payload();
+            $payload['language'] = $languageCode;
             $token = trim((string) ($payload['cart_token'] ?? $payload['token'] ?? ''));
             $cart = $this->cartByToken($channel, $token, true);
             $idempotencyKey = $this->requiredIdempotencyKey($payload);
@@ -182,7 +187,9 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            $result = $this->guestCheckout->update((int) $cart['id'], $this->payload());
+            $payload = $this->payload();
+            $payload['language'] = $languageCode;
+            $result = $this->guestCheckout->update((int) $cart['id'], $payload);
             return $this->json([
                 'cart' => $this->cartPayload($result['cart'], true),
                 'price_changed' => $result['price_changed'],
@@ -379,6 +386,7 @@ final class PublicSaleApiHandler
             'subtotal_minor' => (int) $cart['subtotal_minor'],
             'discount_total_minor' => (int) $cart['discount_total_minor'],
             'tax_total_minor' => (int) $cart['tax_total_minor'],
+            'shipping_total_minor' => (int) ($cart['shipping_total_minor'] ?? 0),
             'grand_total_minor' => (int) $cart['grand_total_minor'],
             'expires_at' => $cart['expires_at'] ?? null,
             'checkout_step' => (string) ($cart['checkout_step'] ?? 'cart'),
@@ -415,6 +423,7 @@ final class PublicSaleApiHandler
             'regular_unit_price_minor' => (int) ($line['regular_unit_price_minor'] ?? 0),
             'currency' => (string) ($line['currency'] ?? 'CHF'),
             'tax_rate_basis_points' => (int) ($line['tax_rate_basis_points'] ?? 0),
+            'tax_class_code' => (string) ($line['tax_class_code'] ?? 'standard'),
             'tax_included' => (bool) ($line['tax_included'] ?? true),
             'line_subtotal_minor' => (int) ($line['line_subtotal_minor'] ?? 0),
             'line_discount_minor' => (int) ($line['line_discount_minor'] ?? 0),
@@ -436,6 +445,7 @@ final class PublicSaleApiHandler
             'subtotal_minor' => (int) $order['subtotal_minor'],
             'discount_total_minor' => (int) $order['discount_total_minor'],
             'tax_total_minor' => (int) $order['tax_total_minor'],
+            'shipping_total_minor' => (int) ($order['shipping_total_minor'] ?? 0),
             'grand_total_minor' => (int) $order['grand_total_minor'],
             'lines' => array_map(fn(array $line): array => $this->linePayload($line), $order['lines'] ?? []),
             'placed_at' => $order['placed_at'] ?? null,

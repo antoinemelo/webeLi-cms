@@ -50,6 +50,7 @@ const orderPayments = ref<Row[]>([]);
 const orderEvents = ref<Row[]>([]);
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
+const fulfillmentMethods = ref<Row[]>([]);
 const sessions = ref<Row[]>([]);
 const paymentAmount = ref(0);
 const cancelReason = ref('');
@@ -191,14 +192,16 @@ async function loadOrders(): Promise<void> {
 }
 
 async function loadSettings(): Promise<void> {
-  const [channelResponse, methodResponse, sessionResponse] = await Promise.all([
+  const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse] = await Promise.all([
     adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
     adminApi.get<{ payment_methods: Row[] }>('/sale/payment-methods'),
-    adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions')
+    adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions'),
+    adminApi.get<{ methods: Row[] }>('/sale/fulfillment')
   ]);
   channels.value = channelResponse.data.channels || [];
   paymentMethods.value = methodResponse.data.payment_methods || [];
   sessions.value = sessionResponse.data.sessions || [];
+  fulfillmentMethods.value = fulfillmentResponse.data.methods || [];
 }
 
 async function load(): Promise<void> {
@@ -686,6 +689,15 @@ onMounted(load);
             <small>{{ statusLabel(method.status) }}</small>
           </div>
           <div v-if="!paymentMethods.length" class="text-muted">{{ t('sale.empty.paymentMethods') }}</div>
+        </section>
+        <section class="sale-admin__section">
+          <h2>{{ t('sale.settings.fulfillmentMethods') }}</h2>
+          <div v-for="method in fulfillmentMethods" :key="String(method.id)" class="sale-admin__list-row">
+            <span>{{ languageCode === 'en' ? method.label_en : method.label_fr }} <small>{{ method.code }}</small></span>
+            <b>{{ money(method.flat_rate_minor, 'CHF') }}</b>
+            <small>{{ statusLabel(method.status) }} · {{ method.fulfillment_type }} · {{ method.requires_shipping_address ? t('sale.fulfillment.addressRequired') : t('sale.fulfillment.addressOptional') }}</small>
+          </div>
+          <div v-if="!fulfillmentMethods.length" class="text-muted">{{ t('sale.empty.fulfillmentMethods') }}</div>
         </section>
         <section class="sale-admin__section">
           <h2>{{ t('sale.settings.posSessions') }}</h2>

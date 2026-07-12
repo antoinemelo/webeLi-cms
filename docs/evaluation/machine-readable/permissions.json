@@ -1059,6 +1059,7 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
@@ -1070,6 +1071,7 @@
     "permission": "business.catalog.discounts.write",
     "source": [
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
+      "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
@@ -3414,6 +3416,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-customer-accounts-manage-7d36fb2569",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.customer_accounts.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-manage-f299f7db39",
@@ -3598,6 +3618,24 @@
       "backend/src/Modules/Sale/Contracts/SaleAiContextContracts.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
+    ],
+    "id": "permission-sale-returns-manage-174ae6d6bb",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.returns.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "status": "supported"
   },

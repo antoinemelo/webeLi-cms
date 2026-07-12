@@ -54,3 +54,4 @@ generated: true
 | `database/migrations/sale/0004_internal_sales_timeline.sql` | `0004_internal_sales_timeline` |
 | `database/migrations/sale/0005_guest_public_checkout.sql` | `0005_guest_public_checkout` |
 | `database/migrations/sale/0006_customer_accounts_links.sql` | `0006_customer_accounts_links` |
+| `database/migrations/sale/0007_fulfillment_tax_v1.sql` | `0007_fulfillment_tax_v1` |

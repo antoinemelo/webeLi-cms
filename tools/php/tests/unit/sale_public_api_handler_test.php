@@ -166,8 +166,8 @@ try {
     $review = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $token . '/checkout', ['step' => 'review'] + $guestData)->updateCheckout('web-main', $token);
     $h->assertSame(200, $review->status(), 'guest checkout review is persisted and recalculated');
     $reviewBody = json_decode($review->body(), true);
-    $h->assertSame(2900, (int) ($reviewBody['data']['cart']['grand_total_minor'] ?? 0), 'client supplied total is ignored');
-    $h->assertSame(0, (int) ($reviewBody['data']['cart']['shipping_method']['amount_minor'] ?? -1), 'shipping amount is calculated by the server');
+    $h->assertSame(3800, (int) ($reviewBody['data']['cart']['grand_total_minor'] ?? 0), 'client supplied total is ignored');
+    $h->assertSame(900, (int) ($reviewBody['data']['cart']['shipping_method']['amount_minor'] ?? -1), 'fixed fulfillment rate is calculated by the server');
     $h->assertSame(false, $reviewBody['data']['cart']['marketing_consent'] ?? null, 'marketing refusal remains distinct from terms consent');
 
     $checkoutPayload = ['cart_token' => $token, 'idempotency_key' => 'public-sale-checkout'] + $guestData;
@@ -182,6 +182,12 @@ try {
     $h->assertSame(1, (int) ($placedOrder['terms_accepted'] ?? 0), 'terms consent is frozen on the order');
     $h->assertSame(0, (int) ($placedOrder['marketing_consent'] ?? 1), 'marketing refusal is frozen separately');
     $h->assertSame('guest@example.test', json_decode((string) $placedOrder['customer_snapshot_json'], true)['email'] ?? null, 'guest identity snapshot is frozen on the order');
+    $h->assertSame(900, (int) $placedOrder['shipping_total_minor'], 'fulfillment total is frozen on the order');
+    $h->assertTrue((int) ($saleDb->one('SELECT COUNT(*) AS c FROM sale_order_tax_lines WHERE order_id=?',[$orderId])['c']??0)>0, 'tax snapshots are persisted per order line');
+    $shippingSnapshot=(string)$placedOrder['shipping_method_snapshot_json'];
+    $saleDb->run("UPDATE sale_fulfillment_methods SET flat_rate_minor=1500 WHERE site_id=1 AND code='standard'");
+    $h->assertSame($shippingSnapshot,(string)$saleDb->one('SELECT shipping_method_snapshot_json FROM sale_orders WHERE id=?',[$orderId])['shipping_method_snapshot_json'],'fulfillment snapshot is immutable after configuration changes');
+    $saleDb->run("UPDATE sale_fulfillment_methods SET flat_rate_minor=900 WHERE site_id=1 AND code='standard'");
 
     $checkoutReplay = $handlerFor('POST', '/api/v1/sale/channels/web-main/checkout', $checkoutPayload)->checkout('web-main');
     $h->assertSame(201, $checkoutReplay->status(), 'public ecommerce checkout is idempotent');
@@ -204,7 +210,7 @@ try {
     $priceReview = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $priceToken . '/checkout', ['step' => 'review'] + $guestData)->updateCheckout('web-main', $priceToken);
     $priceReviewBody = json_decode($priceReview->body(), true);
     $h->assertSame(true, $priceReviewBody['data']['price_changed'] ?? false, 'price modified before validation is detected');
-    $h->assertSame(3100, (int) ($priceReviewBody['data']['cart']['grand_total_minor'] ?? 0), 'modified price is recalculated from the server catalog');
+    $h->assertSame(4000, (int) ($priceReviewBody['data']['cart']['grand_total_minor'] ?? 0), 'modified price and fulfillment are recalculated from server configuration');
     $businessDb->run('UPDATE business_product_base_prices SET amount=29 WHERE product_id=(SELECT product_id FROM business_product_variants WHERE id=?) AND price_kind=\'sale\'', [(int) $variant['id']]);
 
     $unavailableCartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');

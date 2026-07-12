@@ -181,6 +181,7 @@ use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
+use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleImportExportReportService;
@@ -781,8 +782,14 @@ final class ServiceFactory
             $this->saleCatalogSnapshots(),
             $this->salePricing(),
             $this->saleInventory(),
-            $this->saleStateMachines()
+            $this->saleStateMachines(),
+            $this->saleFulfillment()
         ));
+    }
+
+    public function saleFulfillment(): SaleFulfillmentService
+    {
+        return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService($this->saleDatabaseConnection()));
     }
 
     public function salePaymentService(): SalePaymentService

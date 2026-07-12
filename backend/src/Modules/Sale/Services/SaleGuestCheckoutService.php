@@ -13,6 +13,7 @@ use App\Modules\Sale\Repositories\SaleChannelRepository;
 final class SaleGuestCheckoutService
 {
     private const STEPS = ['identity', 'addresses', 'delivery', 'review', 'validated'];
+    private readonly SaleFulfillmentService $fulfillment;
 
     public function __construct(
         private readonly SaleDatabaseConnection $connection,
@@ -22,7 +23,8 @@ final class SaleGuestCheckoutService
         private readonly SalePricingService $pricing,
         private readonly SaleInventoryService $inventory,
         private readonly SaleStateMachineService $states,
-    ) {}
+        ?SaleFulfillmentService $fulfillment = null,
+    ) { $this->fulfillment = $fulfillment ?? new SaleFulfillmentService($connection); }
 
     /** @param array<string,mixed> $payload @return array{cart:array<string,mixed>,price_changed:bool} */
     public function update(int $cartId, array $payload, bool $forPlacement = false): array
@@ -57,15 +59,16 @@ final class SaleGuestCheckoutService
         }
         if (in_array($step, ['addresses','delivery','review','validated'], true)) {
             $this->validateAddress($billing, 'billing');
-            $this->validateAddress($shipping, 'shipping');
         }
         if (in_array($step, ['delivery','review','validated'], true)) {
             $this->requireMethod($shippingMethod, 'sale.checkout.shipping_method_required');
+            $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
         }
 
         $priceChanged = false;
         if (in_array($step, ['review','validated'], true)) {
             $priceChanged = $this->revalidateLines($cart);
+            $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
             $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
         }
         if ($step === 'validated' && !$terms) {
@@ -76,6 +79,7 @@ final class SaleGuestCheckoutService
             $cartId, $identity, $billing, $shipping, $shippingMethod, $paymentMethod,
             $terms, $marketing, $step, $step === 'validated'
         );
+        $this->carts->recalculateTotals($cartId, (int) ($shippingMethod['amount_minor'] ?? 0));
         return ['cart' => $this->carts->cartWithLines((int) $saved['id']), 'price_changed' => $priceChanged];
     }
 
@@ -181,11 +185,7 @@ final class SaleGuestCheckoutService
     {
         $current = $this->object($input, $stored);
         $code = strtolower(trim((string) ($current['code'] ?? '')));
-        return match ($code) {
-            'standard' => ['code' => 'standard', 'label' => 'Livraison standard', 'amount_minor' => 0],
-            'pickup' => ['code' => 'pickup', 'label' => 'Retrait', 'amount_minor' => 0],
-            default => [],
-        };
+        return $code === '' ? [] : ['code' => $code];
     }
 
     /** @return array<string,mixed> */

@@ -133,13 +133,14 @@ final class SaleCartRepository extends SaleRepositoryBase
         $totals = $this->pricing->lineTotals($amounts, (int) $line['quantity']);
         $this->rawDatabase()->run(
             'UPDATE sale_cart_lines SET sku=?,barcode=?,product_name=?,variant_name=?,product_type=?,
-                unit_price_minor=?,regular_unit_price_minor=?,unit_purchase_price_minor=?,currency=?,tax_class_id=?,
+                unit_price_minor=?,regular_unit_price_minor=?,unit_purchase_price_minor=?,currency=?,tax_class_id=?,tax_class_code=?,
                 tax_rate_basis_points=?,tax_included=?,line_subtotal_minor=?,line_discount_minor=?,line_tax_minor=?,line_total_minor=?,
                 metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
             [
                 $snapshot['sku'] ?? null, $snapshot['barcode'] ?? null, (string) $snapshot['product_name'], $snapshot['variant_name'] ?? null,
                 (string) $snapshot['product_type'], (int) $amounts['unit_price_minor'], (int) $amounts['regular_unit_price_minor'],
                 $snapshot['unit_purchase_price_minor'] ?? null, (string) $snapshot['currency'], $snapshot['tax_class_id'] ?? null,
+                (string) ($amounts['tax_class_code'] ?? 'standard'),
                 (int) $amounts['tax_rate_basis_points'], (int) (bool) $amounts['tax_included'],
                 $totals['line_subtotal_minor'], $totals['line_discount_minor'], $totals['line_tax_minor'], $totals['line_total_minor'],
                 $this->lineMetadata($snapshot, $totals), $lineId,
@@ -194,10 +195,10 @@ final class SaleCartRepository extends SaleRepositoryBase
             'INSERT INTO sale_cart_lines(
                 cart_id, line_key, business_product_id, business_variant_id, sku, barcode,
                 product_name, variant_name, product_type, quantity, unit_price_minor,
-                regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id,
+                regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                 tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
                 line_tax_minor, line_total_minor, metadata_json
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $cartId,
                 $lineKey,
@@ -214,6 +215,7 @@ final class SaleCartRepository extends SaleRepositoryBase
                 $snapshot['unit_purchase_price_minor'] ?? null,
                 (string) $snapshot['currency'],
                 $snapshot['tax_class_id'] ?? null,
+                (string) ($amounts['tax_class_code'] ?? 'standard'),
                 $amounts['tax_rate_basis_points'],
                 $amounts['tax_included'] ? 1 : 0,
                 $totals['line_subtotal_minor'],
@@ -237,16 +239,21 @@ final class SaleCartRepository extends SaleRepositoryBase
     }
 
     /** @return array{subtotal_minor:int,discount_total_minor:int,tax_total_minor:int,shipping_total_minor:int,grand_total_minor:int,surcharge_total_minor:int,tax_lines:list<array<string,mixed>>,adjustments:list<array<string,mixed>>} */
-    public function recalculateTotals(int $cartId): array
+    public function recalculateTotals(int $cartId, ?int $shippingTotalMinor = null): array
     {
         $lines = $this->lines($cartId);
-        $payload = $this->pricing->cartTotals($lines, 0, $this->normalizedCartAdjustments($cartId, $lines));
+        if ($shippingTotalMinor === null) {
+            $cart = $this->requireCart($cartId);
+            $snapshot = json_decode((string) ($cart['shipping_method_snapshot_json'] ?? '{}'), true);
+            $shippingTotalMinor = is_array($snapshot) ? max(0, (int) ($snapshot['amount_minor'] ?? 0)) : 0;
+        }
+        $payload = $this->pricing->cartTotals($lines, max(0, $shippingTotalMinor), $this->normalizedCartAdjustments($cartId, $lines));
         $this->rawDatabase()->run(
             'UPDATE sale_carts
-             SET subtotal_minor = ?, discount_total_minor = ?, tax_total_minor = ?,
+             SET subtotal_minor = ?, discount_total_minor = ?, tax_total_minor = ?, shipping_total_minor = ?,
                  grand_total_minor = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
-            [$payload['subtotal_minor'], $payload['discount_total_minor'], $payload['tax_total_minor'], $payload['grand_total_minor'], $cartId]
+            [$payload['subtotal_minor'], $payload['discount_total_minor'], $payload['tax_total_minor'], $payload['shipping_total_minor'], $payload['grand_total_minor'], $cartId]
         );
         return $payload;
     }
@@ -321,6 +328,7 @@ final class SaleCartRepository extends SaleRepositoryBase
             'regular_unit_price_minor' => (int) $line['regular_unit_price_minor'],
             'unit_price_minor' => (int) $line['unit_price_minor'],
             'tax_rate_basis_points' => (int) $line['tax_rate_basis_points'],
+            'tax_class_code' => (string) ($line['tax_class_code'] ?? 'standard'),
             'tax_included' => (bool) $line['tax_included'],
         ], $quantity);
         $this->rawDatabase()->run(

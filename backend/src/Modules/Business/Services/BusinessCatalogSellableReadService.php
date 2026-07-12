@@ -239,6 +239,8 @@ final class BusinessCatalogSellableReadService
             'regular_unit_price_minor' => $regularSaleMinor,
             'purchase_price_visible' => (bool) $context['include_purchase_price'],
             'tax_class_id' => $row['tax_class_id'] === null ? null : (int) $row['tax_class_id'],
+            'tax_class_code' => (string) ($taxClass['code'] ?? 'exempt'),
+            'tax_country' => (string) ($taxClass['country'] ?? 'CH'),
             'tax_rate_basis_points' => $taxRateBasisPoints,
             'tax_included' => $taxIncluded,
             'discounts_applied' => $pricingSummary['active_discount'] === null ? [] : [$pricingSummary['active_discount']],

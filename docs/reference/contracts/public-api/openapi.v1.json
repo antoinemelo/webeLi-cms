@@ -5269,7 +5269,24 @@
                         "checkout": {
                           "enabled": true,
                           "idempotency_required": true
-                        }
+                        },
+                        "fulfillment_methods": [
+                          {
+                            "code": "standard",
+                            "label": "Livraison standard",
+                            "type": "shipping",
+                            "flat_rate_minor": 900,
+                            "free_above_minor": 10000,
+                            "requires_shipping_address": true
+                          },
+                          {
+                            "code": "pickup",
+                            "label": "Retrait local",
+                            "type": "pickup",
+                            "flat_rate_minor": 0,
+                            "requires_shipping_address": false
+                          }
+                        ]
                       },
                       "meta": {
                         "contract": "public.sale.channels.bootstrap.v1",
@@ -5806,10 +5823,7 @@
                         "properties": {
                           "code": {
                             "type": "string",
-                            "enum": [
-                              "standard",
-                              "pickup"
-                            ]
+                            "pattern": "^[a-z0-9_-]+$"
                           }
                         }
                       },
@@ -6538,10 +6552,7 @@
                         "properties": {
                           "code": {
                             "type": "string",
-                            "enum": [
-                              "standard",
-                              "pickup"
-                            ]
+                            "pattern": "^[a-z0-9_-]+$"
                           }
                         },
                         "additionalProperties": false
@@ -7387,6 +7398,9 @@
           "tax_rate_basis_points": {
             "type": "integer"
           },
+          "tax_class_code": {
+            "type": "string"
+          },
           "tax_included": {
             "type": "boolean"
           },
@@ -7487,6 +7501,7 @@
           "subtotal_minor",
           "discount_total_minor",
           "tax_total_minor",
+          "shipping_total_minor",
           "grand_total_minor"
         ],
         "properties": {
@@ -7509,6 +7524,9 @@
             "type": "integer"
           },
           "tax_total_minor": {
+            "type": "integer"
+          },
+          "shipping_total_minor": {
             "type": "integer"
           },
           "grand_total_minor": {
@@ -7595,6 +7613,9 @@
             "type": "integer"
           },
           "tax_total_minor": {
+            "type": "integer"
+          },
+          "shipping_total_minor": {
             "type": "integer"
           },
           "grand_total_minor": {
@@ -8605,7 +8626,8 @@
             "required": [
               "channel",
               "cart",
-              "checkout"
+              "checkout",
+              "fulfillment_methods"
             ],
             "properties": {
               "channel": {
@@ -8618,6 +8640,20 @@
               "checkout": {
                 "type": "object",
                 "additionalProperties": true
+              },
+              "fulfillment_methods": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "type",
+                    "flat_rate_minor",
+                    "requires_shipping_address"
+                  ],
+                  "additionalProperties": true
+                }
               }
             },
             "additionalProperties": true

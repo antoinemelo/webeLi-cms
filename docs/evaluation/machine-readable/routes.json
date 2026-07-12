@@ -21,6 +21,24 @@
     "audience": "web",
     "confidence": "high",
     "evidence": [
+      "backend/routes/web.php"
+    ],
+    "id": "route-get-account-backend-routes-web-php-679192b13c",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/account",
+    "source": [
+      "backend/routes/web.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "web",
+    "confidence": "high",
+    "evidence": [
       "backend/routes/admin.php"
     ],
     "id": "route-get-admin-backend-routes-admin-php-5bc01d6862",
@@ -3461,6 +3479,60 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-get-admin-api-business-pim-price-lists-backend-routes-api-php-708fa88926",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/pim/price-lists",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-pim-price-lists-backend-routes-api-php-83d356068c",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/pim/price-lists",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-pim-price-lists-id-items-backend-routes-api-php-2201559f0c",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/pim/price-lists/{id}/items",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-post-admin-api-business-pim-products-bulk-asset-assign-backend-routes-api-php-255f026c0f",
     "last_verified": "2026-07-12",
     "limitations": [
@@ -3695,6 +3767,24 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-put-admin-api-business-pim-products-id-gift-card-policy-backend-routes-api-php-b81d660831",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PUT",
+    "path": "/admin/api/business/pim/products/{id}/gift-card-policy",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-post-admin-api-business-pim-products-id-recalculate-completeness-backend-routes-api-php-9de31c91b0",
     "last_verified": "2026-07-12",
     "limitations": [
@@ -3702,6 +3792,42 @@
     ],
     "method": "POST",
     "path": "/admin/api/business/pim/products/{id}/recalculate-completeness",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-pim-products-id-relations-backend-routes-api-php-52337a867f",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/pim/products/{id}/relations",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-pim-products-id-relations-backend-routes-api-php-8aa5552314",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/pim/products/{id}/relations",
     "source": [
       "backend/routes/api.php"
     ],
@@ -7968,6 +8094,24 @@
     ],
     "method": "POST",
     "path": "/business/unsubscribe/{token:[A-Za-z0-9]+}",
+    "source": [
+      "backend/routes/web.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "audience": "web",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/web.php"
+    ],
+    "id": "route-get-checkout-backend-routes-web-php-cd37e9078e",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/checkout",
     "source": [
       "backend/routes/web.php"
     ],

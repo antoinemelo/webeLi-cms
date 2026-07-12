@@ -18,6 +18,8 @@
       const total = document.createElement('strong'); total.textContent = `${(line.line_total_minor / 100).toFixed(2)} ${cart.currency}`;
       row.append(name, total); summary.append(row);
     }
+    const tax = document.createElement('p'); tax.textContent = `${lang === 'en' ? 'Tax' : 'TVA'}: ${(cart.tax_total_minor / 100).toFixed(2)} ${cart.currency}`; summary.append(tax);
+    const shipping = document.createElement('p'); shipping.textContent = `${lang === 'en' ? 'Fulfillment' : 'Fulfillment'}: ${((cart.shipping_total_minor || 0) / 100).toFixed(2)} ${cart.currency}`; summary.append(shipping);
     const total = document.createElement('p'); total.textContent = `Total: ${(cart.grand_total_minor / 100).toFixed(2)} ${cart.currency}`; summary.append(total);
   };
   const readJson = async (response) => { const payload = await response.json(); if (!response.ok) throw new Error(payload?.error?.message || 'Checkout invalid'); return payload; };
@@ -38,7 +40,13 @@
   };
   const load = async () => {
     if (!token) { error.textContent = lang === 'en' ? 'Missing cart token.' : 'Token de panier manquant.'; return; }
-    const payload = await readJson(await fetch(`${endpoint}/cart/${encodeURIComponent(token)}?lang=${lang}`, { headers: { Accept: 'application/json' } })); render(payload.data.cart);
+    const [payload, bootstrap] = await Promise.all([
+      readJson(await fetch(`${endpoint}/cart/${encodeURIComponent(token)}?lang=${lang}`, { headers: { Accept: 'application/json' } })),
+      readJson(await fetch(`${endpoint}/bootstrap?lang=${lang}`, { headers: { Accept: 'application/json' } })),
+    ]);
+    const select = form.elements.shipping_method; select.textContent = '';
+    for (const method of bootstrap.data.fulfillment_methods || []) { const option = document.createElement('option'); option.value = method.code; option.textContent = `${method.label}${method.flat_rate_minor ? ` — ${(method.flat_rate_minor / 100).toFixed(2)} ${bootstrap.data.channel.currency}` : ''}`; select.append(option); }
+    render(payload.data.cart);
   };
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); error.textContent = '';

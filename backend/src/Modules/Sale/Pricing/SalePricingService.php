@@ -8,7 +8,7 @@ use App\Modules\Sale\Exceptions\SaleValidationException;
 
 final class SalePricingService
 {
-    /** @param array<string,mixed> $snapshot @return array<string,int|bool> */
+    /** @param array<string,mixed> $snapshot @return array<string,int|bool|string> */
     public function lineAmounts(array $snapshot): array
     {
         $regular = (int) ($snapshot['regular_unit_price_minor'] ?? $snapshot['unit_price_minor'] ?? 0);
@@ -23,12 +23,13 @@ final class SalePricingService
             'unit_price_minor' => $unit,
             'catalog_unit_discount_minor' => $catalogDiscount,
             'tax_rate_basis_points' => max(0, (int) ($snapshot['tax_rate_basis_points'] ?? 0)),
+            'tax_class_code' => strtolower((string) ($snapshot['tax_class_code'] ?? 'standard')),
             'tax_included' => (bool) ($snapshot['tax_included'] ?? true),
         ];
     }
 
     /**
-     * @param array<string,int|bool> $amounts
+     * @param array<string,int|bool|string> $amounts
      * @param list<array{type?:string,value_minor?:int,value_basis_points?:int,label?:string,source_type?:string,source_id?:int}> $lineAdjustments
      * @return array{
      *   line_subtotal_minor:int,
@@ -86,7 +87,7 @@ final class SalePricingService
             'line_total_minor' => max(0, $lineTotal),
             'taxable_amount_minor' => max(0, $taxable),
             'tax_lines' => $rate > 0 ? [[
-                'tax_class_code' => 'standard',
+                'tax_class_code' => preg_match('/^[a-z0-9_.-]+$/', (string) ($amounts['tax_class_code'] ?? 'standard')) ? (string) ($amounts['tax_class_code'] ?? 'standard') : 'standard',
                 'tax_rate_basis_points' => $rate,
                 'taxable_amount_minor' => max(0, $taxable),
                 'tax_amount_minor' => max(0, $tax),

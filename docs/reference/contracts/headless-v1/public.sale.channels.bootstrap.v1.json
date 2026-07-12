@@ -21,11 +21,12 @@
       "properties": {
         "data": {
           "type": "object",
-          "required": ["channel", "cart", "checkout"],
+          "required": ["channel", "cart", "checkout", "fulfillment_methods"],
           "properties": {
             "channel": {"$ref": "#/components/schemas/PublicSaleChannel"},
             "cart": {"type": "object", "additionalProperties": true},
-            "checkout": {"type": "object", "additionalProperties": true}
+            "checkout": {"type": "object", "additionalProperties": true},
+            "fulfillment_methods": {"type": "array", "items": {"type": "object", "required": ["code", "label", "type", "flat_rate_minor", "requires_shipping_address"], "additionalProperties": true}}
           },
           "additionalProperties": true
         },
@@ -42,7 +43,8 @@
       "data": {
         "channel": {"code": "web-main", "name": "Boutique", "currency": "CHF", "default_language": "fr", "tax_mode": "tax_included"},
         "cart": {"enabled": true, "token_transport": "opaque_token"},
-        "checkout": {"enabled": true, "idempotency_required": true}
+        "checkout": {"enabled": true, "idempotency_required": true},
+        "fulfillment_methods": [{"code": "standard", "label": "Livraison standard", "type": "shipping", "flat_rate_minor": 900, "free_above_minor": 10000, "requires_shipping_address": true}, {"code": "pickup", "label": "Retrait local", "type": "pickup", "flat_rate_minor": 0, "requires_shipping_address": false}]
       },
       "meta": {"contract": "public.sale.channels.bootstrap.v1", "site_id": 1, "language_code": "fr"}
     }

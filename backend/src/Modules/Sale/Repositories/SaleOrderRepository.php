@@ -51,8 +51,8 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 billing_address_json, shipping_address_json, shipping_method_snapshot_json,
                 terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json,
                 subtotal_minor, discount_total_minor,
-                tax_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
-             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+                tax_total_minor, shipping_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
+             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
             [
                 (int) $cart['site_id'],
                 (int) $cart['channel_id'],
@@ -75,6 +75,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 (int) $cart['subtotal_minor'],
                 (int) $cart['discount_total_minor'],
                 (int) $cart['tax_total_minor'],
+                (int) ($cart['shipping_total_minor'] ?? 0),
                 (int) $cart['grand_total_minor'],
                 $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null,
                 $this->json(['source_cart_id' => (int) $cart['id'], 'correlation_id' => $correlationId]),
@@ -87,10 +88,10 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 'INSERT INTO sale_order_lines(
                     order_id, line_number, business_product_id, business_variant_id, sku, barcode,
                     product_name, variant_name, product_type, quantity, unit_price_minor,
-                    regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id,
+                    regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                     tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
                     line_tax_minor, line_total_minor, snapshot_json
-                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     $orderId,
                     $lineNumber++,
@@ -107,6 +108,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
                     $line['unit_purchase_price_minor'] ?? null,
                     (string) $line['currency'],
                     $line['tax_class_id'] ?? null,
+                    (string) ($line['tax_class_code'] ?? 'standard'),
                     (int) $line['tax_rate_basis_points'],
                     (int) $line['tax_included'],
                     (int) $line['line_subtotal_minor'],
@@ -116,6 +118,15 @@ final class SaleOrderRepository extends SaleRepositoryBase
                     (string) $line['metadata_json'],
                 ]
             );
+            $orderLineId = (int) $this->rawDatabase()->lastInsertId();
+            $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+            foreach ((is_array($metadata) ? ($metadata['pricing']['tax_lines'] ?? []) : []) as $taxLine) {
+                if (!is_array($taxLine) || (int) ($taxLine['tax_amount_minor'] ?? 0) <= 0) continue;
+                $this->rawDatabase()->run(
+                    'INSERT INTO sale_order_tax_lines(order_id,order_line_id,tax_class_code,tax_rate_basis_points,taxable_amount_minor,tax_amount_minor,currency) VALUES(?,?,?,?,?,?,?)',
+                    [$orderId,$orderLineId,(string)($taxLine['tax_class_code']??$line['tax_class_code']??'standard'),(int)($taxLine['tax_rate_basis_points']??0),(int)($taxLine['taxable_amount_minor']??0),(int)($taxLine['tax_amount_minor']??0),(string)$line['currency']]
+                );
+            }
         }
         foreach ($adjustments as $adjustment) {
             $this->rawDatabase()->run(

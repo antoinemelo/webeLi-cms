@@ -31,7 +31,7 @@ Le rate-limit public applique une enveloppe spécifique au checkout. Les répons
 
 ## Données et snapshots
 
-L’identité invitée exige e-mail, prénom et nom ; le téléphone est facultatif. Facturation et livraison exigent ligne, code postal, ville et pays ISO à deux lettres. Les méthodes v1 sont `standard`/`pickup` pour la livraison et `bank_transfer`/`manual` pour le paiement sans secret en ligne.
+L’identité invitée exige e-mail, prénom et nom ; le téléphone est facultatif. La facturation exige ligne, code postal, ville et pays ISO à deux lettres. L’adresse de livraison dépend de la méthode de fulfillment configurée : livraison physique, retrait local ou aucun fulfillment pour un service/produit numérique. Le navigateur ne fixe jamais le tarif. Les moyens de paiement v1 restent `bank_transfer`/`manual`, sans secret en ligne.
 
 Le consentement CGV est obligatoire et horodaté. Le consentement marketing est nullable et distinct : `false` est conservé comme refus explicite. Au placement, identité, adresses, livraison, méthode de paiement et consentements sont copiés dans la commande puis protégés par trigger d’immuabilité.
 

@@ -339,6 +339,7 @@ def base_components() -> dict[str, Any]:
                     "regular_unit_price_minor": {"type": "integer"},
                     "currency": {"type": "string"},
                     "tax_rate_basis_points": {"type": "integer"},
+                    "tax_class_code": {"type": "string"},
                     "tax_included": {"type": "boolean"},
                     "line_subtotal_minor": {"type": "integer"},
                     "line_discount_minor": {"type": "integer"},
@@ -373,7 +374,7 @@ def base_components() -> dict[str, Any]:
             },
             "PublicSaleCart": {
                 "type": "object",
-                "required": ["id", "status", "currency", "subtotal_minor", "discount_total_minor", "tax_total_minor", "grand_total_minor"],
+                "required": ["id", "status", "currency", "subtotal_minor", "discount_total_minor", "tax_total_minor", "shipping_total_minor", "grand_total_minor"],
                 "properties": {
                     "id": {"type": "integer"},
                     "token": {"type": "string"},
@@ -382,6 +383,7 @@ def base_components() -> dict[str, Any]:
                     "subtotal_minor": {"type": "integer"},
                     "discount_total_minor": {"type": "integer"},
                     "tax_total_minor": {"type": "integer"},
+                    "shipping_total_minor": {"type": "integer"},
                     "grand_total_minor": {"type": "integer"},
                     "expires_at": {"type": ["string", "null"]},
                     "checkout_step": {"type": "string"},
@@ -409,6 +411,7 @@ def base_components() -> dict[str, Any]:
                     "subtotal_minor": {"type": "integer"},
                     "discount_total_minor": {"type": "integer"},
                     "tax_total_minor": {"type": "integer"},
+                    "shipping_total_minor": {"type": "integer"},
                     "grand_total_minor": {"type": "integer"},
                     "lines": {"type": "array", "items": {"$ref": "#/components/schemas/PublicSaleCartLine"}},
                     "placed_at": {"type": ["string", "null"]},

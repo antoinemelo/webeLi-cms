@@ -21,7 +21,7 @@
         "billing_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
         "shipping_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
         "shipping_same_as_billing": {"type": "boolean"},
-        "shipping_method": {"type": "object", "properties": {"code": {"type": "string", "enum": ["standard", "pickup"]}}},
+        "shipping_method": {"type": "object", "properties": {"code": {"type": "string", "pattern": "^[a-z0-9_-]+$"}}},
         "payment": {"type": "object", "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual"]}}},
         "terms_accepted": {"type": "boolean"},
         "marketing_consent": {"type": "boolean"}

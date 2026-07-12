@@ -34,7 +34,7 @@ final class SaleCheckoutService
             if ($db === null) {
                 throw new SaleValidationException('sale.database_unavailable');
             }
-            return $db->transaction(function () use ($cartId, $payload, $correlationId): array {
+            return $db->transaction(function () use ($cartId, $payload, $correlationId, $db): array {
                 $cart = $this->carts->requireCart($cartId);
                 if ((string) $cart['status'] !== 'active') {
                     throw new SaleValidationException('sale.cart_not_convertible');
@@ -50,9 +50,15 @@ final class SaleCheckoutService
                 if ((int) $cart['grand_total_minor'] < 0) {
                     throw new SaleValidationException('sale.total_negative');
                 }
-                $shippingMethod = $payload['shipping_method_snapshot'] ?? $payload['shipping_method'] ?? [];
-                $cart['shipping_method_snapshot_json'] = json_encode(is_array($shippingMethod) ? $shippingMethod : ['label' => (string) $shippingMethod], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+                if (array_key_exists('shipping_method_snapshot', $payload) || array_key_exists('shipping_method', $payload)) {
+                    $shippingMethod = $payload['shipping_method_snapshot'] ?? $payload['shipping_method'];
+                    $cart['shipping_method_snapshot_json'] = json_encode(is_array($shippingMethod) ? $shippingMethod : ['label' => (string) $shippingMethod], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+                }
                 $order = $this->orders->createFromCart($cart, $lines, (string) ($payload['source'] ?? 'admin'), $this->carts->adjustments($cartId), $correlationId);
+                $fulfillmentSnapshot = json_decode((string) ($cart['shipping_method_snapshot_json'] ?? '{}'), true);
+                $fulfillmentStatus = is_array($fulfillmentSnapshot) && ($fulfillmentSnapshot['type'] ?? 'none') !== 'none' ? 'unfulfilled' : 'not_required';
+                $db->run('UPDATE sale_orders SET fulfillment_status=? WHERE id=?', [$fulfillmentStatus, (int) $order['id']]);
+                $order['fulfillment_status'] = $fulfillmentStatus;
                 $states = $this->states ?? new SaleStateMachineService($this->connection->database() ?? throw new SaleValidationException('sale.database_unavailable'));
                 $states->recordInitial((int) $cart['site_id'], 'order', (int) $order['id'], 'placed', $correlationId, $payload['iam_user_id'] ?? null, 'checkout');
                 $this->inventory->consumeCartReservations($cartId, (int) $order['id']);

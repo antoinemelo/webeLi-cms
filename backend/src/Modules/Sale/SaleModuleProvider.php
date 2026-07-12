@@ -346,6 +346,11 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('GET', '/admin/api/sale/reports/stock', $c . 'stockReport'),
             $this->route('GET', '/admin/api/sale/reports/refunds', $c . 'refundsReport'),
             $this->route('GET', '/admin/api/sale/settings', $c . 'settings'),
+            $this->route('GET', '/admin/api/sale/fulfillment', $c . 'fulfillmentConfiguration'),
+            $this->route('POST', '/admin/api/sale/fulfillment/methods', $c . 'saveFulfillmentMethod'),
+            $this->route('POST', '/admin/api/sale/fulfillment/zones', $c . 'saveFulfillmentZone'),
+            $this->route('GET', '/admin/api/sale/reports/taxes', $c . 'taxesReport'),
+            $this->route('GET', '/admin/api/sale/reports/fulfillment', $c . 'fulfillmentReport'),
             $this->route('POST', '/admin/api/sale/customer-accounts/merge', $c . 'mergeCustomerAccounts'),
         ];
     }
@@ -469,6 +474,11 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.reports.stock.v1', 'GET', '/admin/api/sale/reports/stock', 'sale.reports.read'),
             $this->contract('admin.sale.reports.refunds.v1', 'GET', '/admin/api/sale/reports/refunds', 'sale.reports.read'),
             $this->contract('admin.sale.settings.v1', 'GET', '/admin/api/sale/settings', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.configuration.v1', 'GET', '/admin/api/sale/fulfillment', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.methods.store.v1', 'POST', '/admin/api/sale/fulfillment/methods', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.zones.store.v1', 'POST', '/admin/api/sale/fulfillment/zones', 'sale.settings.manage'),
+            $this->contract('admin.sale.reports.taxes.v1', 'GET', '/admin/api/sale/reports/taxes', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.fulfillment.v1', 'GET', '/admin/api/sale/reports/fulfillment', 'sale.reports.read'),
             $this->contract('admin.sale.customer_accounts.merge.v1', 'POST', '/admin/api/sale/customer-accounts/merge', 'sale.customer_accounts.manage'),
             $this->contract('public.sale.channels.bootstrap.v1', 'GET', '/api/v1/sale/channels/{code}/bootstrap', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart', 'anonymous', 'headless'),

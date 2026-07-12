@@ -108,6 +108,60 @@
     "status": "unverified"
   },
   {
+    "command": "python3 tools/cms.py validate --validator PRICING_OFFERS_BUNDLES",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/pricing_offers_bundles.py"
+    ],
+    "execution_result": null,
+    "id": "validator-pricing-offers-bundles-152f8eb36d",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PRICING_OFFERS_BUNDLES",
+    "source": [
+      "tools/python/validation/database/pricing_offers_bundles.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PIM_QUALITY_IMPORT_CHANNELS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/pim_quality_import_channels.py"
+    ],
+    "execution_result": null,
+    "id": "validator-pim-quality-import-channels-477f0bfb2a",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PIM_QUALITY_IMPORT_CHANNELS",
+    "source": [
+      "tools/python/validation/database/pim_quality_import_channels.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator SALE_STATE_INTEGRITY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/sale_state_integrity.py"
+    ],
+    "execution_result": null,
+    "id": "validator-sale-state-integrity-6551bcf40e",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "SALE_STATE_INTEGRITY",
+    "source": [
+      "tools/python/validation/database/sale_state_integrity.py"
+    ],
+    "status": "unverified"
+  },
+  {
     "command": "python3 tools/cms.py validate --validator BLUEPRINT_SCHEMA",
     "confidence": "high",
     "evidence": [

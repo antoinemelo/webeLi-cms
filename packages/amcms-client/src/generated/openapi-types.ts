@@ -271,6 +271,7 @@ export interface OpenApiPublicSaleBootstrapResponse {
     cart: Record<string, unknown>;
     channel: OpenApiPublicSaleChannel;
     checkout: Record<string, unknown>;
+    fulfillment_methods: Array<Record<string, unknown>>;
     [key: string]: unknown;
   };
   meta: OpenApiPublicMeta;
@@ -290,6 +291,7 @@ export interface OpenApiPublicSaleCart {
   payment_method?: Record<string, unknown>;
   shipping_address?: OpenApiPublicSaleAddress;
   shipping_method?: Record<string, unknown>;
+  shipping_total_minor: number;
   status: string;
   subtotal_minor: number;
   tax_total_minor: number;
@@ -319,6 +321,7 @@ export interface OpenApiPublicSaleCartLine {
   quantity: number;
   regular_unit_price_minor?: number;
   sku?: null | string;
+  tax_class_code?: string;
   tax_included?: boolean;
   tax_rate_basis_points?: number;
   unit_price_minor: number;
@@ -397,6 +400,7 @@ export interface OpenApiPublicSaleOrder {
   order_number: string;
   payment_status: string;
   placed_at?: null | string;
+  shipping_total_minor?: number;
   source: string;
   status: string;
   subtotal_minor?: number;

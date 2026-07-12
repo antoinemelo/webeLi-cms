@@ -41,6 +41,8 @@ async function completeGuestCheckout(page: Page, viewport: { width: number; heig
   await page.getByLabel('Adresse', { exact: true }).fill('Rue du Test 1');
   await page.getByLabel('Code postal').fill('1000');
   await page.getByLabel('Ville').fill('Lausanne');
+  await expect(page.locator('select[name="shipping_method"] option[value="standard"]')).toHaveCount(1);
+  await page.locator('select[name="shipping_method"]').selectOption('standard');
   await page.getByLabel('J’accepte les conditions générales de vente').check();
   await page.getByLabel('J’accepte de recevoir des communications marketing (facultatif)').uncheck();
   await page.getByRole('button', { name: 'Commander' }).click();

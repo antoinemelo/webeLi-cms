@@ -23,6 +23,7 @@ use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
+use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
@@ -67,6 +68,7 @@ final class SaleAdminApiController
         private readonly ?SaleReturnService $returnService = null,
         private readonly ?SaleOrderTimelineService $timelineService = null,
         private readonly ?SaleCustomerAccountService $customerAccounts = null,
+        private readonly ?SaleFulfillmentService $fulfillment = null,
     ) {}
 
     public function schema(): Response
@@ -942,6 +944,42 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.settings.manage');
         return $this->ok(['settings' => $this->db()->all('SELECT * FROM sale_settings WHERE site_id = ? ORDER BY setting_key ASC', [(int) $site['id']])], 'admin.sale.settings.v1', $site, $languageCode);
+    }
+
+    public function fulfillmentConfiguration(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.settings.manage');
+        return $this->ok($this->fulfillment?->configuration((int)$site['id']) ?? ['zones'=>[],'methods'=>[]], 'admin.sale.fulfillment.configuration.v1',$site,$languageCode);
+    }
+
+    public function saveFulfillmentMethod(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.settings.manage');
+        try {
+            if ($this->fulfillment===null) throw new SaleBusinessException('sale.fulfillment_unavailable');
+            return $this->ok(['method'=>$this->fulfillment->saveMethod((int)$site['id'],$this->payload())], 'admin.sale.fulfillment.methods.store.v1',$site,$languageCode,201);
+        } catch(Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function saveFulfillmentZone(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.settings.manage');
+        try {
+            if($this->fulfillment===null) throw new SaleBusinessException('sale.fulfillment_unavailable');
+            return $this->ok(['zone'=>$this->fulfillment->saveZone((int)$site['id'],$this->payload())],'admin.sale.fulfillment.zones.store.v1',$site,$languageCode,201);
+        } catch(Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function taxesReport(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.reports.read');
+        return $this->ok(['taxes'=>$this->importExportReports->taxesReport((int)$site['id'],$this->request->query)],'admin.sale.reports.taxes.v1',$site,$languageCode);
+    }
+
+    public function fulfillmentReport(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.reports.read');
+        return $this->ok(['fulfillment'=>$this->importExportReports->fulfillmentReport((int)$site['id'],$this->request->query)],'admin.sale.reports.fulfillment.v1',$site,$languageCode);
     }
 
     public function mergeCustomerAccounts(): Response

@@ -17,6 +17,9 @@
     "tables": [
       "api_tokens",
       "iam_audit_logs",
+      "iam_customer_email_changes",
+      "iam_customer_sessions",
+      "iam_customer_site_accounts",
       "iam_email_2fa_challenges",
       "iam_permissions",
       "iam_rate_limits",
@@ -225,6 +228,85 @@
     ],
     "source": [
       "database/migrations/business/0006_bundle_product_type_check.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0006_customer_account_site_links.sql"
+    ],
+    "id": "database-source-database-migrations-business-0006-customer-account-site-links-sql-d8bf10ed47",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0006_customer_account_site_links.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0007_pricing_offers_bundles.sql"
+    ],
+    "id": "database-source-database-migrations-business-0007-pricing-offers-bundles-sql-421f975dff",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0007_pricing_offers_bundles.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_gift_card_policies",
+      "business_price_list_items",
+      "business_price_lists"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0008_pim_quality_import_channels.sql"
+    ],
+    "id": "database-source-database-migrations-business-0008-pim-quality-import-channels-sql-b62b05ae60",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0008_pim_quality_import_channels.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_catalog_import_runs",
+      "business_product_channel_visibility"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0009_pim_channel_visibility_site_guard.sql"
+    ],
+    "id": "database-source-database-migrations-business-0009-pim-channel-visibility-site-guard-sql-320abbfe82",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0009_pim_channel_visibility_site_guard.sql"
     ],
     "status": "supported",
     "tables": [],
@@ -569,6 +651,28 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/iam/0009_customer_accounts.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0009-customer-accounts-sql-da3213c6a1",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0009_customer_accounts.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "iam_customer_email_changes",
+      "iam_customer_sessions",
+      "iam_customer_site_accounts"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/sale/0001_bundle_product_type_check.sql"
     ],
     "id": "database-source-database-migrations-sale-0001-bundle-product-type-check-sql-1fc7c44e37",
@@ -600,6 +704,112 @@
     ],
     "status": "supported",
     "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0003_state_machines_snapshots.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0003-state-machines-snapshots-sql-7d3fa9a6e4",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0003_state_machines_snapshots.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_fulfillment_lines",
+      "sale_fulfillments",
+      "sale_state_transitions"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0004_internal_sales_timeline.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0004-internal-sales-timeline-sql-325358af81",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0004_internal_sales_timeline.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_financial_corrections",
+      "sale_order_customer_reconciliations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0005_guest_public_checkout.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0005-guest-public-checkout-sql-f572090249",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0005_guest_public_checkout.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0006_customer_accounts_links.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0006-customer-accounts-links-sql-ee83e18ad8",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0006_customer_accounts_links.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_customer_account_links",
+      "sale_customer_addresses",
+      "sale_customer_merge_audit",
+      "sale_customer_order_links",
+      "sale_order_claim_proofs"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0007_fulfillment_tax_v1.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0007-fulfillment-tax-v1-sql-77b074cf94",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0007_fulfillment_tax_v1.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_fulfillment_methods",
+      "sale_fulfillment_zones"
+    ],
     "views": []
   },
   {
@@ -679,12 +889,16 @@
       "business_attributes",
       "business_bundle_components",
       "business_catalog_discounts",
+      "business_catalog_import_runs",
       "business_catalog_offers",
       "business_catalog_products",
       "business_catalog_variant_price_adjustments",
       "business_catalog_variants",
       "business_companies",
       "business_contacts",
+      "business_gift_card_policies",
+      "business_price_list_items",
+      "business_price_lists",
       "business_product_assets",
       "business_product_attribute_group_links",
       "business_product_attribute_values",
@@ -692,6 +906,7 @@
       "business_product_brands",
       "business_product_bundles",
       "business_product_categories",
+      "business_product_channel_visibility",
       "business_product_completeness_rules",
       "business_product_completeness_scores",
       "business_product_option_links",
@@ -823,11 +1038,22 @@
       "sale_channel_catalog_scopes",
       "sale_channels",
       "sale_coupons",
+      "sale_customer_account_links",
+      "sale_customer_addresses",
+      "sale_customer_merge_audit",
+      "sale_customer_order_links",
       "sale_customer_refs",
       "sale_events",
+      "sale_financial_corrections",
+      "sale_fulfillment_lines",
+      "sale_fulfillment_methods",
+      "sale_fulfillment_zones",
+      "sale_fulfillments",
       "sale_idempotency_keys",
       "sale_inventory_items",
       "sale_order_adjustments",
+      "sale_order_claim_proofs",
+      "sale_order_customer_reconciliations",
       "sale_order_lines",
       "sale_order_status_history",
       "sale_order_tax_lines",
@@ -845,6 +1071,7 @@
       "sale_return_lines",
       "sale_returns",
       "sale_settings",
+      "sale_state_transitions",
       "sale_stock_locations",
       "sale_stock_movements",
       "sale_stock_reservations"

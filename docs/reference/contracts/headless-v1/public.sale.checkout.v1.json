@@ -32,7 +32,7 @@
             "billing_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
             "shipping_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
             "shipping_same_as_billing": {"type": "boolean"},
-            "shipping_method": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["standard", "pickup"]}}, "additionalProperties": false},
+            "shipping_method": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^[a-z0-9_-]+$"}}, "additionalProperties": false},
             "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual"]}}, "additionalProperties": false},
             "terms_accepted": {"type": "boolean", "enum": [true]},
             "marketing_consent": {"type": "boolean"}

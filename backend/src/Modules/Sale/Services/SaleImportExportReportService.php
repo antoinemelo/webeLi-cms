@@ -303,9 +303,25 @@ final class SaleImportExportReportService
             'sales_minor' => (int) ($row['sales_minor'] ?? 0),
             'paid_minor' => (int) ($row['paid_minor'] ?? 0),
             'refunded_minor' => (int) ($row['refunded_minor'] ?? 0),
+            'tax_minor' => (int) ($this->db()->one("SELECT COALESCE(SUM(tax_total_minor),0) AS total FROM sale_orders WHERE site_id=? AND date(COALESCE(placed_at,created_at))=? AND status<>'cancelled'",[$siteId,$date])['total']??0),
+            'shipping_minor' => (int) ($this->db()->one("SELECT COALESCE(SUM(shipping_total_minor),0) AS total FROM sale_orders WHERE site_id=? AND date(COALESCE(placed_at,created_at))=? AND status<>'cancelled'",[$siteId,$date])['total']??0),
             'by_channel' => $this->salesByChannel($siteId, ['date' => $date]),
             'by_payment_method' => $this->salesByPaymentMethod($siteId, ['date' => $date]),
         ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function taxesReport(int $siteId, array $filters=[]): array
+    {
+        [$where,$params]=$this->orderWhere($siteId,$filters,'o');
+        return $this->db()->all('SELECT t.tax_class_code,t.tax_rate_basis_points,t.currency,COUNT(DISTINCT t.order_id) AS orders_count,SUM(t.taxable_amount_minor) AS taxable_amount_minor,SUM(t.tax_amount_minor) AS tax_amount_minor FROM sale_order_tax_lines t JOIN sale_orders o ON o.id=t.order_id '.$where.' GROUP BY t.tax_class_code,t.tax_rate_basis_points,t.currency ORDER BY t.tax_class_code',$params);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function fulfillmentReport(int $siteId, array $filters=[]): array
+    {
+        [$where,$params]=$this->orderWhere($siteId,$filters,'o');
+        return $this->db()->all("SELECT COALESCE(json_extract(o.shipping_method_snapshot_json,'$.code'),'none') AS method_code,COALESCE(json_extract(o.shipping_method_snapshot_json,'$.type'),'none') AS fulfillment_type,COUNT(*) AS orders_count,SUM(o.shipping_total_minor) AS shipping_minor,o.currency FROM sale_orders o ".$where." GROUP BY method_code,fulfillment_type,o.currency ORDER BY orders_count DESC",$params);
     }
 
     /** @param array<string,mixed> $filters @return list<array<string,mixed>> */
