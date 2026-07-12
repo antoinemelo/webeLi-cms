@@ -22,6 +22,7 @@ use App\Application\Media\SyncMediaUsagesForRevision;
 use App\Application\Content\UnpublishContentEntry;
 use App\Application\Content\ArchiveDeleteContentEntry;
 use App\Application\Content\ValidateEntryPayload;
+use App\Application\Business\ProductContentLinkService;
 use App\Application\Capability\ActionRunRepository;
 use App\Application\Consistency\CrossDatabaseOperationJournal;
 use App\Application\Capability\BlueprintActionContextService;
@@ -79,6 +80,7 @@ use App\Infrastructure\Persistence\Sql\SqlSeoMetadataRepository;
 use App\Infrastructure\Persistence\Sql\SqlTaxonomyAssignmentRepository;
 use App\Infrastructure\Persistence\Sql\SqlTombstoneRepository;
 use App\Infrastructure\Persistence\Sql\SqlTransactionManager;
+use App\Infrastructure\Persistence\Sql\SqlCmsContentSource;
 use App\Service\OutboxService;
 use App\Service\Webhook\WebhookDispatcher;
 use App\Service\ProjectionService;
@@ -128,6 +130,7 @@ use App\Modules\Business\Repositories\CatalogStockRepository;
 use App\Modules\Business\Repositories\CatalogVariantRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Repositories\PublicCatalogRepository;
+use App\Modules\Business\Repositories\ProductContentSourceRepository;
 use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Services\BusinessConsentService;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
@@ -934,6 +937,15 @@ final class ServiceFactory
         return $this->once('business_pim_admin', fn() => new BusinessPimAdminService($this->businessDatabaseConnection()->database(), $this->businessProductCompleteness()));
     }
 
+    public function productContentLinks(): ProductContentLinkService
+    {
+        return $this->once('product_content_links', fn() => new ProductContentLinkService(
+            $this->coreDb,
+            new ProductContentSourceRepository($this->businessDatabaseConnection()->database()),
+            new SqlCmsContentSource($this->coreDb),
+        ));
+    }
+
     public function businessPublicCatalog(): PublicCatalogRepository
     {
         return $this->once('business_public_catalog', fn() => new PublicCatalogRepository($this->businessDatabaseConnection()->database()));
@@ -946,7 +958,11 @@ final class ServiceFactory
 
     public function businessCatalogProductsService(): CatalogProductService
     {
-        return $this->once('business_catalog_products_service', fn() => new CatalogProductService($this->businessCatalogProducts()));
+        return $this->once('business_catalog_products_service', fn() => new CatalogProductService(
+            $this->businessCatalogProducts(),
+            new \App\Modules\Business\Catalog\BusinessCatalogValidator(),
+            $this->productContentLinks(),
+        ));
     }
 
     public function businessCatalogVariantsService(): CatalogVariantService
@@ -1217,6 +1233,7 @@ final class ServiceFactory
             $this->coreDb,
             $this->cookies(),
             new BlockDocumentNormalizer(new EditorialBlockSecurityPolicy((array) ($this->config['cms']['editorial_security'] ?? []))),
+            $this->productContentLinks(),
         ));
     }
 

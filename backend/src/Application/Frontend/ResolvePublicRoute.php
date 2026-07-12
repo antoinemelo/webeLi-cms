@@ -10,6 +10,7 @@ use App\Application\Content\Read\PublicContentReadRepository;
 use App\Application\Media\Storage\MediaUrlGenerator;
 use App\Application\Search\PublicSearchReadRepository;
 use App\Core\Database;
+use App\Application\Business\ProductContentLinkService;
 
 final class ResolvePublicRoute
 {
@@ -24,6 +25,7 @@ final class ResolvePublicRoute
         private readonly Database $db,
         private readonly ?CookieConsentRepository $cookies = null,
         private readonly ?BlockDocumentNormalizer $blocks = null,
+        private readonly ?ProductContentLinkService $productContentLinks = null,
     ) {
         $this->mediaUrls = new MediaUrlGenerator($db);
     }
@@ -99,6 +101,12 @@ final class ResolvePublicRoute
         $ogImage = $this->absolutePublicUrl($ogImagePath, $baseUrl);
         $twitterImagePath = $this->seoMediaUrl(is_numeric($aggregate['seo']['twitter_image_media_id'] ?? null) ? (int) $aggregate['seo']['twitter_image_media_id'] : 0, 'open_graph') ?: $ogImage;
         $twitterImage = $this->absolutePublicUrl($twitterImagePath, $baseUrl);
+        $commerceProducts = $this->productContentLinks?->publicProductsForContent(
+            (int) ($site['id'] ?? 0),
+            (int) ($entry['id'] ?? 0),
+            $languageCode
+        ) ?? [];
+        $pageJsonLd = $this->jsonLd((string) ($aggregate['seo']['json_ld'] ?? ''), $site, $languageCode, $path, $title, $summary, (string) ($entry['type_key'] ?? 'page'), $entryPublishedAt, $entryUpdatedAt, $payload['breadcrumbs'] ?? [], $blocks, !empty($articleDisplay['include_author_in_schema']) ? $entryAuthorName : '');
         return $payload + [
             'title' => $title,
             'entry_key' => (string) ($entry['entry_key'] ?? ''),
@@ -126,12 +134,39 @@ final class ResolvePublicRoute
             'og_description' => (string) ($aggregate['seo']['og_description'] ?? $aggregate['seo']['meta_description'] ?? $summary),
             'twitter_title' => (string) ($aggregate['seo']['twitter_title'] ?? $aggregate['seo']['meta_title'] ?? $title),
             'twitter_description' => (string) ($aggregate['seo']['twitter_description'] ?? $aggregate['seo']['meta_description'] ?? $summary),
-            'json_ld' => $this->jsonLd((string) ($aggregate['seo']['json_ld'] ?? ''), $site, $languageCode, $path, $title, $summary, (string) ($entry['type_key'] ?? 'page'), $entryPublishedAt, $entryUpdatedAt, $payload['breadcrumbs'] ?? [], $blocks, !empty($articleDisplay['include_author_in_schema']) ? $entryAuthorName : ''),
+            'json_ld' => $this->mergeCommerceJsonLd($pageJsonLd, $commerceProducts),
+            'commerce_products' => $commerceProducts,
             'geo_summary' => $this->geoSummary($title, $summary),
             'ai_summary' => $this->geoSummary($title, $summary),
             'resource' => $aggregate,
             'template' => $template,
         ];
+    }
+
+    /** @param list<array<string,mixed>> $products */
+    private function mergeCommerceJsonLd(string $pageJsonLd, array $products): string
+    {
+        if ($products === []) {
+            return $pageJsonLd;
+        }
+        $graph = [];
+        $page = json_decode($pageJsonLd, true);
+        if (is_array($page)) {
+            if (is_array($page['@graph'] ?? null)) {
+                $graph = array_values($page['@graph']);
+            } else {
+                unset($page['@context']);
+                $graph[] = $page;
+            }
+        }
+        foreach ($products as $product) {
+            if (is_array($product['structured_data'] ?? null)) {
+                $structuredData = $product['structured_data'];
+                unset($structuredData['@context']);
+                $graph[] = $structuredData;
+            }
+        }
+        return (string) json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
 

@@ -15,6 +15,7 @@ VALIDATORS=(
     Validator('DB_SCHEMA', "tools.python.validation.database.schema", 'database'),
     Validator('DB_INVENTORY', "tools.python.validation.database.inventory", 'database'),
     Validator('PROJECTION_DEFINITIONS', "tools.python.validation.database.projections", 'database'),
+    Validator('PRODUCT_CONTENT_LINKS', "tools.python.validation.database.product_content_links", 'database'),
     Validator('BLUEPRINT_SCHEMA', "tools.python.validation.content.blueprints", 'content'),
     Validator('CONTENT_CONTRACTS', "tools.python.validation.content.contracts", 'content'),
     Validator('MULTISITE_LOCALE_MODEL', "tools.python.validation.content.site_locale", 'content'),

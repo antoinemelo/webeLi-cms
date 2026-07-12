@@ -27,6 +27,7 @@ if str(BASE) not in sys.path:
 from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.processes import cms_subprocess_env
 CORE_DB = BASE / "storage" / "database" / "core.sqlite"
+BUSINESS_DB = BASE / "storage" / "database" / "business.sqlite"
 IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
 FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
 COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
@@ -70,7 +71,7 @@ def hash_pw(_password: str) -> str:
 
 
 def ensure_databases_exist() -> None:
-    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB) if not path.exists()]
+    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB) if not path.exists()]
     if missing:
         raise RuntimeError(
             "Base(s) SQLite introuvable(s): "
@@ -86,6 +87,80 @@ def run_seed_file(connection: sqlite3.Connection, sql_path: Path) -> None:
     if sql:
         connection.executescript(sql)
         connection.commit()
+
+
+def rebuild_seed_product_content_projections() -> None:
+    """Materialise les liens CMS/PIM seedes sans lecture inter-base au runtime."""
+    with connect_sqlite(CORE_DB) as core, connect_sqlite(BUSINESS_DB) as business:
+        core.row_factory = sqlite3.Row
+        business.row_factory = sqlite3.Row
+        core.execute(
+            """
+            INSERT OR IGNORE INTO business_product_content_links(
+                site_id,product_id,content_entry_id,relation_type,locale,is_canonical,status,seo_config_json
+            )
+            SELECT 1,1,ce.id,'storytelling',NULL,1,'active','{"schema_type":"Service"}'
+            FROM content_entries ce WHERE ce.site_id=1 AND ce.entry_key='home' LIMIT 1
+            """
+        )
+        links = core.execute(
+            "SELECT * FROM business_product_content_links WHERE status='active' ORDER BY id"
+        ).fetchall()
+        for link in links:
+            product = business.execute(
+                """
+                SELECT p.id,p.site_id,p.type,p.status,p.visibility,p.sku_base,p.name,p.slug,
+                       p.short_description,p.unit,p.is_public,p.is_ecommerce_enabled,p.updated_at,
+                       b.name AS brand_name,b.slug AS brand_slug,c.name AS category_name,c.slug AS category_slug
+                FROM business_products p
+                LEFT JOIN business_product_brands b ON b.id=p.brand_id AND b.site_id=p.site_id
+                LEFT JOIN business_product_categories c ON c.id=p.category_id AND c.site_id=p.site_id
+                WHERE p.id=? AND p.site_id=? AND p.archived_at IS NULL
+                """,
+                (int(link["product_id"]), int(link["site_id"])),
+            ).fetchone()
+            if product is None:
+                raise RuntimeError(f"Lien CMS/PIM seed invalide: produit {link['product_id']} absent du site {link['site_id']}")
+            variants = [dict(row) for row in business.execute(
+                "SELECT id,sku,name,status,stock_quantity,stock_reserved,track_stock,allow_backorder,updated_at FROM business_product_variants WHERE product_id=? AND archived_at IS NULL ORDER BY sort_order,id",
+                (int(link["product_id"]),),
+            )]
+            assets = [dict(row) for row in business.execute(
+                "SELECT media_id,variant_id,role,title,alt_text,caption,channel_scope,sort_order FROM business_product_assets WHERE product_id=? AND archived_at IS NULL AND is_public=1 AND role<>'internal' ORDER BY CASE role WHEN 'main' THEN 0 ELSE 1 END,sort_order,id",
+                (int(link["product_id"]),),
+            )]
+            snapshot = {"product": dict(product), "variants": variants, "assets": assets, "attributes": []}
+            seo_config = json.loads(link["seo_config_json"] or "{}")
+            schema_type = seo_config.get("schema_type") or ("Service" if product["type"] == "service" else "Product")
+            structured = {
+                "@context": "https://schema.org",
+                "@type": schema_type if schema_type in {"Product", "Service"} else "Product",
+                "name": product["name"],
+                "sku": product["sku_base"] or "",
+                "description": product["short_description"] or "",
+            }
+            if product["brand_name"]:
+                structured["brand"] = {"@type": "Brand", "name": product["brand_name"]}
+            active = int(product["status"] == "active" and bool(product["is_public"]))
+            core.execute(
+                """
+                INSERT INTO business_product_public_projections(
+                    link_id,site_id,product_id,content_entry_id,relation_type,locale,is_canonical,is_active,
+                    product_json,structured_data_json,source_product_updated_at,projected_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+                ON CONFLICT(link_id) DO UPDATE SET
+                    product_json=excluded.product_json,structured_data_json=excluded.structured_data_json,
+                    is_active=excluded.is_active,source_product_updated_at=excluded.source_product_updated_at,
+                    projected_at=CURRENT_TIMESTAMP
+                """,
+                (
+                    int(link["id"]), int(link["site_id"]), int(link["product_id"]), int(link["content_entry_id"]),
+                    link["relation_type"], link["locale"], int(link["is_canonical"]), active,
+                    json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                    json.dumps(structured, ensure_ascii=False, separators=(",", ":")), product["updated_at"],
+                ),
+            )
+        core.commit()
 
 def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
     """Synchronise la politique IAM native des modules.
@@ -1983,6 +2058,7 @@ def main() -> int:
     args = parse_args()
     try:
         seed()
+        rebuild_seed_product_content_projections()
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR seed: {exc}", file=sys.stderr)
         return 1

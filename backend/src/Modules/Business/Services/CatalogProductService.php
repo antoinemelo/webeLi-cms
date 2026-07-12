@@ -7,12 +7,14 @@ namespace App\Modules\Business\Services;
 use App\Modules\Business\Catalog\BusinessCatalogValidator;
 use App\Modules\Business\Catalog\CatalogProductServiceContract;
 use App\Modules\Business\Repositories\CatalogProductRepository;
+use App\Modules\Business\Contracts\ProductContentProjectionPort;
 
 final class CatalogProductService implements CatalogProductServiceContract
 {
     public function __construct(
         private readonly CatalogProductRepository $products,
-        private readonly BusinessCatalogValidator $validator = new BusinessCatalogValidator()
+        private readonly BusinessCatalogValidator $validator = new BusinessCatalogValidator(),
+        private readonly ?ProductContentProjectionPort $contentProjections = null,
     ) {}
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -36,21 +38,34 @@ final class CatalogProductService implements CatalogProductServiceContract
         if (($payload['status'] ?? null) === 'active') {
             $this->assertCanBeActive($siteId, $id);
         }
-        return $this->products->update($siteId, $id, $payload, $actorId);
+        $product = $this->products->update($siteId, $id, $payload, $actorId);
+        if ($product !== null) {
+            $this->contentProjections?->refreshProduct($siteId, $id);
+        }
+        return $product;
     }
 
     public function archive(int $siteId, int $id, ?int $actorId = null): bool
     {
-        return $this->products->archive($siteId, $id, $actorId);
+        $archived = $this->products->archive($siteId, $id, $actorId);
+        if ($archived) {
+            $this->contentProjections?->deactivateProduct($siteId, $id);
+        }
+        return $archived;
     }
 
     public function restore(int $siteId, int $id, ?int $actorId = null): bool
     {
-        return $this->products->restore($siteId, $id, $actorId);
+        $restored = $this->products->restore($siteId, $id, $actorId);
+        if ($restored) {
+            $this->contentProjections?->refreshProduct($siteId, $id);
+        }
+        return $restored;
     }
 
     public function deletePermanently(int $siteId, int $id): bool
     {
+        $this->contentProjections?->assertProductCanBeDeleted($siteId, $id);
         return $this->products->deletePermanently($siteId, $id);
     }
 

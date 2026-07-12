@@ -10,6 +10,7 @@ use App\Core\Response;
 use App\Application\Content\Read\PublicContentReadRepository;
 use App\Application\Routing\PublicRouteReadRepository;
 use App\Repository\SiteRepository;
+use App\Application\Business\ProductContentLinkService;
 
 final class PublicContentApiHandler
 {
@@ -19,6 +20,7 @@ final class PublicContentApiHandler
         private readonly PublicRouteReadRepository $routes,
         private readonly SiteRepository $sites,
         private readonly Database $db,
+        private readonly ProductContentLinkService $productContentLinks,
     ) {}
 
     public function index(string $type): Response
@@ -90,6 +92,12 @@ final class PublicContentApiHandler
         $displaySettings = $this->articleDisplaySettings($fields, (int) ($entry['site_id'] ?? 0));
         $authorName = $this->displayAuthorName($fields);
 
+        $products = $this->productContentLinks->publicProductsForContent(
+            (int) ($entry['site_id'] ?? 0),
+            (int) ($entry['id'] ?? 0),
+            (string) ($publication['language_code'] ?? $snapshot['language_code'] ?? '')
+        );
+
         return [
             'system' => [
                 'id' => (int) ($entry['id'] ?? 0),
@@ -121,6 +129,7 @@ final class PublicContentApiHandler
             ],
             'blocks' => $blocks,
             'media' => $this->mediaFromDocument($document),
+            'commerce' => ['products' => $products],
             'links' => [
                 'canonical' => (string) ($seo['canonical_url'] ?? ($route['full_path'] ?? $snapshot['route_path'] ?? '')),
                 'hreflang' => $this->alternates($aggregate),

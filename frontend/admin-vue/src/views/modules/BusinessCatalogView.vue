@@ -4,7 +4,7 @@ import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
-import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductDetail } from '@/api/businessCatalog';
+import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductContentCandidate, type ProductContentLink, type ProductDetail } from '@/api/businessCatalog';
 import { useAdminContextStore } from '@/stores/adminContext';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 
@@ -90,6 +90,8 @@ const bundleProductRows = ref<CatalogProduct[]>([]);
 const bundleComponentProductRows = ref<CatalogProduct[]>([]);
 const discounts = ref<CatalogDiscount[]>([]);
 const productAssets = ref<CatalogProductAsset[]>([]);
+const productContentLinks = ref<ProductContentLink[]>([]);
+const contentCandidates = ref<ProductContentCandidate[]>([]);
 const taxClasses = ref<CatalogTaxClass[]>([]);
 const attributeGroups = ref<CatalogAttributeGroup[]>([]);
 const attributes = ref<CatalogAttribute[]>([]);
@@ -261,6 +263,13 @@ const assetForm = reactive({
   sort_order: '0',
   is_public: true,
 });
+const contentLinkForm = reactive({
+  content_entry_id: '',
+  relation_type: 'product_page',
+  locale: '',
+  is_canonical: false,
+  schema_type: 'Product',
+});
 const assetUploadFile = ref<File | null>(null);
 const attributeGroupForm = reactive({ id: 0, code: '', name: '', description: '', sort_order: '0' });
 const attributeForm = reactive({
@@ -290,6 +299,7 @@ const movementTypes = ['initial', 'purchase', 'sale', 'adjustment', 'return', 'r
 const adjustmentTypes = ['none', 'amount_delta', 'percent_delta', 'fixed_override'];
 const assetRoles = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'internal'];
 const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
+const contentRelationTypes = ['product_page', 'storytelling', 'faq', 'guide', 'comparison', 'seo', 'related'];
 const attributeTypes = ['text', 'textarea', 'rich_text', 'number', 'decimal', 'boolean', 'select', 'multi_select', 'date', 'url', 'file', 'dimension', 'weight', 'color'];
 const colorSwatches = ['#000000', '#334155', '#FFFFFF', '#E11D48', '#EA580C', '#F59E0B', '#16A34A', '#0EA5E9', '#2563EB', '#7C3AED', '#C026D3'];
 const attributeTypeLabels: Record<string, string> = {
@@ -1310,6 +1320,8 @@ function resetProductForm(preserveSelection = false): void {
     selectedProduct.value = null;
     selectedVariant.value = null;
     productAssets.value = [];
+    productContentLinks.value = [];
+    contentCandidates.value = [];
     productAttributeValues.value = [];
     variantAttributeValues.value = [];
     variantStock.value = null;
@@ -2926,12 +2938,61 @@ async function selectProduct(product: CatalogProduct): Promise<void> {
     selectedProduct.value = response.data.product;
     fillProductForm(response.data.product);
     selectedVariant.value = selectedProduct.value.variants?.[0] || null;
-    await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows()]);
+    await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows(), loadProductContentLinks(Number(product.id))]);
     if (selectedVariant.value) await Promise.all([loadVariantStock(selectedVariant.value), loadVariantAttributeValues(Number(selectedVariant.value.id || 0))]);
   } catch (err) {
     setError(err, 'Produit indisponible.');
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadProductContentLinks(productId = selectedProductId.value): Promise<void> {
+  if (productId < 1) {
+    productContentLinks.value = [];
+    contentCandidates.value = [];
+    return;
+  }
+  const [linksResponse, contentsResponse] = await Promise.all([
+    businessCatalogApi.productContentLinks(productId),
+    businessCatalogApi.contentCandidates(),
+  ]);
+  productContentLinks.value = linksResponse.data.links || [];
+  contentCandidates.value = contentsResponse.data.contents || [];
+}
+
+async function createProductContentLink(): Promise<void> {
+  if (!canWrite.value || selectedProductId.value < 1 || Number(contentLinkForm.content_entry_id) < 1) return;
+  busy.value = 'content-link';
+  try {
+    await businessCatalogApi.createProductContentLink(selectedProductId.value, {
+      content_entry_id: Number(contentLinkForm.content_entry_id),
+      relation_type: contentLinkForm.relation_type,
+      locale: contentLinkForm.locale || null,
+      is_canonical: contentLinkForm.is_canonical,
+      seo_config: { schema_type: contentLinkForm.schema_type },
+    });
+    Object.assign(contentLinkForm, { content_entry_id: '', relation_type: 'product_page', locale: '', is_canonical: false, schema_type: 'Product' });
+    await loadProductContentLinks();
+    setNotice('Contenu éditorial lié au produit.');
+  } catch (err) {
+    setError(err, 'Liaison éditoriale non enregistrée.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function deleteProductContentLink(link: ProductContentLink): Promise<void> {
+  if (!canWrite.value || !link.id) return;
+  busy.value = `content-link-${link.id}`;
+  try {
+    await businessCatalogApi.deleteProductContentLink(link.id);
+    await loadProductContentLinks();
+    setNotice('Liaison éditoriale supprimée.');
+  } catch (err) {
+    setError(err, 'Liaison éditoriale non supprimée.');
+  } finally {
+    busy.value = '';
   }
 }
 
@@ -4864,6 +4925,34 @@ onBeforeUnmount(() => {
               <div v-if="assetWarnings.length" class="catalog-quality-strip">
                 <span v-for="warning in assetWarnings.slice(0, 3)" :key="`asset-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
               </div>
+            </section>
+            <section class="catalog-content-links-section">
+              <h3>Contenus CMS</h3>
+              <div class="catalog-compact-list">
+                <div v-for="link in productContentLinks" :key="link.id" class="catalog-compact-row">
+                  <div>
+                    <strong>{{ link.entry_key || `Contenu #${link.content_entry_id}` }}</strong>
+                    <span>{{ link.content_type }} · {{ link.relation_type }}<template v-if="link.locale"> · {{ link.locale }}</template><template v-if="link.is_canonical"> · canonique</template></span>
+                  </div>
+                  <button class="catalog-icon-button catalog-icon-button--danger" type="button" :disabled="!canWrite || busy === `content-link-${link.id}`" aria-label="Supprimer la liaison" title="Supprimer la liaison" @click="deleteProductContentLink(link)">×</button>
+                </div>
+                <p v-if="productContentLinks.length === 0" class="muted">Aucun contenu éditorial lié.</p>
+              </div>
+              <form v-if="canWrite" class="catalog-content-link-form" @submit.prevent="createProductContentLink">
+                <label class="field">Contenu
+                  <select v-model="contentLinkForm.content_entry_id" class="select" required>
+                    <option value="">Choisir…</option>
+                    <option v-for="content in contentCandidates" :key="content.id" :value="String(content.id)">{{ content.title || content.entry_key }} · {{ content.type_key }}</option>
+                  </select>
+                </label>
+                <label class="field">Relation
+                  <select v-model="contentLinkForm.relation_type" class="select"><option v-for="relation in contentRelationTypes" :key="relation" :value="relation">{{ relation }}</option></select>
+                </label>
+                <label class="field">Langue<input v-model.trim="contentLinkForm.locale" class="input" placeholder="Toutes ou fr"></label>
+                <label class="field">Donnée structurée<select v-model="contentLinkForm.schema_type" class="select"><option value="Product">Produit</option><option value="Service">Service</option></select></label>
+                <label class="checkbox-inline"><input v-model="contentLinkForm.is_canonical" type="checkbox"> Contenu canonique</label>
+                <button class="btn primary btn-sm" type="submit" :disabled="busy === 'content-link' || !contentLinkForm.content_entry_id">Lier</button>
+              </form>
             </section>
             <section class="catalog-clickable-section" @click="productViewModalOpen = false; openProductAttributes()">
               <h3>Qualité</h3>
@@ -6861,6 +6950,22 @@ onBeforeUnmount(() => {
   color: #64748b;
 }
 
+.catalog-content-links-section {
+  display: grid;
+  gap: .75rem;
+}
+
+.catalog-content-link-form {
+  display: grid;
+  grid-template-columns: minmax(12rem, 2fr) repeat(3, minmax(8rem, 1fr));
+  gap: .65rem;
+  align-items: end;
+}
+
+.catalog-content-link-form .checkbox-inline {
+  min-height: 2.5rem;
+}
+
 @media (max-width: 1120px) {
   .catalog-layout,
   .catalog-layout--offers {
@@ -6877,6 +6982,10 @@ onBeforeUnmount(() => {
   .catalog-form-grid,
   .catalog-price-grid,
   .option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-content-link-form {
     grid-template-columns: 1fr;
   }
 }

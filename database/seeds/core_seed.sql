@@ -264,3 +264,13 @@ ON CONFLICT(site_id, resource_type, resource_subtype, language_code) WHERE resou
 
 
 INSERT INTO site_settings(site_id, namespace, setting_key, value_json, is_public) VALUES (1, 'api', 'cors_allowed_origins', '[]', 0);
+
+-- Product 1 is the deterministic first Business demo product (vol-decouverte).
+-- The cross-database reference is validated and projected by b0_db_seed.py.
+INSERT OR IGNORE INTO business_product_content_links(
+    site_id, product_id, content_entry_id, relation_type, locale, is_canonical, status, seo_config_json
+)
+SELECT 1, 1, ce.id, 'storytelling', NULL, 1, 'active', '{"schema_type":"Service"}'
+FROM content_entries ce
+WHERE ce.site_id = 1 AND ce.entry_key = 'home'
+LIMIT 1;

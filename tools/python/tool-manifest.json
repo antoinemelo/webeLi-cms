@@ -2308,6 +2308,7 @@
         "tools/python/validation/content/contracts.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/operations/manifests.py",
@@ -2507,6 +2508,20 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/validation/database/product_content_links.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/validation/database/projections.py",
       "category": "internal",
       "public": false,
@@ -2604,6 +2619,7 @@
         "tools/python/validation/content/contracts.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/documentation/contracts.py",
@@ -2992,6 +3008,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],

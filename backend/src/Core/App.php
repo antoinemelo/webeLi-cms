@@ -308,7 +308,7 @@ final class App
             AdminSpaController::class => new AdminSpaController($this->config, $services->auth()),
             PublicHeadlessController::class => new PublicHeadlessController(
                 new PublicApiKernel($this->request, $services->coreDatabase(), $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->taxonomies(), $services->menus(), $services->resolvePublicRoute()),
-                new PublicContentApiHandler($this->request, $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->coreDatabase()),
+                new PublicContentApiHandler($this->request, $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->coreDatabase(), $services->productContentLinks()),
                 new PublicTaxonomyApiHandler($this->request, $services->taxonomies(), $services->sites()),
                 new PublicSearchApiHandler($this->request, $services->publicSearch(), $services->sites()),
                 new PublicFormApiHandler($this->request, $services->forms(), $services->sites()),
@@ -386,6 +386,7 @@ final class App
                 $services->businessProductAssets(),
                 $services->businessProductBundles(),
                 $services->businessCatalogSellables(),
+                $services->productContentLinks(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,

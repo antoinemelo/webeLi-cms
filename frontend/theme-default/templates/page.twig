@@ -14,6 +14,8 @@
     </header>
   {% endif %}
 
+  {% include 'partials/product-content-links.twig' %}
+
   {% if cookie_policy|default(null) %}
     {% include 'partials/cookie-policy.twig' %}
   {% endif %}

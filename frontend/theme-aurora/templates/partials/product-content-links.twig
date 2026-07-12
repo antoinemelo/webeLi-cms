@@ -1,0 +1,15 @@
+{% if commerce_products|default([]) %}
+  <section class="section product-content-links" aria-label="Produits associés">
+    {% for snapshot in commerce_products %}
+      {% set product = snapshot.product|default({}) %}
+      <article class="card product-content-card" data-product-id="{{ product.id }}">
+        <p class="eyebrow">{{ product.type|default('product') }}</p>
+        <h2>{{ product.name }}</h2>
+        {% if product.short_description|default('') %}<p>{{ product.short_description }}</p>{% endif %}
+        {% if snapshot.variants|default([]) %}
+          <ul>{% for variant in snapshot.variants %}{% if variant.status == 'active' %}<li>{{ variant.name }} <small>{{ variant.sku }}</small></li>{% endif %}{% endfor %}</ul>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </section>
+{% endif %}

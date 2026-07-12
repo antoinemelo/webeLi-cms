@@ -113,6 +113,25 @@ export type CatalogProductBundle = Record<string, unknown> & {
   is_active?: boolean;
   components?: CatalogBundleComponent[];
 };
+export type ProductContentLink = Record<string, unknown> & {
+  id: number;
+  product_id?: number;
+  content_entry_id?: number;
+  entry_key?: string;
+  content_type?: string;
+  relation_type?: string;
+  locale?: string | null;
+  is_canonical?: boolean;
+  status?: string;
+  projection_ready?: boolean;
+};
+export type ProductContentCandidate = Record<string, unknown> & {
+  id: number;
+  entry_key?: string;
+  title?: string | null;
+  type_key?: string;
+  status?: string;
+};
 
 export type ProductDetail = Record<string, unknown> & {
   data?: CatalogProduct;
@@ -211,6 +230,21 @@ export const businessCatalogApi = {
   },
   productAssets(id: number, query: Record<string, string | number | boolean | undefined> = {}) {
     return adminApi.get<{ assets: CatalogProductAsset[] }>(`/business/pim/products/${id}/assets`, query);
+  },
+  productContentLinks(id: number) {
+    return adminApi.get<{ links: ProductContentLink[] }>(`/business/pim/products/${id}/content-links`);
+  },
+  contentCandidates(query = '') {
+    return adminApi.get<{ contents: ProductContentCandidate[] }>('/business/pim/content-candidates', { q: query });
+  },
+  createProductContentLink(productId: number, payload: Record<string, unknown>) {
+    return adminApi.post<{ link: ProductContentLink }>(`/business/pim/products/${productId}/content-links`, payload);
+  },
+  updateProductContentLink(id: number, payload: Record<string, unknown>) {
+    return adminApi.patch<{ link: ProductContentLink }>(`/business/pim/content-links/${id}`, payload);
+  },
+  deleteProductContentLink(id: number) {
+    return adminApi.delete<{ deleted: boolean; id: number }>(`/business/pim/content-links/${id}`);
   },
   assignProductAsset(productId: number, payload: Record<string, unknown>) {
     return adminApi.post<{ asset: CatalogProductAsset }>(`/business/pim/products/${productId}/assets`, payload);

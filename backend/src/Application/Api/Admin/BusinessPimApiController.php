@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
+use App\Application\Business\ProductContentLinkService;
 use App\Core\ErrorCode;
 use App\Core\Request;
 use App\Core\Response;
@@ -28,7 +29,59 @@ final class BusinessPimApiController
         private readonly BusinessProductAssetService $assets,
         private readonly BusinessProductBundleService $bundles,
         private readonly BusinessCatalogSellableReadService $sellables,
+        private readonly ProductContentLinkService $contentLinks,
     ) {}
+
+    public function productContentLinks(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'links' => $this->contentLinks->listForProduct((int) $site['id'], $this->id($id)),
+        ], 'admin.business.pim.product_content_links.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function contentCandidates(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'contents' => $this->contentLinks->contentCandidates((int) $site['id'], (string) ($this->request->query['q'] ?? '')),
+        ], 'admin.business.pim.content_candidates.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function storeProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'link' => $this->contentLinks->create((int) $site['id'], $this->id($id), $this->payload(), $this->actorId()),
+                'message' => 'Contenu éditorial lié au produit.',
+            ], 'admin.business.pim.product_content_links.show.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function updateProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'link' => $this->contentLinks->update((int) $site['id'], $this->id($id), $this->payload(), $this->actorId()),
+                'message' => 'Liaison éditoriale mise à jour.',
+            ], 'admin.business.pim.product_content_links.show.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function deleteProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        return Response::success([
+            'deleted' => $this->contentLinks->delete((int) $site['id'], $this->id($id)),
+            'id' => $this->id($id),
+        ], 'admin.business.pim.product_content_links.delete.v1', $this->meta($site, $languageCode));
+    }
 
     public function productAssets(string|int $id): Response
     {

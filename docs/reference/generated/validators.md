@@ -23,6 +23,7 @@ generated: true
 | `DB_SCHEMA` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.schema` |
 | `DB_INVENTORY` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.inventory` |
 | `PROJECTION_DEFINITIONS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.projections` |
+| `PRODUCT_CONTENT_LINKS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.product_content_links` |
 | `BLUEPRINT_SCHEMA` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.blueprints` |
 | `CONTENT_CONTRACTS` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.contracts` |
 | `MULTISITE_LOCALE_MODEL` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.site_locale` |
