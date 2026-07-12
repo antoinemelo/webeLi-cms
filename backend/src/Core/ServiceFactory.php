@@ -148,6 +148,8 @@ use App\Modules\Business\Services\BusinessProductAssetService;
 use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Modules\Business\Services\BusinessProductCompletenessService;
 use App\Modules\Business\Services\CatalogCsvService;
+use App\Modules\Business\Services\CatalogPriceListService;
+use App\Modules\Business\Services\CatalogCommercialRelationService;
 use App\Modules\Business\Services\CatalogPdfService;
 use App\Modules\Business\Services\CatalogDiscountService;
 use App\Modules\Business\Services\CatalogProductService;
@@ -925,6 +927,16 @@ final class ServiceFactory
     public function businessProductBundles(): BusinessProductBundleService
     {
         return $this->once('business_product_bundles', fn() => new BusinessProductBundleService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessPriceLists(): CatalogPriceListService
+    {
+        return $this->once('business_price_lists', fn() => new CatalogPriceListService($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessCommercialRelations(): CatalogCommercialRelationService
+    {
+        return $this->once('business_commercial_relations', fn() => new CatalogCommercialRelationService($this->businessDatabaseConnection()->database()));
     }
 
     public function businessProductCompleteness(): BusinessProductCompletenessService

@@ -21,6 +21,8 @@ generated: false
 
 Le catalogue Opérations permet de préparer un petit catalogue produits, services ou bons cadeaux depuis le back-office. Il couvre les marques, catégories, produits, variantes, prix, réductions simples, stock et import/export CSV.
 
+La résolution des listes de prix, offres, bundles, kits et bons cadeaux est décrite dans [Pricing, offres et compositions Business](../development/architecture/business-pricing-offers-bundles.md).
+
 Pour un parcours utilisateur court, commencez par :
 
 - [Guide utilisateur Catalogue+](catalogue-plus-guide-utilisateur.md) ;

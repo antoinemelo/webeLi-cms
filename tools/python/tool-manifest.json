@@ -612,7 +612,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/operations/outbox.md"
+        "TREE.txt",
+        "docs/operations/outbox.md",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
@@ -1842,10 +1844,13 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/operations/m0-release-gate.md",
+        "docs/reference/generated/configuration.md",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_qualification_orchestrator.py"
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2121,7 +2126,11 @@
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,
@@ -2376,6 +2385,7 @@
         "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
         "tools/python/validation/database/schema.py",
@@ -2517,9 +2527,13 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/admin-i18n.en.md",
         "docs/development/admin-i18n.md",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
         "tools/python/tests/test_i18n_coverage.py",
+        "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
       "replacement": null,
@@ -2584,6 +2598,21 @@
         "docs/reference/generated/validators.md",
         "tools/python/archive/consolidation_inventory.py",
         "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/pricing_offers_bundles.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/reference/generated/validators.md",
         "tools/python/validation/registry.py"
       ],
       "replacement": null,
@@ -2709,6 +2738,7 @@
         "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
         "tools/python/validation/database/schema.py",
@@ -3047,6 +3077,7 @@
         "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/machine-readable/validators.json",
         "docs/operations/m0-release-gate.md",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/qualification/run_all.py",

@@ -388,6 +388,8 @@ final class App
                 $services->businessProductBundles(),
                 $services->businessCatalogSellables(),
                 $services->productContentLinks(),
+                $services->businessPriceLists(),
+                $services->businessCommercialRelations(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,

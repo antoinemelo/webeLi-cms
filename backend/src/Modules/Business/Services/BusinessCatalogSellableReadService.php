@@ -189,7 +189,10 @@ final class BusinessCatalogSellableReadService
         $brand = $this->catalog->brand($siteId, isset($row['brand_id']) ? (int) $row['brand_id'] : null);
         $category = $this->catalog->category($siteId, isset($row['category_id']) ? (int) $row['category_id'] : null);
         $taxClass = $this->catalog->taxClass(isset($row['tax_class_id']) ? (int) $row['tax_class_id'] : null);
-        $pricingSummary = $this->pricing->pricingSummary($variantId, $pricingChannel);
+        $pricingSummary = $this->pricing->pricingSummary($variantId, $pricingChannel, null, [
+            'currency' => $context['currency'],
+            'customer_segment' => $context['customer_segment'],
+        ]);
 
         $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
@@ -608,12 +611,17 @@ final class BusinessCatalogSellableReadService
         return $variantId;
     }
 
-    /** @param array<string,mixed> $context @return array{channel:string,currency:string,include_purchase_price:bool,include_internal_fields:bool,language:string} */
+    /** @param array<string,mixed> $context @return array{channel:string,currency:string,customer_segment:?string,include_purchase_price:bool,include_internal_fields:bool,language:string} */
     private function normalizeContext(array $context): array
     {
+        $segment = strtolower(trim((string) ($context['customer_segment'] ?? '')));
+        if ($segment !== '' && !preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/', $segment)) {
+            throw new InvalidArgumentException('business.pricing.customer_segment_invalid');
+        }
         return [
             'channel' => $this->channel((string) ($context['channel'] ?? 'admin')),
             'currency' => strtoupper(trim((string) ($context['currency'] ?? 'CHF')) ?: 'CHF'),
+            'customer_segment' => $segment === '' ? null : $segment,
             'include_purchase_price' => (bool) ($context['include_purchase_price'] ?? false),
             'include_internal_fields' => (bool) ($context['include_internal_fields'] ?? false),
             'language' => strtolower(trim((string) ($context['language'] ?? 'fr')) ?: 'fr'),

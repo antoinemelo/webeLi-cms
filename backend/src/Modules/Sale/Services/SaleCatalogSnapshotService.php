@@ -16,10 +16,10 @@ final class SaleCatalogSnapshotService
         private readonly SellableCatalogPort $sellables
     ) {}
 
-    /** @return array<string,mixed> */
-    public function snapshotForVariant(int $siteId, int $businessVariantId, string $channel = 'admin', bool $requireSellable = true): array
+    /** @param array<string,mixed> $pricingContext @return array<string,mixed> */
+    public function snapshotForVariant(int $siteId, int $businessVariantId, string $channel = 'admin', bool $requireSellable = true, array $pricingContext = []): array
     {
-        $snapshot = $this->sellables->getSellableVariantSnapshot($siteId, $businessVariantId, [
+        $snapshot = $this->sellables->getSellableVariantSnapshot($siteId, $businessVariantId, $pricingContext + [
             'channel' => $channel,
             'include_purchase_price' => true,
             'include_internal_fields' => true,

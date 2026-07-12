@@ -35,6 +35,7 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $businessDb->pdo()->exec($catalogSchema);
+$businessDb->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0007_pricing_offers_bundles.sql'));
 $variantSalesNoteMigration = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0005_variant_sales_note.sql');
 if ($variantSalesNoteMigration === false) {
     throw new RuntimeException('Unable to read business variant sales note migration.');

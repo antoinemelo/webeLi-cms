@@ -33,6 +33,7 @@ final class CatalogDiscountService implements CatalogDiscountServiceContract
             'starts_at' => $payload['starts_at'] ?? null,
             'ends_at' => $payload['ends_at'] ?? null,
             'status' => $payload['status'] ?? 'active',
+            'customer_segment' => $payload['customer_segment'] ?? null,
         ], $actorId);
     }
 

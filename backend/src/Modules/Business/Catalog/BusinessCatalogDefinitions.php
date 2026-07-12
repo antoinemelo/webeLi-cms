@@ -16,6 +16,10 @@ final class BusinessCatalogDefinitions
     public const OFFER_TYPES = ['percent', 'amount'];
     public const OFFER_SCOPES = ['product', 'variant', 'category', 'brand'];
     public const OFFER_CHANNELS = ['all', 'ecommerce', 'pos', 'catalogue', 'admin'];
+    public const PRICE_LIST_ADJUSTMENT_TYPES = ['fixed', 'amount_delta', 'percent_delta'];
+    public const COMMERCIAL_RELATION_TYPES = ['upsell', 'cross_sell'];
+    public const COMPOSITION_TYPES = ['bundle', 'kit'];
+    public const GIFT_CARD_VALUE_MODES = ['fixed', 'open'];
     public const CURRENCIES = ['CHF', 'EUR', 'USD'];
     public const TAX_CLASSES = ['standard', 'reduced', 'zero', 'exempt'];
 
@@ -33,6 +37,10 @@ final class BusinessCatalogDefinitions
             'offer_types' => self::OFFER_TYPES,
             'offer_scopes' => self::OFFER_SCOPES,
             'offer_channels' => self::OFFER_CHANNELS,
+            'price_list_adjustment_types' => self::PRICE_LIST_ADJUSTMENT_TYPES,
+            'commercial_relation_types' => self::COMMERCIAL_RELATION_TYPES,
+            'composition_types' => self::COMPOSITION_TYPES,
+            'gift_card_value_modes' => self::GIFT_CARD_VALUE_MODES,
             'currencies' => self::CURRENCIES,
             'tax_classes' => self::TAX_CLASSES,
         ];

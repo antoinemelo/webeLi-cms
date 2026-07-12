@@ -44,19 +44,22 @@ generated: true
 | `business_attribute_options` | id, attribute_id, code, label, value, color_hex, sort_order, created_at, updated_at, archived_at |
 | `business_attributes` | id, site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_bundle_components` | id, bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json, created_at, updated_at, archived_at |
-| `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, customer_segment, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_offers` | id, site_id, name, offer_type, offer_value, scope_type, product_id, variant_id, category_id, brand_id, channel, starts_at, ends_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_products` | id, site_id, name, slug, product_type, status, currency, base_purchase_price, base_sale_price, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, created_at, updated_at |
 | `business_catalog_variants` | id, product_id, sku, barcode, status, stock_quantity, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_companies` | id, site_id, name, normalized_name, company_kind, status, email, phone, website_url, address_json, notes, is_system, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_contacts` | id, site_id, company_id, iam_user_id, first_name, last_name, display_name, normalized_name, status, preferred_language, email, phone, mobile, job_title, notes, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_gift_card_policies` | id, site_id, product_id, currency, value_mode, minimum_amount, maximum_amount, expires_after_days, is_active, created_at, updated_at |
+| `business_price_list_items` | id, price_list_id, product_id, variant_id, adjustment_type, adjustment_value, compare_at_amount, priority, starts_at, ends_at, created_at, updated_at, archived_at |
+| `business_price_lists` | id, site_id, name, currency, channel, customer_segment, priority, status, starts_at, ends_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_assets` | id, site_id, product_id, variant_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_attribute_group_links` | product_id, group_id, sort_order, created_at |
 | `business_product_attribute_values` | id, product_id, attribute_id, language, value_text, value_number, value_json, updated_by_iam_user_id, updated_at |
 | `business_product_base_prices` | id, product_id, price_kind, currency, amount, tax_included, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `business_product_brands` | id, site_id, name, slug, company_id, description, website_url, logo_media_id, is_public, status, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_product_bundles` | id, site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_bundles` | id, site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, composition_type, unavailable_strategy, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_categories` | id, site_id, parent_id, name, slug, description, is_public, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_completeness_rules` | id, site_id, code, name, scope, required_field, required_attribute_id, channel, weight, is_active, created_at, updated_at |
 | `business_product_completeness_scores` | id, product_id, variant_id, channel, score, is_sellable, missing_json, calculated_at |

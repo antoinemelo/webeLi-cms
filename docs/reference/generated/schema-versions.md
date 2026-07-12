@@ -26,6 +26,7 @@ generated: true
 | `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
 | `database/migrations/business/0005_variant_sales_note.sql` | `0005_variant_sales_note` |
 | `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
+| `database/migrations/business/0007_pricing_offers_bundles.sql` | `0007_pricing_offers_bundles` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |

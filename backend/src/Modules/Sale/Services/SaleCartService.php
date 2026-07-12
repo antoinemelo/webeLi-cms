@@ -57,7 +57,11 @@ final class SaleCartService
             (int) $cart['site_id'],
             $businessVariantId,
             $this->channels->channelCodeForCatalog($channel),
-            true
+            true,
+            [
+                'currency' => (string) ($cart['currency'] ?? $channel['currency'] ?? 'CHF'),
+                'customer_segment' => $payload['customer_segment'] ?? null,
+            ]
         );
         $amounts = $this->pricing->lineAmounts($snapshot);
         $this->inventory->reserveForCart((int) $cart['site_id'], $cartId, $snapshot, $quantity);
