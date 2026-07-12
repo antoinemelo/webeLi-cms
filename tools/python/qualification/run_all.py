@@ -10,6 +10,7 @@ Codes de retour:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shlex
@@ -27,6 +28,7 @@ from typing import Callable
 
 from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.change_cache import fingerprint_paths, read_success, write_success
+from tools.python.lib.release_metadata import load_release_metadata
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
@@ -107,6 +109,61 @@ class Step:
     env_vars: tuple[str, ...] = ()
     timeout: int = 900
     action: Callable[[], tuple[int, str, str]] | None = None
+    available_in: tuple[str, ...] = ("source",)
+    critical: bool = True
+
+
+def _git_commit() -> str:
+    proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True, timeout=10)
+    return proc.stdout.strip() if proc.returncode == 0 else "unknown"
+
+
+def _technical_version() -> str:
+    try:
+        return load_release_metadata(ROOT / "config" / "release.json").technical_version
+    except Exception:
+        return "unknown"
+
+
+def _sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _artifact_hashes() -> dict[str, str]:
+    artifacts = {
+        "admin_manifest": ROOT / "admin-app/.vite/manifest.json",
+        "admin_api_contract": ROOT / "docs/reference/contracts/admin-api-v1/admin.maintenance.v1.json",
+        "public_openapi_json": ROOT / "docs/reference/contracts/public-api/openapi.v1.json",
+        "public_openapi_yaml": ROOT / "docs/reference/contracts/public-api/openapi.v1.yaml",
+        "sdk_openapi_types": ROOT / "packages/amcms-client/src/generated/openapi-types.ts",
+        "qualification_performance": ROOT / "storage/qualification/performance/latest.json",
+    }
+    latest = _latest_archive()
+    if latest is not None:
+        artifacts["latest_release_archive"] = latest
+    return {name: digest for name, path in artifacts.items() if (digest := _sha256(path)) is not None}
+
+
+def _gate_matrix() -> list[dict[str, object]]:
+    return [
+        {"requirement": "validation statique", "source_steps": ["python-lint", "php-lint", "validate-core"], "release_commands": ["tools/cms.py validate"]},
+        {"requirement": "tests PHP/Python/TypeScript", "source_steps": ["tests", "frontend-build"], "release_commands": []},
+        {"requirement": "build back-office", "source_steps": ["frontend-build"], "release_commands": []},
+        {"requirement": "rebuild complet", "source_steps": ["browser-e2e", "performance-baseline"], "release_commands": []},
+        {"requirement": "plan de migration", "source_steps": ["validate-core"], "release_commands": ["tools/cms.py migrate --plan"]},
+        {"requirement": "smoke HTTP et E2E", "source_steps": ["browser-e2e", "fresh-install"], "release_commands": ["tools/cms.py smoke"]},
+        {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
+        {"requirement": "backup/restore et intégrité SQLite", "source_steps": ["backup-restore", "runtime-integrity"], "release_commands": ["tools/cms.py backup", "tools/cms.py backup --restore"]},
+        {"requirement": "documentation OpenAPI SDK", "source_steps": ["docs-generate", "docs-check", "validate-core"], "release_commands": ["tools/cms.py docs check"]},
+        {"requirement": "audit dépendances", "source_steps": ["php-dependencies", "frontend-dependencies"], "release_commands": []},
+        {"requirement": "baseline performance", "source_steps": ["performance-baseline"], "release_commands": []},
+    ]
 
 
 def _latest_archive() -> Path | None:
@@ -153,6 +210,16 @@ def steps() -> tuple[Step, ...]:
         Step("runtime-integrity", "Intégrité runtime", ("complete", "release"), (py, cms, "validate", "--full", "--validator", "RUNTIME_INTEGRITY"), timeout=300),
         Step("backup-restore", "Sauvegarde/restauration", ("complete", "release"), (py, cms, "validate", "--with-slow", "--validator", "BACKUP_RESTORE_ROUNDTRIP"), timeout=600),
         Step(
+            "php-dependencies",
+            "Dépendances PHP",
+            ("complete", "release"),
+            cwd="backend",
+            executables=("composer",),
+            files=("backend/composer.json", "backend/composer.lock"),
+            action=_php_dependencies_check,
+            timeout=180,
+        ),
+        Step(
             "frontend-dependencies",
             "Dépendances frontend",
             ("complete", "release"),
@@ -193,13 +260,23 @@ def steps() -> tuple[Step, ...]:
             action=_browser_e2e_check,
             timeout=1200,
         ),
+        Step(
+            "performance-baseline",
+            "Baseline performance M0",
+            ("release",),
+            (py, "tools/python/qualification/performance_baseline.py", "--use-built-assets"),
+            executables=("php",),
+            files=("tools/python/qualification/performance_baseline.py", "admin-app/.vite/manifest.json"),
+            action=_performance_baseline_check,
+            timeout=900,
+        ),
         Step("docs-generate", "Génération documentaire", ("complete", "release"), (py, cms, "docs", "generate"), timeout=300),
         Step("docs-check", "Contrôle documentaire", ("complete", "release"), (py, cms, "docs", "check"), timeout=300),
         Step("static-export", "Export statique à blanc", ("complete", "release"), (py, cms, "--dry-run", "export"), executables=("php",), files=("backend/bin/console",), timeout=300),
         Step("preflight", "Préflight de production", ("release",), (py, "tools/python/operations/deployment/d1_preflight_local.py"), timeout=300),
         Step("package", "Création de la release", ("release",), (py, "tools/python/operations/deployment/d2_package_release.py"), timeout=600),
-        Step("verify-archive", "Vérification de l'archive", ("release",), action=_verify_latest_archive),
-        Step("fresh-install", "Installation neuve et smoke test", ("release",), action=_fresh_install_smoke),
+        Step("verify-archive", "Vérification de l'archive", ("release",), action=_verify_latest_archive, available_in=("source", "release")),
+        Step("fresh-install", "Installation neuve et smoke test", ("release",), action=_fresh_install_smoke, available_in=("source", "release")),
     )
 
 
@@ -380,6 +457,60 @@ def _frontend_dependencies_check() -> tuple[int, str, str]:
     return 0, "Audit sécurité frontend OK.\n$ npm audit --audit-level=high\n" + (output or "found 0 vulnerabilities"), ""
 
 
+def _php_dependencies_check() -> tuple[int, str, str]:
+    """Vérifie composer.json/lock et les advisories connues par Composer."""
+    backend = ROOT / "backend"
+    composer = shutil.which("composer")
+    if composer is None:
+        return 2, "", "Composer absent: impossible d'auditer les dépendances PHP."
+
+    validate = subprocess.run(
+        [composer, "validate", "--strict", "--no-check-publish", "--no-interaction"],
+        cwd=backend,
+        text=True,
+        capture_output=True,
+        timeout=60,
+    )
+    validate_output = "\n".join(part for part in (_as_text(validate.stdout).strip(), _as_text(validate.stderr).strip()) if part)
+    if validate.returncode != 0:
+        return validate.returncode, validate_output, "composer validate --strict a échoué."
+
+    try:
+        audit = subprocess.run(
+            [composer, "audit", "--locked", "--no-interaction", "--format=json"],
+            cwd=backend,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None)).strip()
+        stderr = _as_text(getattr(exc, "stderr", None)).strip()
+        return 124, "\n".join(part for part in (stdout, stderr) if part), "composer audit --locked a dépassé 120s."
+
+    output = "\n".join(part for part in (_as_text(audit.stdout).strip(), _as_text(audit.stderr).strip()) if part)
+    if audit.returncode != 0:
+        return audit.returncode, output, "composer audit --locked a détecté au moins une advisory non acceptée."
+    return 0, "Audit sécurité PHP OK.\n$ composer validate --strict --no-check-publish\n$ composer audit --locked --format=json\n" + (output or "{}"), ""
+
+
+def _performance_baseline_check() -> tuple[int, str, str]:
+    command = [
+        sys.executable,
+        str(ROOT / "tools/python/qualification/performance_baseline.py"),
+        "--use-built-assets",
+        "--report",
+        str(ROOT / "storage/qualification/performance/latest.json"),
+    ]
+    try:
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=900)
+    except subprocess.TimeoutExpired as exc:
+        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
+        stderr = _as_text(getattr(exc, "stderr", None))
+        return 124, stdout, stderr + "\nTimeout après 900s"
+    return returncode, stdout, stderr
+
+
 def _e2e_fingerprint() -> str:
     build_cache = CACHE_DIR / "frontend-build.json"
     try:
@@ -529,6 +660,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{step.id}: {step.label}")
         return 0
     results: list[Result] = []
+    started_at = time.monotonic()
     print(f"Qualification DEC CMS — profil {args.profile}")
     print("=" * 72)
     for step in selected:
@@ -548,7 +680,35 @@ def main(argv: list[str] | None = None) -> int:
         if result.status == "failed" and not args.continue_on_failure:
             break
     code = _exit_code(results)
-    payload = {"schema_version": 1, "profile": args.profile, "status": {0: "passed", 1: "failed", 2: "incomplete", 3: "internal-error"}[code], "exit_code": code, "generated_at": datetime.now(timezone.utc).isoformat(), "results": [asdict(r) for r in results]}
+    payload = {
+        "schema_version": 2,
+        "profile": args.profile,
+        "status": {0: "passed", 1: "failed", 2: "incomplete", 3: "internal-error"}[code],
+        "exit_code": code,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "duration_ms": int((time.monotonic() - started_at) * 1000),
+        "version": _technical_version(),
+        "commit": _git_commit(),
+        "environment": {
+            "python": sys.version.split()[0],
+            "platform": sys.platform,
+            "cwd": str(ROOT),
+            "cache_enabled": USE_CACHE,
+        },
+        "commands": [result.command for result in results if result.command],
+        "m0_gate": {
+            "official_command": "python3 tools/cms.py qualify --profile release",
+            "source_vs_release": _gate_matrix(),
+            "step_availability": {step.id: list(step.available_in) for step in selected},
+            "limits": [
+                "Les tests source, le build frontend, Composer, npm et Playwright exigent le dépôt source complet.",
+                "Une archive distribuée expose les contrôles autonomes smoke, validate, docs check, backup/restore et migrate plan.",
+                "La baseline performance locale qualifie la machine courante; elle ne remplace pas un test de charge externe.",
+            ],
+        },
+        "artifact_hashes": _artifact_hashes(),
+        "results": [asdict(r) for r in results],
+    }
     if not args.no_reports:
         json_path = Path(args.json_report)
         md_path = Path(args.markdown_report)

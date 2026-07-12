@@ -16,13 +16,18 @@ CRITICAL_PAGES = (
     "README.md",
     "docs/README.md",
     "docs/getting-started/README.md",
+    "docs/getting-started/role-guides.md",
+    "docs/getting-started/verified-scenarios.md",
     "docs/user-guide/README.md",
     "docs/administration/README.md",
     "docs/installation/README.md",
     "docs/operations/README.md",
+    "docs/operations/source-vs-release.md",
     "docs/api/README.md",
     "docs/development/README.md",
     "docs/reference/README.md",
+    "docs/reference/contextual-help.md",
+    "docs/reference/module-changelog.md",
     "docs/evaluation/README.md",
     "docs/evaluation/limitations.md",
     "docs/evaluation/evidence-index.md",
@@ -57,6 +62,9 @@ ADMIN_DOC_VIEWER_REQUIRED_SNIPPETS = (
     ("frontend/admin-vue/src/views/assets/DocsView.vue", "from_id", "transmission du document source pour les liens relatifs"),
     ("backend/routes/api.php", "/admin/api/docs/resolve", "endpoint stable de résolution des liens Markdown internes"),
     ("backend/routes/api.php", "/admin/api/docs/{id:.+}", "compatibilité avec les anciens liens Markdown encodés dans le chemin"),
+    ("frontend/admin-vue/src/views/assets/DocsView.vue", "route.query.doc", "ouverture directe d’un document depuis l’aide contextuelle"),
+    ("frontend/admin-vue/src/components/ui/ContextualHelpLink.vue", "data-context-help-id", "identifiant stable exposé par l’aide contextuelle"),
+    ("frontend/admin-vue/src/contextualHelp.ts", "docId", "pointeurs documentaires de l’aide contextuelle"),
 )
 
 FORBIDDEN_DOC_ACCESS_RULES = (
@@ -103,6 +111,12 @@ def _available_cli_commands() -> set[str]:
     text = completed.stdout + completed.stderr
     match = re.search(r"\{([^}]+)\}", text)
     return set(match.group(1).split(",")) if match else set()
+
+
+def _doc_id(relative_path: str) -> str:
+    value = re.sub(r"\.md$", "", relative_path, flags=re.I)
+    value = value.replace("/README", "/index").replace("/", "~")
+    return re.sub(r"[^A-Za-z0-9._~-]+", "-", value)
 
 
 def validate(mode: str = "fast") -> ValidationReport:
@@ -167,6 +181,24 @@ def validate(mode: str = "fast") -> ValidationReport:
             continue
         if snippet not in source_path.read_text(encoding="utf-8", errors="ignore"):
             report.add("DOC-009", "Protection des liens Markdown du viewer Docs incomplète", path=rel, expected=expected)
+
+    context_help_path = ROOT / "frontend/admin-vue/src/contextualHelp.ts"
+    context_help_doc = ROOT / "docs/reference/contextual-help.md"
+    if context_help_path.is_file() and context_help_doc.is_file():
+        context_source = context_help_path.read_text(encoding="utf-8", errors="ignore")
+        registry_source = context_help_doc.read_text(encoding="utf-8", errors="ignore")
+        doc_ids = {
+            _doc_id(path.relative_to(ROOT / "docs").as_posix())
+            for path in (ROOT / "docs").rglob("*.md")
+        }
+        for help_id in sorted(set(re.findall(r"id:\s*'([^']+)'", context_source))):
+            report.checked()
+            if help_id not in registry_source:
+                report.add("DOC-012", "Identifiant d’aide contextuelle absent du registre documentaire", path="docs/reference/contextual-help.md", help_id=help_id)
+        for doc_id in sorted(set(re.findall(r"docId:\s*'([^']+)'", context_source))):
+            report.checked()
+            if doc_id not in doc_ids:
+                report.add("DOC-013", "Aide contextuelle vers un document non indexé", path="frontend/admin-vue/src/contextualHelp.ts", doc_id=doc_id)
 
     controller_path = ROOT / "backend/src/Application/Api/Admin/DocsApiController.php"
     if controller_path.is_file():

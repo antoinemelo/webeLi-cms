@@ -275,6 +275,7 @@ return [
     ['DELETE', '/admin/api/imports-exports/static/{releaseId:[A-Za-z0-9._-]+}', 'App\Application\Api\Admin\ImportsExportsApiController@delete'],
 
     ['GET', '/admin/api/maintenance', 'App\Application\Api\Admin\MaintenanceApiController@index'],
+    ['POST', '/admin/api/maintenance/dependencies/refresh', 'App\Application\Api\Admin\MaintenanceApiController@refreshDependencies'],
     ['POST', '/admin/api/maintenance/cache/clear', 'App\Application\Api\Admin\MaintenanceApiController@clearCache'],
     ['POST', '/admin/api/maintenance/search/reindex', 'App\Application\Api\Admin\MaintenanceApiController@reindexSearch'],
     ['DELETE', '/admin/api/maintenance/audit-logs', 'App\Application\Api\Admin\MaintenanceApiController@clearAuditLogs'],

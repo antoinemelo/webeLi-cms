@@ -6,6 +6,14 @@ return [
     'enabled' => (bool) env('APP_UPDATES_ENABLED', true),
     'http_timeout_seconds' => (int) env('APP_UPDATES_HTTP_TIMEOUT', 4),
     'github_repo' => (string) env('APP_UPDATES_GITHUB_REPO', 'antoinemelo/webeLi-cms'),
+    'dependencies' => [
+        'latest_enabled' => (bool) env('APP_DEPENDENCIES_LATEST_ENABLED', true),
+        'http_timeout_seconds' => (int) env('APP_DEPENDENCIES_HTTP_TIMEOUT', 1),
+        'latest_request_budget_seconds' => (float) env('APP_DEPENDENCIES_LATEST_BUDGET', 3),
+        'refresh_http_timeout_seconds' => (int) env('APP_DEPENDENCIES_REFRESH_HTTP_TIMEOUT', 6),
+        'refresh_request_budget_seconds' => (float) env('APP_DEPENDENCIES_REFRESH_BUDGET', 45),
+        'latest_cache_ttl_seconds' => (int) env('APP_DEPENDENCIES_LATEST_CACHE_TTL', 43200),
+    ],
     'channels' => [
         'dev' => [
             'label' => 'Dev',

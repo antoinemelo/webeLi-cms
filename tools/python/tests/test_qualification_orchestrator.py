@@ -11,6 +11,7 @@ from tools.python.qualification.run_all import (
     Result,
     _display_path,
     _exit_code,
+    _gate_matrix,
     parse_args,
     steps,
 )
@@ -32,6 +33,8 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertNotIn("fresh-install", by_profile["complete"])
 
         self.assertIn("browser-e2e", by_profile["release"])
+        self.assertIn("php-dependencies", by_profile["release"])
+        self.assertIn("performance-baseline", by_profile["release"])
         self.assertIn("preflight", by_profile["release"])
         self.assertIn("package", by_profile["release"])
         self.assertIn("fresh-install", by_profile["release"])
@@ -86,6 +89,16 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual((), e2e.env_vars)
         self.assertIn("e2e", e2e.command)
         self.assertIn("--use-built-assets", e2e.command)
+        self.assertIn("tools/python/qualification/performance_baseline.py", registry["performance-baseline"].files)
+
+    def test_release_gate_matrix_distinguishes_source_and_release_controls(self):
+        matrix = _gate_matrix()
+        requirements = {entry["requirement"]: entry for entry in matrix}
+
+        self.assertIn("baseline performance", requirements)
+        self.assertEqual(["performance-baseline"], requirements["baseline performance"]["source_steps"])
+        self.assertIn("tools/cms.py validate", requirements["validation statique"]["release_commands"])
+        self.assertIn("tools/cms.py backup --restore", requirements["backup/restore et intégrité SQLite"]["release_commands"])
 
     def test_qualification_cache_is_explicit_and_forceable(self):
         args = parse_args(["--profile", "release", "--no-cache"])
