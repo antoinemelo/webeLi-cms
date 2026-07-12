@@ -82,6 +82,72 @@ final class SaleCartRepository extends SaleRepositoryBase
         return $cart;
     }
 
+    /** @param array<string,mixed> $identity @param array<string,mixed> $billing @param array<string,mixed> $shipping @param array<string,mixed> $shippingMethod @param array<string,mixed> $paymentMethod */
+    public function saveGuestCheckout(
+        int $cartId,
+        array $identity,
+        array $billing,
+        array $shipping,
+        array $shippingMethod,
+        array $paymentMethod,
+        bool $termsAccepted,
+        ?bool $marketingConsent,
+        string $step,
+        bool $validated
+    ): array {
+        $current = $this->requireCart($cartId);
+        $termsAcceptedAt = $termsAccepted ? ((string) ($current['terms_accepted_at'] ?? '') ?: gmdate('Y-m-d H:i:s')) : null;
+        $marketingConsentAt = $marketingConsent === null ? null : ((string) ($current['marketing_consent_at'] ?? '') ?: gmdate('Y-m-d H:i:s'));
+        $this->rawDatabase()->run(
+            'UPDATE sale_carts SET
+                customer_snapshot_json=?, billing_address_json=?, shipping_address_json=?,
+                shipping_method_snapshot_json=?, payment_method_snapshot_json=?, checkout_step=?,
+                terms_accepted=?, terms_accepted_at=?, marketing_consent=?, marketing_consent_at=?,
+                checkout_validated_at=?,
+                updated_at=CURRENT_TIMESTAMP, version=version+1
+             WHERE id=? AND status=\'active\'',
+            [
+                $this->json($identity), $this->json($billing), $this->json($shipping),
+                $this->json($shippingMethod), $this->json($paymentMethod), $step,
+                $termsAccepted ? 1 : 0, $termsAcceptedAt,
+                $marketingConsent === null ? null : ($marketingConsent ? 1 : 0),
+                $marketingConsentAt,
+                $validated ? gmdate('Y-m-d H:i:s') : null, $cartId,
+            ]
+        );
+        return $this->requireCart($cartId);
+    }
+
+    public function markCheckoutDirty(int $cartId): void
+    {
+        $this->rawDatabase()->run(
+            "UPDATE sale_carts SET checkout_step='cart',checkout_validated_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='active'",
+            [$cartId]
+        );
+    }
+
+    /** @param array<string,mixed> $snapshot @param array<string,mixed> $amounts */
+    public function refreshLineSnapshot(int $lineId, array $snapshot, array $amounts): array
+    {
+        $line = $this->requireLine($lineId);
+        $totals = $this->pricing->lineTotals($amounts, (int) $line['quantity']);
+        $this->rawDatabase()->run(
+            'UPDATE sale_cart_lines SET sku=?,barcode=?,product_name=?,variant_name=?,product_type=?,
+                unit_price_minor=?,regular_unit_price_minor=?,unit_purchase_price_minor=?,currency=?,tax_class_id=?,
+                tax_rate_basis_points=?,tax_included=?,line_subtotal_minor=?,line_discount_minor=?,line_tax_minor=?,line_total_minor=?,
+                metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+            [
+                $snapshot['sku'] ?? null, $snapshot['barcode'] ?? null, (string) $snapshot['product_name'], $snapshot['variant_name'] ?? null,
+                (string) $snapshot['product_type'], (int) $amounts['unit_price_minor'], (int) $amounts['regular_unit_price_minor'],
+                $snapshot['unit_purchase_price_minor'] ?? null, (string) $snapshot['currency'], $snapshot['tax_class_id'] ?? null,
+                (int) $amounts['tax_rate_basis_points'], (int) (bool) $amounts['tax_included'],
+                $totals['line_subtotal_minor'], $totals['line_discount_minor'], $totals['line_tax_minor'], $totals['line_total_minor'],
+                $this->lineMetadata($snapshot, $totals), $lineId,
+            ]
+        );
+        return $this->requireLine($lineId);
+    }
+
     /** @return list<array<string,mixed>> */
     public function lines(int $cartId): array
     {

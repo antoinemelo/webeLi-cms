@@ -50,6 +50,8 @@ generated: true
 | `APP_PUBLIC_API_AUTH_DEFAULT_SCOPE` | `backend/config/app.php` |
 | `APP_PUBLIC_API_CORS_DEFAULT_ORIGINS` | `backend/config/app.php` |
 | `APP_PUBLIC_API_CORS_MAX_AGE` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_CLEANUP_PROBABILITY` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW` | `backend/config/app.php` |

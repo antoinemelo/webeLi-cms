@@ -206,7 +206,16 @@ await cms.deleteSaleCartLine('web-main', token, 20);
 
 const order = await cms.checkoutSaleCart(
   'web-main',
-  { cart_token: token },
+  {
+    cart_token: token,
+    identity: { email: 'guest@example.test', first_name: 'Anne', last_name: 'Exemple' },
+    billing_address: { line1: 'Rue du Test 1', postal_code: '1000', city: 'Lausanne', country_code: 'CH' },
+    shipping_same_as_billing: true,
+    shipping_method: { code: 'standard' },
+    payment: { code: 'bank_transfer' },
+    terms_accepted: true,
+    marketing_consent: false,
+  },
   { idempotencyKey: 'checkout-1' },
 );
 ```
@@ -219,6 +228,8 @@ Méthodes disponibles :
 - `addSaleCartLine(code, token, payload, options?)`
 - `updateSaleCartLine(code, token, lineId, payload, options?)`
 - `deleteSaleCartLine(code, token, lineId, options?)`
+- `updateSaleCheckout(code, token, payload, options?)`
+- `abandonSaleCart(code, token, options?)`
 - `checkoutSaleCart(code, payload, options?)`
 
 ## Ce que ce SDK ne fait pas

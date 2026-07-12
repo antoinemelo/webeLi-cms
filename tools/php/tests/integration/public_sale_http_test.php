@@ -270,7 +270,16 @@ try {
     $checkout = sale_http_request(
         $baseUrl . '/api/v1/sale/channels/web-main/checkout',
         'POST',
-        sale_json_body(['cart_token' => $token]),
+        sale_json_body([
+            'cart_token' => $token,
+            'identity' => ['email' => 'http-guest@example.test', 'first_name' => 'HTTP', 'last_name' => 'Guest'],
+            'billing_address' => ['line1' => 'Rue du Test 1', 'postal_code' => '1000', 'city' => 'Lausanne', 'country_code' => 'CH'],
+            'shipping_same_as_billing' => true,
+            'shipping_method' => ['code' => 'standard'],
+            'payment' => ['code' => 'bank_transfer'],
+            'terms_accepted' => true,
+            'marketing_consent' => false,
+        ]),
         ['Content-Type: application/json', 'Idempotency-Key: ' . $checkoutKey]
     );
     $h->assertSame(201, $checkout['status'], 'anonymous POST Sale checkout succeeds');

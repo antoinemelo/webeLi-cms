@@ -48,9 +48,11 @@ final class SaleOrderRepository extends SaleRepositoryBase
             'INSERT INTO sale_orders(
                 site_id, channel_id, order_number, source, status, payment_status, currency, source_cart_id, correlation_id,
                 customer_company_id, customer_contact_id, customer_snapshot_json,
-                billing_address_json, shipping_address_json, shipping_method_snapshot_json, subtotal_minor, discount_total_minor,
+                billing_address_json, shipping_address_json, shipping_method_snapshot_json,
+                terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json,
+                subtotal_minor, discount_total_minor,
                 tax_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
-             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
             [
                 (int) $cart['site_id'],
                 (int) $cart['channel_id'],
@@ -65,6 +67,11 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 (string) $cart['billing_address_json'],
                 (string) $cart['shipping_address_json'],
                 (string) ($cart['shipping_method_snapshot_json'] ?? '{}'),
+                (int) ($cart['terms_accepted'] ?? 0),
+                $cart['terms_accepted_at'] ?? null,
+                $cart['marketing_consent'] ?? null,
+                $cart['marketing_consent_at'] ?? null,
+                (string) ($cart['payment_method_snapshot_json'] ?? '{}'),
                 (int) $cart['subtotal_minor'],
                 (int) $cart['discount_total_minor'],
                 (int) $cart['tax_total_minor'],

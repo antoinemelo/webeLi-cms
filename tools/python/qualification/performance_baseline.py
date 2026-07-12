@@ -229,7 +229,16 @@ def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | No
             base_url,
             "POST",
             "/api/v1/sale/channels/web-main/checkout",
-            body={"cart_token": token},
+            body={
+                "cart_token": token,
+                "identity": {"email": "performance@example.test", "first_name": "Perf", "last_name": "Guest"},
+                "billing_address": {"line1": "Rue du Test 1", "postal_code": "1000", "city": "Lausanne", "country_code": "CH"},
+                "shipping_same_as_billing": True,
+                "shipping_method": {"code": "standard"},
+                "payment": {"code": "bank_transfer"},
+                "terms_accepted": True,
+                "marketing_consent": False,
+            },
             headers={"Idempotency-Key": "perf-checkout-" + os.urandom(6).hex()},
         )
         order_id = _decode_json(body).get("data", {}).get("order", {}).get("id", 0)

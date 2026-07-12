@@ -86,6 +86,44 @@ export interface SaleCheckoutPayload {
   cart_token?: string;
   token?: string;
   idempotency_key?: string;
+  identity: SaleGuestIdentity;
+  billing_address: SaleAddress;
+  shipping_address?: SaleAddress;
+  shipping_same_as_billing?: boolean;
+  shipping_method: { code: 'standard' | 'pickup' };
+  payment: { code: 'bank_transfer' | 'manual' };
+  terms_accepted: true;
+  marketing_consent?: boolean;
+}
+
+export interface SaleGuestIdentity {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}
+
+export interface SaleAddress {
+  line1: string;
+  line2?: string;
+  postal_code: string;
+  city: string;
+  region?: string;
+  country_code: string;
+}
+
+export interface SaleCheckoutUpdatePayload extends Partial<Omit<SaleCheckoutPayload, 'cart_token' | 'token' | 'idempotency_key'>> {
+  step: 'identity' | 'addresses' | 'delivery' | 'review';
+}
+
+export interface PublicSaleCheckoutUpdateResponse {
+  data: { cart: PublicSaleCartResponse['data']['cart']; price_changed: boolean };
+  meta: PublicMeta;
+}
+
+export interface PublicSaleCartAbandonResponse {
+  data: { abandoned: boolean };
+  meta: PublicMeta;
 }
 
 // Types de base générés depuis docs/public-api/openapi.v1.json.

@@ -20,6 +20,8 @@ import type {
   PublicSaleCartLineDeleteResponse,
   PublicSaleCartLineMutationResponse,
   PublicSaleCartResponse,
+  PublicSaleCartAbandonResponse,
+  PublicSaleCheckoutUpdateResponse,
   PublicSaleCheckoutResponse,
   PublicSearchResponse,
   PublicTaxonomiesResponse,
@@ -30,6 +32,7 @@ import type {
   SaleCartLineUpdatePayload,
   SaleChannelOptions,
   SaleCheckoutPayload,
+  SaleCheckoutUpdatePayload,
   SearchOptions,
 } from './types';
 
@@ -256,6 +259,23 @@ export class AmCmsClient {
       query: this.withCommonQuery({}, options),
       body: payload,
       options,
+    });
+  }
+
+  updateSaleCheckout(
+    code: string,
+    token: string,
+    payload: SaleCheckoutUpdatePayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleCheckoutUpdateResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}/checkout`, {
+      method: 'PATCH', query: this.withCommonQuery({}, options), body: payload, options,
+    });
+  }
+
+  abandonSaleCart(code: string, token: string, options: SaleChannelOptions = {}): Promise<PublicSaleCartAbandonResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}`, {
+      method: 'DELETE', query: this.withCommonQuery({}, options), options,
     });
   }
 

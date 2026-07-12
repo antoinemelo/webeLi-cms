@@ -1,0 +1,14 @@
+{
+  "contract": "public.sale.cart.abandon.v1",
+  "kind": "schema",
+  "summary": "Abandonner un panier public.",
+  "description": "Marque le panier comme abandonné et libère ses réservations.",
+  "method": "DELETE",
+  "path": "/api/v1/sale/channels/{code}/cart/{token}",
+  "source": "sale_carts + sale_stock_reservations",
+  "security": "Public endpoint protected by the opaque cart token.",
+  "path_params": {"code": {"type": "string", "required": true}, "token": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9_-]{32,128}$"}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {"data": {"type": "object", "required": ["abandoned"], "properties": {"abandoned": {"type": "boolean"}}}, "meta": {"$ref": "#/components/schemas/PublicMeta"}}}},
+  "errors": [{"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Panier introuvable ou expiré."}],
+  "examples": {"response": {"data": {"abandoned": true}, "meta": {"contract": "public.sale.cart.abandon.v1", "site_id": 1, "language_code": "fr"}}}
+}

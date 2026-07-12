@@ -257,6 +257,15 @@ export interface OpenApiPublicRouteResponse {
   };
 }
 
+export interface OpenApiPublicSaleAddress {
+  city: string;
+  country_code: string;
+  line1: string;
+  line2?: null | string;
+  postal_code: string;
+  region?: null | string;
+}
+
 export interface OpenApiPublicSaleBootstrapResponse {
   data: {
     cart: Record<string, unknown>;
@@ -268,17 +277,32 @@ export interface OpenApiPublicSaleBootstrapResponse {
 }
 
 export interface OpenApiPublicSaleCart {
+  billing_address?: OpenApiPublicSaleAddress;
+  checkout_step?: string;
   currency: string;
   discount_total_minor: number;
   expires_at?: null | string;
   grand_total_minor: number;
   id: number;
+  identity?: OpenApiPublicSaleGuestIdentity;
   lines?: Array<OpenApiPublicSaleCartLine>;
+  marketing_consent?: boolean | null;
+  payment_method?: Record<string, unknown>;
+  shipping_address?: OpenApiPublicSaleAddress;
+  shipping_method?: Record<string, unknown>;
   status: string;
   subtotal_minor: number;
   tax_total_minor: number;
+  terms_accepted?: boolean;
   token?: string;
   [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCartAbandonResponse {
+  data: {
+    abandoned: boolean;
+  };
+  meta: OpenApiPublicMeta;
 }
 
 export interface OpenApiPublicSaleCartLine {
@@ -343,6 +367,21 @@ export interface OpenApiPublicSaleCheckoutResponse {
     [key: string]: unknown;
   };
   meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCheckoutUpdateResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    price_changed: boolean;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleGuestIdentity {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: null | string;
 }
 
 export interface OpenApiPublicSaleOrder {

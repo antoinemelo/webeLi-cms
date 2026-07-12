@@ -3,7 +3,7 @@ title: Exemples d’intégration headless v1
 audience:
   - api-integrator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-07-12
 source_of_truth: contract
 owners:
   - api
@@ -73,7 +73,26 @@ Ces appels correspondent aux endpoints publics headless v1 documentés dans `ope
 - `GET /api/v1/media` ;
 - `GET /api/v1/media/{id}`.
 
-Aucun exemple ne documente GraphQL, mutation publique, brouillon ou preview avancée, car ces surfaces ne font pas partie de l’API headless v1 publique.
+Les mutations publiques restent limitées aux formulaires, consentements et au panier/checkout invité Sale. Aucun exemple n’expose de brouillon ou de preview avancée.
+
+## Checkout invité
+
+Le parcours natif minimal est disponible sur `/checkout?channel=web-main&cart_token=<token>`. Il est rendu côté serveur puis utilise les contrats publics pour charger le panier et placer la commande. Le même flux peut être intégré avec le SDK :
+
+```js
+await client.updateSaleCheckout('web-main', cartToken, {
+  step: 'review',
+  identity: { email: 'guest@example.test', first_name: 'Anne', last_name: 'Exemple' },
+  billing_address: { line1: 'Rue du Test 1', postal_code: '1000', city: 'Lausanne', country_code: 'CH' },
+  shipping_same_as_billing: true,
+  shipping_method: { code: 'standard' },
+  payment: { code: 'bank_transfer' },
+  terms_accepted: true,
+  marketing_consent: false,
+});
+```
+
+Le placement final exige `Idempotency-Key`. Les prix, remises, taxes, frais de livraison et totaux envoyés par le navigateur ne sont jamais utilisés comme source de vérité.
 
 ## SDK TypeScript et fallback fetch
 
@@ -161,7 +180,7 @@ Utilisez `examples/headless-astro/` pour :
 
 ## Ce que l’API ne fait pas encore
 
-L’API headless v1 ne fournit pas GraphQL, ne permet pas de mutation publique, n’expose pas les brouillons et ne fournit pas de preview avancée. Pour ces besoins, il faut utiliser les surfaces internes ou back-office prévues par le CMS, pas l’API publique headless v1.
+L’API headless v1 ne fournit pas GraphQL, n’expose pas les brouillons et ne fournit pas de preview avancée. Les mutations publiques sont uniquement celles explicitement contractées.
 
 
 Cette page constitue la collection canonique d’exemples pour l’API publique.

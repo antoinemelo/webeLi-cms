@@ -362,6 +362,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('POST', '/api/v1/sale/channels/{code}/cart/{token}/lines', $c . 'saleCartLineStore'),
             $this->route('PATCH', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', $c . 'saleCartLineUpdate'),
             $this->route('DELETE', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', $c . 'saleCartLineDelete'),
+            $this->route('PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', $c . 'saleCheckoutUpdate'),
+            $this->route('DELETE', '/api/v1/sale/channels/{code}/cart/{token}', $c . 'saleCartAbandon'),
             $this->route('POST', '/api/v1/sale/channels/{code}/checkout', $c . 'saleCheckout'),
         ];
     }
@@ -460,6 +462,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('public.sale.cart.lines.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart/{token}/lines', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.delete.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
+            $this->contract('public.sale.checkout.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', 'anonymous', 'headless'),
+            $this->contract('public.sale.cart.abandon.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),
             $this->contract('public.sale.checkout.v1', 'POST', '/api/v1/sale/channels/{code}/checkout', 'anonymous', 'headless'),
             $this->integrationContract('integration.sale.events.v1', SaleIntegrationEventContracts::payloads()),
             $this->integrationContract('integration.sale.ai_contexts.v1', SaleAiContextContracts::contexts()),

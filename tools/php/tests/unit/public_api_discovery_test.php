@@ -6,6 +6,8 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Application\Frontend\PublicApiDocsController;
 use App\Core\Request;
+use App\Core\Database;
+use App\Security\PublicApiCorsGuard;
 use App\Core\Router;
 
 $h = new TestHarness();
@@ -60,6 +62,10 @@ $h->assertTrue(is_array($saleLinePatch), 'canonical OpenAPI exposes public Sale 
 $h->assertTrue(is_array($saleLineDelete), 'canonical OpenAPI exposes public Sale DELETE line operation');
 $saleCheckout = $jsonPayload['paths']['/api/v1/sale/channels/{code}/checkout']['post'] ?? null;
 $h->assertTrue(is_array($saleCheckout) && array_key_exists('201', $saleCheckout['responses'] ?? []), 'canonical OpenAPI documents public Sale checkout as 201');
+$checkoutHeaders = array_values(array_filter($saleCheckout['parameters'] ?? [], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'header' && ($parameter['name'] ?? null) === 'Idempotency-Key'));
+$h->assertSame(true, $checkoutHeaders[0]['required'] ?? false, 'canonical OpenAPI requires Idempotency-Key for checkout placement');
+$h->assertTrue(isset($jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/checkout']['patch']), 'canonical OpenAPI documents progressive guest checkout');
+$h->assertTrue(isset($jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}']['delete']), 'canonical OpenAPI documents cart abandonment');
 
 $referenceOpenApi = json_decode((string) file_get_contents(base_path('docs/reference/contracts/public-api/openapi.v1.json')), true);
 foreach ($publicCookieOperations as [$path, $method]) {
@@ -101,6 +107,16 @@ $h->assertTrue(in_array('Idempotency-Key', $cors['allowed_headers'] ?? [], true)
 $rateLimitRules = $config['public_api_rate_limit']['endpoints'] ?? [];
 $saleRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/cart') === 1);
 $h->assertTrue($saleRateLimited !== [], 'optional sale ecommerce endpoints have a dedicated public rate-limit group');
+$checkoutRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/checkout') === 1);
+$h->assertTrue($checkoutRateLimited !== [], 'guest checkout has a stricter public rate-limit rule');
+$corsDbDir = sys_get_temp_dir() . '/amcms-cors-' . bin2hex(random_bytes(4));
+mkdir($corsDbDir, 0775, true);
+$corsDb = new Database($corsDbDir . '/core.sqlite');
+$sameOriginRequest = new Request('POST', '/api/v1/sale/channels/web-main/checkout', [], [], ['HTTP_HOST' => '127.0.0.1:8080', 'HTTP_ORIGIN' => 'http://127.0.0.1:8080'], [], []);
+$sameOriginGuard = new PublicApiCorsGuard($sameOriginRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => []]]]);
+$h->assertSame(null, $sameOriginGuard->enforce(), 'same-origin storefront mutations are accepted without explicit CORS configuration');
+$corsDb = null;
+test_remove_tree($corsDbDir);
 
 $htaccess = (string) file_get_contents(base_path('.htaccess'));
 $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');

@@ -50,3 +50,4 @@ generated: true
 | `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |
 | `database/migrations/sale/0003_state_machines_snapshots.sql` | `0003_state_machines_snapshots` |
 | `database/migrations/sale/0004_internal_sales_timeline.sql` | `0004_internal_sales_timeline` |
+| `database/migrations/sale/0005_guest_public_checkout.sql` | `0005_guest_public_checkout` |

@@ -145,6 +145,11 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     billing_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(billing_address_json)),
     shipping_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_json)),
     shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
+    terms_accepted INTEGER NOT NULL DEFAULT 0 CHECK(terms_accepted IN (0,1)),
+    terms_accepted_at TEXT,
+    marketing_consent INTEGER CHECK(marketing_consent IS NULL OR marketing_consent IN (0,1)),
+    marketing_consent_at TEXT,
+    payment_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payment_method_snapshot_json)),
     source_cart_id INTEGER,
     correlation_id TEXT,
     subtotal_minor INTEGER NOT NULL DEFAULT 0 CHECK(subtotal_minor >= 0),
@@ -299,6 +304,14 @@ CREATE TABLE IF NOT EXISTS sale_carts (
     billing_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(billing_address_json)),
     shipping_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_json)),
     shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
+    checkout_step TEXT NOT NULL DEFAULT 'cart' CHECK(checkout_step IN ('cart','identity','addresses','delivery','review','validated')),
+    terms_accepted INTEGER NOT NULL DEFAULT 0 CHECK(terms_accepted IN (0,1)),
+    terms_accepted_at TEXT,
+    marketing_consent INTEGER CHECK(marketing_consent IS NULL OR marketing_consent IN (0,1)),
+    marketing_consent_at TEXT,
+    payment_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payment_method_snapshot_json)),
+    checkout_validated_at TEXT,
+    abandoned_at TEXT,
     subtotal_minor INTEGER NOT NULL DEFAULT 0 CHECK(subtotal_minor >= 0),
     discount_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(discount_total_minor >= 0),
     tax_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(tax_total_minor >= 0),
@@ -329,6 +342,8 @@ CREATE INDEX IF NOT EXISTS idx_sale_carts_customer
     ON sale_carts(customer_company_id, customer_contact_id);
 CREATE INDEX IF NOT EXISTS idx_sale_carts_expires
     ON sale_carts(status, expires_at);
+CREATE INDEX IF NOT EXISTS idx_sale_carts_checkout_step
+    ON sale_carts(status, checkout_step, expires_at);
 
 CREATE TABLE IF NOT EXISTS sale_cart_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -897,6 +912,11 @@ WHEN OLD.status <> 'draft'
 BEGIN
     SELECT RAISE(ABORT, 'sale order snapshots are immutable after placement');
 END;
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_orders_guest_checkout_immutable
+BEFORE UPDATE OF terms_accepted,terms_accepted_at,marketing_consent,marketing_consent_at,payment_method_snapshot_json ON sale_orders
+WHEN OLD.status IN ('placed','confirmed','completed','cancelled')
+BEGIN SELECT RAISE(ABORT, 'sale guest checkout snapshot is immutable'); END;
 
 CREATE TRIGGER IF NOT EXISTS trg_sale_order_line_snapshots_immutable
 BEFORE UPDATE OF business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type,

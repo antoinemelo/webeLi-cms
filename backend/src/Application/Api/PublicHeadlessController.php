@@ -64,5 +64,7 @@ final class PublicHeadlessController
     public function saleCartLineStore(string $code, string $token): Response { return $this->sale->addLine($code, $token); }
     public function saleCartLineUpdate(string $code, string $token, string|int $line_id): Response { return $this->sale->updateLine($code, $token, $line_id); }
     public function saleCartLineDelete(string $code, string $token, string|int $line_id): Response { return $this->sale->deleteLine($code, $token, $line_id); }
+    public function saleCheckoutUpdate(string $code, string $token): Response { return $this->sale->updateCheckout($code, $token); }
+    public function saleCartAbandon(string $code, string $token): Response { return $this->sale->abandonCart($code, $token); }
     public function saleCheckout(string $code): Response { return $this->sale->checkout($code); }
 }

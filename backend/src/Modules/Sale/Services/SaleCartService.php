@@ -66,6 +66,7 @@ final class SaleCartService
         $amounts = $this->pricing->lineAmounts($snapshot);
         $this->inventory->reserveForCart((int) $cart['site_id'], $cartId, $snapshot, $quantity);
         $line = $this->carts->addOrIncrementLine($cartId, $snapshot, $quantity, $amounts);
+        $this->carts->markCheckoutDirty($cartId);
         $totals = $this->carts->recalculateTotals($cartId);
         $response = ['cart' => $this->carts->cartWithLines($cartId), 'line' => $line, 'totals' => $totals];
         $this->events->emit((int) $cart['site_id'], 'sale.cart.line_added', 'cart', $cartId, [
@@ -104,6 +105,7 @@ final class SaleCartService
         if ($quantity < (int) $existing['quantity']) {
             $this->inventory->syncCartLineReservation((int) $cart['site_id'], $cartId, (int) $line['business_variant_id'], $quantity, $allowBackorder);
         }
+        $this->carts->markCheckoutDirty($cartId);
         return $line;
     }
 
@@ -115,6 +117,7 @@ final class SaleCartService
         }
         $line = $this->carts->requireLine($lineId);
         $this->carts->deleteLine($cartId, $lineId);
+        $this->carts->markCheckoutDirty($cartId);
         $this->inventory->releaseCartVariantReservations($cartId, (int) $line['business_variant_id'], 'cart line deleted');
     }
 }

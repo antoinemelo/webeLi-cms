@@ -97,11 +97,25 @@ final class PublicApiCorsGuard
     /** @param array<string,mixed> $settings */
     private function isAllowedOrigin(string $origin, array $settings): bool
     {
+        if ($this->isSameRequestOrigin($origin)) {
+            return true;
+        }
         $allowed = $this->allowedOrigins($settings);
         if (in_array('*', $allowed, true)) {
             return true;
         }
         return in_array(strtolower($origin), array_map('strtolower', $allowed), true);
+    }
+
+    private function isSameRequestOrigin(string $origin): bool
+    {
+        $host = strtolower(trim((string) ($this->request->server['HTTP_HOST'] ?? '')));
+        if ($host === '') {
+            return false;
+        }
+        $https = strtolower((string) ($this->request->server['HTTPS'] ?? ''));
+        $scheme = in_array($https, ['1', 'on', 'true'], true) ? 'https' : 'http';
+        return hash_equals($scheme . '://' . $host, strtolower(rtrim($origin, '/')));
     }
 
     /** @param array<string,mixed> $settings @return list<string> */

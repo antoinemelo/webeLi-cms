@@ -4865,6 +4865,87 @@
       }
     },
     "/api/v1/sale/channels/{code}/cart/{token}": {
+      "delete": {
+        "operationId": "delete_public_sale_cart_abandon_v1",
+        "summary": "Abandonner un panier public.",
+        "description": "Marque le panier comme abandonné et libère ses réservations.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartAbandonResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "abandoned": true
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.abandon.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Panier introuvable ou expiré.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Panier introuvable ou expiré.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "operationId": "get_public_sale_cart_show_v1",
         "summary": "Lire un panier e-commerce public.",
@@ -4960,6 +5041,220 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/cart/{token}/checkout": {
+      "patch": {
+        "operationId": "patch_public_sale_checkout_update_v1",
+        "summary": "Compléter et recalculer un checkout invité.",
+        "description": "Enregistre une étape du checkout et recalcule les lignes depuis le catalogue serveur à l'étape review.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCheckoutUpdateResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "cart": {
+                          "id": 10,
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 2900,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 2900,
+                          "lines": []
+                        },
+                        "price_changed": false
+                      },
+                      "meta": {
+                        "contract": "public.sale.checkout.update.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Panier introuvable, expiré ou appartenant à un autre token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Panier introuvable, expiré ou appartenant à un autre token.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Données invalides ou produit indisponible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Données invalides ou produit indisponible.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Trop de validations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Trop de validations.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "enum": [
+                          "identity",
+                          "addresses",
+                          "delivery",
+                          "review"
+                        ]
+                      },
+                      "identity": {
+                        "$ref": "#/components/schemas/PublicSaleGuestIdentity"
+                      },
+                      "billing_address": {
+                        "$ref": "#/components/schemas/PublicSaleAddress"
+                      },
+                      "shipping_address": {
+                        "$ref": "#/components/schemas/PublicSaleAddress"
+                      },
+                      "shipping_same_as_billing": {
+                        "type": "boolean"
+                      },
+                      "shipping_method": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "standard",
+                              "pickup"
+                            ]
+                          }
+                        }
+                      },
+                      "payment": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "bank_transfer",
+                              "manual"
+                            ]
+                          }
+                        }
+                      },
+                      "terms_accepted": {
+                        "type": "boolean"
+                      },
+                      "marketing_consent": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
               }
             }
           }
@@ -5459,7 +5754,7 @@
       "post": {
         "operationId": "post_public_sale_checkout_v1",
         "summary": "Convertir un panier public en commande.",
-        "description": "Place une commande e-commerce depuis un panier public actif. Le checkout est idempotent si `Idempotency-Key` ou `data.idempotency_key` est fourni.",
+        "description": "Valide et place une commande invitée depuis un panier public actif. Identité, adresses, livraison, paiement non sensible et consentement CGV sont validés côté serveur. Les montants client sont ignorés.",
         "tags": [
           "Headless v1"
         ],
@@ -5468,10 +5763,11 @@
           {
             "name": "Idempotency-Key",
             "in": "header",
-            "required": false,
-            "description": "Clé optionnelle de rejeu idempotent pour le checkout.",
+            "required": true,
+            "description": "Clé obligatoire de rejeu idempotent pour le placement.",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$"
             }
           },
           {
@@ -5557,7 +5853,7 @@
             }
           },
           "422": {
-            "description": "Panier vide, déjà converti ou idempotence invalide.",
+            "description": "Checkout incomplet, produit indisponible, panier converti ou idempotence invalide.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5568,7 +5864,32 @@
                     "value": {
                       "error": {
                         "code": "VALIDATION_FAILED",
-                        "message": "Panier vide, déjà converti ou idempotence invalide.",
+                        "message": "Checkout incomplet, produit indisponible, panier converti ou idempotence invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Trop de validations de checkout.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Trop de validations de checkout.",
                         "details": {}
                       },
                       "meta": {
@@ -5592,7 +5913,12 @@
                   "data": {
                     "type": "object",
                     "required": [
-                      "cart_token"
+                      "cart_token",
+                      "identity",
+                      "billing_address",
+                      "shipping_method",
+                      "payment",
+                      "terms_accepted"
                     ],
                     "properties": {
                       "cart_token": {
@@ -5604,7 +5930,61 @@
                         "pattern": "^[A-Za-z0-9_-]{32,128}$"
                       },
                       "idempotency_key": {
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9._:-]{8,128}$"
+                      },
+                      "identity": {
+                        "$ref": "#/components/schemas/PublicSaleGuestIdentity"
+                      },
+                      "billing_address": {
+                        "$ref": "#/components/schemas/PublicSaleAddress"
+                      },
+                      "shipping_address": {
+                        "$ref": "#/components/schemas/PublicSaleAddress"
+                      },
+                      "shipping_same_as_billing": {
+                        "type": "boolean"
+                      },
+                      "shipping_method": {
+                        "type": "object",
+                        "required": [
+                          "code"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "standard",
+                              "pickup"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "payment": {
+                        "type": "object",
+                        "required": [
+                          "code"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "bank_transfer",
+                              "manual"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "terms_accepted": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      },
+                      "marketing_consent": {
+                        "type": "boolean"
                       }
                     },
                     "additionalProperties": true
@@ -6440,6 +6820,79 @@
         },
         "additionalProperties": true
       },
+      "PublicSaleGuestIdentity": {
+        "type": "object",
+        "required": [
+          "email",
+          "first_name",
+          "last_name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "first_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "last_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSaleAddress": {
+        "type": "object",
+        "required": [
+          "line1",
+          "postal_code",
+          "city",
+          "country_code"
+        ],
+        "properties": {
+          "line1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "line2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postal_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string",
+            "minLength": 1
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          }
+        },
+        "additionalProperties": false
+      },
       "PublicSaleCart": {
         "type": "object",
         "required": [
@@ -6479,6 +6932,35 @@
           "expires_at": {
             "type": [
               "string",
+              "null"
+            ]
+          },
+          "checkout_step": {
+            "type": "string"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/PublicSaleGuestIdentity"
+          },
+          "billing_address": {
+            "$ref": "#/components/schemas/PublicSaleAddress"
+          },
+          "shipping_address": {
+            "$ref": "#/components/schemas/PublicSaleAddress"
+          },
+          "shipping_method": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "payment_method": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "terms_accepted": {
+            "type": "boolean"
+          },
+          "marketing_consent": {
+            "type": [
+              "boolean",
               "null"
             ]
           },
@@ -7585,6 +8067,56 @@
           }
         },
         "additionalProperties": false
+      },
+      "PublicSaleCartAbandonResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "abandoned"
+            ],
+            "properties": {
+              "abandoned": {
+                "type": "boolean"
+              }
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        }
+      },
+      "PublicSaleCheckoutUpdateResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "cart",
+              "price_changed"
+            ],
+            "properties": {
+              "cart": {
+                "$ref": "#/components/schemas/PublicSaleCart"
+              },
+              "price_changed": {
+                "type": "boolean"
+              }
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        }
       },
       "PublicSaleCartLineMutationResponse": {
         "type": "object",

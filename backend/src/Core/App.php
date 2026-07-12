@@ -58,6 +58,7 @@ use App\Application\Frontend\BusinessMemoShareController;
 use App\Application\Frontend\BusinessUnsubscribeController;
 use App\Application\Frontend\PublicApiDocsController;
 use App\Application\Frontend\RouteResolutionController;
+use App\Application\Frontend\PublicSaleCheckoutController;
 use App\Security\AdminApiRequestGuard;
 use App\Security\PublicApiCorsGuard;
 use App\Security\PublicApiRateLimitGuard;
@@ -316,7 +317,7 @@ final class App
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
                 new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
-                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout()),
             ),
             UpdateManifestController::class => new UpdateManifestController(new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
@@ -483,6 +484,7 @@ final class App
             SecurityAdminApiController::class => new SecurityAdminApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->auth(), $services->authorization()),
             IamAdminApiController::class => new IamAdminApiController($this->request, $services->auth(), $services->authorization(), $services->iamAdmin()),
             PublicApiDocsController::class => new PublicApiDocsController(),
+            PublicSaleCheckoutController::class => new PublicSaleCheckoutController($this->request),
             BusinessMemoShareController::class => new BusinessMemoShareController($services->businessMemos(), $services->logger()),
             BusinessUnsubscribeController::class => new BusinessUnsubscribeController($services->businessMailingRepository(), $services->logger()),
             HomeController::class,

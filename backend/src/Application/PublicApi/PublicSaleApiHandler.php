@@ -17,6 +17,7 @@ use App\Modules\Sale\Repositories\SaleChannelRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Repository\SiteRepository;
 use InvalidArgumentException;
@@ -35,6 +36,7 @@ final class PublicSaleApiHandler
         private readonly SaleOrderRepository $orders,
         private readonly SaleCartService $cartService,
         private readonly SaleCheckoutService $checkout,
+        private readonly SaleGuestCheckoutService $guestCheckout,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -153,11 +155,45 @@ final class PublicSaleApiHandler
             $payload = $this->payload();
             $token = trim((string) ($payload['cart_token'] ?? $payload['token'] ?? ''));
             $cart = $this->cartByToken($channel, $token, true);
+            $idempotencyKey = $this->requiredIdempotencyKey($payload);
+            if ((string) $cart['status'] === 'active') {
+                $this->guestCheckout->update((int) $cart['id'], $payload, true);
+            }
             $order = $this->checkout->placeOrder((int) $cart['id'], [
-                'idempotency_key' => $this->idempotencyKey($payload),
+                'idempotency_key' => $idempotencyKey,
                 'source' => 'ecommerce',
+                'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
             ]);
             return $this->json(['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))], 'public.sale.checkout.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function updateCheckout(string $code, string $token): Response
+    {
+        [$site, $languageCode] = $this->context();
+        try {
+            $channel = $this->publicChannel((int) $site['id'], $code);
+            $cart = $this->cartByToken($channel, $token);
+            $result = $this->guestCheckout->update((int) $cart['id'], $this->payload());
+            return $this->json([
+                'cart' => $this->cartPayload($result['cart'], true),
+                'price_changed' => $result['price_changed'],
+            ], 'public.sale.checkout.update.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function abandonCart(string $code, string $token): Response
+    {
+        [$site, $languageCode] = $this->context();
+        try {
+            $channel = $this->publicChannel((int) $site['id'], $code);
+            $cart = $this->cartByToken($channel, $token);
+            $this->guestCheckout->abandon((int) $cart['id']);
+            return $this->json(['abandoned' => true], 'public.sale.cart.abandon.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -209,11 +245,14 @@ final class PublicSaleApiHandler
         $cart = $this->db()->one(
             'SELECT * FROM sale_carts
              WHERE channel_id = ? AND cart_token_hash = ? AND status IN ' . $statuses . '
-               AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
              LIMIT 1',
             [(int) $channel['id'], $this->tokenHash($token)]
         );
         if ($cart === null) {
+            throw new SaleValidationException('sale.cart_not_found');
+        }
+        if ((string) $cart['status'] === 'active' && $cart['expires_at'] !== null && (string) $cart['expires_at'] <= gmdate('Y-m-d H:i:s')) {
+            $this->guestCheckout->expire((int) $cart['id']);
             throw new SaleValidationException('sale.cart_not_found');
         }
         $cart['lines'] = $this->carts->lines((int) $cart['id']);
@@ -245,6 +284,43 @@ final class PublicSaleApiHandler
     {
         $header = $this->request->header('Idempotency-Key');
         return trim((string) ($payload['idempotency_key'] ?? $header ?? '')) ?: null;
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function requiredIdempotencyKey(array $payload): string
+    {
+        $key = $this->idempotencyKey($payload);
+        if ($key === null || preg_match('/^[A-Za-z0-9._:-]{8,128}$/', $key) !== 1) {
+            throw new SaleValidationException('sale.checkout.idempotency_key_required');
+        }
+        return $key;
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    private function checkoutRequestPayload(array $payload): array
+    {
+        $pick = static function (mixed $value, array $keys): array {
+            if (!is_array($value)) {
+                return [];
+            }
+            $out = [];
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $value)) {
+                    $out[$key] = is_string($value[$key]) ? trim($value[$key]) : $value[$key];
+                }
+            }
+            return $out;
+        };
+        return [
+            'identity' => $pick($payload['identity'] ?? [], ['email','first_name','last_name','phone']),
+            'billing_address' => $pick($payload['billing_address'] ?? [], ['line1','line2','postal_code','city','region','country_code']),
+            'shipping_address' => $pick($payload['shipping_address'] ?? [], ['line1','line2','postal_code','city','region','country_code']),
+            'shipping_same_as_billing' => ($payload['shipping_same_as_billing'] ?? false) === true,
+            'shipping_method' => $pick($payload['shipping_method'] ?? [], ['code']),
+            'payment' => $pick($payload['payment'] ?? $payload['payment_method'] ?? [], ['code']),
+            'terms_accepted' => ($payload['terms_accepted'] ?? false) === true,
+            'marketing_consent' => is_bool($payload['marketing_consent'] ?? null) ? $payload['marketing_consent'] : null,
+        ];
     }
 
     private function id(string|int $id): int
@@ -299,6 +375,14 @@ final class PublicSaleApiHandler
             'tax_total_minor' => (int) $cart['tax_total_minor'],
             'grand_total_minor' => (int) $cart['grand_total_minor'],
             'expires_at' => $cart['expires_at'] ?? null,
+            'checkout_step' => (string) ($cart['checkout_step'] ?? 'cart'),
+            'identity' => json_decode((string) ($cart['customer_snapshot_json'] ?? '{}'), true) ?: [],
+            'billing_address' => json_decode((string) ($cart['billing_address_json'] ?? '{}'), true) ?: [],
+            'shipping_address' => json_decode((string) ($cart['shipping_address_json'] ?? '{}'), true) ?: [],
+            'shipping_method' => json_decode((string) ($cart['shipping_method_snapshot_json'] ?? '{}'), true) ?: [],
+            'payment_method' => json_decode((string) ($cart['payment_method_snapshot_json'] ?? '{}'), true) ?: [],
+            'terms_accepted' => (bool) ($cart['terms_accepted'] ?? false),
+            'marketing_consent' => ($cart['marketing_consent'] ?? null) === null ? null : (bool) $cart['marketing_consent'],
         ];
         if ($token !== null) {
             $payload['token'] = $token;
@@ -349,6 +433,12 @@ final class PublicSaleApiHandler
             'grand_total_minor' => (int) $order['grand_total_minor'],
             'lines' => array_map(fn(array $line): array => $this->linePayload($line), $order['lines'] ?? []),
             'placed_at' => $order['placed_at'] ?? null,
+            'checkout' => [
+                'shipping_method' => json_decode((string) ($order['shipping_method_snapshot_json'] ?? '{}'), true) ?: [],
+                'payment_method' => json_decode((string) ($order['payment_method_snapshot_json'] ?? '{}'), true) ?: [],
+                'terms_accepted' => (bool) ($order['terms_accepted'] ?? false),
+                'marketing_consent' => ($order['marketing_consent'] ?? null) === null ? null : (bool) $order['marketing_consent'],
+            ],
         ];
     }
 

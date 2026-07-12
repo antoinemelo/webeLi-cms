@@ -114,6 +114,11 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
+            '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:checkout|cart/[A-Za-z0-9_-]+/checkout)$#' => [
+                'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX', 20),
+                'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW', 60),
+                'group' => '/api/v1/sale/checkout',
+            ],
             '#^/api/v1/search$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX', 60),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW', 60),

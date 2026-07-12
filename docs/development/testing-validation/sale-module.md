@@ -4,7 +4,7 @@ audience:
   - developer
   - evaluator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-12
 source_of_truth: code
 source_paths:
   - tools/php/tests/unit/sale_module_contracts_test.php
@@ -16,6 +16,7 @@ source_paths:
   - tools/php/tests/unit/sale_admin_api_controller_test.php
   - tools/php/tests/unit/sale_public_api_handler_test.php
   - tools/php/tests/integration/sale_uses_business_sellable_snapshot_test.php
+  - frontend/admin-vue/tests/e2e/public-guest-checkout.spec.ts
   - tools/python/tests/test_sale_module_smoke.py
   - tools/php/tests/run.php
 owners:
@@ -61,7 +62,8 @@ python3 tools/cms.py test --timeout 300 --target-duration 120
 | `sale_inventory_service_test.php` | Reservations, backorder, expiration, consommation, mouvements et retours restockes. |
 | `sale_domain_workflows_test.php` | Panier, checkout, paiement, remboursement, events, outbox, snapshots immuables et refus de variante non vendable. |
 | `sale_admin_api_controller_test.php` | Surface admin : routes, POS, recus, exports, imports, rapports, contextes IA et permissions. |
-| `sale_public_api_handler_test.php` | API e-commerce optionnelle, canal non public refuse, token opaque, payload public sans prix d'achat et checkout idempotent. |
+| `sale_public_api_handler_test.php` | Checkout invité complet, isolation par token, erreurs de validation, recalcul prix/stock, consentements, expiration, abandon et doubles soumissions. |
+| `public-guest-checkout.spec.ts` | Parcours SSR public complet sur viewport desktop et mobile. |
 | `sale_uses_business_sellable_snapshot_test.php` | Integration Opérations/Vente par snapshot vendable, sans lecture directe non maitrisee. |
 | `test_sale_module_smoke.py` | Manifest, base, tables, provider, permissions, migrations et montants mineurs. |
 

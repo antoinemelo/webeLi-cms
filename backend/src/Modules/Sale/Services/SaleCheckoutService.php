@@ -25,6 +25,9 @@ final class SaleCheckoutService
     {
         $cart = $this->carts->requireCart($cartId);
         $request = ['cart_id' => $cartId, 'source' => $payload['source'] ?? 'admin'];
+        if (isset($payload['request_fingerprint'])) {
+            $request['request_fingerprint'] = (string) $payload['request_fingerprint'];
+        }
         $correlationId = SaleStateMachineService::correlationId($payload['correlation_id'] ?? null);
         return $this->idempotency->run((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request, function () use ($cartId, $payload, $correlationId): array {
             $db = $this->connection->database();
@@ -35,6 +38,10 @@ final class SaleCheckoutService
                 $cart = $this->carts->requireCart($cartId);
                 if ((string) $cart['status'] !== 'active') {
                     throw new SaleValidationException('sale.cart_not_convertible');
+                }
+                if ((string) ($payload['source'] ?? 'admin') === 'ecommerce'
+                    && ((string) ($cart['checkout_step'] ?? 'cart') !== 'validated' || empty($cart['checkout_validated_at']))) {
+                    throw new SaleValidationException('sale.checkout.validation_required');
                 }
                 $lines = $this->carts->lines($cartId);
                 if ($lines === []) {

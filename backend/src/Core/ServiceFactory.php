@@ -180,6 +180,7 @@ use App\Modules\Sale\Repositories\SalePaymentRepository;
 use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleImportExportReportService;
@@ -755,6 +756,19 @@ final class ServiceFactory
             $this->saleInventory(),
             $this->saleEvents(),
             $this->saleIdempotency(),
+            $this->saleStateMachines()
+        ));
+    }
+
+    public function saleGuestCheckout(): SaleGuestCheckoutService
+    {
+        return $this->once('sale_guest_checkout', fn() => new SaleGuestCheckoutService(
+            $this->saleDatabaseConnection(),
+            $this->saleCarts(),
+            $this->saleChannels(),
+            $this->saleCatalogSnapshots(),
+            $this->salePricing(),
+            $this->saleInventory(),
             $this->saleStateMachines()
         ));
     }
