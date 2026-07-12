@@ -2385,6 +2385,7 @@
         "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pim_quality_import_channels.py",
         "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
@@ -2607,12 +2608,29 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/validation/database/pim_quality_import_channels.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/validation/database/pricing_offers_bundles.py",
       "category": "internal",
       "public": false,
       "entrypoint": false,
       "called_by": [
         "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
       "replacement": null,
@@ -2738,6 +2756,7 @@
         "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pim_quality_import_channels.py",
         "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",

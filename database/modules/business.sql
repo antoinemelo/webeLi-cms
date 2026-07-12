@@ -285,6 +285,7 @@ CREATE TABLE IF NOT EXISTS business_products (
     type TEXT NOT NULL CHECK(type IN ('physical','service','gift_card','bundle')),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
     visibility TEXT NOT NULL DEFAULT 'internal' CHECK(visibility IN ('private','internal','public')),
+    external_id TEXT,
     sku_base TEXT,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
@@ -396,6 +397,10 @@ CREATE TABLE IF NOT EXISTS business_product_variants (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_variants_sku_active
     ON business_product_variants(sku)
     WHERE archived_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_products_external_id
+    ON business_products(site_id, external_id)
+    WHERE external_id IS NOT NULL AND archived_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS business_product_variant_option_values (
     variant_id INTEGER NOT NULL,
@@ -876,6 +881,9 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
     scope TEXT NOT NULL CHECK(scope IN ('product','variant','asset','price','tax','channel')),
     required_field TEXT,
     required_attribute_id INTEGER,
+    product_type TEXT NOT NULL DEFAULT 'all' CHECK(product_type IN ('all','physical','service','gift_card','bundle')),
+    severity TEXT NOT NULL DEFAULT 'block' CHECK(severity IN ('block','warn')),
+    required_language TEXT,
     channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     weight INTEGER NOT NULL DEFAULT 1 CHECK(weight > 0),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
@@ -891,6 +899,63 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
 
 CREATE INDEX IF NOT EXISTS idx_business_product_completeness_rules_scope
     ON business_product_completeness_rules(site_id, scope, channel, is_active);
+
+CREATE TABLE IF NOT EXISTS business_product_channel_visibility (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('public','ecommerce','pos','catalogue')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','archived')),
+    starts_at TEXT,
+    ends_at TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id, product_id, channel),
+    CHECK(site_id > 0),
+    CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_channel_visibility_context
+    ON business_product_channel_visibility(site_id, channel, status, starts_at, ends_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_business_product_channel_visibility_site_insert
+BEFORE INSERT ON business_product_channel_visibility
+BEGIN
+    SELECT RAISE(ABORT, 'business channel visibility product must belong to site')
+    WHERE NOT EXISTS (SELECT 1 FROM business_products p WHERE p.id = NEW.product_id AND p.site_id = NEW.site_id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_business_product_channel_visibility_site_update
+BEFORE UPDATE OF site_id, product_id ON business_product_channel_visibility
+BEGIN
+    SELECT RAISE(ABORT, 'business channel visibility product must belong to site')
+    WHERE NOT EXISTS (SELECT 1 FROM business_products p WHERE p.id = NEW.product_id AND p.site_id = NEW.site_id);
+END;
+
+CREATE TABLE IF NOT EXISTS business_catalog_import_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    format_version TEXT NOT NULL,
+    checksum TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('applied','rejected')),
+    rows_total INTEGER NOT NULL DEFAULT 0 CHECK(rows_total >= 0),
+    changed_rows INTEGER NOT NULL DEFAULT 0 CHECK(changed_rows >= 0),
+    summary_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(summary_json)),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, idempotency_key),
+    CHECK(site_id > 0),
+    CHECK(trim(idempotency_key) <> ''),
+    CHECK(trim(format_version) <> ''),
+    CHECK(trim(checksum) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_catalog_import_runs_site_created
+    ON business_catalog_import_runs(site_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS business_product_completeness_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

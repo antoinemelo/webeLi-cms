@@ -25,6 +25,7 @@ generated: true
 | `PROJECTION_DEFINITIONS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.projections` |
 | `PRODUCT_CONTENT_LINKS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.product_content_links` |
 | `PRICING_OFFERS_BUNDLES` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.pricing_offers_bundles` |
+| `PIM_QUALITY_IMPORT_CHANNELS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.pim_quality_import_channels` |
 | `BLUEPRINT_SCHEMA` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.blueprints` |
 | `CONTENT_CONTRACTS` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.contracts` |
 | `MULTISITE_LOCALE_MODEL` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.site_locale` |

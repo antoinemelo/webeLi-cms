@@ -11,7 +11,7 @@ final class BusinessProductCompletenessService
 {
     private const CHANNELS = ['admin', 'pos', 'ecommerce', 'catalogue'];
 
-    public function __construct(private readonly Database $db) {}
+    public function __construct(private readonly Database $db, private readonly ?Database $contentDb = null) {}
 
     /** @return array<string,mixed> */
     public function calculateProductScore(int $productId, string $channel): array
@@ -60,6 +60,10 @@ final class BusinessProductCompletenessService
                 $warnings[] = $this->issue('main_image_missing', 'assets', 'Image principale recommandée');
             }
         }
+
+        [$configuredMissing, $configuredWarnings] = $this->configuredIssues($product, null, $channel);
+        $missing = array_merge($missing, $configuredMissing);
+        $warnings = array_merge($warnings, $configuredWarnings);
 
         $variantResults = [];
         foreach ($variants as $variant) {
@@ -149,6 +153,11 @@ final class BusinessProductCompletenessService
             $missing[] = $this->issue('tax_class_missing', 'tax_class_id', 'TVA manquante');
         }
 
+
+        if (!$this->isChannelCurrentlyVisible($productId, $channel)) {
+            $missing[] = $this->issue('channel_visibility_inactive', 'visibility', 'Produit hors période ou statut de publication');
+        }
+
         $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
         $backorderDeliveryDays = $row['variant_backorder_delivery_days'] === null ? (int) $row['product_backorder_delivery_days'] : (int) $row['variant_backorder_delivery_days'];
@@ -166,6 +175,11 @@ final class BusinessProductCompletenessService
                 );
             }
         }
+
+
+        [$configuredMissing, $configuredWarnings] = $this->configuredIssues($row, $variantId, $channel);
+        $missing = array_merge($missing, $configuredMissing);
+        $warnings = array_merge($warnings, $configuredWarnings);
 
         $missing = $this->uniqueIssues($missing);
         $warnings = $this->uniqueIssues($warnings);
@@ -424,10 +438,20 @@ final class BusinessProductCompletenessService
         $this->db->run('CREATE INDEX IF NOT EXISTS idx_business_product_attribute_group_links_group ON business_product_attribute_group_links(group_id, sort_order)');
     }
 
-    /** @return array{code:string,field:string,label:string} */
-    private function issue(string $code, string $field, string $label): array
+    /** @return array{code:string,field:string,label:string,weight?:int,severity?:string,source?:string} */
+    private function issue(string $code, string $field, string $label, ?int $weight = null, ?string $severity = null, ?string $source = null): array
     {
-        return ['code' => $code, 'field' => $field, 'label' => $label];
+        $issue = ['code' => $code, 'field' => $field, 'label' => $label];
+        if ($weight !== null) {
+            $issue['weight'] = $weight;
+        }
+        if ($severity !== null) {
+            $issue['severity'] = $severity;
+        }
+        if ($source !== null) {
+            $issue['source'] = $source;
+        }
+        return $issue;
     }
 
     /** @param list<array<string,mixed>> $issues @return list<array<string,mixed>> */
@@ -455,7 +479,133 @@ final class BusinessProductCompletenessService
     /** @param list<array<string,mixed>> $missing @param list<array<string,mixed>> $warnings */
     private function score(array $missing, array $warnings): int
     {
-        return max(0, min(100, 100 - (count($missing) * 25) - (count($warnings) * 10)));
+        $blockingPenalty = array_sum(array_map(static fn(array $issue): int => isset($issue['weight']) ? max(1, (int) $issue['weight']) * 10 : 25, $missing));
+        $warningPenalty = array_sum(array_map(static fn(array $issue): int => isset($issue['weight']) ? max(1, (int) $issue['weight']) * 5 : 10, $warnings));
+        return max(0, min(100, 100 - $blockingPenalty - $warningPenalty));
+    }
+
+    /** @param array<string,mixed> $product @return array{0:list<array<string,mixed>>,1:list<array<string,mixed>>} */
+    private function configuredIssues(array $product, ?int $variantId, string $channel): array
+    {
+        $productId = (int) ($product['product_id'] ?? $product['id'] ?? 0);
+        $siteId = (int) ($product['site_id'] ?? 0);
+        $type = (string) ($product['product_type'] ?? $product['type'] ?? 'physical');
+        if ($productId < 1 || $siteId < 1) {
+            return [[], []];
+        }
+        $rules = $this->db->all(
+            'SELECT * FROM business_product_completeness_rules
+             WHERE site_id = :site_id AND is_active = 1
+               AND product_type IN (\'all\', :product_type)
+               AND channel IN (\'all\', :channel)
+             ORDER BY code ASC',
+            ['site_id' => $siteId, 'product_type' => $type, 'channel' => $channel]
+        );
+        $missing = [];
+        $warnings = [];
+        foreach ($rules as $rule) {
+            $scope = (string) $rule['scope'];
+            if ($variantId === null && in_array($scope, ['variant', 'price'], true)) {
+                continue;
+            }
+            if ($variantId !== null && !in_array($scope, ['variant', 'price'], true)) {
+                continue;
+            }
+            if ($this->ruleSatisfied($rule, $product, $productId, $variantId, $channel)) {
+                continue;
+            }
+            $severity = (string) ($rule['severity'] ?? 'block');
+            $issue = $this->issue(
+                (string) $rule['code'],
+                (string) ($rule['required_field'] ?? $scope),
+                (string) $rule['name'],
+                (int) ($rule['weight'] ?? 1),
+                $severity,
+                'configured_rule'
+            );
+            if ($severity === 'warn') {
+                $warnings[] = $issue;
+            } else {
+                $missing[] = $issue;
+            }
+        }
+        return [$missing, $warnings];
+    }
+
+    /** @param array<string,mixed> $rule @param array<string,mixed> $product */
+    private function ruleSatisfied(array $rule, array $product, int $productId, ?int $variantId, string $channel): bool
+    {
+        $scope = (string) $rule['scope'];
+        $field = (string) ($rule['required_field'] ?? '');
+        if (($rule['required_attribute_id'] ?? null) !== null) {
+            return $variantId === null
+                ? $this->hasAttributeValue('product', $productId, (int) $rule['required_attribute_id'])
+                : $this->hasVariantOrProductAttributeValue($productId, $variantId, ['id' => (int) $rule['required_attribute_id']]);
+        }
+        if ($scope === 'asset') {
+            return $this->hasMainAsset($productId, $variantId, $channel === 'admin' ? 'all' : $channel);
+        }
+        if ($scope === 'price') {
+            return $variantId !== null && $this->hasSalePrice($productId, $variantId);
+        }
+        if ($scope === 'tax') {
+            return ($product['tax_class_id'] ?? null) !== null || $this->hasDefaultTaxClass((int) $product['site_id']);
+        }
+        if ($scope === 'channel') {
+            $enabled = match ($channel) {
+                'pos' => (bool) ($product['is_pos_enabled'] ?? false),
+                'ecommerce' => (bool) ($product['is_ecommerce_enabled'] ?? false),
+                'catalogue' => (bool) ($product['is_catalogue_enabled'] ?? false),
+                default => true,
+            };
+            return $enabled && $this->isChannelCurrentlyVisible($productId, $channel);
+        }
+        if ($field === 'variant') {
+            return $this->variants($productId) !== [];
+        }
+        if ($field === 'category') {
+            return ($product['category_id'] ?? null) !== null;
+        }
+        if ($field === 'translation') {
+            $language = strtolower(trim((string) ($rule['required_language'] ?? '')));
+            return $language !== '' && $this->db->one(
+                'SELECT 1 FROM business_product_attribute_values WHERE product_id = ? AND language = ? LIMIT 1',
+                [$productId, $language]
+            ) !== null;
+        }
+        if ($field === 'cms_content') {
+            return $this->contentDb !== null && $this->contentDb->one(
+                'SELECT 1 FROM business_product_content_links WHERE site_id = ? AND product_id = ? AND status = \'active\' LIMIT 1',
+                [(int) $product['site_id'], $productId]
+            ) !== null;
+        }
+        if ($variantId !== null && $field === 'sku') {
+            return trim((string) ($product['sku'] ?? '')) !== '';
+        }
+        if ($variantId !== null && $field === 'active_variant') {
+            return (string) ($product['variant_status'] ?? '') === 'active';
+        }
+        $allowed = ['name', 'slug', 'sku_base', 'short_description', 'description', 'category_id', 'brand_id', 'tax_class_id'];
+        return in_array($field, $allowed, true) && trim((string) ($product[$field] ?? '')) !== '';
+    }
+
+    private function isChannelCurrentlyVisible(int $productId, string $channel): bool
+    {
+        if ($channel === 'admin') {
+            return true;
+        }
+        $channel = $channel === 'public' ? 'ecommerce' : $channel;
+        $row = $this->db->one(
+            'SELECT status, starts_at, ends_at FROM business_product_channel_visibility WHERE product_id = ? AND channel = ? LIMIT 1',
+            [$productId, $channel]
+        );
+        if ($row === null) {
+            return true;
+        }
+        $now = date('Y-m-d H:i:s');
+        return (string) $row['status'] === 'active'
+            && (($row['starts_at'] ?? null) === null || (string) $row['starts_at'] <= $now)
+            && (($row['ends_at'] ?? null) === null || (string) $row['ends_at'] > $now);
     }
 
     /** @param list<array<string,mixed>> $missing */

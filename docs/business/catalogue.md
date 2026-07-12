@@ -146,6 +146,8 @@ T-shirt demo;t-shirt-demo;physical;active;NOUVELLE MARQUE;Marchandises;1;1;1;12.
 
 Avant d'appliquer un import, lancez toujours la prévisualisation. Elle retourne un rapport ligne par ligne et refuse les prix invalides ou négatifs. L'import ne crée marques, catégories ou options absentes que si les options correspondantes sont activées.
 
+Le format courant `pim.catalog.v1` inclut le site et l'identifiant externe facultatif. La prévisualisation affiche le diff avant toute écriture, l'application est atomique et les réimports identiques sont idempotents. Les exports filtrés par canal excluent les produits hors période de visibilité.
+
 ## Limites v1
 
 - pas de moteur de promotions avancées ;

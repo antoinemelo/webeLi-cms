@@ -681,6 +681,14 @@ final class BusinessCatalogSellableReadService
             $where[] = 'p.is_public = 1';
             $where[] = 'p.visibility = \'public\'';
         }
+        if (in_array($channel, ['pos', 'catalogue', 'ecommerce', 'public'], true)) {
+            $where[] = 'NOT EXISTS (
+                SELECT 1 FROM business_product_channel_visibility cv
+                WHERE cv.product_id = p.id AND cv.site_id = p.site_id AND cv.channel = :visibility_channel
+                  AND (cv.status <> \'active\' OR (cv.starts_at IS NOT NULL AND cv.starts_at > CURRENT_TIMESTAMP) OR (cv.ends_at IS NOT NULL AND cv.ends_at <= CURRENT_TIMESTAMP))
+            )';
+            $params['visibility_channel'] = $channel === 'public' ? 'ecommerce' : $channel;
+        }
         if (trim((string) ($filters['product_type'] ?? '')) !== '') {
             $where[] = 'p.type = :product_type';
             $params['product_type'] = $this->productType((string) $filters['product_type']);

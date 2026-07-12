@@ -45,6 +45,7 @@ generated: true
 | `business_attributes` | id, site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_bundle_components` | id, bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json, created_at, updated_at, archived_at |
 | `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, customer_segment, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_import_runs` | id, site_id, idempotency_key, format_version, checksum, status, rows_total, changed_rows, summary_json, created_by_iam_user_id, created_at |
 | `business_catalog_offers` | id, site_id, name, offer_type, offer_value, scope_type, product_id, variant_id, category_id, brand_id, channel, starts_at, ends_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_products` | id, site_id, name, slug, product_type, status, currency, base_purchase_price, base_sale_price, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, created_at, updated_at |
@@ -61,7 +62,8 @@ generated: true
 | `business_product_brands` | id, site_id, name, slug, company_id, description, website_url, logo_media_id, is_public, status, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_bundles` | id, site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, composition_type, unavailable_strategy, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_categories` | id, site_id, parent_id, name, slug, description, is_public, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_product_completeness_rules` | id, site_id, code, name, scope, required_field, required_attribute_id, channel, weight, is_active, created_at, updated_at |
+| `business_product_channel_visibility` | id, site_id, product_id, channel, status, starts_at, ends_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `business_product_completeness_rules` | id, site_id, code, name, scope, required_field, required_attribute_id, channel, weight, is_active, created_at, updated_at, product_type, severity, required_language |
 | `business_product_completeness_scores` | id, product_id, variant_id, channel, score, is_sellable, missing_json, calculated_at |
 | `business_product_option_links` | product_id, option_id, is_required, sort_order, created_at |
 | `business_product_option_values` | id, option_id, code, label, value, color_hex, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
@@ -72,7 +74,7 @@ generated: true
 | `business_product_variant_option_values` | variant_id, option_id, option_value_id, created_at |
 | `business_product_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, currency, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `business_product_variants` | id, product_id, status, sku, barcode, name, sales_note, track_stock, stock_quantity, stock_reserved, allow_backorder, backorder_delivery_days, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at, external_id |
 | `business_stock_movements` | id, variant_id, movement_type, quantity, reason, reference_type, reference_id, created_by_iam_user_id, created_at |
 | `business_tag_links` | id, tag_id, target_type, company_id, contact_id, created_by_iam_user_id, created_at |
 | `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
@@ -91,7 +93,7 @@ generated: true
 | `crm_message_outbox` | id, site_id, provider_id, template_id, mailing_id, contact_id, channel, recipient_value, subject, body_text, body_html, payload_json, status, attempts, max_attempts, next_attempt_at, locked_at, sent_at, failed_at, last_error, created_by_iam_user_id, created_at, updated_at |
 | `crm_message_templates` | id, site_id, template_key, channel, name, subject, body_text, body_html, provider_template_ref, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_messaging_providers` | id, site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `cookies.sqlite`
 

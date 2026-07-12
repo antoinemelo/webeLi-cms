@@ -23,6 +23,30 @@ try {
     $h->assertTrue((int) $complete['score'] >= 90, 'complete product keeps a high score');
     $h->assertSame('Prêt à vendre', $complete['label'], 'complete product exposes a human sellable label');
 
+    $db->run(
+        "INSERT INTO business_product_completeness_rules(site_id,code,name,scope,required_field,product_type,severity,required_language,channel,weight,is_active)
+         VALUES(1,'physical-de-translation','Traduction allemande recommandée','product','translation','physical','warn','de','ecommerce',2,1)"
+    );
+    $configuredWarning = $service->calculateProductScore($gourdeProductId, 'ecommerce');
+    $configuredWarningCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $configuredWarning['warnings']);
+    $h->assertTrue(in_array('physical-de-translation', $configuredWarningCodes, true), 'product-type translation rule is explainable');
+    $h->assertSame(true, $configuredWarning['is_sellable'], 'warning policy does not block publication');
+    $serviceConfigured = $service->calculateProductScore($serviceProductId, 'ecommerce');
+    $serviceWarningCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $serviceConfigured['warnings']);
+    $h->assertSame(false, in_array('physical-de-translation', $serviceWarningCodes, true), 'product-type rule is isolated from other product types');
+
+    $db->run("INSERT INTO business_product_channel_visibility(site_id,product_id,channel,status,starts_at) VALUES(1,?,'pos','active','2999-01-01 00:00:00')", [$gourdeProductId]);
+    $futureVisibility = $service->calculateVariantSellability($gourdeVariantId, 'pos');
+    $futureCodes = array_map(static fn(array $issue): string => (string) $issue['code'], $futureVisibility['missing']);
+    $h->assertSame(false, $futureVisibility['is_sellable'], 'future visibility period blocks current publication');
+    $h->assertTrue(in_array('channel_visibility_inactive', $futureCodes, true), 'visibility failure is explicitly explained');
+    $h->expectException(
+        fn() => $db->run("INSERT INTO business_product_channel_visibility(site_id,product_id,channel,status) VALUES(2,?,'ecommerce','active')", [$gourdeProductId]),
+        PDOException::class,
+        'channel visibility cannot target a product from another site'
+    );
+    $db->run('DELETE FROM business_product_channel_visibility WHERE product_id = ?', [$gourdeProductId]);
+
     $db->run("INSERT INTO business_attribute_groups(site_id, code, name) VALUES(1, 'required_specs', 'Spécifications requises')");
     $requiredGroupId = (int) $db->lastInsertId();
     $db->run(

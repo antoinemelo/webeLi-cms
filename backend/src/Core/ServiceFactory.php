@@ -941,7 +941,7 @@ final class ServiceFactory
 
     public function businessProductCompleteness(): BusinessProductCompletenessService
     {
-        return $this->once('business_product_completeness', fn() => new BusinessProductCompletenessService($this->businessDatabaseConnection()->database()));
+        return $this->once('business_product_completeness', fn() => new BusinessProductCompletenessService($this->businessDatabaseConnection()->database(), $this->coreDb));
     }
 
     public function businessPimAdmin(): BusinessPimAdminService
