@@ -144,6 +144,9 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     customer_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(customer_snapshot_json)),
     billing_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(billing_address_json)),
     shipping_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_json)),
+    shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
+    source_cart_id INTEGER,
+    correlation_id TEXT,
     subtotal_minor INTEGER NOT NULL DEFAULT 0 CHECK(subtotal_minor >= 0),
     discount_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(discount_total_minor >= 0),
     tax_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(tax_total_minor >= 0),
@@ -159,6 +162,7 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(site_id, order_number),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(site_id > 0),
@@ -178,6 +182,9 @@ CREATE INDEX IF NOT EXISTS idx_sale_orders_site_created
     ON sale_orders(site_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_orders_channel
     ON sale_orders(channel_id, status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_orders_source_cart
+    ON sale_orders(source_cart_id)
+    WHERE source_cart_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS sale_order_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -270,6 +277,7 @@ CREATE TABLE IF NOT EXISTS sale_order_status_history (
     to_status TEXT NOT NULL CHECK(to_status IN ('draft','placed','confirmed','completed','cancelled')),
     changed_by_iam_user_id INTEGER,
     reason TEXT,
+    correlation_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(from_status IS NULL OR from_status <> to_status)
@@ -290,6 +298,7 @@ CREATE TABLE IF NOT EXISTS sale_carts (
     customer_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(customer_snapshot_json)),
     billing_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(billing_address_json)),
     shipping_address_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_json)),
+    shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
     subtotal_minor INTEGER NOT NULL DEFAULT 0 CHECK(subtotal_minor >= 0),
     discount_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(discount_total_minor >= 0),
     tax_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(tax_total_minor >= 0),
@@ -300,6 +309,7 @@ CREATE TABLE IF NOT EXISTS sale_carts (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     converted_order_id INTEGER,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY(converted_order_id) REFERENCES sale_orders(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CHECK(site_id > 0),
@@ -425,6 +435,7 @@ CREATE TABLE IF NOT EXISTS sale_payment_intents (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(provider_key, intent_reference),
     UNIQUE(site_id, idempotency_key),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -700,6 +711,8 @@ CREATE TABLE IF NOT EXISTS sale_returns (
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT,
+    updated_at TEXT,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(order_id, return_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(trim(return_number) <> ''),
@@ -740,6 +753,8 @@ CREATE TABLE IF NOT EXISTS sale_refunds (
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     processed_at TEXT,
+    updated_at TEXT,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(order_id, refund_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY(payment_transaction_id) REFERENCES sale_payment_transactions(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -752,6 +767,92 @@ CREATE INDEX IF NOT EXISTS idx_sale_refunds_order
     ON sale_refunds(order_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_refunds_payment_transaction
     ON sale_refunds(payment_transaction_id);
+
+CREATE TABLE IF NOT EXISTS sale_fulfillments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    fulfillment_number TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','preparing','partially_shipped','shipped','delivered','cancelled','returned')),
+    shipping_address_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_snapshot_json)),
+    shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
+    tracking_reference TEXT,
+    correlation_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    shipped_at TEXT,
+    delivered_at TEXT,
+    cancelled_at TEXT,
+    UNIQUE(order_id, fulfillment_number),
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(trim(fulfillment_number) <> ''),
+    CHECK(trim(correlation_id) <> ''),
+    CHECK(shipped_at IS NULL OR status IN ('shipped','delivered','returned')),
+    CHECK(delivered_at IS NULL OR status IN ('delivered','returned')),
+    CHECK(cancelled_at IS NULL OR status = 'cancelled')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_fulfillments_order
+    ON sale_fulfillments(order_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sale_fulfillment_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fulfillment_id INTEGER NOT NULL,
+    order_line_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(fulfillment_id, order_line_id),
+    FOREIGN KEY(fulfillment_id) REFERENCES sale_fulfillments(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sale_state_transitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    aggregate_type TEXT NOT NULL CHECK(aggregate_type IN ('cart','order','payment_intent','fulfillment','return','refund')),
+    aggregate_id INTEGER NOT NULL,
+    from_status TEXT,
+    to_status TEXT NOT NULL,
+    correlation_id TEXT NOT NULL,
+    changed_by_iam_user_id INTEGER,
+    reason TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0),
+    CHECK(aggregate_id > 0),
+    CHECK(from_status IS NULL OR from_status <> to_status),
+    CHECK(trim(to_status) <> ''),
+    CHECK(trim(correlation_id) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_state_transitions_aggregate
+    ON sale_state_transitions(aggregate_type, aggregate_id, id);
+CREATE INDEX IF NOT EXISTS idx_sale_state_transitions_correlation
+    ON sale_state_transitions(correlation_id, id);
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_order_snapshots_immutable
+BEFORE UPDATE OF customer_snapshot_json, billing_address_json, shipping_address_json, shipping_method_snapshot_json, currency ON sale_orders
+WHEN OLD.status <> 'draft'
+BEGIN
+    SELECT RAISE(ABORT, 'sale order snapshots are immutable after placement');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_order_line_snapshots_immutable
+BEFORE UPDATE OF business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type,
+    unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id,
+    tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, snapshot_json
+ON sale_order_lines
+BEGIN
+    SELECT RAISE(ABORT, 'sale order line snapshots are immutable');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_order_lines_delete_immutable
+BEFORE DELETE ON sale_order_lines
+WHEN EXISTS (SELECT 1 FROM sale_orders o WHERE o.id = OLD.order_id AND o.status <> 'draft')
+BEGIN
+    SELECT RAISE(ABORT, 'sale order lines cannot be deleted after placement');
+END;
 
 CREATE TABLE IF NOT EXISTS sale_promotions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -840,6 +941,7 @@ CREATE TABLE IF NOT EXISTS sale_events (
     aggregate_type TEXT NOT NULL,
     aggregate_id INTEGER NOT NULL,
     payload_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payload_json)),
+    correlation_id TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK(site_id > 0),
@@ -854,6 +956,8 @@ CREATE INDEX IF NOT EXISTS idx_sale_events_aggregate
     ON sale_events(aggregate_type, aggregate_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_events_type
     ON sale_events(event_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sale_events_correlation
+    ON sale_events(correlation_id, id);
 
 CREATE TABLE IF NOT EXISTS sale_outbox (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

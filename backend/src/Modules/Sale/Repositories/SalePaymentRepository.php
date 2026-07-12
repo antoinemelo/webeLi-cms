@@ -66,6 +66,13 @@ final class SalePaymentRepository extends SaleRepositoryBase
         );
     }
 
+    public function setIntentReference(int $intentId, ?string $reference): void
+    {
+        if ($reference !== null && trim($reference) !== '') {
+            $this->rawDatabase()->run('UPDATE sale_payment_intents SET intent_reference = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$reference, $intentId]);
+        }
+    }
+
     /** @param array<string,mixed> $options @return array<string,mixed> */
     public function recordTransaction(int $orderId, int $amountMinor, string $currency, string $type = 'payment', array $options = []): array
     {

@@ -18,6 +18,7 @@ VALIDATORS=(
     Validator('PRODUCT_CONTENT_LINKS', "tools.python.validation.database.product_content_links", 'database'),
     Validator('PRICING_OFFERS_BUNDLES', "tools.python.validation.database.pricing_offers_bundles", 'database'),
     Validator('PIM_QUALITY_IMPORT_CHANNELS', "tools.python.validation.database.pim_quality_import_channels", 'database'),
+    Validator('SALE_STATE_INTEGRITY', "tools.python.validation.database.sale_state_integrity", 'database'),
     Validator('BLUEPRINT_SCHEMA', "tools.python.validation.content.blueprints", 'content'),
     Validator('CONTENT_CONTRACTS', "tools.python.validation.content.contracts", 'content'),
     Validator('MULTISITE_LOCALE_MODEL', "tools.python.validation.content.site_locale", 'content'),

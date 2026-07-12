@@ -48,3 +48,4 @@ generated: true
 | `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
 | `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
 | `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |
+| `database/migrations/sale/0003_state_machines_snapshots.sql` | `0003_state_machines_snapshots` |

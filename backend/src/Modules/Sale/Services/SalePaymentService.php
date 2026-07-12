@@ -16,7 +16,8 @@ final class SalePaymentService
         private readonly SaleOrderRepository $orders,
         private readonly SaleEventService $events,
         private readonly ?SaleIdempotencyService $idempotency = null,
-        private readonly ?PaymentProviderRegistry $providers = null
+        private readonly ?PaymentProviderRegistry $providers = null,
+        private readonly ?SaleStateMachineService $states = null
     ) {}
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -32,7 +33,16 @@ final class SalePaymentService
             'amount_minor' => $amountMinor,
             'provider_key' => $providerKey,
         ];
-        $callback = fn(): array => $this->recordPaymentNow($order, $amountMinor, $providerKey, $iamUserId, $options);
+        $correlationId = SaleStateMachineService::correlationId($options['correlation_id'] ?? null);
+        $callback = function () use ($order, $amountMinor, $providerKey, $iamUserId, $options, $correlationId): array {
+            $result = $this->payments->rawDatabase()->transaction(
+                fn(): array => $this->recordPaymentNow($order, $amountMinor, $providerKey, $iamUserId, $options, $correlationId)
+            );
+            if (!empty($result['_provider_failed'])) {
+                throw new SalePaymentException('sale.payment_provider_failed');
+            }
+            return $result;
+        };
         if ($this->idempotency === null) {
             return $callback();
         }
@@ -40,7 +50,7 @@ final class SalePaymentService
     }
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
-    private function recordPaymentNow(array $order, int $amountMinor, string $providerKey, ?int $iamUserId, array $options): array
+    private function recordPaymentNow(array $order, int $amountMinor, string $providerKey, ?int $iamUserId, array $options, string $correlationId): array
     {
         $orderId = (int) $order['id'];
         $newTotal = $this->payments->allocatedTotal($orderId) + $amountMinor;
@@ -68,7 +78,10 @@ final class SalePaymentService
             'currency' => (string) $order['currency'],
         ]);
         $status = (string) ($providerResult['status'] ?? 'succeeded');
-        $this->payments->updateIntent((int) $intent['id'], $status === 'succeeded' ? 'captured' : 'failed', $providerResult['provider_reference'] ?? null);
+        $this->payments->setIntentReference((int) $intent['id'], $providerResult['provider_reference'] ?? null);
+        ($this->states ?? new SaleStateMachineService($this->payments->rawDatabase()))->transition(
+            'payment_intent', (int) $intent['id'], $status === 'succeeded' ? 'captured' : 'failed', $iamUserId, null, $correlationId
+        );
         $transaction = $this->payments->recordTransaction($orderId, $amountMinor, (string) $order['currency'], 'payment', [
             'payment_intent_id' => (int) $intent['id'],
             'status' => $status,
@@ -86,8 +99,8 @@ final class SalePaymentService
                 'error_code' => (string) ($providerResult['error_code'] ?? 'provider_failed'),
                 'error_message' => (string) ($providerResult['error_message'] ?? 'Payment provider failed.'),
                 'iam_user_id' => $iamUserId,
-            ], $iamUserId);
-            throw new SalePaymentException('sale.payment_provider_failed');
+            ], $iamUserId, $correlationId);
+            return ['order' => $order, 'transaction' => $transaction, 'intent' => $intent, '_provider_failed' => true];
         }
         $order = $this->orders->updatePaidTotal($orderId, $newTotal);
         $this->events->emit((int) $order['site_id'], 'sale.payment.recorded', 'order', $orderId, [
@@ -99,7 +112,7 @@ final class SalePaymentService
             'provider_key' => $providerKey,
             'payment_status' => (string) $order['payment_status'],
             'iam_user_id' => $iamUserId,
-        ], $iamUserId);
+        ], $iamUserId, $correlationId);
         return ['order' => $order, 'transaction' => $transaction, 'intent' => $intent];
     }
 
@@ -115,7 +128,16 @@ final class SalePaymentService
             'amount_minor' => $amountMinor,
             'provider_key' => $providerKey,
         ];
-        $callback = fn(): array => $this->refundPaymentNow($tx, $amountMinor, $providerKey, $reason, $iamUserId);
+        $correlationId = SaleStateMachineService::correlationId();
+        $callback = function () use ($tx, $amountMinor, $providerKey, $reason, $iamUserId, $correlationId): array {
+            $result = $this->payments->rawDatabase()->transaction(
+                fn(): array => $this->refundPaymentNow($tx, $amountMinor, $providerKey, $reason, $iamUserId, $correlationId)
+            );
+            if (!empty($result['_provider_failed'])) {
+                throw new SalePaymentException('sale.refund_provider_failed');
+            }
+            return $result;
+        };
         if ($this->idempotency === null) {
             return $callback();
         }
@@ -123,7 +145,7 @@ final class SalePaymentService
     }
 
     /** @param array<string,mixed> $tx @return array<string,mixed> */
-    private function refundPaymentNow(array $tx, int $amountMinor, string $providerKey, ?string $reason, ?int $iamUserId): array
+    private function refundPaymentNow(array $tx, int $amountMinor, string $providerKey, ?string $reason, ?int $iamUserId, string $correlationId): array
     {
         if ($amountMinor < 1) {
             throw new SalePaymentException('sale.refund_amount_invalid');
@@ -146,7 +168,11 @@ final class SalePaymentService
             'currency' => (string) $tx['currency'],
         ]);
         $status = (string) ($providerResult['status'] ?? 'succeeded');
-        $refund = $this->payments->createRefund((int) $tx['order_id'], (int) $tx['id'], $amountMinor, (string) $tx['currency'], $reason, $iamUserId, $status);
+        $refund = $this->payments->createRefund((int) $tx['order_id'], (int) $tx['id'], $amountMinor, (string) $tx['currency'], $reason, $iamUserId, 'draft');
+        $states = $this->states ?? new SaleStateMachineService($this->payments->rawDatabase());
+        $states->recordInitial((int) $tx['site_id'], 'refund', (int) $refund['id'], 'draft', $correlationId, $iamUserId, 'refund requested');
+        $states->transition('refund', (int) $refund['id'], 'pending', $iamUserId, $reason, $correlationId);
+        $refund = $states->transition('refund', (int) $refund['id'], $status === 'succeeded' ? 'succeeded' : 'failed', $iamUserId, $reason, $correlationId);
         $refundTransaction = $this->payments->recordTransaction((int) $tx['order_id'], $amountMinor, (string) $tx['currency'], 'refund', [
             'payment_intent_id' => $tx['payment_intent_id'] ?? null,
             'status' => $status,
@@ -155,7 +181,7 @@ final class SalePaymentService
             'allocate' => false,
         ]);
         if ($status !== 'succeeded') {
-            throw new SalePaymentException('sale.refund_provider_failed');
+            return ['order' => $this->orders->requireOrder((int) $tx['order_id']), 'refund' => $refund, 'transaction' => $refundTransaction, '_provider_failed' => true];
         }
         $refundedTotal = (int) $tx['refunded_total_minor'] + $amountMinor;
         $order = $this->orders->updateRefundedTotal((int) $tx['order_id'], $refundedTotal);
@@ -170,7 +196,7 @@ final class SalePaymentService
             'provider_key' => $providerKey,
             'reason' => $reason,
             'iam_user_id' => $iamUserId,
-        ], $iamUserId);
+        ], $iamUserId, $correlationId);
         return ['order' => $order, 'refund' => $refund, 'transaction' => $refundTransaction];
     }
 

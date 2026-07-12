@@ -7,13 +7,13 @@ namespace App\Modules\Sale\Repositories;
 final class SaleEventRepository extends SaleRepositoryBase
 {
     /** @param array<string,mixed> $payload @return array<string,mixed> */
-    public function emit(int $siteId, string $eventType, string $aggregateType, int $aggregateId, array $payload = [], ?int $iamUserId = null): array
+    public function emit(int $siteId, string $eventType, string $aggregateType, int $aggregateId, array $payload = [], ?int $iamUserId = null, ?string $correlationId = null): array
     {
         $db = $this->rawDatabase();
         $db->run(
-            'INSERT INTO sale_events(site_id, event_type, aggregate_type, aggregate_id, payload_json, created_by_iam_user_id)
-             VALUES(?, ?, ?, ?, ?, ?)',
-            [$siteId, $eventType, $aggregateType, $aggregateId, $this->json($payload), $iamUserId]
+            'INSERT INTO sale_events(site_id, event_type, aggregate_type, aggregate_id, payload_json, correlation_id, created_by_iam_user_id)
+             VALUES(?, ?, ?, ?, ?, ?, ?)',
+            [$siteId, $eventType, $aggregateType, $aggregateId, $this->json($payload), $correlationId, $iamUserId]
         );
         $event = $db->one('SELECT * FROM sale_events WHERE id = ?', [(int) $db->lastInsertId()]) ?? [];
         if ($event !== []) {
@@ -35,6 +35,7 @@ final class SaleEventRepository extends SaleRepositoryBase
                 'id' => (int) $event['aggregate_id'],
             ],
             'payload' => $payload,
+            'correlation_id' => $event['correlation_id'] ?? null,
             'created_by_iam_user_id' => $event['created_by_iam_user_id'] === null ? null : (int) $event['created_by_iam_user_id'],
             'created_at' => (string) $event['created_at'],
         ];

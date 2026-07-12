@@ -68,6 +68,7 @@
         "docs/development/architecture/business-pim-lite-final-review.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
+        "docs/development/architecture/sale-state-machines-snapshots.md",
         "docs/development/backoffice/visual-editor.md",
         "docs/development/command-reliability.md",
         "docs/development/contributing-documentation.md",
@@ -2389,6 +2390,7 @@
         "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/sale_state_integrity.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/operations/manifests.py",
         "tools/python/validation/operations/media.py",
@@ -2680,6 +2682,23 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/validation/database/sale_state_integrity.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/architecture/sale-state-machines-snapshots.md",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/validation/database/schema.py",
       "category": "internal",
       "public": false,
@@ -2760,6 +2779,7 @@
         "tools/python/validation/database/pricing_offers_bundles.py",
         "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/sale_state_integrity.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/documentation/contracts.py",
         "tools/python/validation/operations/manifests.py",

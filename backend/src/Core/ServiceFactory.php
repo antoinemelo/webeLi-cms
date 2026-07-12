@@ -186,6 +186,7 @@ use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleStockMovementService;
 use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
+use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
 use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
@@ -744,7 +745,8 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleInventory(),
             $this->saleEvents(),
-            $this->saleIdempotency()
+            $this->saleIdempotency(),
+            $this->saleStateMachines()
         ));
     }
 
@@ -755,13 +757,21 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            new PaymentProviderRegistry()
+            new PaymentProviderRegistry(),
+            $this->saleStateMachines()
         ));
     }
 
     public function saleOrderService(): SaleOrderService
     {
-        return $this->once('sale_order_service', fn() => new SaleOrderService($this->saleOrders(), $this->saleEvents(), $this->saleInventory()));
+        return $this->once('sale_order_service', fn() => new SaleOrderService($this->saleOrders(), $this->saleEvents(), $this->saleInventory(), $this->saleStateMachines()));
+    }
+
+    public function saleStateMachines(): SaleStateMachineService
+    {
+        return $this->once('sale_state_machines', fn() => new SaleStateMachineService(
+            $this->saleDatabaseConnection()->database() ?? throw new \RuntimeException('sale.database_unavailable')
+        ));
     }
 
     public function salePosService(): SalePosService

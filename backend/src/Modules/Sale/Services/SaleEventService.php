@@ -11,8 +11,8 @@ final class SaleEventService
     public function __construct(private readonly SaleEventRepository $events) {}
 
     /** @param array<string,mixed> $payload */
-    public function emit(int $siteId, string $eventType, string $aggregateType, int $aggregateId, array $payload = [], ?int $iamUserId = null): void
+    public function emit(int $siteId, string $eventType, string $aggregateType, int $aggregateId, array $payload = [], ?int $iamUserId = null, ?string $correlationId = null): void
     {
-        $this->events->emit($siteId, $eventType, $aggregateType, $aggregateId, $payload, $iamUserId);
+        $this->events->emit($siteId, $eventType, $aggregateType, $aggregateId, $payload, $iamUserId, $correlationId);
     }
 }

@@ -78,6 +78,8 @@ Une vente POS retourne un recu lisible par l'interface. Le recu utilise les snap
 
 Annuler une commande change le statut de commande et tente de liberer les reservations non consommees. Un remboursement est separe du paiement original : il cree une transaction de type `refund`, met a jour le montant rembourse et conserve la trace du paiement source.
 
+Les statuts de panier, commande, paiement, fulfillment, retour et remboursement suivent des machines distinctes. Chaque transition est historisée avec un identifiant de corrélation. Après validation, les snapshots produit, client, adresses et méthode de livraison sont immuables ; une modification ultérieure du PIM ou du CRM ne réécrit jamais la commande.
+
 ## Rapports, imports et exports
 
 Les rapports v1 couvrent :
