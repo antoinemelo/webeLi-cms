@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-12
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/views/modules/SalePosView.vue
@@ -62,7 +62,7 @@ Le checkout POS cree une commande prefixee `POS-`, consomme les reservations de 
 
 ## Recu et envoi
 
-Le recu POS est base sur la commande et ses lignes snapshot. Il affiche l'heure locale du site, la reference de vente et la devise en entete. L'impression doit utiliser le flux recu, pas l'impression brute de toute la page. L'envoi par courriel utilise le recu courant et un destinataire fourni au moment de l'action.
+Le reçu POS est persisté à partir de la commande et de ses lignes snapshot. Il existe en français et en anglais, possède un numéro stable et inclut date, opérateur, lignes, taxes, paiements et remboursements. Il exclut les payloads techniques des providers. L'impression doit utiliser le flux reçu, pas l'impression brute de toute la page. L'envoi par courriel utilise le reçu courant et un destinataire fourni au moment de l'action.
 
 ## Cloturer la session
 

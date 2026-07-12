@@ -41,6 +41,8 @@ $expectedTables = [
     'sale_returns',
     'sale_return_lines',
     'sale_refunds',
+    'sale_financial_corrections',
+    'sale_order_customer_reconciliations',
     'sale_fulfillments',
     'sale_fulfillment_lines',
     'sale_state_transitions',
@@ -59,6 +61,7 @@ $expectedPermissions = [
     'sale.payments.read',
     'sale.payments.manage',
     'sale.refunds.manage',
+    'sale.returns.manage',
     'sale.pos.use',
     'sale.pos.manage',
     'sale.cash.manage',
@@ -168,6 +171,12 @@ foreach ([
     ['GET', '/admin/api/sale/export/stock-movements.csv', 'admin.sale.export.stock_movements.v1', 'sale.stock.read'],
     ['POST', '/admin/api/sale/import/stock/apply', 'admin.sale.import.stock.apply.v1', 'sale.stock.manage'],
     ['POST', '/admin/api/sale/pos/checkout', 'admin.sale.pos.checkout.v1', 'sale.pos.use'],
+    ['POST', '/admin/api/sale/orders/{id}/returns', 'admin.sale.orders.returns.store.v1', 'sale.returns.manage'],
+    ['POST', '/admin/api/sale/returns/{id}/transition', 'admin.sale.returns.transition.v1', 'sale.returns.manage'],
+    ['GET', '/admin/api/sale/orders/{id}/timeline', 'admin.sale.orders.timeline.v1', 'sale.orders.read'],
+    ['POST', '/admin/api/sale/orders/{id}/customer-reconciliation', 'admin.sale.orders.customer_reconciliation.v1', 'sale.orders.manage'],
+    ['POST', '/admin/api/sale/orders/{id}/payments/corrections', 'admin.sale.orders.payments.correction.v1', 'sale.payments.manage'],
+    ['POST', '/admin/api/sale/payment-intents/{id}/void', 'admin.sale.payment_intents.void.v1', 'sale.payments.manage'],
 ] as [$method, $path, $key, $permission]) {
     $matched = $router->match($method, samplePath($path), $adminRoutes);
     $h->assertTrue($matched !== null, 'sale route matches router: ' . $method . ' ' . $path);
@@ -219,6 +228,12 @@ try {
         PDOException::class,
         'sale inventory availability must match on-hand minus reserved'
     );
+    $returnColumns = array_column($saleDb->all('PRAGMA table_info(sale_returns)'), 'name');
+    $receiptColumns = array_column($saleDb->all('PRAGMA table_info(sale_receipts)'), 'name');
+    $transactionColumns = array_column($saleDb->all('PRAGMA table_info(sale_payment_transactions)'), 'name');
+    $h->assertTrue(in_array('request_hash', $returnColumns, true), 'sale returns persist the idempotency request hash');
+    $h->assertTrue(in_array('language', $receiptColumns, true), 'sale receipts persist their language');
+    $h->assertTrue(in_array('correlation_id', $transactionColumns, true), 'sale financial transactions persist correlation ids');
 } finally {
     $saleDb = null;
     gc_collect_cycles();

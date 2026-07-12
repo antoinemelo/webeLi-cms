@@ -17,6 +17,7 @@ use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCartService;
@@ -28,6 +29,10 @@ use App\Modules\Sale\Services\SaleImportExportReportService;
 use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SaleReceiptService;
+use App\Modules\Sale\Services\SaleReturnService;
+use App\Modules\Sale\Services\SaleOrderTimelineService;
+use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -57,6 +62,9 @@ final class SaleAdminApiController
         private readonly SaleImportExportReportService $importExportReports,
         private readonly SaleIdempotencyService $idempotency,
         private readonly MailerInterface $mailer,
+        private readonly ?SaleReceiptService $receiptService = null,
+        private readonly ?SaleReturnService $returnService = null,
+        private readonly ?SaleOrderTimelineService $timelineService = null,
     ) {}
 
     public function schema(): Response
@@ -422,8 +430,15 @@ final class SaleAdminApiController
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
             $payload = $this->payload();
-            if (isset($payload['status']) && in_array($payload['status'], ['placed', 'confirmed', 'completed'], true)) {
-                $this->db()->run('UPDATE sale_orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [(string) $payload['status'], $this->id($id)]);
+            if (isset($payload['status'])) {
+                $target = (string) $payload['status'];
+                if ($target === 'confirmed') {
+                    $this->orderService->confirmOrder($this->id($id), $this->actorId(), $payload['reason'] ?? null);
+                } elseif ($target === 'completed') {
+                    $this->orderService->completeOrder($this->id($id), $this->actorId(), $payload['reason'] ?? null);
+                } elseif ($target !== (string) $order['status']) {
+                    throw new SaleValidationException('sale.order_transition_invalid');
+                }
             }
             return $this->ok(['order' => $this->orders->orderWithLines($this->id($id))], 'admin.sale.orders.show.v1', $site, $languageCode);
         } catch (Throwable $e) {
@@ -461,7 +476,7 @@ final class SaleAdminApiController
         try {
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
-            return $this->ok(['receipt' => $this->receiptPayload($this->id($id))], 'admin.sale.orders.receipt.v1', $site, $languageCode);
+            return $this->ok(['receipt' => $this->receipt()->issue($this->id($id), $languageCode, $this->actorId())], 'admin.sale.orders.receipt.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -531,6 +546,93 @@ final class SaleAdminApiController
             $tx = $this->payments->requireTransactionWithOrder($this->id($transaction_id));
             $this->ensureSite((int) $site['id'], (int) $tx['site_id']);
             return $this->ok($this->paymentService->refundPayment($this->id($transaction_id), (int) ($payload['amount_minor'] ?? $tx['amount_minor']), isset($payload['reason']) ? (string) $payload['reason'] : null, $this->actorId(), $this->idempotencyKey($payload)), 'admin.sale.payments.refund.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function correctOrderPayment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            return $this->ok($this->paymentService->recordCorrection(
+                $this->id($id),
+                (int) ($payload['amount_delta_minor'] ?? 0),
+                (string) ($payload['reason'] ?? ''),
+                (string) ($this->idempotencyKey($payload) ?? ''),
+                $this->actorId(),
+                isset($payload['payment_transaction_id']) ? (int) $payload['payment_transaction_id'] : null
+            ), 'admin.sale.orders.payments.correction.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function voidPaymentIntent(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $intent = $this->payments->requireIntentWithOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $intent['order_site_id']);
+            return $this->ok($this->paymentService->voidIntent($this->id($id), $this->actorId()), 'admin.sale.payment_intents.void.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function orderTimeline(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.read');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            return $this->ok(['timeline' => $this->timeline()->timeline($this->id($id), $languageCode)], 'admin.sale.orders.timeline.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function reconcileOrderCustomer(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            $updated = $this->orderService->reconcileCustomer($this->id($id), isset($payload['company_id']) ? (int) $payload['company_id'] : null, isset($payload['contact_id']) ? (int) $payload['contact_id'] : null, $this->actorId(), $payload['reason'] ?? null);
+            return $this->ok(['order' => $updated], 'admin.sale.orders.customer_reconciliation.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function storeReturn(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.returns.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            return $this->ok(['return' => $this->returnsService()->request($this->id($id), is_array($payload['lines'] ?? null) ? $payload['lines'] : [], $payload['reason'] ?? null, $this->actorId(), $this->idempotencyKey($payload))], 'admin.sale.orders.returns.store.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function transitionReturn(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.returns.manage');
+        try {
+            $payload = $this->payload();
+            $row = $this->db()->one('SELECT o.site_id FROM sale_returns r INNER JOIN sale_orders o ON o.id=r.order_id WHERE r.id=?', [$this->id($id)]);
+            if ($row === null) {
+                throw new SaleValidationException('sale.return_not_found');
+            }
+            $this->ensureSite((int) $site['id'], (int) $row['site_id']);
+            return $this->ok(['return' => $this->returnsService()->transition($this->id($id), (string) ($payload['status'] ?? ''), $this->actorId(), $payload['reason'] ?? null)], 'admin.sale.returns.transition.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -699,7 +801,7 @@ final class SaleAdminApiController
                 'payment_method' => (string) ($payload['payment_method'] ?? 'cash'),
                 'amount_minor' => (int) ($payload['amount_minor'] ?? 0),
             ];
-            $data = $this->idempotency->run((int) $site['id'], 'pos.complete_sale', $this->idempotencyKey($payload), $request, function () use ($site, $payload): array {
+            $data = $this->idempotency->run((int) $site['id'], 'pos.complete_sale', $this->idempotencyKey($payload), $request, function () use ($site, $payload, $languageCode): array {
                 $sessionId = (int) ($payload['cash_session_id'] ?? $payload['session_id'] ?? 0);
                 $paymentMethod = (string) ($payload['payment_method'] ?? 'cash');
                 if ($paymentMethod === 'cash') {
@@ -743,7 +845,7 @@ final class SaleAdminApiController
                         );
                     }
                 }
-                return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receiptPayload((int) $order['id'])];
+                return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receipt()->issue((int) $order['id'], $languageCode, $this->actorId())];
             });
             return $this->ok($data, 'admin.sale.pos.checkout.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
@@ -757,7 +859,7 @@ final class SaleAdminApiController
         try {
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
-            return $this->ok(['receipt' => $this->receiptPayload($this->id($id))], 'admin.sale.pos.receipt.v1', $site, $languageCode);
+            return $this->ok(['receipt' => $this->receipt()->issue($this->id($id), $languageCode, $this->actorId())], 'admin.sale.pos.receipt.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -777,9 +879,9 @@ final class SaleAdminApiController
                 throw new SaleValidationException('sale.receipt_email_invalid');
             }
 
-            $receipt = $this->receiptPayload($orderId);
-            $reference = $this->receiptReference($order);
-            $subject = 'Ticket de caisse ' . $reference;
+            $receipt = $this->receipt()->issue($orderId, $languageCode, $this->actorId());
+            $reference = (string) ($receipt['receipt_number'] ?? $order['order_number']);
+            $subject = ($languageCode === 'en' ? 'Receipt ' : 'Ticket de caisse ') . $reference;
             $text = (string) ($receipt['printable_text'] ?? '');
             $html = '<pre style="font-family: Courier New, monospace; font-size: 13px; line-height: 1.35; white-space: pre-wrap;">'
                 . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
@@ -1254,101 +1356,6 @@ final class SaleAdminApiController
         return $session;
     }
 
-    /** @return array<string,mixed> */
-    private function receiptPayload(int $orderId): array
-    {
-        $order = $this->orders->orderWithLines($orderId);
-        return [
-            'order_id' => $orderId,
-            'order_number' => $order['order_number'] ?? null,
-            'currency' => $order['currency'] ?? 'CHF',
-            'grand_total_minor' => (int) ($order['grand_total_minor'] ?? 0),
-            'paid_total_minor' => (int) ($order['paid_total_minor'] ?? 0),
-            'lines' => $order['lines'] ?? [],
-            'issued_at' => date('Y-m-d H:i:s'),
-            'printable_text' => $this->receiptText($order),
-        ];
-    }
-
-    /** @param array<string,mixed> $order */
-    private function receiptText(array $order): string
-    {
-        $currency = (string) ($order['currency'] ?? 'CHF');
-        $orderNumber = $this->receiptReference($order);
-        $lines = [
-            $this->receiptPair('Ticket de caisse', '[' . $currency . ']'),
-            'Vente ' . $orderNumber,
-            date('d.m.Y H:i'),
-            str_repeat('-', 32),
-        ];
-
-        foreach (($order['lines'] ?? []) as $line) {
-            if (!is_array($line)) {
-                continue;
-            }
-            $name = trim((string) ($line['product_name'] ?? 'Article'));
-            $variant = trim((string) ($line['variant_name'] ?? ''));
-            if ($variant !== '') {
-                $name .= ' - ' . $variant;
-            }
-            $quantity = $this->receiptQuantity($line['quantity'] ?? 1);
-            $unit = $this->receiptMoney((int) ($line['unit_price_minor'] ?? 0));
-            $total = $this->receiptMoney((int) ($line['line_total_minor'] ?? 0));
-            $lines[] = $this->receiptWrap($name, 32);
-            $lines[] = $this->receiptPair($quantity . ' x ' . $unit, $total);
-        }
-
-        $paidMinor = (int) ($order['paid_total_minor'] ?? 0);
-        $grandTotalMinor = (int) ($order['grand_total_minor'] ?? 0);
-        $dueMinor = $grandTotalMinor - $paidMinor;
-        $lines[] = str_repeat('-', 32);
-        $lines[] = $this->receiptPair('Total', $this->receiptMoney($grandTotalMinor));
-        $lines[] = $this->receiptPair('Payé', $this->receiptMoney($paidMinor));
-        $lines[] = $this->receiptPair('Solde', $this->receiptMoney($dueMinor));
-
-        return implode("\n", $lines);
-    }
-
-    private function receiptPair(string $label, string $value): string
-    {
-        $label = mb_substr($label, 0, 20);
-        $space = max(1, 32 - mb_strlen($label) - mb_strlen($value));
-        return $label . str_repeat(' ', $space) . $value;
-    }
-
-    private function receiptWrap(string $value, int $width): string
-    {
-        $value = preg_replace('/\s+/', ' ', trim($value)) ?: 'Article';
-        if (mb_strlen($value) <= $width) {
-            return $value;
-        }
-        return rtrim(wordwrap($value, $width, "\n", true));
-    }
-
-    private function receiptQuantity(mixed $value): string
-    {
-        $quantity = (float) $value;
-        if (abs($quantity - round($quantity)) < 0.00001) {
-            return (string) (int) round($quantity);
-        }
-        return rtrim(rtrim(number_format($quantity, 2, '.', ''), '0'), '.');
-    }
-
-    private function receiptMoney(int $minor): string
-    {
-        return number_format($minor / 100, 2, '.', '');
-    }
-
-    /** @param array<string,mixed> $order */
-    private function receiptReference(array $order): string
-    {
-        $orderNumber = (string) ($order['order_number'] ?? $order['id'] ?? '');
-        if (($order['source'] ?? '') === 'pos' && str_starts_with($orderNumber, 'SALE-')) {
-            return 'POS-' . substr($orderNumber, 5);
-        }
-        return $orderNumber;
-    }
-
     private function logReceiptEmail(string $to, string $subject, string $text, ?string $html): bool
     {
         $path = \base_path('storage/logs/mail.log');
@@ -1365,6 +1372,21 @@ final class SaleAdminApiController
             'transport' => 'sale_pos_receipt_fallback',
         ];
         return file_put_contents($path, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, FILE_APPEND | LOCK_EX) !== false;
+    }
+
+    private function receipt(): SaleReceiptService
+    {
+        return $this->receiptService ?? new SaleReceiptService($this->orders, $this->payments, new SaleReceiptRepository($this->sale));
+    }
+
+    private function returnsService(): SaleReturnService
+    {
+        return $this->returnService ?? new SaleReturnService($this->sale, new SaleStateMachineService($this->db()), $this->inventory);
+    }
+
+    private function timeline(): SaleOrderTimelineService
+    {
+        return $this->timelineService ?? new SaleOrderTimelineService($this->sale);
     }
 
     private function domainError(Throwable $e): Response

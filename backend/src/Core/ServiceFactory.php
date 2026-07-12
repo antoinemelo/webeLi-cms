@@ -177,6 +177,7 @@ use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleEventService;
@@ -189,6 +190,9 @@ use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
 use App\Modules\Sale\Services\SalePosService;
+use App\Modules\Sale\Services\SaleReceiptService;
+use App\Modules\Sale\Services\SaleReturnService;
+use App\Modules\Sale\Services\SaleOrderTimelineService;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
 
 final class ServiceFactory
@@ -676,6 +680,11 @@ final class ServiceFactory
         return $this->once('sale_payments', fn() => new SalePaymentRepository($this->saleDatabaseConnection()));
     }
 
+    public function saleReceiptsRepository(): SaleReceiptRepository
+    {
+        return $this->once('sale_receipts_repository', fn() => new SaleReceiptRepository($this->saleDatabaseConnection()));
+    }
+
     public function saleInventoryRepository(): SaleInventoryRepository
     {
         return $this->once('sale_inventory_repository', fn() => new SaleInventoryRepository($this->saleDatabaseConnection()));
@@ -772,6 +781,21 @@ final class ServiceFactory
         return $this->once('sale_state_machines', fn() => new SaleStateMachineService(
             $this->saleDatabaseConnection()->database() ?? throw new \RuntimeException('sale.database_unavailable')
         ));
+    }
+
+    public function saleReceiptService(): SaleReceiptService
+    {
+        return $this->once('sale_receipt_service', fn() => new SaleReceiptService($this->saleOrders(), $this->salePayments(), $this->saleReceiptsRepository()));
+    }
+
+    public function saleReturnService(): SaleReturnService
+    {
+        return $this->once('sale_return_service', fn() => new SaleReturnService($this->saleDatabaseConnection(), $this->saleStateMachines(), $this->saleInventory()));
+    }
+
+    public function saleOrderTimeline(): SaleOrderTimelineService
+    {
+        return $this->once('sale_order_timeline', fn() => new SaleOrderTimelineService($this->saleDatabaseConnection()));
     }
 
     public function salePosService(): SalePosService

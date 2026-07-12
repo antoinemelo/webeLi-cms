@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-12
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/views/modules/SaleView.vue
@@ -12,6 +12,9 @@ source_paths:
   - backend/src/Modules/Sale/Services/SaleOrderService.php
   - backend/src/Modules/Sale/Services/SalePaymentService.php
   - backend/src/Modules/Sale/Services/SaleInventoryService.php
+  - backend/src/Modules/Sale/Services/SaleReceiptService.php
+  - backend/src/Modules/Sale/Services/SaleReturnService.php
+  - backend/src/Modules/Sale/Services/SaleOrderTimelineService.php
 owners:
   - sale
 document_type: guide
@@ -56,9 +59,27 @@ Pour enregistrer un paiement :
 
 Le montant ne peut pas depasser le solde restant. Le paiement cree une transaction et met a jour le statut de paiement de la commande.
 
+Les encaissements peuvent être fractionnés entre espèces, virement, paiement manuel et terminal externe. Une correction opérateur ajoute une écriture dédiée et justifiée ; elle ne modifie ni ne supprime la transaction d'origine. Une intention encore non capturée peut être annulée, tandis qu'une intention capturée doit passer par un remboursement.
+
 ## Remboursement
 
 Un remboursement part d'une transaction de paiement. Il ne supprime pas le paiement original et ne modifie pas les lignes vendues. Il ajoute une trace de remboursement, met a jour le total rembourse et peut produire un recu de credit selon le flux utilise.
+
+Le montant cumulé remboursé ne peut jamais dépasser le montant réussi de la transaction source. Une clé d'idempotence permet de rejouer la demande sans créer un second remboursement.
+
+## Retours
+
+Un retour suit `requested → approved → received → completed`. Les quantités sont contrôlées par rapport aux lignes historiques. La fin du workflow augmente `returned_quantity` et, lorsque la ligne le demande, écrit un mouvement de stock `return`. La permission `sale.returns.manage` est distincte de `sale.refunds.manage` : un retour physique n'autorise pas implicitement un mouvement financier.
+
+## Reçu et chronologie
+
+Le reçu FR ou EN possède un numéro stable pour un état financier donné. Il fige la date, l'opérateur, les lignes, taxes, paiements et remboursements sans recopier les payloads provider. Une évolution des totaux produit une nouvelle version, notamment un reçu de crédit après remboursement.
+
+La chronologie agrège les transitions, paiements, corrections, mouvements de stock, retours, remboursements, événements d'intégration et rapprochements client. Elle sert à expliquer la commande ; elle ne constitue pas une comptabilité légale.
+
+## Vente invitée et rapprochement CRM
+
+Une commande peut être créée sans identifiant CRM. Le rapprochement ultérieur renseigne les références entreprise/contact et ajoute une trace corrélée, sans modifier `customer_snapshot_json` : l'identité connue au moment de la vente reste intacte.
 
 ## Annulation
 

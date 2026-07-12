@@ -250,11 +250,13 @@ generated: true
 | `sale_coupons` | id, promotion_id, coupon_code_hash, status, usage_limit, used_count, starts_at, ends_at, created_at |
 | `sale_customer_refs` | id, site_id, company_id, contact_id, display_name, email, phone, billing_address_json, shipping_address_json, created_at, updated_at |
 | `sale_events` | id, site_id, event_type, aggregate_type, aggregate_id, payload_json, correlation_id, created_by_iam_user_id, created_at |
+| `sale_financial_corrections` | id, order_id, payment_transaction_id, amount_delta_minor, currency, reason, idempotency_key, correlation_id, created_by_iam_user_id, created_at |
 | `sale_fulfillment_lines` | id, fulfillment_id, order_line_id, quantity, created_at |
 | `sale_fulfillments` | id, order_id, fulfillment_number, status, shipping_address_snapshot_json, shipping_method_snapshot_json, tracking_reference, correlation_id, version, created_by_iam_user_id, created_at, updated_at, shipped_at, delivered_at, cancelled_at |
 | `sale_idempotency_keys` | id, site_id, key_hash, scope, request_hash, response_json, status, locked_until, created_at, updated_at |
 | `sale_inventory_items` | id, site_id, business_variant_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity, updated_at |
 | `sale_order_adjustments` | id, order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
+| `sale_order_customer_reconciliations` | id, order_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, correlation_id, linked_by_iam_user_id, created_at |
 | `sale_order_lines` | id, order_id, line_number, business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type, quantity, fulfilled_quantity, returned_quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, snapshot_json, created_at |
 | `sale_order_status_history` | id, order_id, from_status, to_status, changed_by_iam_user_id, reason, correlation_id, created_at |
 | `sale_order_tax_lines` | id, order_id, order_line_id, tax_class_code, tax_rate_basis_points, taxable_amount_minor, tax_amount_minor, currency, created_at |
@@ -263,18 +265,18 @@ generated: true
 | `sale_payment_allocations` | id, order_id, payment_transaction_id, amount_minor, currency, created_at |
 | `sale_payment_intents` | id, site_id, channel_id, order_id, provider_key, intent_reference, status, amount_minor, currency, idempotency_key, expires_at, created_at, updated_at, metadata_json, version |
 | `sale_payment_methods` | id, site_id, channel_id, code, name, provider_key, method_type, status, config_json, created_at, updated_at, archived_at |
-| `sale_payment_transactions` | id, payment_intent_id, order_id, transaction_type, status, amount_minor, currency, provider_transaction_id, provider_payload_json, error_code, error_message, processed_at, created_at |
+| `sale_payment_transactions` | id, payment_intent_id, order_id, transaction_type, status, amount_minor, currency, provider_transaction_id, provider_payload_json, error_code, error_message, processed_at, created_at, correlation_id, created_by_iam_user_id |
 | `sale_pos_devices` | id, register_id, device_name, device_token_hash, status, last_seen_at, created_at, updated_at, revoked_at |
 | `sale_pos_registers` | id, site_id, channel_id, code, name, status, location_name, created_at, updated_at, archived_at |
 | `sale_promotions` | id, site_id, channel_id, code, name, promotion_type, status, starts_at, ends_at, created_at, updated_at, archived_at |
-| `sale_receipts` | id, order_id, receipt_number, receipt_type, status, html_snapshot, text_snapshot, pdf_media_id, issued_at, created_at |
+| `sale_receipts` | id, order_id, receipt_number, receipt_type, status, html_snapshot, text_snapshot, pdf_media_id, issued_at, created_at, language, operator_iam_user_id, snapshot_json |
 | `sale_refunds` | id, order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, created_at, processed_at, updated_at, version |
 | `sale_return_lines` | id, return_id, order_line_id, quantity, reason, restock, created_at |
-| `sale_returns` | id, order_id, return_number, status, reason, created_by_iam_user_id, created_at, completed_at, updated_at, version |
+| `sale_returns` | id, order_id, return_number, status, reason, created_by_iam_user_id, created_at, completed_at, updated_at, version, idempotency_key, request_hash |
 | `sale_settings` | id, site_id, setting_key, setting_value_json, updated_at |
 | `sale_state_transitions` | id, site_id, aggregate_type, aggregate_id, from_status, to_status, correlation_id, changed_by_iam_user_id, reason, metadata_json, created_at |
 | `sale_stock_locations` | id, site_id, code, name, location_type, status, created_at, updated_at, archived_at |
 | `sale_stock_movements` | id, inventory_item_id, movement_type, quantity, reference_type, reference_id, reason, created_by_iam_user_id, created_at |
 | `sale_stock_reservations` | id, inventory_item_id, cart_id, order_id, reservation_key, quantity, status, expires_at, created_at, released_at, consumed_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 

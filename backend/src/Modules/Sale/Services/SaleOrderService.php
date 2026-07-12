@@ -49,4 +49,29 @@ final class SaleOrderService
     {
         return ($this->states ?? new SaleStateMachineService($this->orders->rawDatabase()))->transition('order', $orderId, 'completed', $iamUserId, $reason);
     }
+
+    /** @return array<string,mixed> */
+    public function reconcileCustomer(int $orderId, ?int $companyId, ?int $contactId, ?int $iamUserId = null, ?string $reason = null): array
+    {
+        if (($companyId ?? 0) < 1 && ($contactId ?? 0) < 1) {
+            throw new \App\Modules\Sale\Exceptions\SaleValidationException('sale.customer_reconciliation_target_required');
+        }
+        $db = $this->orders->rawDatabase();
+        return $db->transaction(function () use ($orderId, $companyId, $contactId, $iamUserId, $reason, $db): array {
+            $order = $this->orders->requireOrder($orderId);
+            $snapshotBefore = (string) $order['customer_snapshot_json'];
+            $correlationId = SaleStateMachineService::correlationId();
+            $db->run('UPDATE sale_orders SET customer_company_id=?, customer_contact_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [$companyId, $contactId, $orderId]);
+            $db->run(
+                'INSERT INTO sale_order_customer_reconciliations(order_id,previous_company_id,previous_contact_id,company_id,contact_id,reason,correlation_id,linked_by_iam_user_id)
+                 VALUES(?,?,?,?,?,?,?,?)',
+                [$orderId, $order['customer_company_id'] ?? null, $order['customer_contact_id'] ?? null, $companyId, $contactId, $reason, $correlationId, $iamUserId]
+            );
+            $updated = $this->orders->requireOrder($orderId);
+            if (!hash_equals($snapshotBefore, (string) $updated['customer_snapshot_json'])) {
+                throw new \App\Modules\Sale\Exceptions\SaleValidationException('sale.customer_snapshot_changed');
+            }
+            return $updated + ['reconciliation_correlation_id' => $correlationId];
+        });
+    }
 }

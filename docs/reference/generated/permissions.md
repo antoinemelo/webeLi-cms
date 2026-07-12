@@ -127,6 +127,7 @@ generated: true
 | `sale.read` |
 | `sale.refunds.manage` |
 | `sale.reports.read` |
+| `sale.returns.manage` |
 | `sale.settings.manage` |
 | `sale.status.admin` |
 | `sale.stock.manage` |

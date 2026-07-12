@@ -463,6 +463,8 @@ CREATE TABLE IF NOT EXISTS sale_payment_transactions (
     provider_payload_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(provider_payload_json)),
     error_code TEXT,
     error_message TEXT,
+    correlation_id TEXT,
+    created_by_iam_user_id INTEGER,
     processed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE SET NULL ON UPDATE CASCADE,
@@ -690,6 +692,9 @@ CREATE TABLE IF NOT EXISTS sale_receipts (
     html_snapshot TEXT NOT NULL DEFAULT '',
     text_snapshot TEXT NOT NULL DEFAULT '',
     pdf_media_id INTEGER,
+    language TEXT NOT NULL DEFAULT 'fr' CHECK(language IN ('fr','en')),
+    operator_iam_user_id INTEGER,
+    snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(snapshot_json)),
     issued_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(order_id, receipt_number),
@@ -708,6 +713,8 @@ CREATE TABLE IF NOT EXISTS sale_returns (
     return_number TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN ('requested','approved','received','rejected','completed','cancelled')),
     reason TEXT,
+    idempotency_key TEXT,
+    request_hash TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     completed_at TEXT,
@@ -722,6 +729,9 @@ CREATE TABLE IF NOT EXISTS sale_returns (
 
 CREATE INDEX IF NOT EXISTS idx_sale_returns_order
     ON sale_returns(order_id, status, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_returns_idempotency
+    ON sale_returns(order_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS sale_return_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -767,6 +777,56 @@ CREATE INDEX IF NOT EXISTS idx_sale_refunds_order
     ON sale_refunds(order_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_refunds_payment_transaction
     ON sale_refunds(payment_transaction_id);
+
+CREATE TABLE IF NOT EXISTS sale_financial_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    payment_transaction_id INTEGER,
+    amount_delta_minor INTEGER NOT NULL CHECK(amount_delta_minor <> 0),
+    currency TEXT NOT NULL CHECK(length(currency)=3 AND currency=upper(currency)),
+    reason TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    correlation_id TEXT NOT NULL,
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(order_id, idempotency_key),
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(payment_transaction_id) REFERENCES sale_payment_transactions(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(trim(reason) <> ''),
+    CHECK(trim(idempotency_key) <> ''),
+    CHECK(trim(correlation_id) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_financial_corrections_order
+    ON sale_financial_corrections(order_id, created_at, id);
+
+CREATE TABLE IF NOT EXISTS sale_order_customer_reconciliations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    previous_company_id INTEGER,
+    previous_contact_id INTEGER,
+    company_id INTEGER,
+    contact_id INTEGER,
+    reason TEXT,
+    correlation_id TEXT NOT NULL,
+    linked_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(company_id IS NOT NULL OR contact_id IS NOT NULL),
+    CHECK(trim(correlation_id) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_order_customer_reconciliations_order
+    ON sale_order_customer_reconciliations(order_id, created_at, id);
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_payment_transactions_no_delete
+BEFORE DELETE ON sale_payment_transactions BEGIN SELECT RAISE(ABORT, 'sale financial transactions are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_payment_allocations_no_delete
+BEFORE DELETE ON sale_payment_allocations BEGIN SELECT RAISE(ABORT, 'sale payment allocations are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_refunds_no_delete
+BEFORE DELETE ON sale_refunds BEGIN SELECT RAISE(ABORT, 'sale refunds are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_financial_corrections_no_delete
+BEFORE DELETE ON sale_financial_corrections BEGIN SELECT RAISE(ABORT, 'sale financial corrections are immutable'); END;
 
 CREATE TABLE IF NOT EXISTS sale_fulfillments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -995,3 +1055,14 @@ INSERT OR IGNORE INTO sale_channels (
     (1, 'admin-manual', 'Saisie admin manuelle', 'admin', 'active', 'CHF', 'fr', 'tax_included', 1, 0),
     (1, 'pos-main', 'Caisse principale', 'pos', 'draft', 'CHF', 'fr', 'tax_included', 1, 0),
     (1, 'web-main', 'Boutique web principale', 'ecommerce', 'active', 'CHF', 'fr', 'tax_included', 1, 1);
+
+INSERT OR IGNORE INTO sale_payment_methods(site_id, channel_id, code, name, provider_key, method_type, status)
+SELECT c.site_id, c.id, m.code, m.name, m.provider_key, m.method_type, 'active'
+FROM sale_channels c
+CROSS JOIN (
+    SELECT 'cash' AS code, 'Espèces' AS name, 'cash' AS provider_key, 'cash' AS method_type
+    UNION ALL SELECT 'bank-transfer', 'Virement', 'bank_transfer', 'bank_transfer'
+    UNION ALL SELECT 'manual-payment', 'Paiement manuel', 'manual_card', 'manual_card'
+    UNION ALL SELECT 'external-terminal', 'Terminal externe', 'external_terminal', 'external_terminal'
+) m
+WHERE c.channel_type IN ('admin','pos');
