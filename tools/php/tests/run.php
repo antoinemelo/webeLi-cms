@@ -37,6 +37,7 @@ $tests = [
     'unit/sale_domain_workflows_test.php',
     'unit/sale_admin_api_controller_test.php',
     'unit/sale_public_api_handler_test.php',
+    'unit/outbox_service_test.php',
     'unit/docs_access_test.php',
     'unit/public_api_discovery_test.php',
     'integration/auth_permissions_test.php',

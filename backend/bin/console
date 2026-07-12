@@ -66,6 +66,7 @@ $syncModules = static function () use ($services): void {
     $services->modules()->syncManifest();
     $services->modules()->applyMigrations();
     $services->modules()->syncContentTypes();
+    $services->moduleLifecycle()->syncAllDeclarations();
 };
 
 switch ($cmd) {
@@ -187,4 +188,3 @@ switch ($cmd) {
         echo $commandList . "\n";
         exit(2);
 }
-

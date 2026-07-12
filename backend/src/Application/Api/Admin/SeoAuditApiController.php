@@ -145,7 +145,7 @@ final class SeoAuditApiController
              WHERE sd.site_id = :site_id AND sd.language_code = :language_code AND LOWER(COALESCE(sm.meta_robots, 'index,follow')) LIKE '%noindex%'",
             ['site_id' => $siteId, 'language_code' => $languageCode]
         );
-        $checks[] = $this->check('search.noindex_filtered_at_runtime', 'medium', true, count($noindexSearchDocs), 'Documents noindex conservés dans la projection atomique search_documents et filtrés à la lecture', $noindexSearchDocs, 'Conserver le filtrage via seo_metadata.meta_robots dans les requêtes de recherche publiques.');
+        $checks[] = $this->check('search.noindex_absent_from_internal_index', 'medium', $noindexSearchDocs === [], count($noindexSearchDocs), 'Documents noindex présents dans l’index interne search_documents', $noindexSearchDocs, 'Reconstruire les projections publiques afin de retirer ces contenus de l’index de recherche.');
 
         $domainRows = $this->db->all("SELECT host, scheme, is_primary, enforce_https, canonical_host_strategy FROM site_domains WHERE site_id = :site_id AND is_active = 1 ORDER BY is_primary DESC, id", ['site_id' => $siteId]);
         $primaryDomain = $domainRows[0] ?? null;

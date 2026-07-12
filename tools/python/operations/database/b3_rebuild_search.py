@@ -4,8 +4,8 @@
 Le moteur de recherche est volontairement reconstruit via le projecteur public
 officiel (`projections:rebuild`) afin de garder une seule source de vérité pour
 les routes, snapshots, SEO et `search_documents`. Le rebuild public purge et
-réécrit les documents de recherche depuis les révisions publiées ; les résultats
-publics restent ensuite filtrés par site, langue, type, taxonomie et meta robots.
+réécrit les documents de recherche indexables depuis les révisions publiées ;
+les résultats publics restent ensuite filtrés par site, langue, type et taxonomie.
 """
 from __future__ import annotations
 

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+from tools.python.lib.database_inventory import database_specs
+from tools.python.lib.deploylib import sha256_file
 from tools.python.validation.checks import ROOT
 from tools.python.validation.model import ValidationReport
 
@@ -57,12 +60,58 @@ def validate(mode: str = "slow") -> ValidationReport:
             # manifest. Since module-aware backups it returns (manifest, entries)
             # so callers can restore additional database files safely. Keep this
             # validator compatible with both contracts.
-            manifest = validated[0] if isinstance(validated, tuple) else validated
+            if isinstance(validated, tuple):
+                manifest, entries = validated
+            else:
+                manifest = validated
+                entries = {}
             report.checked(2)
             if int(manifest.get("schema_version", 0)) < 2:
                 report.add("BKP-205", "Version de manifeste de sauvegarde obsolète", details={"schema_version": manifest.get("schema_version")})
             if not manifest.get("technical_version"):
                 report.add("BKP-206", "Version technique absente du manifeste de sauvegarde")
+            _check_expected_inventory(report, manifest)
+            _check_extracted_hashes(report, manifest, entries, extract)
+            _simulate_restore(report, entries, extract, Path(tmp) / "restored")
         except Exception as exc:
             report.add("BKP-207", "Le validateur natif de restauration rejette la sauvegarde produite", error=str(exc))
     return report
+
+
+def _check_expected_inventory(report: ValidationReport, manifest: dict) -> None:
+    expected = {spec.key for spec in database_specs(root=ROOT, backup=True)}
+    actual = set((manifest.get("databases") or {}).keys())
+    report.checked()
+    missing = sorted(expected - actual)
+    if missing:
+        report.add("BKP-208", "La sauvegarde ne couvre pas toutes les bases attendues", details={"missing": missing, "expected": sorted(expected)})
+
+
+def _check_extracted_hashes(report: ValidationReport, manifest: dict, entries: dict[str, dict], extract: Path) -> None:
+    databases = manifest.get("databases") or {}
+    for key, meta in databases.items():
+        report.checked()
+        entry = entries.get(key) or {"member": f"database/{meta.get('name', key)}"}
+        path = extract / str(entry["member"])
+        expected = str(meta.get("sha256", ""))
+        actual = sha256_file(path) if path.is_file() else ""
+        if not expected or expected != actual:
+            report.add("BKP-209", "Hash restauré divergent du manifeste", details={"key": key, "expected": expected, "actual": actual})
+
+
+def _simulate_restore(report: ValidationReport, entries: dict[str, dict], extract: Path, target: Path) -> None:
+    for key, entry in entries.items():
+        report.checked()
+        destination = target / str(entry["path"])
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(extract / str(entry["member"]), destination)
+        try:
+            import sqlite3
+
+            with sqlite3.connect(destination) as connection:
+                integrity = str(connection.execute("PRAGMA integrity_check").fetchone()[0])
+        except Exception as exc:
+            report.add("BKP-210", "Base restaurée illisible dans le round-trip simulé", details={"key": key, "error": str(exc)})
+            continue
+        if integrity != "ok":
+            report.add("BKP-211", "Base restaurée non intègre dans le round-trip simulé", details={"key": key, "integrity_check": integrity})

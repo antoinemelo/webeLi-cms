@@ -83,10 +83,24 @@ def ensure_databases_exist() -> None:
 def run_seed_file(connection: sqlite3.Connection, sql_path: Path) -> None:
     if not sql_path.exists():
         raise FileNotFoundError(f"Seed SQL introuvable: {sql_path}")
-    sql = sql_path.read_text(encoding="utf-8").strip()
+    sql = normalize_seed_sql(sql_path, sql_path.read_text(encoding="utf-8")).strip()
     if sql:
         connection.executescript(sql)
         connection.commit()
+
+
+def normalize_seed_sql(sql_path: Path, sql: str) -> str:
+    """Ignore les anciennes traces outbox incompatibles avec le schéma M0."""
+    if sql_path != CORE_DEFAULT_SEED:
+        return sql
+    lines = []
+    for line in sql.splitlines():
+        if 'INSERT INTO "outbox_events"' in line:
+            continue
+        if 'INSERT INTO "sqlite_sequence"' in line and "'outbox_events'" in line:
+            continue
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def rebuild_seed_product_content_projections() -> None:
@@ -1027,29 +1041,26 @@ def rebuild_seed_public_projections(cur: sqlite3.Cursor) -> None:
             """,
             (site_id, "content_entry", entry_id, lang, meta_title, meta_description, meta_robots, path, meta_title, meta_description, meta_title, meta_description, seo.get("json_ld"), score, rev_id, checksum, ts),
         )
-        # Contrat de projection critique: search_documents garde une ligne par
-        # publication, y compris pour les pages noindex. Le filtrage public de
-        # recherche se fait a la lecture via seo_metadata.meta_robots, afin que
-        # routes + snapshots + SEO + search_documents restent atomiquement
-        # vérifiables et reconstructibles depuis la même révision publiée.
-        cur.execute(
-            """
-            INSERT INTO search_documents(
-                site_id, resource_type, resource_id, language_code, path,
-                title, summary, search_text, source_published_revision_id,
-                source_revision_checksum_sha256, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
-                path = excluded.path,
-                title = excluded.title,
-                summary = excluded.summary,
-                search_text = excluded.search_text,
-                source_published_revision_id = excluded.source_published_revision_id,
-                source_revision_checksum_sha256 = excluded.source_revision_checksum_sha256,
-                updated_at = excluded.updated_at
-            """,
-            (site_id, "content_entry", entry_id, lang, path, title, summary, " ".join((title, summary, blocks_text)).strip(), rev_id, checksum, ts),
-        )
+        if "noindex" not in meta_robots.lower():
+            cur.execute(
+                """
+                INSERT INTO search_documents(
+                    site_id, resource_type, resource_id, language_code, path,
+                    title, summary, search_text, source_published_revision_id,
+                    source_revision_checksum_sha256, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
+                    path=excluded.path,title=excluded.title,summary=excluded.summary,
+                    search_text=excluded.search_text,source_published_revision_id=excluded.source_published_revision_id,
+                    source_revision_checksum_sha256=excluded.source_revision_checksum_sha256,updated_at=excluded.updated_at
+                """,
+                (site_id, "content_entry", entry_id, lang, path, title, summary, " ".join((title, summary, blocks_text)).strip(), rev_id, checksum, ts),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM search_documents WHERE site_id=? AND resource_type='content_entry' AND resource_id=? AND language_code=?",
+                (site_id, entry_id, lang),
+            )
 
 
 
@@ -1116,21 +1127,24 @@ def rebuild_seed_taxonomy_projections(cur: sqlite3.Cursor) -> None:
             """,
             (site_id, 'taxonomy_term', term_id, lang, title, summary, robots, path, title, summary, title, summary, seo_score(title, summary, str(slug or '')), ts),
         )
-        cur.execute(
-            """
-            INSERT INTO search_documents(
-                site_id, resource_type, resource_id, language_code, path,
-                title, summary, search_text, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
-                path=excluded.path,
-                title=excluded.title,
-                summary=excluded.summary,
-                search_text=excluded.search_text,
-                updated_at=excluded.updated_at
-            """,
-            (site_id, 'taxonomy_term', term_id, lang, path, str(name or title), summary, ' '.join([str(name or ''), summary, str(taxonomy_key or '')]).strip(), ts),
-        )
+        if "noindex" not in robots.lower():
+            cur.execute(
+                """
+                INSERT INTO search_documents(
+                    site_id, resource_type, resource_id, language_code, path,
+                    title, summary, search_text, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
+                    path=excluded.path,title=excluded.title,summary=excluded.summary,
+                    search_text=excluded.search_text,updated_at=excluded.updated_at
+                """,
+                (site_id, 'taxonomy_term', term_id, lang, path, str(name or title), summary, ' '.join([str(name or ''), summary, str(taxonomy_key or '')]).strip(), ts),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM search_documents WHERE site_id=? AND resource_type='taxonomy_term' AND resource_id=? AND language_code=?",
+                (site_id, term_id, lang),
+            )
 
 
 def _seed_text(value: object) -> str:
@@ -1572,6 +1586,32 @@ def rebuild_public_projections(required: bool = True) -> int:
         "corrigez la verite editoriale ou relancez explicitement avec --skip-projections.",
         file=sys.stderr,
     )
+    return proc.returncode
+
+
+def sync_php_modules(required: bool = True) -> int:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
+        message = f"{php_error or 'backend/bin/console introuvable'}: les modules PHP ne sont pas synchronises."
+        if required:
+            print(f"ERREUR: {message}", file=sys.stderr)
+            return 2
+        print(f"AVERTISSEMENT: {message}")
+        return 0
+
+    proc = subprocess.run([php, str(CONSOLE), "modules:sync"], cwd=str(BASE), env=cms_subprocess_env(), text=True, capture_output=True)
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr, end="")
+    if proc.returncode == 0:
+        return 0
+    print("ERREUR: modules PHP non synchronises.", file=sys.stderr)
     return proc.returncode
 
 
@@ -2072,6 +2112,10 @@ def main() -> int:
         return code
 
     if not args.skip_projections:
+        code = sync_php_modules(required=not args.allow_missing_php)
+        if code != 0:
+            return code
+
         code = rebuild_public_projections(required=not args.allow_missing_php)
         if code != 0:
             return code

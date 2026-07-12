@@ -125,7 +125,7 @@ def _check_core_projections(report: ValidationReport, db: sqlite3.Connection) ->
         LIMIT 20
     """).fetchall()
     if noindex_rows:
-        report.add("PRJ-207", "Des contenus noindex restent projetés dans l’index interne; le filtrage à la lecture doit rester actif", severity="warning", details={"rows": [dict(row) for row in noindex_rows]})
+        report.add("PRJ-207", "Des contenus noindex restent projetés dans l’index interne search_documents", details={"rows": [dict(row) for row in noindex_rows]})
 
     report.checked()
     bad_json = []

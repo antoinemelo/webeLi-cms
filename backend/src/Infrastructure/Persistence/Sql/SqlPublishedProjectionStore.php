@@ -95,23 +95,21 @@ final class SqlPublishedProjectionStore implements PublishedProjectionStore
 
             $this->insertSeoAuditIssues($projection, $now);
 
-            // Le contrat de publication exige une ligne search_documents pour
-            // chaque publication, meme si la page est noindex. L'exclusion des
-            // resultats publics reste une decision de lecture basee sur
-            // seo_metadata.meta_robots, pas une projection critique manquante.
-            $this->db->run('INSERT INTO search_documents(site_id, resource_type, resource_id, language_code, path, title, summary, search_text, source_published_revision_id, source_revision_checksum_sha256, updated_at) VALUES(:site_id, :resource_type, :resource_id, :language_code, :path, :title, :summary, :search_text, :source_published_revision_id, :source_revision_checksum_sha256, :updated_at)', [
-                'site_id' => $projection->siteId,
-                'resource_type' => $projection->resourceType,
-                'resource_id' => $projection->resourceId,
-                'language_code' => $projection->languageCode,
-                'path' => $projection->path,
-                'title' => $projection->title() !== '' ? $projection->title() : $fallbackTitle,
-                'summary' => (string) $projection->seo->metaDescription,
-                'search_text' => $this->searchText($projection),
-                'source_published_revision_id' => $projection->sourcePublishedRevisionId,
-                'source_revision_checksum_sha256' => $projection->sourceRevisionChecksumSha256,
-                'updated_at' => $now,
-            ]);
+            if ($projection->seo->isIndexable()) {
+                $this->db->run('INSERT INTO search_documents(site_id, resource_type, resource_id, language_code, path, title, summary, search_text, source_published_revision_id, source_revision_checksum_sha256, updated_at) VALUES(:site_id, :resource_type, :resource_id, :language_code, :path, :title, :summary, :search_text, :source_published_revision_id, :source_revision_checksum_sha256, :updated_at)', [
+                    'site_id' => $projection->siteId,
+                    'resource_type' => $projection->resourceType,
+                    'resource_id' => $projection->resourceId,
+                    'language_code' => $projection->languageCode,
+                    'path' => $projection->path,
+                    'title' => $projection->title() !== '' ? $projection->title() : $fallbackTitle,
+                    'summary' => (string) $projection->seo->metaDescription,
+                    'search_text' => $this->searchText($projection),
+                    'source_published_revision_id' => $projection->sourcePublishedRevisionId,
+                    'source_revision_checksum_sha256' => $projection->sourceRevisionChecksumSha256,
+                    'updated_at' => $now,
+                ]);
+            }
 
             $this->db->run('INSERT INTO public_content_snapshots(site_id, language_code, resource_type, resource_id, route_path, title, slug, blocks_json, block_count, document_json, seo_json, source_published_revision_id, source_revision_checksum_sha256, published_at, projected_at) VALUES(:site_id, :language_code, :resource_type, :resource_id, :route_path, :title, :slug, :blocks_json, :block_count, :document_json, :seo_json, :source_published_revision_id, :source_revision_checksum_sha256, :published_at, :projected_at)', [
                 'site_id' => $projection->siteId,
@@ -217,7 +215,6 @@ final class SqlPublishedProjectionStore implements PublishedProjectionStore
         $checks = [
             'routes' => "SELECT COUNT(*) AS c FROM routes WHERE site_id = :site_id AND language_code = :language_code AND resource_type = :resource_type AND resource_id = :resource_id AND full_path = :path AND status = 'active' AND is_primary = 1 AND is_canonical = 1 AND source_published_revision_id = :revision_id AND source_revision_checksum_sha256 = :checksum AND :path = :path",
             'seo_metadata' => "SELECT COUNT(*) AS c FROM seo_metadata WHERE site_id = :site_id AND language_code = :language_code AND resource_type = :resource_type AND resource_id = :resource_id AND source_published_revision_id = :revision_id AND source_revision_checksum_sha256 = :checksum AND :path = :path",
-            'search_documents' => "SELECT COUNT(*) AS c FROM search_documents WHERE site_id = :site_id AND language_code = :language_code AND resource_type = :resource_type AND resource_id = :resource_id AND path = :path AND source_published_revision_id = :revision_id AND source_revision_checksum_sha256 = :checksum AND :path = :path",
             'public_content_snapshots' => "SELECT COUNT(*) AS c FROM public_content_snapshots WHERE site_id = :site_id AND language_code = :language_code AND resource_type = :resource_type AND resource_id = :resource_id AND route_path = :path AND source_published_revision_id = :revision_id AND source_revision_checksum_sha256 = :checksum AND :path = :path",
         ];
         foreach ($checks as $table => $sql) {
@@ -226,6 +223,16 @@ final class SqlPublishedProjectionStore implements PublishedProjectionStore
             if ($count !== 1) {
                 $errors[] = sprintf('%s: attendu 1 ligne critique cohérente, obtenu %d.', $table, $count);
             }
+        }
+
+        $searchRow = $this->db->one(
+            "SELECT COUNT(*) AS c FROM search_documents WHERE site_id = :site_id AND language_code = :language_code AND resource_type = :resource_type AND resource_id = :resource_id AND path = :path AND source_published_revision_id = :revision_id AND source_revision_checksum_sha256 = :checksum AND :path = :path",
+            $params
+        );
+        $expectedSearchCount = $projection->seo->isIndexable() ? 1 : 0;
+        $searchCount = (int) ($searchRow['c'] ?? 0);
+        if ($searchCount !== $expectedSearchCount) {
+            $errors[] = sprintf('search_documents: attendu %d ligne cohérente selon meta_robots, obtenu %d.', $expectedSearchCount, $searchCount);
         }
 
         $activeShadow = $this->db->one(
@@ -448,4 +455,3 @@ final class SqlPublishedProjectionStore implements PublishedProjectionStore
         return implode(' ', array_values($terms));
     }
 }
-

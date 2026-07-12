@@ -25,18 +25,30 @@ final class WebhookDispatcher
             try {
                 $topic = (string) $event['topic'];
                 $payload = json_decode((string) $event['payload_json'], true) ?: [];
-                $siteId = isset($payload['site_id']) ? (int) $payload['site_id'] : null;
+                $siteId = isset($event['site_id']) ? (int) $event['site_id'] : (isset($payload['site_id']) ? (int) $payload['site_id'] : null);
                 foreach ($this->webhooks->matchingEndpoints($topic, $siteId) as $endpoint) {
                     $deliveryId = $this->deliveryId($eventId, (int) $endpoint['id']);
-                    $this->webhooks->createDelivery((int) $endpoint['id'], $eventId, $topic, $this->buildPayload($eventId, $topic, $payload, $deliveryId), $deliveryId);
+                    $this->webhooks->createDelivery((int) $endpoint['id'], $eventId, $topic, $this->buildPayload($event, $payload, $deliveryId), $deliveryId);
                     $scheduled++;
                 }
                 $this->outbox->markProcessed($eventId);
-                $this->logger->info('webhook.outbox_scheduled', ['event_id' => $eventId, 'topic' => $topic, 'deliveries' => $scheduled]);
+                $this->logger->info('webhook.outbox_scheduled', [
+                    'event_row_id' => $eventId,
+                    'event_id' => $event['event_id'] ?? null,
+                    'correlation_id' => $event['correlation_id'] ?? null,
+                    'topic' => $topic,
+                    'deliveries' => $scheduled,
+                ]);
             } catch (\Throwable $e) {
-                $attempts = ((int) ($event['attempts'] ?? 0)) + 1;
+                $attempts = (int) ($event['attempts'] ?? 1);
                 $this->outbox->markFailed($eventId, $e->getMessage(), $attempts);
-                $this->logger->error('webhook.outbox_failed', ['event_id' => $eventId, 'attempts' => $attempts, 'message' => $e->getMessage()]);
+                $this->logger->error('webhook.outbox_failed', [
+                    'event_row_id' => $eventId,
+                    'event_id' => $event['event_id'] ?? null,
+                    'correlation_id' => $event['correlation_id'] ?? null,
+                    'attempts' => $attempts,
+                    'message' => $e->getMessage(),
+                ]);
             }
         }
         return $scheduled;
@@ -90,13 +102,18 @@ final class WebhookDispatcher
         return 'wh_' . $eventId . '_' . $webhookId . '_' . bin2hex(random_bytes(6));
     }
 
-    private function buildPayload(int $eventId, string $topic, array $data, string $deliveryId): array
+    /** @param array<string,mixed> $event @param array<string,mixed> $data @return array<string,mixed> */
+    private function buildPayload(array $event, array $data, string $deliveryId): array
     {
         return [
             'id' => $deliveryId,
-            'event_id' => $eventId,
-            'event' => $topic,
-            'occurred_at' => now_utc(),
+            'event_id' => (int) $event['id'],
+            'event_uuid' => $event['event_id'] ?? null,
+            'event' => (string) $event['topic'],
+            'schema_version' => (int) ($event['schema_version'] ?? 1),
+            'occurred_at' => $event['occurred_at'] ?? now_utc(),
+            'correlation_id' => $event['correlation_id'] ?? null,
+            'causation_id' => $event['causation_id'] ?? null,
             'data' => $data,
         ];
     }

@@ -652,9 +652,33 @@ final class SecurityAdminApiController
 
     private function createSyntheticOutboxEvent(string $topic, array $payload): int
     {
+        $now = now_utc();
+        $siteId = isset($payload['data']['site_id']) ? (int) $payload['data']['site_id'] : null;
         $this->coreDb->run(
-            "INSERT INTO outbox_events(topic, payload_json, status, attempts, created_at, available_at, processed_at) VALUES(:topic, :payload, 'processed', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-            ['topic' => $topic, 'payload' => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]
+            "INSERT INTO outbox_events(
+                event_id, event_type, schema_version, occurred_at, site_id, correlation_id,
+                aggregate_type, aggregate_id, topic, payload_json, metadata_json, status, attempts,
+                max_attempts, created_at, available_at, processed_at, updated_at
+            ) VALUES(
+                :event_id, :event_type, 1, :occurred_at, :site_id, :correlation_id,
+                'webhook_endpoint', :aggregate_id, :topic, :payload, :metadata, 'processed', 1,
+                1, :created_at, :available_at, :processed_at, :updated_at
+            )",
+            [
+                'event_id' => 'evt_ping_' . bin2hex(random_bytes(16)),
+                'event_type' => $topic,
+                'occurred_at' => $now,
+                'site_id' => $siteId && $siteId > 0 ? $siteId : null,
+                'correlation_id' => Response::requestId(),
+                'aggregate_id' => isset($payload['data']['webhook_id']) ? (string) $payload['data']['webhook_id'] : null,
+                'topic' => $topic,
+                'payload' => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'metadata' => json_encode(['producer' => 'admin.webhook.ping'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                'created_at' => $now,
+                'available_at' => $now,
+                'processed_at' => $now,
+                'updated_at' => $now,
+            ]
         );
         return $this->coreDb->lastInsertId();
     }
