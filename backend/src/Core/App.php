@@ -60,6 +60,7 @@ use App\Application\Frontend\BusinessUnsubscribeController;
 use App\Application\Frontend\PublicApiDocsController;
 use App\Application\Frontend\RouteResolutionController;
 use App\Application\Frontend\PublicSaleCheckoutController;
+use App\Application\Frontend\PublicStorefrontCartController;
 use App\Application\Frontend\PublicCustomerAccountController;
 use App\Security\AdminApiRequestGuard;
 use App\Security\PublicApiCorsGuard;
@@ -493,6 +494,7 @@ final class App
             IamAdminApiController::class => new IamAdminApiController($this->request, $services->auth(), $services->authorization(), $services->iamAdmin()),
             PublicApiDocsController::class => new PublicApiDocsController(),
             PublicSaleCheckoutController::class => new PublicSaleCheckoutController($this->request),
+            PublicStorefrontCartController::class => new PublicStorefrontCartController(),
             PublicCustomerAccountController::class => new PublicCustomerAccountController(),
             BusinessMemoShareController::class => new BusinessMemoShareController($services->businessMemos(), $services->logger()),
             BusinessUnsubscribeController::class => new BusinessUnsubscribeController($services->businessMailingRepository(), $services->logger()),

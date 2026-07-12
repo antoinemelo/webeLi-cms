@@ -78,6 +78,7 @@ final class SaleGuestCheckoutService
         $saved = $this->carts->saveGuestCheckout(
             $cartId, $identity, $billing, $shipping, $shippingMethod, $paymentMethod,
             $terms, $marketing, $step, $step === 'validated'
+            ,isset($payload['expected_version'])?(int)$payload['expected_version']:null
         );
         $this->carts->recalculateTotals($cartId, (int) ($shippingMethod['amount_minor'] ?? 0));
         return ['cart' => $this->carts->cartWithLines((int) $saved['id']), 'price_changed' => $priceChanged];

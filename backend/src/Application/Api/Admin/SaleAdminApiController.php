@@ -330,7 +330,7 @@ final class SaleAdminApiController
         [$site, $languageCode] = $this->authorize('sale.orders.manage');
         try {
             $payload = $this->payload();
-            $cart = $this->cartService->createCart((int) $site['id'], (int) ($payload['channel_id'] ?? 0), $payload + ['iam_user_id' => $this->actorId()]);
+            $cart = $this->cartService->createCart((int) $site['id'], (int) ($payload['channel_id'] ?? 0), $payload + ['iam_user_id' => $this->actorId(),'cart_kind'=>'admin']);
             return $this->ok(['cart' => $cart], 'admin.sale.carts.show.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -356,9 +356,10 @@ final class SaleAdminApiController
             $payload = $this->payload();
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $result = $this->cartService->addLine($this->id($id), (int) ($payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
+            $result = $this->cartService->addLine($this->id($id), (int) ($payload['sellable_id'] ?? $payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
                 'idempotency_key' => $this->idempotencyKey($payload),
                 'iam_user_id' => $this->actorId(),
+                'expected_version'=>$payload['expected_version']??null,'options'=>$payload['options']??[],'personalization'=>$payload['personalization']??[],
             ]);
             return $this->ok($result, 'admin.sale.carts.lines.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
@@ -372,7 +373,8 @@ final class SaleAdminApiController
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $line = $this->cartService->updateLineQuantity($this->id($id), $this->id($line_id), (int) ($this->payload()['quantity'] ?? 1));
+            $payload=$this->payload();
+            $line = $this->cartService->updateLineQuantity($this->id($id), $this->id($line_id), (int) ($payload['quantity'] ?? 1),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->ok(['line' => $line, 'cart' => $this->carts->cartWithLines($this->id($id))], 'admin.sale.carts.lines.update.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -385,7 +387,7 @@ final class SaleAdminApiController
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $this->cartService->deleteLine($this->id($id), $this->id($line_id));
+            $payload=$this->payload(); $this->cartService->deleteLine($this->id($id), $this->id($line_id),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->ok(['deleted' => true, 'cart' => $this->carts->cartWithLines($this->id($id))], 'admin.sale.carts.lines.delete.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -398,11 +400,21 @@ final class SaleAdminApiController
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $totals = $this->carts->recalculateTotals($this->id($id));
-            return $this->ok(['totals' => $totals, 'cart' => $this->carts->cartWithLines($this->id($id))], 'admin.sale.carts.recalculate.v1', $site, $languageCode);
+            $payload=$this->payload(); $recalculated=$this->cartService->recalculate($this->id($id),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
+            return $this->ok(['cart'=>$recalculated], 'admin.sale.carts.recalculate.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function mergeCart(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.orders.manage');
+        try {
+            $payload=$this->payload(); $source=$this->carts->requireCart($this->id($id)); $this->ensureSite((int)$site['id'],(int)$source['site_id']);
+            $cart=$this->cartService->mergeGuestIntoAccount($this->id($id),$this->id($payload['target_cart_id']??0),$this->id($payload['customer_ref_id']??0),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
+            return $this->ok(['cart'=>$cart,'merged_cart_id'=>$this->id($id)],'admin.sale.carts.merge.v1',$site,$languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function checkoutCart(string|int $id): Response
@@ -765,7 +777,7 @@ final class SaleAdminApiController
         try {
             $payload = $this->payload();
             $channelId = (int) ($payload['channel_id'] ?? $this->defaultPosChannelId((int) $site['id']));
-            $cart = $this->cartService->createCart((int) $site['id'], $channelId, $payload + ['iam_user_id' => $this->actorId()]);
+            $cart = $this->cartService->createCart((int) $site['id'], $channelId, $payload + ['iam_user_id' => $this->actorId(),'cart_kind'=>'pos','register_session_id'=>$payload['cash_session_id']??$payload['register_session_id']??null]);
             return $this->ok(['cart' => $cart], 'admin.sale.pos.carts.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -779,9 +791,10 @@ final class SaleAdminApiController
             $payload = $this->payload();
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $result = $this->cartService->addLine($this->id($id), (int) ($payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
+            $result = $this->cartService->addLine($this->id($id), (int) ($payload['sellable_id'] ?? $payload['business_variant_id'] ?? $payload['variant_id'] ?? 0), (int) ($payload['quantity'] ?? 1), [
                 'idempotency_key' => $this->idempotencyKey($payload),
                 'iam_user_id' => $this->actorId(),
+                'expected_version'=>$payload['expected_version']??null,
             ]);
             return $this->ok($result, 'admin.sale.pos.carts.lines.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
@@ -795,7 +808,7 @@ final class SaleAdminApiController
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $line = $this->cartService->updateLineQuantity($this->id($id), $this->id($line_id), (int) ($this->payload()['quantity'] ?? 1));
+            $payload=$this->payload(); $line = $this->cartService->updateLineQuantity($this->id($id), $this->id($line_id), (int) ($payload['quantity'] ?? 1),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->ok(['line' => $line, 'cart' => $this->carts->cartWithLines($this->id($id))], 'admin.sale.pos.carts.lines.update.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -808,7 +821,7 @@ final class SaleAdminApiController
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
-            $this->cartService->deleteLine($this->id($id), $this->id($line_id));
+            $payload=$this->payload(); $this->cartService->deleteLine($this->id($id), $this->id($line_id),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->ok(['deleted' => true, 'cart' => $this->carts->cartWithLines($this->id($id))], 'admin.sale.pos.carts.lines.delete.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -1485,6 +1498,9 @@ final class SaleAdminApiController
 
     private function domainError(Throwable $e): Response
     {
+        if ($e instanceof SaleValidationException && $e->getMessage() === 'sale.cart_version_conflict') {
+            return Response::error(ErrorCode::REVISION_CONFLICT, 'Le panier a été modifié par une autre requête.', 409, ['sale' => [$e->getMessage()]]);
+        }
         if ($e instanceof SaleValidationException || $e instanceof SaleInventoryException || $e instanceof SalePaymentException || $e instanceof SaleBusinessException || $e instanceof InvalidArgumentException) {
             return Response::validation(['sale' => [$e->getMessage()]], 'Donnée Vente invalide.');
         }

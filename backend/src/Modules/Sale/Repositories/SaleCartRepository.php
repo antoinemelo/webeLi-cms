@@ -45,12 +45,17 @@ final class SaleCartRepository extends SaleRepositoryBase
     {
         $this->rawDatabase()->run(
             'INSERT INTO sale_carts(
-                site_id, channel_id, status, currency, customer_company_id, customer_contact_id,
-                customer_snapshot_json, billing_address_json, shipping_address_json, created_by_iam_user_id
-             ) VALUES(?, ?, \'active\', ?, ?, ?, ?, ?, ?, ?)',
+                site_id, channel_id, cart_kind, locale, customer_ref_id, register_session_id,
+                status, currency, customer_company_id, customer_contact_id,
+                customer_snapshot_json, billing_address_json, shipping_address_json, created_by_iam_user_id, expires_at
+             ) VALUES(?, ?, ?, ?, ?, ?, \'active\', ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $siteId,
                 $channelId,
+                (string) ($payload['cart_kind'] ?? 'admin'),
+                strtolower((string) ($payload['locale'] ?? 'fr')),
+                $payload['customer_ref_id'] ?? null,
+                $payload['register_session_id'] ?? null,
                 strtoupper((string) ($payload['currency'] ?? 'CHF')),
                 $payload['customer_company_id'] ?? null,
                 $payload['customer_contact_id'] ?? null,
@@ -58,6 +63,7 @@ final class SaleCartRepository extends SaleRepositoryBase
                 $this->json($payload['billing_address'] ?? []),
                 $this->json($payload['shipping_address'] ?? []),
                 $payload['iam_user_id'] ?? null,
+                $payload['expires_at'] ?? null,
             ]
         );
         return $this->requireCart((int) $this->rawDatabase()->lastInsertId());
@@ -70,7 +76,41 @@ final class SaleCartRepository extends SaleRepositoryBase
         if ($row === null) {
             throw new SaleValidationException('sale.cart_not_found');
         }
+        $row['cart_id'] = (int) $row['id'];
+        $row['public_token_hash'] = $row['public_token_hash'] ?? $row['cart_token_hash'] ?? null;
+        $row['customer_ref'] = $row['customer_ref_id'] ?? $row['customer_contact_id'] ?? $row['customer_company_id'] ?? null;
         return $row;
+    }
+
+    public function attachPublicToken(int $cartId, string $tokenHash, string $expiresAt): void
+    {
+        $cart = $this->requireCart($cartId);
+        if (($cart['cart_kind'] ?? null) !== 'web') throw new SaleValidationException('sale.cart_public_token_forbidden');
+        $this->rawDatabase()->run('UPDATE sale_carts SET cart_token_hash=?,public_token_hash=?,expires_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$tokenHash,$tokenHash,$expiresAt,$cartId]);
+    }
+
+    /** @template T @param callable(array<string,mixed>):T $mutation @return T */
+    public function withOptimisticLock(int $cartId, ?int $expectedVersion, callable $mutation): mixed
+    {
+        return $this->rawDatabase()->transaction(function () use ($cartId,$expectedVersion,$mutation): mixed {
+            $cart=$this->requireCart($cartId); $current=(int)$cart['version'];
+            if ($expectedVersion!==null && $expectedVersion!==$current) throw new SaleValidationException('sale.cart_version_conflict');
+            $result=$mutation($cart);
+            $stmt=$this->rawDatabase()->pdo()->prepare('UPDATE sale_carts SET version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=?');
+            $stmt->execute([$cartId,$current]);
+            if ($stmt->rowCount()!==1) throw new SaleValidationException('sale.cart_version_conflict');
+            return $result;
+        });
+    }
+
+    public function claimVersion(int $cartId, ?int $expectedVersion): int
+    {
+        $cart=$this->requireCart($cartId); $current=(int)$cart['version'];
+        if ($expectedVersion!==null && $expectedVersion!==$current) throw new SaleValidationException('sale.cart_version_conflict');
+        $stmt=$this->rawDatabase()->pdo()->prepare('UPDATE sale_carts SET version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=?');
+        $stmt->execute([$cartId,$current]);
+        if ($stmt->rowCount()!==1) throw new SaleValidationException('sale.cart_version_conflict');
+        return $current+1;
     }
 
     /** @return array<string,mixed> */
@@ -93,28 +133,31 @@ final class SaleCartRepository extends SaleRepositoryBase
         bool $termsAccepted,
         ?bool $marketingConsent,
         string $step,
-        bool $validated
+        bool $validated,
+        ?int $expectedVersion = null
     ): array {
         $current = $this->requireCart($cartId);
+        $version=(int)$current['version'];
+        if ($expectedVersion!==null && $expectedVersion!==$version) throw new SaleValidationException('sale.cart_version_conflict');
         $termsAcceptedAt = $termsAccepted ? ((string) ($current['terms_accepted_at'] ?? '') ?: gmdate('Y-m-d H:i:s')) : null;
         $marketingConsentAt = $marketingConsent === null ? null : ((string) ($current['marketing_consent_at'] ?? '') ?: gmdate('Y-m-d H:i:s'));
-        $this->rawDatabase()->run(
+        $stmt=$this->rawDatabase()->pdo()->prepare(
             'UPDATE sale_carts SET
                 customer_snapshot_json=?, billing_address_json=?, shipping_address_json=?,
                 shipping_method_snapshot_json=?, payment_method_snapshot_json=?, checkout_step=?,
                 terms_accepted=?, terms_accepted_at=?, marketing_consent=?, marketing_consent_at=?,
                 checkout_validated_at=?,
                 updated_at=CURRENT_TIMESTAMP, version=version+1
-             WHERE id=? AND status=\'active\'',
-            [
+             WHERE id=? AND status=\'active\' AND version=?');
+        $stmt->execute([
                 $this->json($identity), $this->json($billing), $this->json($shipping),
                 $this->json($shippingMethod), $this->json($paymentMethod), $step,
                 $termsAccepted ? 1 : 0, $termsAcceptedAt,
                 $marketingConsent === null ? null : ($marketingConsent ? 1 : 0),
                 $marketingConsentAt,
-                $validated ? gmdate('Y-m-d H:i:s') : null, $cartId,
-            ]
-        );
+                $validated ? gmdate('Y-m-d H:i:s') : null, $cartId,$version,
+            ]);
+        if ($stmt->rowCount()!==1) throw new SaleValidationException('sale.cart_version_conflict');
         return $this->requireCart($cartId);
     }
 
@@ -130,12 +173,14 @@ final class SaleCartRepository extends SaleRepositoryBase
     public function refreshLineSnapshot(int $lineId, array $snapshot, array $amounts): array
     {
         $line = $this->requireLine($lineId);
+        $priceChanged=(int)$line['unit_price_minor']!==(int)$amounts['unit_price_minor'];
         $totals = $this->pricing->lineTotals($amounts, (int) $line['quantity']);
         $this->rawDatabase()->run(
             'UPDATE sale_cart_lines SET sku=?,barcode=?,product_name=?,variant_name=?,product_type=?,
                 unit_price_minor=?,regular_unit_price_minor=?,unit_purchase_price_minor=?,currency=?,tax_class_id=?,tax_class_code=?,
                 tax_rate_basis_points=?,tax_included=?,line_subtotal_minor=?,line_discount_minor=?,line_tax_minor=?,line_total_minor=?,
-                metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                availability_state=?,previous_unit_price_minor=?,price_changed_at=?,
+                calculation_version=calculation_version+1,metadata_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
             [
                 $snapshot['sku'] ?? null, $snapshot['barcode'] ?? null, (string) $snapshot['product_name'], $snapshot['variant_name'] ?? null,
                 (string) $snapshot['product_type'], (int) $amounts['unit_price_minor'], (int) $amounts['regular_unit_price_minor'],
@@ -143,6 +188,9 @@ final class SaleCartRepository extends SaleRepositoryBase
                 (string) ($amounts['tax_class_code'] ?? 'standard'),
                 (int) $amounts['tax_rate_basis_points'], (int) (bool) $amounts['tax_included'],
                 $totals['line_subtotal_minor'], $totals['line_discount_minor'], $totals['line_tax_minor'], $totals['line_total_minor'],
+                (string) ($snapshot['availability_state'] ?? 'available'),
+                $priceChanged ? (int) $line['unit_price_minor'] : ($line['previous_unit_price_minor'] ?? null),
+                $priceChanged ? gmdate('Y-m-d H:i:s') : ($line['price_changed_at'] ?? null),
                 $this->lineMetadata($snapshot, $totals), $lineId,
             ]
         );
@@ -164,7 +212,8 @@ final class SaleCartRepository extends SaleRepositoryBase
     /** @param array<string,mixed> $snapshot @return array<string,mixed> */
     public function addOrIncrementLine(int $cartId, array $snapshot, int $quantity, array $amounts): array
     {
-        $lineKey = 'variant:' . (int) $snapshot['business_variant_id'];
+        $options=$snapshot['line_options']??[]; $personalization=$snapshot['personalization']??[];
+        $lineKey = 'sellable:' . (int) ($snapshot['sellable_id']??$snapshot['business_variant_id']) . ':' . substr(hash('sha256',$this->json([$options,$personalization])),0,12);
         $existing = $this->rawDatabase()->one(
             'SELECT * FROM sale_cart_lines WHERE cart_id = ? AND line_key = ? LIMIT 1',
             [$cartId, $lineKey]
@@ -197,8 +246,9 @@ final class SaleCartRepository extends SaleRepositoryBase
                 product_name, variant_name, product_type, quantity, unit_price_minor,
                 regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                 tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
-                line_tax_minor, line_total_minor, metadata_json
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                line_tax_minor, line_total_minor, metadata_json, options_json, personalization_json,
+                fulfillment_class, availability_state, calculation_version
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $cartId,
                 $lineKey,
@@ -224,6 +274,11 @@ final class SaleCartRepository extends SaleRepositoryBase
                 $totals['line_tax_minor'],
                 $totals['line_total_minor'],
                 $this->lineMetadata($snapshot, $totals),
+                $this->json(is_array($options)?$options:[]),
+                $this->json(is_array($personalization)?$personalization:[]),
+                (string) ($snapshot['fulfillment_class']??'shipping'),
+                (string) ($snapshot['availability_state']??'available'),
+                (int) ($snapshot['calculation_version']??1),
             ]
         );
         return $this->requireLine((int) $this->rawDatabase()->lastInsertId());
@@ -252,7 +307,7 @@ final class SaleCartRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'UPDATE sale_carts
              SET subtotal_minor = ?, discount_total_minor = ?, tax_total_minor = ?, shipping_total_minor = ?,
-                 grand_total_minor = ?, updated_at = CURRENT_TIMESTAMP
+                 grand_total_minor = ?, calculation_version=calculation_version+1, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?',
             [$payload['subtotal_minor'], $payload['discount_total_minor'], $payload['tax_total_minor'], $payload['shipping_total_minor'], $payload['grand_total_minor'], $cartId]
         );

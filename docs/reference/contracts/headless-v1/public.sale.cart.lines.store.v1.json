@@ -28,6 +28,9 @@
           "properties": {
             "sellable_id": {"type": "integer", "minimum": 1},
             "quantity": {"type": "integer", "minimum": 1},
+            "expected_version": {"type": "integer", "minimum": 0, "description": "Version observée du panier pour la concurrence optimiste."},
+            "options": {"type": "object", "additionalProperties": {"type": ["string", "number", "integer", "boolean", "null"]}},
+            "personalization": {"type": "object", "additionalProperties": {"type": ["string", "number", "integer", "boolean", "null"]}},
             "idempotency_key": {"type": "string"}
           },
           "additionalProperties": false
@@ -58,10 +61,11 @@
   },
   "errors": [
     {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal, panier ou variante introuvable."},
+    {"code": "REVISION_CONFLICT", "status": 409, "description": "La version du panier n'est plus courante."},
     {"code": "VALIDATION_FAILED", "status": 422, "description": "Payload, stock ou idempotence invalide."}
   ],
   "examples": {
-    "request": {"data": {"sellable_id": 3, "quantity": 1, "idempotency_key": "cart-line-1"}},
+    "request": {"data": {"sellable_id": 3, "quantity": 1, "expected_version": 1, "options": {"color": "blue"}, "idempotency_key": "cart-line-1"}},
     "response": {
       "data": {
         "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []},

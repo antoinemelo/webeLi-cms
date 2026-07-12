@@ -279,6 +279,10 @@ export interface OpenApiPublicSaleBootstrapResponse {
 
 export interface OpenApiPublicSaleCart {
   billing_address?: OpenApiPublicSaleAddress;
+  calculation_version: number;
+  cart_id: number;
+  cart_kind: "admin" | "pos" | "web";
+  channel_id: number;
   checkout_step?: string;
   currency: string;
   discount_total_minor: number;
@@ -287,6 +291,7 @@ export interface OpenApiPublicSaleCart {
   id: number;
   identity?: OpenApiPublicSaleGuestIdentity;
   lines?: Array<OpenApiPublicSaleCartLine>;
+  locale: string;
   marketing_consent?: boolean | null;
   payment_method?: Record<string, unknown>;
   shipping_address?: OpenApiPublicSaleAddress;
@@ -297,6 +302,7 @@ export interface OpenApiPublicSaleCart {
   tax_total_minor: number;
   terms_accepted?: boolean;
   token?: string;
+  version: number;
   [key: string]: unknown;
 }
 
@@ -308,19 +314,26 @@ export interface OpenApiPublicSaleCartAbandonResponse {
 }
 
 export interface OpenApiPublicSaleCartLine {
+  availability_state: "available" | "backorder" | "contact_us" | "unavailable";
   barcode?: null | string;
   business_product_id?: number;
   business_variant_id: number;
+  calculation_version: number;
   currency: string;
+  fulfillment_class: "digital" | "none" | "shipping";
   id: number;
   line_discount_minor?: number;
   line_subtotal_minor?: number;
   line_tax_minor?: number;
   line_total_minor: number;
+  options?: Record<string, unknown>;
+  personalization?: Record<string, unknown>;
+  previous_unit_price_minor?: null | number;
+  price_changed_at?: null | string;
   product_name?: string;
   quantity: number;
   regular_unit_price_minor?: number;
-  sellable_id?: number;
+  sellable_id: number;
   sku?: null | string;
   tax_class_code?: string;
   tax_included?: boolean;

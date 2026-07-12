@@ -4,6 +4,7 @@ import { adminApi, apiErrorMessage } from '@/api/client';
 import { useI18n } from '@/i18n';
 
 type PosVariant = Record<string, unknown> & {
+  sellable_id?: number;
   business_variant_id: number;
   sku?: string;
   barcode?: string | null;
@@ -37,7 +38,7 @@ type PosAttribute = { code?: string; name?: string; value?: unknown; unit?: stri
 type PosVariantOption = { option_code?: string; option_name?: string; value_code?: string; label?: string; value?: string };
 type PosCartLine = Record<string, unknown> & { id: number; quantity: number; product_name?: string; sku?: string; line_total_minor?: number };
 type PosAdjustment = Record<string, unknown> & { id?: number; adjustment_type?: string; amount_minor?: number };
-type PosCart = Record<string, unknown> & { id: number; subtotal_minor?: number; discount_total_minor?: number; grand_total_minor?: number; currency?: string; lines?: PosCartLine[]; adjustments?: PosAdjustment[] };
+type PosCart = Record<string, unknown> & { id: number; version?: number; subtotal_minor?: number; discount_total_minor?: number; grand_total_minor?: number; currency?: string; lines?: PosCartLine[]; adjustments?: PosAdjustment[] };
 type PosSession = Record<string, unknown> & { id: number; status?: string; expected_cash_minor?: number; currency?: string };
 type PosReceipt = Record<string, unknown> & { order_id?: number | string; order_number?: string | null; printable_text?: string };
 
@@ -174,7 +175,7 @@ async function closeSession(): Promise<void> {
 
 async function ensureCart(): Promise<PosCart> {
   if (cart.value?.id) return cart.value;
-  const response = await adminApi.post<{ cart: PosCart }>('/sale/pos/carts', {});
+  const response = await adminApi.post<{ cart: PosCart }>('/sale/pos/carts', { cash_session_id: session.value?.id });
   assignCart(response.data.cart);
   return response.data.cart;
 }
@@ -185,8 +186,9 @@ async function addVariant(variant: PosVariant): Promise<void> {
   try {
     const current = await ensureCart();
     const response = await adminApi.post<{ cart: PosCart; line: PosCartLine }>(`/sale/pos/carts/${current.id}/lines`, {
-      business_variant_id: variant.business_variant_id,
+      sellable_id: variant.sellable_id || variant.business_variant_id,
       quantity: 1,
+      expected_version: current.version,
       idempotency_key: `pos-${Date.now()}-${variant.business_variant_id}`
     });
     assignCart(response.data.cart);
@@ -206,7 +208,7 @@ async function updateLine(line: PosCartLine, quantity: number): Promise<void> {
   error.value = '';
   line.quantity = nextQuantity;
   try {
-    const response = await adminApi.patch<{ cart: PosCart; line?: PosCartLine }>(`/sale/pos/carts/${cart.value.id}/lines/${line.id}`, { quantity: nextQuantity });
+    const response = await adminApi.patch<{ cart: PosCart; line?: PosCartLine }>(`/sale/pos/carts/${cart.value.id}/lines/${line.id}`, { quantity: nextQuantity, expected_version: cart.value.version });
     mergeCartUpdate(response.data.cart, response.data.line);
     await search();
   } catch (err) {
@@ -220,7 +222,7 @@ async function deleteLine(line: PosCartLine): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const response = await adminApi.delete<{ cart: PosCart }>(`/sale/pos/carts/${cart.value.id}/lines/${line.id}`);
+    const response = await adminApi.delete<{ cart: PosCart }>(`/sale/pos/carts/${cart.value.id}/lines/${line.id}`, { expected_version: cart.value.version });
     assignCart(response.data.cart);
     await search();
   } catch (err) {

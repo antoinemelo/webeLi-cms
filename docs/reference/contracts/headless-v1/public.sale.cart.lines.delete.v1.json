@@ -15,6 +15,20 @@
     "token": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9_-]{32,128}$"},
     "line_id": {"type": "integer", "required": true, "minimum": 1}
   },
+  "request_body": {
+    "required": false,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {"expected_version": {"type": "integer", "minimum": 0}},
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
   "response": {
     "status": 200,
     "schema": {
@@ -37,9 +51,11 @@
   },
   "errors": [
     {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal, panier ou ligne introuvable."},
+    {"code": "REVISION_CONFLICT", "status": 409, "description": "La version du panier n'est plus courante."},
     {"code": "VALIDATION_FAILED", "status": 422, "description": "Suppression invalide."}
   ],
   "examples": {
+    "request": {"data": {"expected_version": 3}},
     "response": {
       "data": {
         "deleted": true,

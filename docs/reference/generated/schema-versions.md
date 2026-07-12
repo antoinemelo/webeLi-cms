@@ -63,3 +63,4 @@ generated: true
 | `database/migrations/sale/0007_fulfillment_tax_v1.sql` | `0007_fulfillment_tax_v1` |
 | `database/migrations/sale/0008_sales_channel_contract.sql` | `0008_sales_channel_contract` |
 | `database/migrations/sale/0009_sellable_references.sql` | `0009_sellable_references` |
+| `database/migrations/sale/0010_cart_aggregate_contract.sql` | `0010_cart_aggregate_contract` |

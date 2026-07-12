@@ -272,6 +272,7 @@ generated: true
 | `GET` | `/api/v1/taxonomies/{taxonomy}` | API publique | `backend/routes/api.php` |
 | `GET` | `/business/memos/share/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/cart` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/checkout` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |

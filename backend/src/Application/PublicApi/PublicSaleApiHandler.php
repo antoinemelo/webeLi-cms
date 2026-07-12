@@ -72,14 +72,13 @@ final class PublicSaleApiHandler
             $channel = $this->publicChannel((int) $site['id'], $code);
             $token = $this->newCartToken();
             $cart = $this->cartService->createCart((int) $site['id'], (int) $channel['id'], [
+                'cart_kind' => 'web',
+                'locale' => $languageCode,
                 'customer_snapshot' => [],
                 'billing_address' => [],
                 'shipping_address' => [],
             ]);
-            $this->db()->run(
-                'UPDATE sale_carts SET cart_token_hash = ?, expires_at = datetime(\'now\', \'+30 days\'), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [$this->tokenHash($token), (int) $cart['id']]
-            );
+            $this->carts->attachPublicToken((int)$cart['id'],$this->tokenHash($token),gmdate('Y-m-d H:i:s',time()+2592000));
             return $this->json(['cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true, $token)], 'public.sale.cart.show.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -114,6 +113,9 @@ final class PublicSaleApiHandler
             }
             $result = $this->cartService->addLine((int) $cart['id'], $sellableId, (int) ($payload['quantity'] ?? 1), [
                 'idempotency_key' => $this->idempotencyKey($payload),
+                'expected_version' => isset($payload['expected_version']) ? (int)$payload['expected_version'] : null,
+                'options' => $payload['options'] ?? [],
+                'personalization' => $payload['personalization'] ?? [],
             ]);
             return $this->json([
                 'cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true),
@@ -131,7 +133,8 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            $line = $this->cartService->updateLineQuantity((int) $cart['id'], $this->id($line_id), (int) ($this->payload()['quantity'] ?? 1));
+            $payload=$this->payload();
+            $line = $this->cartService->updateLineQuantity((int) $cart['id'], $this->id($line_id), (int) ($payload['quantity'] ?? 1), isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->json([
                 'cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true),
                 'line' => $this->linePayload($line),
@@ -148,7 +151,8 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            $this->cartService->deleteLine((int) $cart['id'], $this->id($line_id));
+            $payload=$this->payload();
+            $this->cartService->deleteLine((int) $cart['id'], $this->id($line_id),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
             return $this->json([
                 'deleted' => true,
                 'cart' => $this->cartPayload($this->carts->cartWithLines((int) $cart['id']), true),
@@ -267,7 +271,7 @@ final class PublicSaleApiHandler
         $statuses = $allowConverted ? '(\'active\',\'converted\')' : '(\'active\')';
         $cart = $this->db()->one(
             'SELECT * FROM sale_carts
-             WHERE channel_id = ? AND cart_token_hash = ? AND status IN ' . $statuses . '
+             WHERE channel_id = ? AND cart_kind=\'web\' AND public_token_hash = ? AND status IN ' . $statuses . '
              LIMIT 1',
             [(int) $channel['id'], $this->tokenHash($token)]
         );
@@ -396,6 +400,12 @@ final class PublicSaleApiHandler
     {
         $payload = [
             'id' => (int) $cart['id'],
+            'cart_id' => (int) $cart['id'],
+            'cart_kind' => (string)($cart['cart_kind']??'web'),
+            'channel_id' => (int)$cart['channel_id'],
+            'locale' => (string)($cart['locale']??'fr'),
+            'version' => (int)($cart['version']??0),
+            'calculation_version' => (int)($cart['calculation_version']??1),
             'status' => (string) $cart['status'],
             'currency' => (string) $cart['currency'],
             'subtotal_minor' => (int) $cart['subtotal_minor'],
@@ -445,6 +455,13 @@ final class PublicSaleApiHandler
             'line_discount_minor' => (int) ($line['line_discount_minor'] ?? 0),
             'line_tax_minor' => (int) ($line['line_tax_minor'] ?? 0),
             'line_total_minor' => (int) ($line['line_total_minor'] ?? 0),
+            'options' => json_decode((string)($line['options_json']??'{}'),true)?:[],
+            'personalization' => json_decode((string)($line['personalization_json']??'{}'),true)?:[],
+            'fulfillment_class'=>(string)($line['fulfillment_class']??'shipping'),
+            'availability_state'=>(string)($line['availability_state']??'available'),
+            'calculation_version'=>(int)($line['calculation_version']??1),
+            'previous_unit_price_minor'=>isset($line['previous_unit_price_minor'])?(int)$line['previous_unit_price_minor']:null,
+            'price_changed_at'=>$line['price_changed_at']??null,
         ];
     }
 
@@ -477,6 +494,9 @@ final class PublicSaleApiHandler
     private function domainError(Throwable $e): Response
     {
         if ($e instanceof SaleValidationException) {
+            if ($e->getMessage() === 'sale.cart_version_conflict') {
+                return Response::error(ErrorCode::REVISION_CONFLICT, 'Le panier a été modifié par une autre requête.', 409, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
+            }
             if (in_array($e->getMessage(), ['sale.public_channel_not_found', 'sale.cart_not_found', 'sale.cart_line_not_found'], true)) {
                 return Response::error(ErrorCode::PUBLIC_CONTENT_NOT_FOUND, 'Ressource Vente publique introuvable.', 404, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
             }

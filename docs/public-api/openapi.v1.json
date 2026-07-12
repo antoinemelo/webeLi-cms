@@ -5978,6 +5978,31 @@
               }
             }
           },
+          "409": {
+            "description": "La version du panier n'est plus courante.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "La version du panier n'est plus courante.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "422": {
             "description": "Payload, stock ou idempotence invalide.",
             "content": {
@@ -6025,6 +6050,35 @@
                       "quantity": {
                         "type": "integer",
                         "minimum": 1
+                      },
+                      "expected_version": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Version observée du panier pour la concurrence optimiste."
+                      },
+                      "options": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": [
+                            "string",
+                            "number",
+                            "integer",
+                            "boolean",
+                            "null"
+                          ]
+                        }
+                      },
+                      "personalization": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": [
+                            "string",
+                            "number",
+                            "integer",
+                            "boolean",
+                            "null"
+                          ]
+                        }
                       },
                       "idempotency_key": {
                         "type": "string"
@@ -6150,6 +6204,31 @@
               }
             }
           },
+          "409": {
+            "description": "La version du panier n'est plus courante.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "La version du panier n'est plus courante.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "422": {
             "description": "Suppression invalide.",
             "content": {
@@ -6172,6 +6251,29 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "expected_version": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": true
               }
             }
           }
@@ -6293,6 +6395,31 @@
               }
             }
           },
+          "409": {
+            "description": "La version du panier n'est plus courante.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "La version du panier n'est plus courante.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "422": {
             "description": "Quantité ou stock invalide.",
             "content": {
@@ -6335,6 +6462,11 @@
                       "quantity": {
                         "type": "integer",
                         "minimum": 1
+                      },
+                      "expected_version": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Version observée du panier pour la concurrence optimiste."
                       }
                     },
                     "additionalProperties": false
@@ -7627,11 +7759,15 @@
         "type": "object",
         "required": [
           "id",
+          "sellable_id",
           "business_variant_id",
           "quantity",
           "unit_price_minor",
           "currency",
-          "line_total_minor"
+          "line_total_minor",
+          "fulfillment_class",
+          "availability_state",
+          "calculation_version"
         ],
         "properties": {
           "sellable_id": {
@@ -7700,6 +7836,47 @@
           },
           "line_total_minor": {
             "type": "integer"
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "personalization": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "fulfillment_class": {
+            "type": "string",
+            "enum": [
+              "shipping",
+              "digital",
+              "none"
+            ]
+          },
+          "availability_state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "backorder",
+              "unavailable",
+              "contact_us"
+            ]
+          },
+          "calculation_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "previous_unit_price_minor": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "price_changed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": true
@@ -7781,6 +7958,12 @@
         "type": "object",
         "required": [
           "id",
+          "cart_id",
+          "cart_kind",
+          "channel_id",
+          "locale",
+          "version",
+          "calculation_version",
           "status",
           "currency",
           "subtotal_minor",
@@ -7792,6 +7975,31 @@
         "properties": {
           "id": {
             "type": "integer"
+          },
+          "cart_id": {
+            "type": "integer"
+          },
+          "cart_kind": {
+            "type": "string",
+            "enum": [
+              "web",
+              "pos",
+              "admin"
+            ]
+          },
+          "channel_id": {
+            "type": "integer"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "calculation_version": {
+            "type": "integer",
+            "minimum": 1
           },
           "token": {
             "type": "string"

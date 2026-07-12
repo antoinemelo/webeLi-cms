@@ -18,5 +18,12 @@ test.describe('Storefront projections SSR and headless',()=>{
     await page.goto(cmsPath(`/shop/products/${product.slug}?lang=fr`));
     await expect(page.getByRole('heading',{name:product.name}).first()).toBeVisible();
     await expect(page.locator(`[data-sellable-id="${product.default_sellable_id}"]`).first()).toBeVisible();
+    await page.locator(`[data-storefront-add-to-cart][data-sellable-id="${product.default_sellable_id}"]`).first().click();
+    await expect(page.locator('[data-cart-count]')).toHaveText('1');
+    await expect(page.locator('[data-cart-drawer]')).toBeVisible();
+    await page.goto(cmsPath('/cart'));
+    await expect(page.locator('[data-cart-page]')).toBeVisible();
+    await expect(page.locator('[data-cart-lines] .cart-line')).toHaveCount(1);
+    await expect(page.locator('[data-cart-total]')).toContainText('Total');
   });
 });

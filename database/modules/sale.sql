@@ -332,6 +332,11 @@ CREATE TABLE IF NOT EXISTS sale_carts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
     channel_id INTEGER NOT NULL,
+    cart_kind TEXT NOT NULL DEFAULT 'admin' CHECK(cart_kind IN ('web','pos','admin')),
+    locale TEXT NOT NULL DEFAULT 'fr',
+    customer_ref_id INTEGER,
+    public_token_hash TEXT,
+    register_session_id INTEGER,
     cart_token_hash TEXT,
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','abandoned','converted','expired','cancelled')),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
@@ -361,10 +366,14 @@ CREATE TABLE IF NOT EXISTS sale_carts (
     updated_at TEXT,
     converted_order_id INTEGER,
     version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
+    calculation_version INTEGER NOT NULL DEFAULT 1 CHECK(calculation_version >= 1),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY(converted_order_id) REFERENCES sale_orders(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(register_session_id) REFERENCES sale_cash_sessions(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(cart_token_hash IS NULL OR length(cart_token_hash) >= 32),
+    CHECK(public_token_hash IS NULL OR length(public_token_hash) >= 32),
+    CHECK((cart_kind='web') OR public_token_hash IS NULL),
     CHECK(customer_company_id IS NULL OR customer_company_id > 0),
     CHECK(customer_contact_id IS NULL OR customer_contact_id > 0),
     CHECK((status = 'converted' AND converted_order_id IS NOT NULL)
@@ -374,6 +383,9 @@ CREATE TABLE IF NOT EXISTS sale_carts (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_carts_token
     ON sale_carts(cart_token_hash)
     WHERE cart_token_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_carts_public_token ON sale_carts(public_token_hash) WHERE public_token_hash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sale_carts_kind_status ON sale_carts(site_id,cart_kind,status,expires_at);
+CREATE INDEX IF NOT EXISTS idx_sale_carts_register_session ON sale_carts(register_session_id,status);
 CREATE INDEX IF NOT EXISTS idx_sale_carts_site_channel_status
     ON sale_carts(site_id, channel_id, status);
 CREATE INDEX IF NOT EXISTS idx_sale_carts_customer
@@ -382,6 +394,16 @@ CREATE INDEX IF NOT EXISTS idx_sale_carts_expires
     ON sale_carts(status, expires_at);
 CREATE INDEX IF NOT EXISTS idx_sale_carts_checkout_step
     ON sale_carts(status, checkout_step, expires_at);
+CREATE TRIGGER IF NOT EXISTS trg_sale_carts_context_immutable
+BEFORE UPDATE OF site_id,channel_id,cart_kind,currency ON sale_carts
+WHEN NEW.site_id<>OLD.site_id OR NEW.channel_id<>OLD.channel_id OR NEW.cart_kind<>OLD.cart_kind OR NEW.currency<>OLD.currency
+BEGIN SELECT RAISE(ABORT,'sale.cart_context_immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_carts_public_token_policy_insert
+BEFORE INSERT ON sale_carts WHEN NEW.cart_kind<>'web' AND NEW.public_token_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT,'sale.cart_public_token_forbidden'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_carts_public_token_policy_update
+BEFORE UPDATE OF public_token_hash,cart_kind ON sale_carts WHEN NEW.cart_kind<>'web' AND NEW.public_token_hash IS NOT NULL
+BEGIN SELECT RAISE(ABORT,'sale.cart_public_token_forbidden'); END;
 
 CREATE TABLE IF NOT EXISTS sale_cart_lines (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -389,7 +411,7 @@ CREATE TABLE IF NOT EXISTS sale_cart_lines (
     line_key TEXT NOT NULL,
     business_product_id INTEGER NOT NULL,
     business_variant_id INTEGER NOT NULL,
-    sellable_id INTEGER,
+    sellable_id INTEGER NOT NULL,
     sku TEXT,
     barcode TEXT,
     product_name TEXT NOT NULL,
@@ -409,6 +431,13 @@ CREATE TABLE IF NOT EXISTS sale_cart_lines (
     line_tax_minor INTEGER NOT NULL DEFAULT 0 CHECK(line_tax_minor >= 0),
     line_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(line_total_minor >= 0),
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    options_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(options_json)),
+    personalization_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(personalization_json)),
+    fulfillment_class TEXT NOT NULL DEFAULT 'shipping' CHECK(fulfillment_class IN ('shipping','pickup','digital','none')),
+    availability_state TEXT NOT NULL DEFAULT 'available' CHECK(availability_state IN ('available','backorder','unavailable','contact_us')),
+    calculation_version INTEGER NOT NULL DEFAULT 1 CHECK(calculation_version >= 1),
+    previous_unit_price_minor INTEGER CHECK(previous_unit_price_minor IS NULL OR previous_unit_price_minor >= 0),
+    price_changed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     UNIQUE(cart_id, line_key),

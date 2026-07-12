@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 use App\Application\PublicApi\PublicSaleApiHandler;
 use App\Application\Frontend\PublicSaleCheckoutController;
 use App\Application\Frontend\PublicCustomerAccountController;
+use App\Application\Frontend\PublicStorefrontCartController;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
@@ -89,11 +90,15 @@ try {
     $h->assertSame(null, (new Router())->match('GET', '/api/v1/sale/orders', $routes), 'sale public API still has no public order listing');
     $webRoutes = require __DIR__ . '/../../../../backend/routes/web.php';
     $h->assertTrue((new Router())->match('GET', '/checkout', $webRoutes) !== null, 'native guest checkout SSR route is declared');
+    $h->assertTrue((new Router())->match('GET', '/cart', $webRoutes) !== null, 'native storefront cart route is declared');
     $h->assertTrue((new Router())->match('GET', '/account', $webRoutes) !== null, 'secure customer account SSR route is declared');
     $ssr = (new PublicSaleCheckoutController(new Request('GET', '/checkout', ['channel' => 'web-main', 'cart_token' => str_repeat('A', 43)], [], ['HTTP_HOST' => 'example.test'], [], [])))->show();
     $h->assertSame(200, $ssr->status(), 'native guest checkout SSR renders');
     $h->assertTrue(str_contains($ssr->body(), 'data-checkout-form'), 'native guest checkout SSR includes the accessible form');
     $h->assertTrue(str_contains($ssr->body(), 'guest-checkout.js'), 'native guest checkout SSR loads the checkout client progressively');
+    $cartPage = (new PublicStorefrontCartController())->show();
+    $h->assertSame(200, $cartPage->status(), 'native storefront cart page renders');
+    $h->assertTrue(str_contains($cartPage->body(), 'data-cart-page'), 'storefront cart page exposes the accessible cart root');
     $accountPage = (new PublicCustomerAccountController())->show();
     $h->assertSame(200, $accountPage->status(), 'customer account SSR renders');
     $h->assertTrue(str_contains($accountPage->body(), 'data-customer-account'), 'customer account SSR exposes the secure client root');
@@ -130,6 +135,10 @@ try {
     $lineId = (int) ($addLinePayload['data']['line']['id'] ?? 0);
     $h->assertSame(2900, (int) ($addLinePayload['data']['cart']['grand_total_minor'] ?? 0), 'public ecommerce line uses server-side price snapshot');
     $h->assertTrue(!str_contains($addLine->body(), 'purchase'), 'public ecommerce line payload does not expose purchase price');
+
+    $staleUpdate = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines/' . $lineId, ['quantity' => 2, 'expected_version' => 0])->updateLine('web-main', $token, $lineId);
+    $h->assertSame(409, $staleUpdate->status(), 'public cart rejects a stale optimistic version');
+    $h->assertTrue(str_contains($staleUpdate->body(), 'REVISION_CONFLICT'), 'public cart exposes a stable concurrency error');
 
     $updateLine = $handlerFor('PATCH', '/api/v1/sale/channels/web-main/cart/' . $token . '/lines/' . $lineId, ['quantity' => 2])->updateLine('web-main', $token, $lineId);
     $h->assertSame(200, $updateLine->status(), 'public ecommerce cart can update a line');

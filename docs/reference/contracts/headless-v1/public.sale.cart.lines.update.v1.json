@@ -23,7 +23,10 @@
         "data": {
           "type": "object",
           "required": ["quantity"],
-          "properties": {"quantity": {"type": "integer", "minimum": 1}},
+          "properties": {
+            "quantity": {"type": "integer", "minimum": 1},
+            "expected_version": {"type": "integer", "minimum": 0, "description": "Version observée du panier pour la concurrence optimiste."}
+          },
           "additionalProperties": false
         }
       },
@@ -52,10 +55,11 @@
   },
   "errors": [
     {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal, panier ou ligne introuvable."},
+    {"code": "REVISION_CONFLICT", "status": 409, "description": "La version du panier n'est plus courante."},
     {"code": "VALIDATION_FAILED", "status": 422, "description": "Quantité ou stock invalide."}
   ],
   "examples": {
-    "request": {"data": {"quantity": 2}},
+    "request": {"data": {"quantity": 2, "expected_version": 2}},
     "response": {
       "data": {
         "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 5800, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 5800, "lines": []},
