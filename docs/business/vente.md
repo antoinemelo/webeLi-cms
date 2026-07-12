@@ -46,7 +46,7 @@ Un canal definit le contexte de vente :
 - `pos` : vente en caisse ;
 - `ecommerce` : API publique optionnelle, inactive tant qu'un canal n'est pas actif et public.
 
-Les canaux portent la devise, le mode de taxe et l'etat public. Le seed installe `admin-manual`, `pos-main` et `web-main`, mais `web-main` reste en brouillon et non public par defaut.
+Les canaux portent la devise, le mode de taxe et l'etat public. Le seed de développement installe `admin-manual`, `pos-main` et un canal `web-main` actif/public afin de permettre les tests e-commerce. En production, les routes API publiques des modules restent désactivées tant que `APP_PUBLIC_API_MODULE_ROUTES=1` n'est pas configuré explicitement.
 
 ## Tableau de bord
 

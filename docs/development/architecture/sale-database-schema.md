@@ -88,9 +88,10 @@ Le schema installe trois canaux :
 
 - `admin-manual`, actif, non public ;
 - `pos-main`, brouillon, non public ;
-- `web-main`, brouillon, non public.
+- `web-main`, actif et public pour les scénarios de développement/test.
 
 Un canal ne peut etre public que s'il est de type `ecommerce`.
+L'exposition en production reste en plus contrôlée par `APP_PUBLIC_API_MODULE_ROUTES`, désactivé par défaut dans cet environnement.
 
 ## Migrations
 
