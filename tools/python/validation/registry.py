@@ -19,6 +19,7 @@ VALIDATORS=(
     Validator('BLUEPRINT_SCHEMA', "tools.python.validation.content.blueprints", 'content'),
     Validator('CONTENT_CONTRACTS', "tools.python.validation.content.contracts", 'content'),
     Validator('MULTISITE_LOCALE_MODEL', "tools.python.validation.content.site_locale", 'content'),
+    Validator('I18N_COVERAGE', "tools.python.validation.content.i18n", 'content'),
     Validator('PERMISSION_MODEL', "tools.python.validation.permissions.model", 'permissions'),
     Validator('API_SPEC', "tools.python.validation.api.specification", 'api'),
     Validator('SECURITY_BASELINE', "tools.python.validation.security.baseline", 'security'),

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
+import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
@@ -1862,6 +1863,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="page-stack business-crm">
     <PageHeader title="Opérations" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging." />
+    <ContextualHelpLink id="business.crm" class="mb-3" />
 
     <ApiFeedback :error="error" :success="success" />
 

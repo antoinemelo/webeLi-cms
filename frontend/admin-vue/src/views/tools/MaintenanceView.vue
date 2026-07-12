@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
+import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import DataTable from '@/components/ui/DataTable.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 import { useAdminContextStore } from '@/stores/adminContext';
+import { useI18n } from '@/i18n';
 
 type DirectoryStats = { exists: boolean; files: number; size_bytes: number; writable: boolean };
 type MaintenanceStatus = {
@@ -45,34 +47,52 @@ type DatabaseVersion = {
 type VersionManifest = { core?: CoreVersion | null; modules?: ModuleVersion[]; databases?: DatabaseVersion[]; source?: string; source_url?: string; generated_at?: string; git?: { branch?: string; commit?: string; repo?: string } };
 type VersionChannel = { key: string; label: string; status: 'available' | 'unavailable'; source: string; source_url?: string; git_branch?: string; error?: string | null; core?: CoreVersion | null; modules: ModuleVersion[]; databases?: DatabaseVersion[]; generated_at?: string | null };
 type MaintenanceVersions = { enabled: boolean; local: VersionManifest; channels: Record<string, VersionChannel> };
+type DependencyRuntime = { key: string; name: string; installed?: string; latest?: string; latest_checked_at?: string; latest_source?: string; required?: string; path?: string; status?: string };
+type DependencyPackage = { manager: 'composer' | 'npm'; name: string; label?: string; installed?: string; latest?: string; latest_checked_at?: string; latest_source?: string; path?: string; path_exists?: boolean; source_path?: string; direct?: boolean; status?: string };
+type MaintenanceDependencies = { generated_at?: string; latest_enabled?: boolean; latest_cache_ttl_seconds?: number; runtimes: DependencyRuntime[]; packages: DependencyPackage[] };
 type VersionRow = { key: string; name: string; type: 'core' | 'module'; installed: string; dev: string; stable: string; status: string; statusClass: string; detail: string };
 type DatabaseRow = { key: string; name: string; installed: string; dev: string; stable: string; status: string; statusClass: string; detail: string };
-type MaintenancePayload = { status: MaintenanceStatus; audit_logs: AuditLog[]; runtime_logs: RuntimeLog[]; versions?: MaintenanceVersions };
+type RuntimeRow = { key: string; name: string; latest: string; installed: string; required: string; status: string; statusClass: string; source: string };
+type DependencyPackageRow = { key: string; name: string; manager: string; installed: string; latest: string; path: string; status: string; statusClass: string; source: string };
+type MaintenancePayload = { status: MaintenanceStatus; audit_logs: AuditLog[]; runtime_logs: RuntimeLog[]; versions?: MaintenanceVersions; dependencies?: MaintenanceDependencies };
 const HIDDEN_SYSTEM_MODULE_KEYS = new Set(['articles', 'core', 'editor', 'media', 'pages', 'seo', 'taxonomy']);
 
 const context = useAdminContextStore();
+const { t, dateTime } = useI18n();
 const status = ref<MaintenanceStatus | null>(null);
 const auditLogs = ref<AuditLog[]>([]);
 const runtimeLogs = ref<RuntimeLog[]>([]);
 const versions = ref<MaintenanceVersions | null>(null);
+const dependencies = ref<MaintenanceDependencies | null>(null);
 const loading = ref(false);
-const busyAction = ref('');
+const busyActions = ref<Record<string, boolean>>({});
+const refreshingDependencyVersions = ref(false);
 const error = ref('');
 const message = ref('');
 
 const canMaintain = computed(() => context.can('maintenance.manage'));
 const auditRows = computed(() => auditLogs.value.map((row) => ({
   id: row.id,
-  created_at: row.created_at,
-  actor: row.actor_email || 'Système',
+  created_at: dateTime(row.created_at),
+  actor: row.actor_email || t('maintenance.audit.actor.system'),
   action_key: row.action_key,
   resource: `${row.resource_type || '—'} ${row.resource_id || ''}`.trim(),
   ip: row.ip_address || '—'
 })));
+const auditColumns = computed(() => [
+  { key: 'created_at', label: t('maintenance.audit.column.date') },
+  { key: 'actor', label: t('maintenance.audit.column.actor') },
+  { key: 'action_key', label: t('maintenance.audit.column.action') },
+  { key: 'resource', label: t('maintenance.audit.column.resource') },
+  { key: 'ip', label: 'IP' }
+]);
 const devChannel = computed(() => versions.value?.channels?.dev ?? null);
 const stableChannel = computed(() => versions.value?.channels?.stable ?? null);
 const versionRows = computed<VersionRow[]>(() => buildVersionRows());
 const databaseRows = computed<DatabaseRow[]>(() => buildDatabaseRows());
+const runtimeRows = computed<RuntimeRow[]>(() => buildRuntimeRows());
+const dependencyPackageRows = computed<DependencyPackageRow[]>(() => buildDependencyPackageRows());
+const initialLoading = computed(() => loading.value && status.value === null && versions.value === null && dependencies.value === null);
 const updateManifestUrl = computed(() => {
   const configured = window.__AMCMS_ADMIN__?.basePath;
   if (typeof configured === 'string') return `${configured.replace(/\/$/, '')}/updates/manifest.json`;
@@ -101,11 +121,67 @@ async function load(): Promise<void> {
     auditLogs.value = res.data.audit_logs || [];
     runtimeLogs.value = res.data.runtime_logs || [];
     versions.value = res.data.versions || null;
+    dependencies.value = res.data.dependencies || null;
   } catch (err) {
-    error.value = apiErrorMessage(err, 'Module de maintenance indisponible.');
+    error.value = apiErrorMessage(err, t('maintenance.loadError'));
   } finally {
     loading.value = false;
   }
+}
+
+function runtimeStatus(runtime: DependencyRuntime): Pick<RuntimeRow, 'status' | 'statusClass'> {
+  return dependencyStatus(runtime.status);
+}
+
+function dependencyStatus(status?: string): Pick<DependencyPackageRow, 'status' | 'statusClass'> {
+  switch (status) {
+    case 'update_available':
+      return { status: t('maintenance.status.updateAvailable'), statusClass: 'text-bg-warning' };
+    case 'up_to_date':
+      return { status: t('maintenance.status.upToDate'), statusClass: 'text-bg-success' };
+    case 'missing':
+      return { status: t('maintenance.status.missing'), statusClass: 'text-bg-danger' };
+    case 'latest_unknown':
+    default:
+      return { status: t('maintenance.status.latestUnknown'), statusClass: 'text-bg-secondary' };
+  }
+}
+
+function latestSourceLabel(source?: string): string {
+  switch (source) {
+    case 'composer_registry':
+      return t('maintenance.latest.packagist');
+    case 'composer_site':
+      return t('maintenance.latest.composer');
+    case 'php_site':
+      return t('maintenance.latest.php');
+    case 'node_site':
+      return t('maintenance.latest.node');
+    case 'npm_registry':
+      return t('maintenance.latest.npm');
+    case 'cache':
+      return t('maintenance.latest.cache');
+    case 'cache_empty':
+      return t('maintenance.latest.cacheEmpty');
+    case 'disabled':
+      return t('maintenance.latest.disabled');
+    case 'budget_exceeded':
+      return t('maintenance.latest.budgetExceeded');
+    default:
+      return t('common.unavailable');
+  }
+}
+
+function shortPath(path = ''): string {
+  if (!path) return '—';
+  const marker = '/web/mod/';
+  const index = path.indexOf(marker);
+  if (index >= 0) return path.slice(index + marker.length);
+  return path;
+}
+
+function isBusyAction(action: string): boolean {
+  return Boolean(busyActions.value[action]);
 }
 
 function coreLabel(core?: CoreVersion | null): string {
@@ -121,7 +197,7 @@ function databaseAppliedLabel(database?: DatabaseVersion | null): string {
 }
 
 function databaseExpectedLabel(database?: DatabaseVersion | null): string {
-  return database?.expected_latest || (database?.expected_count === 0 ? 'aucune' : '—');
+  return database?.expected_latest || (database?.expected_count === 0 ? t('common.none') : '—');
 }
 
 function compareTechnicalVersion(left: string, right: string): number {
@@ -153,8 +229,9 @@ function compareModuleVersion(left: string, right: string): number {
 
 function compareMigrationName(left: string, right: string): number {
   if (left === right) return 0;
-  if (!left || left === '—' || left === 'aucune') return -1;
-  if (!right || right === '—' || right === 'aucune') return 1;
+  const noneLabel = t('common.none');
+  if (!left || left === '—' || left === noneLabel) return -1;
+  if (!right || right === '—' || right === noneLabel) return 1;
   return left.localeCompare(right, 'fr', { numeric: true, sensitivity: 'base' });
 }
 
@@ -175,11 +252,11 @@ function localDatabaseMap(): Map<string, DatabaseVersion> {
 }
 
 function channelSourceLabel(channel: VersionChannel | null): string {
-  if (!channel) return 'indisponible';
-  if (channel.status !== 'available') return 'indisponible';
-  if (channel.source === 'git') return `Git ${channel.git_branch || ''}`.trim();
-  if (channel.source === 'reference_with_git_fallback') return 'référence + Git';
-  return 'référence';
+  if (!channel) return t('common.unavailable');
+  if (channel.status !== 'available') return t('common.unavailable');
+  if (channel.source === 'git') return t('maintenance.channel.git', { branch: channel.git_branch || '' }).trim();
+  if (channel.source === 'reference_with_git_fallback') return t('maintenance.channel.referenceGitFallback');
+  return t('maintenance.channel.reference');
 }
 
 function versionAvailabilityStatus(
@@ -190,29 +267,29 @@ function versionAvailabilityStatus(
   if (missing) return { status: missing, statusClass: 'text-bg-secondary' };
   if (newerChannels.length > 0) {
     return {
-      status: `Nouvelle version disponible: ${newerChannels.join(', ')}`,
+      status: t('maintenance.status.updateAvailableChannels', { channels: newerChannels.join(', ') }),
       statusClass: 'text-bg-warning'
     };
   }
-  if (availableChannels.length > 0) return { status: 'À jour', statusClass: 'text-bg-success' };
-  return { status: 'Version distante inconnue', statusClass: 'text-bg-secondary' };
+  if (availableChannels.length > 0) return { status: t('maintenance.status.upToDate'), statusClass: 'text-bg-success' };
+  return { status: t('maintenance.status.remoteUnknown'), statusClass: 'text-bg-secondary' };
 }
 
 function databaseLocalStatus(database?: DatabaseVersion | null): Pick<DatabaseRow, 'status' | 'statusClass'> | null {
-  if (!database) return { status: 'Base absente localement', statusClass: 'text-bg-secondary' };
+  if (!database) return { status: t('maintenance.status.databaseLocalMissing'), statusClass: 'text-bg-secondary' };
   switch (database.status) {
     case 'missing_database':
-      return { status: 'Base absente', statusClass: 'text-bg-danger' };
+      return { status: t('maintenance.status.databaseMissing'), statusClass: 'text-bg-danger' };
     case 'optional_database_absent':
-      return { status: 'Base optionnelle absente', statusClass: 'text-bg-secondary' };
+      return { status: t('maintenance.status.optionalDatabaseMissing'), statusClass: 'text-bg-secondary' };
     case 'missing_journal':
-      return { status: 'Journal de migrations absent', statusClass: 'text-bg-warning' };
+      return { status: t('maintenance.status.migrationJournalMissing'), statusClass: 'text-bg-warning' };
     case 'pending_migrations':
-      return { status: `Migration manquante: ${(database.missing_migrations || []).slice(0, 2).join(', ')}`, statusClass: 'text-bg-warning' };
+      return { status: t('maintenance.status.pendingMigration', { migrations: (database.missing_migrations || []).slice(0, 2).join(', ') }), statusClass: 'text-bg-warning' };
     case 'unknown_migrations':
-      return { status: `Migration inconnue: ${(database.unknown_migrations || []).slice(0, 2).join(', ')}`, statusClass: 'text-bg-warning' };
+      return { status: t('maintenance.status.unknownMigration', { migrations: (database.unknown_migrations || []).slice(0, 2).join(', ') }), statusClass: 'text-bg-warning' };
     case 'checksum_mismatch':
-      return { status: 'Divergence checksum', statusClass: 'text-bg-danger' };
+      return { status: t('maintenance.status.checksumMismatch'), statusClass: 'text-bg-danger' };
     case 'no_migrations':
       return null;
     case 'up_to_date':
@@ -282,7 +359,7 @@ function buildVersionRows(): VersionRow[] {
       devVersion !== '—' ? 'dev' : '',
       stableVersion !== '—' ? 'stable' : ''
     ].filter(Boolean);
-    const missing = !local ? 'Absent localement' : (!devModule && !stableModule ? 'Absent des canaux' : '');
+    const missing = !local ? t('maintenance.status.localMissing') : (!devModule && !stableModule ? t('maintenance.status.channelsMissing') : '');
     const status = versionAvailabilityStatus(available, newer, missing);
     return {
       key,
@@ -293,7 +370,7 @@ function buildVersionRows(): VersionRow[] {
       stable: stableVersion,
       status: status.status,
       statusClass: status.statusClass,
-      detail: local?.enabled === false ? 'désactivé' : local?.installed === false ? 'non installé' : local?.type || ''
+      detail: local?.enabled === false ? t('maintenance.status.disabled') : local?.installed === false ? t('maintenance.status.notInstalled') : local?.type || ''
     };
   }).filter((row): row is VersionRow => row !== null)
     .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }))
@@ -331,9 +408,9 @@ function buildDatabaseRows(): DatabaseRow[] {
     ].filter(Boolean);
     const status = localStatus
       ?? (newer.length > 0
-        ? { status: `Nouvelle migration disponible: ${newer.join(', ')}`, statusClass: 'text-bg-warning' }
+        ? { status: t('maintenance.status.migrationAvailableChannels', { channels: newer.join(', ') }), statusClass: 'text-bg-warning' }
         : local?.status === 'no_migrations' && available.length === 0
-          ? { status: 'Aucune migration attendue', statusClass: 'text-bg-secondary' }
+          ? { status: t('maintenance.status.noMigrationExpected'), statusClass: 'text-bg-secondary' }
           : versionAvailabilityStatus(available, []));
 
     return {
@@ -349,8 +426,57 @@ function buildDatabaseRows(): DatabaseRow[] {
   }).sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 }
 
+function buildRuntimeRows(): RuntimeRow[] {
+  return (dependencies.value?.runtimes ?? []).map((runtime) => {
+    const status = runtimeStatus(runtime);
+    return {
+      key: runtime.key,
+      name: runtime.name,
+      latest: runtime.latest || '—',
+      installed: runtime.installed || '—',
+      required: runtime.required || '—',
+      status: status.status,
+      statusClass: status.statusClass,
+      source: latestSourceLabel(runtime.latest_source)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+}
+
+function buildDependencyPackageRows(): DependencyPackageRow[] {
+  return (dependencies.value?.packages ?? []).map((dependency) => {
+    const status = dependencyStatus(dependency.status);
+    return {
+      key: `${dependency.manager}:${dependency.name}`,
+      name: dependency.label || dependency.name,
+      manager: dependency.manager === 'composer' ? 'Composer' : 'npm',
+      installed: dependency.installed || '—',
+      latest: dependency.latest || '—',
+      path: shortPath(dependency.path),
+      status: status.status,
+      statusClass: status.statusClass,
+      source: latestSourceLabel(dependency.latest_source)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+}
+
+async function refreshDependencyVersions(): Promise<void> {
+  refreshingDependencyVersions.value = true;
+  error.value = '';
+  message.value = '';
+  try {
+    const query = `?site_id=${context.siteId}&language_code=${encodeURIComponent(context.languageCode)}`;
+    const res = await adminApi.post<{ message: string; dependencies: MaintenanceDependencies }>('/maintenance/dependencies/refresh' + query, {});
+    message.value = res.data.message;
+    dependencies.value = res.data.dependencies;
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('maintenance.refreshDependenciesError'));
+  } finally {
+    refreshingDependencyVersions.value = false;
+  }
+}
+
 async function runAction(action: 'clear-cache' | 'reindex-search' | 'clear-audit' | 'clear-runtime'): Promise<void> {
-  busyAction.value = action;
+  busyActions.value = { ...busyActions.value, [action]: true };
   error.value = '';
   message.value = '';
   try {
@@ -369,9 +495,9 @@ async function runAction(action: 'clear-cache' | 'reindex-search' | 'clear-audit
     if ('runtime_logs' in res.data && Array.isArray(res.data.runtime_logs)) runtimeLogs.value = res.data.runtime_logs;
     if (action === 'clear-cache' || action === 'reindex-search') await load();
   } catch (err) {
-    error.value = apiErrorMessage(err, 'Action de maintenance impossible.');
+    error.value = apiErrorMessage(err, t('maintenance.actionError'));
   } finally {
-    busyAction.value = '';
+    busyActions.value = { ...busyActions.value, [action]: false };
   }
 }
 
@@ -379,44 +505,50 @@ onMounted(load);
 </script>
 
 <template>
-  <PageHeader title="Maintenance" intro="Cache, index de recherche, logs runtime et journal d’audit IAM depuis un écran unique orienté exploitation.">
+  <PageHeader :title="t('maintenance.title')" :intro="t('maintenance.intro')">
   </PageHeader>
+  <ContextualHelpLink id="tools.maintenance" class="mb-3" />
 
   <ApiFeedback :error="error" :message="message" />
 
   <div v-if="!canMaintain" class="card empty-state">
-    <h2>Accès restreint</h2>
-    <p class="muted">La maintenance système demande la permission <code>maintenance.manage</code>.</p>
+    <h2>{{ t('maintenance.restricted.title') }}</h2>
+    <p class="muted" v-html="t('maintenance.restricted.message', { permission: '<code>maintenance.manage</code>' })"></p>
+  </div>
+
+  <div v-else-if="initialLoading" class="maintenance-loading" role="status" aria-live="polite">
+    <span class="maintenance-loading-spinner" aria-hidden="true"></span>
+    <span>{{ t('maintenance.loading') }}</span>
   </div>
 
   <template v-else>
     <section class="stats-grid dashboard-top-stats">
-      <article class="card"><span class="muted">Cache</span><strong>{{ status?.cache.files ?? 0 }}</strong><small>{{ formatBytes(status?.cache.size_bytes ?? 0) }}</small></article>
-      <article class="card"><span class="muted">Recherche</span><strong>{{ status?.search_documents ?? 0 }}</strong><small>{{ status?.published_entries ?? 0 }} entrée(s) publiée(s)</small></article>
-      <article class="card"><span class="muted">Audits IAM</span><strong>{{ status?.audit_rows ?? 0 }}</strong><small>Événements journalisés</small></article>
-      <article class="card"><span class="muted">Logs runtime</span><strong>{{ status?.runtime_logs.files ?? 0 }}</strong><small>{{ formatBytes(status?.runtime_logs.size_bytes ?? 0) }}</small></article>
+      <article class="card"><span class="muted">{{ t('maintenance.metric.cache') }}</span><strong>{{ status?.cache.files ?? 0 }}</strong><small>{{ formatBytes(status?.cache.size_bytes ?? 0) }}</small></article>
+      <article class="card"><span class="muted">{{ t('maintenance.metric.search') }}</span><strong>{{ status?.search_documents ?? 0 }}</strong><small>{{ t('maintenance.metric.publishedEntries', { count: status?.published_entries ?? 0 }) }}</small></article>
+      <article class="card"><span class="muted">{{ t('maintenance.metric.audit') }}</span><strong>{{ status?.audit_rows ?? 0 }}</strong><small>{{ t('maintenance.metric.loggedEvents') }}</small></article>
+      <article class="card"><span class="muted">{{ t('maintenance.metric.runtimeLogs') }}</span><strong>{{ status?.runtime_logs.files ?? 0 }}</strong><small>{{ formatBytes(status?.runtime_logs.size_bytes ?? 0) }}</small></article>
     </section>
 
     <section class="card maintenance-panel-full maintenance-versions-panel">
       <p class="muted maintenance-channel-summary">
-        Dev : {{ channelSourceLabel(devChannel) }} · Stable : {{ channelSourceLabel(stableChannel) }}
+        {{ t('maintenance.channelSummary', { dev: channelSourceLabel(devChannel), stable: channelSourceLabel(stableChannel) }) }}
       </p>
 
-      <div v-if="!versions" class="muted">Informations de version indisponibles.</div>
+      <div v-if="!versions" class="muted">{{ t('maintenance.empty.versions') }}</div>
       <div v-else class="table-responsive">
         <table class="table align-middle mb-0 maintenance-version-table">
           <thead>
             <tr>
               <th>
                 <span class="maintenance-table-heading">
-                  Versions installées
-                  <InfoHint text="Comparaison informative du core et des modules installés avec les canaux dev et stable. Aucune mise à jour n’est lancée depuis cette page." />
+                  {{ t('maintenance.modules.title') }}
+                  <InfoHint :text="t('maintenance.modules.info')" />
                 </span>
               </th>
-              <th>Installé</th>
-              <th>Dev</th>
-              <th>Stable</th>
-              <th>État</th>
+              <th>{{ t('maintenance.column.installed') }}</th>
+              <th>{{ t('maintenance.column.dev') }}</th>
+              <th>{{ t('maintenance.column.stable') }}</th>
+              <th>{{ t('maintenance.column.status') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -430,7 +562,7 @@ onMounted(load);
               <td><span class="badge" :class="row.statusClass">{{ row.status }}</span></td>
             </tr>
             <tr v-if="versionRows.length === 0">
-              <td colspan="5" class="text-muted">Aucune information de version à afficher.</td>
+              <td colspan="5" class="text-muted">{{ t('maintenance.empty.versionRows') }}</td>
             </tr>
           </tbody>
         </table>
@@ -443,14 +575,14 @@ onMounted(load);
               <tr>
                 <th>
                   <span class="maintenance-table-heading">
-                    Bases de données
-                    <InfoHint text="Comparaison informative des migrations SQLite attendues et appliquées. Cette page ne crée pas de base et n’applique aucune migration." />
+                    {{ t('maintenance.databases.title') }}
+                    <InfoHint :text="t('maintenance.databases.info')" />
                   </span>
                 </th>
-                <th>Appliquée</th>
-                <th>Dev</th>
-                <th>Stable</th>
-                <th>État</th>
+                <th>{{ t('maintenance.column.applied') }}</th>
+                <th>{{ t('maintenance.column.dev') }}</th>
+                <th>{{ t('maintenance.column.stable') }}</th>
+                <th>{{ t('maintenance.column.status') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -464,7 +596,7 @@ onMounted(load);
                 <td><span class="badge" :class="row.statusClass">{{ row.status }}</span></td>
               </tr>
               <tr v-if="databaseRows.length === 0">
-                <td colspan="5" class="text-muted">Aucune information de base de données à afficher.</td>
+                <td colspan="5" class="text-muted">{{ t('maintenance.empty.databaseRows') }}</td>
               </tr>
             </tbody>
           </table>
@@ -472,55 +604,124 @@ onMounted(load);
       </div>
 
       <p class="muted mt-3 mb-0">
-        Manifest local public :
+        {{ t('maintenance.manifest.local') }}
         <a :href="updateManifestUrl" target="_blank" rel="noopener">{{ updateManifestUrl }}</a>
       </p>
+    </section>
+
+    <section class="card maintenance-panel-full maintenance-dependencies-panel">
+      <div class="maintenance-dependencies-head">
+        <span class="maintenance-table-heading">
+          {{ t('maintenance.dependencies.title') }}
+          <InfoHint :text="t('maintenance.dependencies.info')" />
+        </span>
+        <button
+          class="btn small"
+          type="button"
+          :disabled="refreshingDependencyVersions || dependencies?.latest_enabled === false"
+          @click="refreshDependencyVersions"
+        >
+          {{ refreshingDependencyVersions ? t('maintenance.action.refreshingDependencies') : t('maintenance.action.refreshDependencies') }}
+        </button>
+      </div>
+
+      <div v-if="!dependencies" class="muted">{{ t('maintenance.empty.dependencies') }}</div>
+      <template v-else>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0 maintenance-dependencies-table">
+            <thead>
+              <tr>
+                <th>{{ t('maintenance.column.environment') }}</th>
+                <th>{{ t('maintenance.column.installed') }}</th>
+                <th>{{ t('maintenance.column.latest') }}</th>
+                <th>{{ t('maintenance.column.required') }}</th>
+                <th>{{ t('maintenance.column.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in runtimeRows" :key="row.key">
+                <td>{{ row.name }}</td>
+                <td><code>{{ row.installed }}</code></td>
+                <td><code>{{ row.latest }}</code> <span class="muted dependency-source">· {{ row.source }}</span></td>
+                <td><code>{{ row.required }}</code></td>
+                <td><span class="badge" :class="row.statusClass">{{ row.status }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-responsive maintenance-dependencies-subtable">
+          <table class="table align-middle mb-0 maintenance-dependencies-table">
+            <thead>
+              <tr>
+                <th>{{ t('maintenance.column.dependency') }}</th>
+                <th>{{ t('maintenance.column.installed') }}</th>
+                <th>{{ t('maintenance.column.latest') }}</th>
+                <th>{{ t('maintenance.column.path') }}</th>
+                <th>{{ t('maintenance.column.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in dependencyPackageRows" :key="row.key">
+                <td>{{ row.name }}</td>
+                <td><code>{{ row.installed }}</code></td>
+                <td><code>{{ row.latest }}</code> <span class="muted dependency-source">· {{ row.source }}</span></td>
+                <td><code>{{ row.path }}</code></td>
+                <td><span class="badge" :class="row.statusClass">{{ row.status }}</span></td>
+              </tr>
+              <tr v-if="dependencyPackageRows.length === 0">
+                <td colspan="5" class="text-muted">{{ t('maintenance.empty.packageRows') }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </section>
 
     <section class="grid grid-2 maintenance-actions">
       <article class="card maintenance-card">
         <h2 class="d-inline-flex align-items-center gap-1">
-          Cache
-          <InfoHint text="Supprime les fichiers générés dans storage/cache, y compris le cache Twig public." />
+          {{ t('maintenance.action.cache.title') }}
+          <InfoHint :text="t('maintenance.action.cache.info')" />
         </h2>
-        <button class="btn primary" type="button" :disabled="busyAction !== ''" @click="runAction('clear-cache')">{{ busyAction === 'clear-cache' ? 'Nettoyage…' : 'Vider le cache' }}</button>
+        <button class="btn primary" type="button" :disabled="isBusyAction('clear-cache')" @click="runAction('clear-cache')">{{ isBusyAction('clear-cache') ? t('maintenance.action.cache.running') : t('maintenance.action.cache.run') }}</button>
       </article>
       <article class="card maintenance-card">
         <h2 class="d-inline-flex align-items-center gap-1">
-          Recherche
-          <InfoHint text="Reconstruit les projections publiques des contenus publiés puis régénère l’index FTS natif." />
+          {{ t('maintenance.action.search.title') }}
+          <InfoHint :text="t('maintenance.action.search.info')" />
         </h2>
-        <button class="btn primary" type="button" :disabled="busyAction !== ''" @click="runAction('reindex-search')">{{ busyAction === 'reindex-search' ? 'Réindexation…' : 'Réindexer la recherche' }}</button>
+        <button class="btn primary" type="button" :disabled="isBusyAction('reindex-search')" @click="runAction('reindex-search')">{{ isBusyAction('reindex-search') ? t('maintenance.action.search.running') : t('maintenance.action.search.run') }}</button>
       </article>
       <article class="card maintenance-card danger-zone">
         <h2 class="d-inline-flex align-items-center gap-1">
-          Journal d’audit
-          <InfoHint text="Efface les audits IAM existants, puis écrit une nouvelle trace de purge." />
+          {{ t('maintenance.action.audit.title') }}
+          <InfoHint :text="t('maintenance.action.audit.info')" />
         </h2>
-        <button class="btn danger" type="button" :disabled="busyAction !== ''" @click="runAction('clear-audit')">{{ busyAction === 'clear-audit' ? 'Suppression…' : 'Effacer les audits' }}</button>
+        <button class="btn danger" type="button" :disabled="isBusyAction('clear-audit')" @click="runAction('clear-audit')">{{ isBusyAction('clear-audit') ? t('maintenance.action.audit.running') : t('maintenance.action.audit.run') }}</button>
       </article>
       <article class="card maintenance-card danger-zone">
         <h2 class="d-inline-flex align-items-center gap-1">
-          Logs runtime
-          <InfoHint text="Supprime les fichiers de log applicatifs dans storage/logs." />
+          {{ t('maintenance.action.runtime.title') }}
+          <InfoHint :text="t('maintenance.action.runtime.info')" />
         </h2>
-        <button class="btn danger" type="button" :disabled="busyAction !== ''" @click="runAction('clear-runtime')">{{ busyAction === 'clear-runtime' ? 'Suppression…' : 'Effacer les logs' }}</button>
+        <button class="btn danger" type="button" :disabled="isBusyAction('clear-runtime')" @click="runAction('clear-runtime')">{{ isBusyAction('clear-runtime') ? t('maintenance.action.runtime.running') : t('maintenance.action.runtime.run') }}</button>
       </article>
     </section>
 
     <section class="maintenance-panels stack">
       <article class="card maintenance-panel-full">
-        <h2>Logs runtime</h2>
-        <div v-if="runtimeLogs.length === 0" class="muted">Aucun fichier de log runtime.</div>
+        <h2>{{ t('maintenance.action.runtime.title') }}</h2>
+        <div v-if="runtimeLogs.length === 0" class="muted">{{ t('maintenance.empty.runtimeLogs') }}</div>
         <details v-for="log in runtimeLogs" :key="log.name" class="runtime-log-details">
-          <summary><strong>{{ log.name }}</strong> <span class="muted">{{ formatBytes(log.size_bytes) }} · {{ log.updated_at }}</span></summary>
+          <summary><strong>{{ log.name }}</strong> <span class="muted">{{ formatBytes(log.size_bytes) }} · {{ dateTime(log.updated_at) }}</span></summary>
           <pre>{{ log.tail.join('\n') }}</pre>
         </details>
       </article>
 
       <article class="maintenance-panel-full">
-        <div class="panel-header"><h2>Audits récents</h2></div>
-        <DataTable :columns="[{key:'created_at',label:'Date'},{key:'actor',label:'Acteur'},{key:'action_key',label:'Action'},{key:'resource',label:'Ressource'},{key:'ip',label:'IP'}]" :rows="auditRows" />
+        <div class="panel-header"><h2>{{ t('maintenance.audit.recent') }}</h2></div>
+        <DataTable :columns="auditColumns" :rows="auditRows" />
       </article>
     </section>
   </template>
@@ -529,6 +730,31 @@ onMounted(load);
 <style scoped>
 .maintenance-version-table {
   table-layout: fixed;
+}
+
+.maintenance-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  min-height: 42vh;
+  width: 100%;
+  padding: 1rem;
+  color: var(--muted);
+}
+
+.maintenance-loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: maintenance-spin .75s linear infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes maintenance-spin {
+  to { transform: rotate(360deg); }
 }
 
 .maintenance-versions-panel {
@@ -573,5 +799,55 @@ onMounted(load);
 
 .maintenance-actions {
   margin-top: 1.25rem;
+}
+
+.maintenance-dependencies-panel {
+  margin-top: 1.25rem;
+  padding-bottom: 1.15rem;
+}
+
+.maintenance-dependencies-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .55rem;
+}
+
+.maintenance-dependencies-table {
+  table-layout: fixed;
+}
+
+.maintenance-dependencies-table th,
+.maintenance-dependencies-table td {
+  width: 20%;
+  padding-top: .42rem;
+  padding-bottom: .42rem;
+  overflow-wrap: anywhere;
+}
+
+.maintenance-dependencies-table code {
+  font-size: .8rem;
+}
+
+.maintenance-dependencies-table .badge {
+  padding: .16rem .45rem;
+  font-size: .72rem;
+  line-height: 1.15;
+}
+
+.maintenance-dependencies-subtable {
+  margin-top: .85rem;
+}
+
+.dependency-source {
+  font-size: .78rem;
+}
+
+@media (max-width: 720px) {
+  .maintenance-dependencies-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>

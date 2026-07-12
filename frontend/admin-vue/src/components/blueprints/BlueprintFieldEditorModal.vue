@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useI18n } from '@/i18n';
 import type { BlueprintField, FieldConfig, FieldType } from './types';
 
 const props = defineProps<{ field: BlueprintField; fieldTypes: FieldType[]; mode: 'blueprint'|'fieldset'; isNew?: boolean; canManage: boolean }>();
@@ -10,8 +11,9 @@ const jsonBuffers = ref({ options: '', validation: '', conditions: '', config: '
 const jsonErrors = ref<Record<string, string>>({});
 const typeWarning = ref('');
 const choiceRevision = ref(0);
+const { t } = useI18n();
 
-const purposeLabels: Record<string, string> = { content: 'Contenu', seo: 'SEO', page_builder: 'Page builder', metadata: 'Métadonnées', system: 'Système' };
+function purposeLabel(purpose: string): string { return t(`blueprints.purpose.${purpose}`) || purpose; }
 const choiceTypes = ['select', 'multiselect', 'radio', 'checkboxes', 'button_group'];
 const textTypes = ['text', 'textarea', 'richtext', 'markdown', 'slug', 'link', 'code', 'yaml'];
 const numericTypes = ['number', 'integer', 'range'];
@@ -68,7 +70,7 @@ function assignJson(key: 'options'|'validation'|'conditions'|'config', value: st
     const { [key]: _removed, ...rest } = jsonErrors.value;
     jsonErrors.value = rest;
   } catch {
-    jsonErrors.value = { ...jsonErrors.value, [key]: `JSON invalide dans ${key}.` };
+    jsonErrors.value = { ...jsonErrors.value, [key]: t('blueprints.error.invalidJson', { key }) };
   }
 }
 function onKeydown(event: KeyboardEvent): void { if (event.key === 'Escape') { event.preventDefault(); emit('cancel'); } }
@@ -154,7 +156,7 @@ watch(() => props.field.field_type, (next, previous) => {
   const config = readConfig();
   const hasMediaConfig = Boolean(validation.alt_policy || validation.allowed_mime || validation.allowed_mimes || config.kind || config.max_files);
   if ((choiceTypes.includes(previous) && !choiceTypes.includes(next) && hasChoiceConfig) || (mediaTypes.includes(previous) && !mediaTypes.includes(next) && hasMediaConfig)) {
-    typeWarning.value = 'Le nouveau type ne consomme peut-être pas certaines options existantes. Elles sont conservées dans la zone experte.';
+    typeWarning.value = t('blueprints.fieldModal.typeWarning');
   } else typeWarning.value = '';
 });
 onMounted(() => nextTick(() => (initialFocus.value?.disabled ? closeButton.value : initialFocus.value)?.focus()));
@@ -163,69 +165,69 @@ onMounted(() => nextTick(() => (initialFocus.value?.disabled ? closeButton.value
 <template>
   <div class="modal d-block blueprint-modal" role="dialog" aria-modal="true" aria-labelledby="field-editor-title" tabindex="-1" @keydown="onKeydown">
     <div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content">
-      <div class="modal-header"><div><h2 id="field-editor-title" class="modal-title h5">Modifier le champ</h2><small class="text-muted"><code>{{ field.field_handle }}</code> · {{ fieldTypeLabel(field.field_type) }}</small></div><button ref="closeButton" type="button" class="btn-close" aria-label="Annuler la modification du champ" @click="emit('cancel')"></button></div>
+      <div class="modal-header"><div><h2 id="field-editor-title" class="modal-title h5">{{ t('blueprints.fieldModal.title') }}</h2><small class="text-muted"><code>{{ field.field_handle }}</code> · {{ fieldTypeLabel(field.field_type) }}</small></div><button ref="closeButton" type="button" class="btn-close" :aria-label="t('blueprints.fieldModal.cancel')" @click="emit('cancel')"></button></div>
       <div class="modal-body">
         <div class="row g-3">
-          <label class="col-md-4 form-label">Nom affiché<input ref="initialFocus" v-model="field.label" class="form-control mt-1" :disabled="!canManage"></label>
-          <label class="col-md-4 form-label">Type<select v-model="field.field_type" class="form-select mt-1" :disabled="field.is_system || !canManage"><option v-for="type in fieldTypes" :key="type.handle" :value="type.handle">{{ type.label }}</option></select></label>
-          <label class="col-md-4 form-label">Largeur<select v-model.number="field.width" class="form-select mt-1" :disabled="!canManage"><option v-for="width in [25,33,50,66,75,100]" :key="width" :value="width">{{ width }}%</option></select></label>
-          <div class="col-md-4 d-flex align-items-end gap-3"><label class="form-check"><input v-model="field.is_required" class="form-check-input" type="checkbox" :disabled="!canManage"><span class="form-check-label">obligatoire</span></label><label class="form-check"><input v-model="field.is_localized" class="form-check-input" type="checkbox" :disabled="!canManage"><span class="form-check-label">multilingue</span></label></div>
-          <label class="col-md-8 form-label">Aide<textarea v-model="field.help_text" class="form-control mt-1" rows="2" :disabled="!canManage"></textarea></label>
+          <label class="col-md-4 form-label">{{ t('blueprints.editor.displayName') }}<input ref="initialFocus" v-model="field.label" class="form-control mt-1" :disabled="!canManage"></label>
+          <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.type') }}<select v-model="field.field_type" class="form-select mt-1" :disabled="field.is_system || !canManage"><option v-for="type in fieldTypes" :key="type.handle" :value="type.handle">{{ type.label }}</option></select></label>
+          <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.width') }}<select v-model.number="field.width" class="form-select mt-1" :disabled="!canManage"><option v-for="width in [25,33,50,66,75,100]" :key="width" :value="width">{{ width }}%</option></select></label>
+          <div class="col-md-4 d-flex align-items-end gap-3"><label class="form-check"><input v-model="field.is_required" class="form-check-input" type="checkbox" :disabled="!canManage"><span class="form-check-label">{{ t('blueprints.fieldModal.required') }}</span></label><label class="form-check"><input v-model="field.is_localized" class="form-check-input" type="checkbox" :disabled="!canManage"><span class="form-check-label">{{ t('blueprints.fieldModal.localized') }}</span></label></div>
+          <label class="col-md-8 form-label">{{ t('blueprints.fieldModal.help') }}<textarea v-model="field.help_text" class="form-control mt-1" rows="2" :disabled="!canManage"></textarea></label>
         </div>
         <div v-if="typeWarning" class="alert alert-warning mt-3 mb-0">{{ typeWarning }}</div>
 
         <section v-if="hasTypedConfiguration" class="border rounded-3 p-3 mt-3" aria-labelledby="typed-field-config-title">
-          <h3 id="typed-field-config-title" class="h6">Configuration guidée</h3>
+          <h3 id="typed-field-config-title" class="h6">{{ t('blueprints.fieldModal.guidedConfig') }}</h3>
           <div v-if="isChoiceType" class="vstack gap-2">
-            <p class="small text-muted mb-1">Options réellement utilisées par les champs de choix. Les autres clés restent dans la zone experte.</p>
+            <p class="small text-muted mb-1">{{ t('blueprints.fieldModal.choiceHelp') }}</p>
             <div v-for="(choice, index) in choiceRows" :key="index" class="row g-2 align-items-end">
-              <label class="col-md-4 form-label mb-0">Valeur<input class="form-control mt-1" :value="choice.value" :disabled="!canManage" @input="setChoice(index, 'value', ($event.target as HTMLInputElement).value)"></label>
-              <label class="col-md-6 form-label mb-0">Libellé<input class="form-control mt-1" :value="choice.label" :disabled="!canManage" @input="setChoice(index, 'label', ($event.target as HTMLInputElement).value)"></label>
-              <div class="col-md-2"><button type="button" class="btn btn-outline-danger btn-sm w-100" :disabled="!canManage" @click="removeChoice(index)">Retirer</button></div>
+              <label class="col-md-4 form-label mb-0">{{ t('blueprints.fieldModal.value') }}<input class="form-control mt-1" :value="choice.value" :disabled="!canManage" @input="setChoice(index, 'value', ($event.target as HTMLInputElement).value)"></label>
+              <label class="col-md-6 form-label mb-0">{{ t('blueprints.fieldModal.label') }}<input class="form-control mt-1" :value="choice.label" :disabled="!canManage" @input="setChoice(index, 'label', ($event.target as HTMLInputElement).value)"></label>
+              <div class="col-md-2"><button type="button" class="btn btn-outline-danger btn-sm w-100" :disabled="!canManage" @click="removeChoice(index)">{{ t('common.remove') }}</button></div>
             </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm align-self-start" :disabled="!canManage" @click="addChoice">Ajouter une option</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm align-self-start" :disabled="!canManage" @click="addChoice">{{ t('blueprints.fieldModal.addOption') }}</button>
           </div>
           <div v-if="isTextType" class="row g-3">
-            <label class="col-md-3 form-label">Min. caractères<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'min')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'min', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-3 form-label">Max. caractères<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'max')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'max', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-3 form-label">Format<select class="form-select mt-1" :value="valueAt(readValidation(), 'format')" :disabled="!canManage" @change="setOptionalString(editValidation(), 'format', ($event.target as HTMLSelectElement).value)"><option value="">—</option><option value="email">E-mail</option><option value="url">URL</option><option value="slug">Slug</option></select></label>
-            <label class="col-md-3 form-label">Regex<input class="form-control mt-1" :value="valueAt(readValidation(), 'regex')" :disabled="!canManage" @input="setOptionalString(editValidation(), 'regex', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.minChars') }}<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'min')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'min', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.maxChars') }}<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'max')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'max', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.format') }}<select class="form-select mt-1" :value="valueAt(readValidation(), 'format')" :disabled="!canManage" @change="setOptionalString(editValidation(), 'format', ($event.target as HTMLSelectElement).value)"><option value="">—</option><option value="email">E-mail</option><option value="url">URL</option><option value="slug">Slug</option></select></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.regex') }}<input class="form-control mt-1" :value="valueAt(readValidation(), 'regex')" :disabled="!canManage" @input="setOptionalString(editValidation(), 'regex', ($event.target as HTMLInputElement).value)"></label>
           </div>
           <div v-if="isNumericType" class="row g-3">
-            <label class="col-md-4 form-label">Minimum UI<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'min')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'min', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-4 form-label">Maximum UI<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'max')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'max', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-4 form-label">Pas UI<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'step')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'step', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.minimumUi') }}<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'min')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'min', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.maximumUi') }}<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'max')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'max', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.stepUi') }}<input class="form-control mt-1" type="number" :value="valueAt(readConfig(), 'step')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'step', ($event.target as HTMLInputElement).value)"></label>
           </div>
           <div v-if="isMediaType" class="row g-3">
-            <label class="col-md-3 form-label">Type média<select class="form-select mt-1" :value="valueAt(readConfig(), 'kind')" :disabled="!canManage" @change="setOptionalString(editConfig(), 'kind', ($event.target as HTMLSelectElement).value)"><option value="">—</option><option value="image">Image</option><option value="video">Vidéo</option><option value="audio">Audio</option><option value="document">Document</option><option value="any">Tout</option></select></label>
-            <label class="col-md-3 form-label">Nombre max.<input class="form-control mt-1" type="number" min="1" :value="valueAt(readConfig(), 'max_files')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'max_files', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-3 form-label">Politique alt<select class="form-select mt-1" :value="valueAt(readValidation(), 'alt_policy')" :disabled="!canManage" @change="setOptionalString(editValidation(), 'alt_policy', ($event.target as HTMLSelectElement).value)"><option value="">Défaut serveur</option><option value="required">Requis</option><option value="decorative_allowed">Décoratif autorisé</option><option value="forbidden">Interdit</option></select></label>
-            <label class="col-md-3 form-label">Set préféré<input class="form-control mt-1" :value="valueAt(readConfig(), 'preferred_set')" :disabled="!canManage" @input="setOptionalString(editConfig(), 'preferred_set', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-12 form-label">MIME autorisés<textarea class="form-control mt-1" rows="2" :value="allowedMimeText()" :disabled="!canManage" @input="setAllowedMime(($event.target as HTMLTextAreaElement).value)"></textarea></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.mediaType') }}<select class="form-select mt-1" :value="valueAt(readConfig(), 'kind')" :disabled="!canManage" @change="setOptionalString(editConfig(), 'kind', ($event.target as HTMLSelectElement).value)"><option value="">—</option><option value="image">{{ t('blueprints.mediaKind.image') }}</option><option value="video">{{ t('blueprints.mediaKind.video') }}</option><option value="audio">{{ t('blueprints.mediaKind.audio') }}</option><option value="document">{{ t('blueprints.mediaKind.document') }}</option><option value="any">{{ t('common.all') }}</option></select></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.maxFiles') }}<input class="form-control mt-1" type="number" min="1" :value="valueAt(readConfig(), 'max_files')" :disabled="!canManage" @input="setOptionalNumber(editConfig(), 'max_files', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.altPolicy') }}<select class="form-select mt-1" :value="valueAt(readValidation(), 'alt_policy')" :disabled="!canManage" @change="setOptionalString(editValidation(), 'alt_policy', ($event.target as HTMLSelectElement).value)"><option value="">{{ t('blueprints.fieldModal.serverDefault') }}</option><option value="required">{{ t('blueprints.fieldModal.altRequired') }}</option><option value="decorative_allowed">{{ t('blueprints.fieldModal.decorativeAllowed') }}</option><option value="forbidden">{{ t('blueprints.fieldModal.forbidden') }}</option></select></label>
+            <label class="col-md-3 form-label">{{ t('blueprints.fieldModal.preferredSet') }}<input class="form-control mt-1" :value="valueAt(readConfig(), 'preferred_set')" :disabled="!canManage" @input="setOptionalString(editConfig(), 'preferred_set', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-12 form-label">{{ t('blueprints.fieldModal.allowedMimes') }}<textarea class="form-control mt-1" rows="2" :value="allowedMimeText()" :disabled="!canManage" @input="setAllowedMime(($event.target as HTMLTextAreaElement).value)"></textarea></label>
           </div>
           <div v-if="isRelationType" class="row g-3">
-            <label class="col-md-4 form-label">Type de ressource<input class="form-control mt-1" :value="valueAt(readConfig(), 'resource_type')" :disabled="!canManage" @input="setOptionalString(editConfig(), 'resource_type', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-4 form-label">Minimum éléments<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'min_items')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'min_items', ($event.target as HTMLInputElement).value)"></label>
-            <label class="col-md-4 form-label">Maximum éléments<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'max_items')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'max_items', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.resourceType') }}<input class="form-control mt-1" :value="valueAt(readConfig(), 'resource_type')" :disabled="!canManage" @input="setOptionalString(editConfig(), 'resource_type', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.minItems') }}<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'min_items')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'min_items', ($event.target as HTMLInputElement).value)"></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.maxItems') }}<input class="form-control mt-1" type="number" :value="valueAt(readValidation(), 'max_items')" :disabled="!canManage" @input="setOptionalNumber(editValidation(), 'max_items', ($event.target as HTMLInputElement).value)"></label>
           </div>
         </section>
 
-        <details class="mt-3"><summary class="small fw-semibold">Options expertes : identifiant, cycle de vie, conditions et JSON</summary>
+        <details class="mt-3"><summary class="small fw-semibold">{{ t('blueprints.fieldModal.expertOptions') }}</summary>
           <div class="row g-3 mt-1">
-            <label class="col-md-4 form-label">Identifiant technique<input v-model="field.field_handle" class="form-control mt-1" :disabled="field.is_system || Boolean(field.id) || !canManage" @blur="field.field_handle = normalizeHandle(field.field_handle)"><small v-if="field.id" class="text-muted">Identifiant technique verrouillé.</small></label>
-            <label class="col-md-4 form-label">Cycle de vie<select class="form-select mt-1" :value="valueAt(readConfig(), 'lifecycle_state') || 'active'" :disabled="!canManage" @change="setOptionalString(editConfig(), 'lifecycle_state', ($event.target as HTMLSelectElement).value === 'active' ? '' : ($event.target as HTMLSelectElement).value)"><option value="active">Actif</option><option value="disabled">Désactivé</option><option value="hidden">Masqué</option><option value="archived">Archivé</option></select></label>
-            <div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" type="checkbox" :checked="Boolean(readConfig().disabled)" :disabled="field.is_system || !canManage" @change="setOptionalBoolean(editConfig(), 'disabled', ($event.target as HTMLInputElement).checked)"><span class="form-check-label">désactivation UI historique</span></label></div>
-            <label class="col-md-6 form-label">Options JSON<textarea :value="jsonBuffers.options" class="form-control font-monospace mt-1" rows="6" :disabled="!canManage" @input="assignJson('options', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.options" class="text-danger">{{ jsonErrors.options }}</small></label>
-            <label class="col-md-6 form-label">Validation JSON<textarea :value="jsonBuffers.validation" class="form-control font-monospace mt-1" rows="6" :disabled="!canManage" @input="assignJson('validation', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.validation" class="text-danger">{{ jsonErrors.validation }}</small></label>
-            <label class="col-md-6 form-label">Conditions JSON<textarea :value="jsonBuffers.conditions" class="form-control font-monospace mt-1" rows="5" :disabled="!canManage" @input="assignJson('conditions', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.conditions" class="text-danger">{{ jsonErrors.conditions }}</small></label>
-            <label class="col-md-6 form-label">Configuration JSON<textarea :value="jsonBuffers.config" class="form-control font-monospace mt-1" rows="5" :disabled="!canManage" @input="assignJson('config', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.config" class="text-danger">{{ jsonErrors.config }}</small></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.editor.technicalId') }}<input v-model="field.field_handle" class="form-control mt-1" :disabled="field.is_system || Boolean(field.id) || !canManage" @blur="field.field_handle = normalizeHandle(field.field_handle)"><small v-if="field.id" class="text-muted">{{ t('blueprints.editor.lockedAfterCreation') }}</small></label>
+            <label class="col-md-4 form-label">{{ t('blueprints.fieldModal.lifecycle') }}<select class="form-select mt-1" :value="valueAt(readConfig(), 'lifecycle_state') || 'active'" :disabled="!canManage" @change="setOptionalString(editConfig(), 'lifecycle_state', ($event.target as HTMLSelectElement).value === 'active' ? '' : ($event.target as HTMLSelectElement).value)"><option value="active">{{ t('common.enabled') }}</option><option value="disabled">{{ t('common.disabled') }}</option><option value="hidden">{{ t('blueprints.fieldModal.hidden') }}</option><option value="archived">{{ t('core.status.archived') }}</option></select></label>
+            <div class="col-md-4 d-flex align-items-end"><label class="form-check"><input class="form-check-input" type="checkbox" :checked="Boolean(readConfig().disabled)" :disabled="field.is_system || !canManage" @change="setOptionalBoolean(editConfig(), 'disabled', ($event.target as HTMLInputElement).checked)"><span class="form-check-label">{{ t('blueprints.fieldModal.legacyUiDisabled') }}</span></label></div>
+            <label class="col-md-6 form-label">{{ t('blueprints.fieldModal.optionsJson') }}<textarea :value="jsonBuffers.options" class="form-control font-monospace mt-1" rows="6" :disabled="!canManage" @input="assignJson('options', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.options" class="text-danger">{{ jsonErrors.options }}</small></label>
+            <label class="col-md-6 form-label">{{ t('blueprints.fieldModal.validationJson') }}<textarea :value="jsonBuffers.validation" class="form-control font-monospace mt-1" rows="6" :disabled="!canManage" @input="assignJson('validation', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.validation" class="text-danger">{{ jsonErrors.validation }}</small></label>
+            <label class="col-md-6 form-label">{{ t('blueprints.fieldModal.conditionsJson') }}<textarea :value="jsonBuffers.conditions" class="form-control font-monospace mt-1" rows="5" :disabled="!canManage" @input="assignJson('conditions', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.conditions" class="text-danger">{{ jsonErrors.conditions }}</small></label>
+            <label class="col-md-6 form-label">{{ t('blueprints.fieldModal.configJson') }}<textarea :value="jsonBuffers.config" class="form-control font-monospace mt-1" rows="5" :disabled="!canManage" @input="assignJson('config', ($event.target as HTMLTextAreaElement).value)"></textarea><small v-if="jsonErrors.config" class="text-danger">{{ jsonErrors.config }}</small></label>
           </div>
         </details>
-        <div v-if="Object.keys(jsonErrors).length" class="alert alert-danger mt-3 mb-0">Corrigez le JSON expert avant d’appliquer localement. Le texte saisi est conservé.</div>
+        <div v-if="Object.keys(jsonErrors).length" class="alert alert-danger mt-3 mb-0">{{ t('blueprints.fieldModal.fixJson') }}</div>
       </div>
       <div class="modal-footer justify-content-between">
-        <button v-if="mode === 'blueprint' && !isNew" class="btn btn-outline-secondary" :disabled="!canManage" @click="emit('duplicate')">Dupliquer</button>
-        <div class="d-flex gap-2 ms-auto"><button v-if="!isNew" class="btn btn-outline-danger" :disabled="field.is_system || !canManage" @click="emit('remove')">Retirer</button><button class="btn btn-secondary" @click="emit('cancel')">Annuler</button><button class="btn btn-dark" :disabled="!canManage || !canApply" @click="requestApply">Appliquer localement</button></div>
+        <button v-if="mode === 'blueprint' && !isNew" class="btn btn-outline-secondary" :disabled="!canManage" @click="emit('duplicate')">{{ t('common.duplicate') }}</button>
+        <div class="d-flex gap-2 ms-auto"><button v-if="!isNew" class="btn btn-outline-danger" :disabled="field.is_system || !canManage" @click="emit('remove')">{{ t('common.remove') }}</button><button class="btn btn-secondary" @click="emit('cancel')">{{ t('common.cancel') }}</button><button class="btn btn-dark" :disabled="!canManage || !canApply" @click="requestApply">{{ t('common.applyLocally') }}</button></div>
       </div>
     </div></div>
   </div>

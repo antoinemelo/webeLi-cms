@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
+import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import { useAdminContextStore } from '@/stores/adminContext';
 
@@ -30,6 +32,7 @@ type DocsIndexPayload = { sections: DocsSection[]; documents: DocsDocument[]; ac
 type DocsShowPayload = { document: DocsDocument & { html: string; markdown?: string; source?: string; front_matter?: Record<string, unknown> }; navigation: DocsDocument[] };
 
 const context = useAdminContextStore();
+const route = useRoute();
 const sections = ref<DocsSection[]>([]);
 const documents = ref<DocsDocument[]>([]);
 const current = ref<DocsShowPayload['document'] | null>(null);
@@ -116,6 +119,11 @@ const filteredSections = computed(() => {
 const filteredDocuments = computed(() => filteredSections.value.flatMap((section) => section.documents));
 const currentSection = computed(() => sections.value.find((section) => section.key === current.value?.section_key));
 
+function requestedDocumentId(): string {
+  const doc = route.query.doc;
+  return Array.isArray(doc) ? String(doc[0] || '') : String(doc || '');
+}
+
 function labelForStatus(status?: string): string {
   if (!status) return '';
   const labels: Record<string, string> = { stable: 'stable', draft: 'brouillon', generated: 'généré' };
@@ -142,7 +150,10 @@ async function loadIndex(): Promise<void> {
     const response = await adminApi.get<DocsIndexPayload>('/docs');
     sections.value = response.data.sections || [];
     documents.value = response.data.documents || [];
-    const first = documents.value.find((doc) => doc.is_section_index) || documents.value[0];
+    const requested = requestedDocumentId();
+    const first = requested
+      ? documents.value.find((doc) => doc.id === requested) || { id: requested }
+      : documents.value.find((doc) => doc.is_section_index) || documents.value[0];
     if (first && !selectedId.value) await selectDocument(first.id);
   } catch (err) {
     error.value = apiErrorMessage(err, 'Documentation indisponible.');
@@ -381,10 +392,15 @@ function onMarkdownClick(event: MouseEvent): void {
 }
 
 onMounted(loadIndex);
+watch(() => route.query.doc, (doc) => {
+  const id = Array.isArray(doc) ? String(doc[0] || '') : String(doc || '');
+  if (id && id !== selectedId.value) void selectDocument(id);
+});
 </script>
 
 <template>
   <PageHeader title="Documentation" intro="Toute la documentation du CMS, accessible à chaque utilisateur du back-office depuis le menu principal Actifs." />
+  <ContextualHelpLink id="docs.index" class="mb-3" />
 
   <ApiFeedback :error="error" />
 

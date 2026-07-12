@@ -69,6 +69,19 @@ const currentSiteId = computed(() => context.siteId ?? context.context?.site.id 
 
 const logoutAction = computed(() => window.__AMCMS_ADMIN__?.logoutPath || `${window.__AMCMS_ADMIN__?.apiBasePath?.replace(/\/api$/g, '') || ''}/logout`);
 
+function itemLabel(item: MainNavigationItem): string {
+  return item.labelKey ? t(item.labelKey) : item.label;
+}
+
+function linkLabel(link: SectionLink): string {
+  const key = link.navLabelKey || link.labelKey;
+  return key ? t(key) : (link.navLabel || link.label);
+}
+
+function linkHint(link: SectionLink): string {
+  return link.hintKey ? t(link.hintKey) : (link.hint || '');
+}
+
 function onSiteChange(event: Event) {
   const select = event.target as HTMLSelectElement;
   const value = Number(select.value || 0);
@@ -129,7 +142,7 @@ function closeMenus() {
             :aria-haspopup="hasChildren(item) ? 'true' : undefined"
             @click="closeMenus"
           >
-            <span>{{ item.label }}</span>
+            <span>{{ itemLabel(item) }}</span>
             <svg v-if="hasChildren(item)" class="topnav-caret" aria-hidden="true" viewBox="0 0 16 16" focusable="false">
               <path fill="currentColor" fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z" clip-rule="evenodd" />
             </svg>
@@ -144,8 +157,8 @@ function closeMenus() {
                 role="menuitem"
                 @click="closeMenus"
               >
-                <strong>{{ child.navLabel || child.label }}</strong>
-                <small v-if="child.hint">{{ child.hint }}</small>
+                <strong>{{ linkLabel(child) }}</strong>
+                <small v-if="linkHint(child)">{{ linkHint(child) }}</small>
               </RouterLink>
             </template>
             <template v-else>
@@ -157,8 +170,8 @@ function closeMenus() {
                 role="menuitem"
                 @click="closeMenus"
               >
-                <strong>{{ child.navLabel || child.label }}</strong>
-                <small v-if="child.hint">{{ child.hint }}</small>
+                <strong>{{ linkLabel(child) }}</strong>
+                <small v-if="linkHint(child)">{{ linkHint(child) }}</small>
               </RouterLink>
             </template>
           </div>
@@ -167,8 +180,8 @@ function closeMenus() {
 
       <div class="topnav-actions">
         <label v-if="availableSites.length > 1" class="site-switcher">
-          <span>Site</span>
-          <select :value="currentSiteId" @change="onSiteChange" aria-label="Changer de site administré">
+          <span>{{ t('common.site') }}</span>
+          <select :value="currentSiteId" @change="onSiteChange" :aria-label="t('common.changeSite')">
             <option v-for="site in availableSites" :key="site.id" :value="site.id">
               {{ site.name }}
             </option>
@@ -182,17 +195,17 @@ function closeMenus() {
             </svg>
           </button>
           <div v-if="accountMenuOpen" class="account-popover card">
-            <p class="account-popover__title">Compte</p>
-            <RouterLink class="account-option" to="/profile" @click="closeMenus">Mon profil</RouterLink>
+            <p class="account-popover__title">{{ t('common.account') }}</p>
+            <RouterLink class="account-option" to="/profile" @click="closeMenus">{{ t('common.myProfile') }}</RouterLink>
             <form class="account-logout-form" method="post" :action="logoutAction">
               <input type="hidden" name="_csrf" :value="context.context?.csrf_token || ''">
-              <button class="account-option account-option--danger" type="submit">Déconnexion</button>
+              <button class="account-option account-option--danger" type="submit">{{ t('common.logout') }}</button>
             </form>
             <template v-if="isSuperAdmin">
               <hr />
-              <p class="account-popover__title">Administration IAM</p>
-              <RouterLink class="account-option" to="/iam/users" @click="closeMenus">Utilisateurs / profils</RouterLink>
-              <RouterLink v-if="canAdministerGlobalRoles" class="account-option" to="/iam/roles" @click="closeMenus">Rôles / permissions</RouterLink>
+              <p class="account-popover__title">{{ t('core.account.iamAdministration') }}</p>
+              <RouterLink class="account-option" to="/iam/users" @click="closeMenus">{{ t('core.account.usersProfiles') }}</RouterLink>
+              <RouterLink v-if="canAdministerGlobalRoles" class="account-option" to="/iam/roles" @click="closeMenus">{{ t('core.account.rolesPermissions') }}</RouterLink>
             </template>
           </div>
         </div>
@@ -206,9 +219,9 @@ function closeMenus() {
           class="mobile-nav-link mobile-nav-link--parent"
           @click="closeMenus"
         >
-          {{ item.label }}
+          {{ itemLabel(item) }}
         </RouterLink>
-        <div v-if="hasChildren(item)" class="mobile-subnav" :aria-label="`Sous-menu ${item.label}`">
+        <div v-if="hasChildren(item)" class="mobile-subnav" :aria-label="`${t('common.mainNavigation')} ${itemLabel(item)}`">
           <RouterLink
             v-for="child in (item.key === 'modules' ? moduleMenuChildren(item) : visibleChildren(item))"
             :key="`${item.key}-${child.route}`"
@@ -216,7 +229,7 @@ function closeMenus() {
             class="mobile-nav-link mobile-nav-link--child"
             @click="closeMenus"
           >
-            {{ child.navLabel || child.label }}
+            {{ linkLabel(child) }}
           </RouterLink>
         </div>
       </div>

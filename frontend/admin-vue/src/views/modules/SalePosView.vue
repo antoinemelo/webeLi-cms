@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import { useI18n } from '@/i18n';
 
 type PosVariant = Record<string, unknown> & {
   business_variant_id: number;
@@ -41,6 +42,8 @@ type PosSession = Record<string, unknown> & { id: number; status?: string; expec
 type PosReceipt = Record<string, unknown> & { order_id?: number | string; order_number?: string | null; printable_text?: string };
 
 defineProps<{ embedded?: boolean }>();
+
+const { languageCode, t, money: formatMoney } = useI18n();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -83,12 +86,11 @@ const receiptText = computed(() => String(receipt.value?.printable_text || ''));
 const receiptOrderId = computed(() => Number(receipt.value?.order_id || 0));
 
 function money(minor?: unknown): string {
-  const value = Number(minor || 0) / 100;
-  return value.toFixed(2);
+  return formatMoney(minor, cart.value?.currency || 'CHF');
 }
 
 function cardPrice(minor?: unknown): string {
-  return (Number(minor || 0) / 100).toFixed(2);
+  return formatMoney(minor, cart.value?.currency || 'CHF');
 }
 
 function amountToMinor(value: unknown): number {
@@ -147,7 +149,7 @@ async function openSession(): Promise<void> {
   try {
     const response = await adminApi.post<{ session: PosSession }>('/sale/pos/sessions/open', { opening_cash_minor: amountToMinor(openingCash.value) });
     session.value = response.data.session;
-    notice.value = 'Session caisse ouverte.';
+    notice.value = t('sale.pos.sessionOpened');
   } catch (err) {
     error.value = apiErrorMessage(err);
   } finally {
@@ -162,7 +164,7 @@ async function closeSession(): Promise<void> {
   try {
     const response = await adminApi.post<{ session: PosSession }>(`/sale/pos/sessions/${session.value.id}/close`, { counted_cash_minor: Number(session.value.expected_cash_minor || 0) });
     session.value = response.data.session;
-    notice.value = 'Session caisse fermée.';
+    notice.value = t('sale.pos.sessionClosedNotice');
   } catch (err) {
     error.value = apiErrorMessage(err);
   } finally {
@@ -286,7 +288,7 @@ function printReceipt(): void {
   if (!text) return;
   const printWindow = window.open('', 'sale-pos-receipt', 'popup,width=360,height=640');
   if (!printWindow) {
-    error.value = 'Impossible de préparer le ticket à imprimer.';
+    error.value = t('sale.orders.printUnavailable');
     return;
   }
 
@@ -308,7 +310,7 @@ async function emailReceipt(): Promise<void> {
   if (!receiptOrderId.value) return;
   const email = receiptEmail.value.trim();
   if (!email) {
-    error.value = 'Indiquer une adresse courriel.';
+    error.value = t('sale.pos.emailRequired');
     return;
   }
   receiptSending.value = true;
@@ -316,8 +318,8 @@ async function emailReceipt(): Promise<void> {
   try {
     const response = await adminApi.post<{ sent?: boolean; logged?: boolean; email?: string }>(`/sale/pos/orders/${receiptOrderId.value}/receipt/email`, { email });
     notice.value = response.data.sent === false && response.data.logged
-      ? `Ticket préparé dans le journal d'envoi pour ${email}.`
-      : `Ticket envoyé à ${email}.`;
+      ? t('sale.pos.receiptQueued', { email })
+      : t('sale.pos.receiptSent', { email });
   } catch (err) {
     error.value = apiErrorMessage(err);
   } finally {
@@ -327,10 +329,10 @@ async function emailReceipt(): Promise<void> {
 
 function receiptPrintHtml(text: string): string {
   return `<!doctype html>
-<html lang="fr">
+<html lang="${languageCode.value}">
 <head>
   <meta charset="utf-8">
-  <title>Ticket</title>
+  <title>${escapeHtml(t('sale.orders.receiptTitle'))}</title>
   <style>
     @page { size: 80mm auto; margin: 4mm; }
     * { box-sizing: border-box; }
@@ -429,7 +431,7 @@ async function checkout(): Promise<void> {
     cart.value = null;
     paidAmount.value = 0;
     adjustmentValue.value = 0;
-    notice.value = `Vente ${String(response.data.order.order_number || '')} terminée.`;
+    notice.value = t('sale.pos.saleCompleted', { order: String(response.data.order.order_number || '') });
     await loadBootstrap();
   } catch (err) {
     error.value = apiErrorMessage(err);
@@ -445,15 +447,15 @@ onMounted(loadBootstrap);
   <section class="sale-pos" :class="{ 'sale-pos--embedded': embedded }">
     <header class="sale-pos__head" :class="{ 'sale-pos__head--embedded': embedded }">
       <div v-if="!embedded">
-        <p class="text-uppercase text-muted small mb-1">Vente</p>
-        <h1>POS</h1>
+        <p class="text-uppercase text-muted small mb-1">{{ t('sale.title') }}</p>
+        <h1>{{ t('sale.pos.title') }}</h1>
       </div>
       <div class="sale-pos__session">
         <span class="badge" :class="session?.status === 'open' ? 'text-bg-success' : 'text-bg-secondary'">
-          {{ session?.status === 'open' ? 'Session ouverte' : 'Session fermée' }}
+          {{ session?.status === 'open' ? t('sale.pos.sessionOpen') : t('sale.pos.sessionClosed') }}
         </span>
-        <button v-if="!session || session.status !== 'open'" class="btn btn-primary btn-sm" :disabled="saving" @click="openSession">Ouvrir</button>
-        <button v-else class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">Fermer</button>
+        <button v-if="!session || session.status !== 'open'" class="btn btn-primary btn-sm" :disabled="saving" @click="openSession">{{ t('sale.pos.open') }}</button>
+        <button v-else class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">{{ t('sale.pos.close') }}</button>
       </div>
     </header>
 
@@ -463,14 +465,14 @@ onMounted(loadBootstrap);
     <div class="sale-pos__layout">
       <main class="sale-pos__catalog">
         <div class="sale-pos__search">
-          <input v-model="query" class="form-control" type="search" placeholder="Produit, bundle, SKU..." @keyup.enter="search">
-          <input v-model="barcode" class="form-control" type="search" placeholder="Code-barres" @keyup.enter="search">
-          <button class="btn btn-outline-primary" :disabled="loading" @click="search">Rechercher</button>
+          <input v-model="query" class="form-control" type="search" :placeholder="t('sale.pos.productPlaceholder')" @keyup.enter="search">
+          <input v-model="barcode" class="form-control" type="search" :placeholder="t('sale.pos.barcodePlaceholder')" @keyup.enter="search">
+          <button class="btn btn-outline-primary" :disabled="loading" @click="search">{{ t('common.search') }}</button>
         </div>
 
         <section v-if="bundles.length" class="sale-pos__bundle-section">
           <div class="sale-pos__section-head">
-            <h2>Bundles</h2>
+            <h2>{{ t('sale.pos.bundles') }}</h2>
           </div>
           <div class="sale-pos__grid sale-pos__grid--bundles">
             <button v-for="bundle in bundles" :key="`bundle-${bundle.business_variant_id}`" class="sale-pos__product sale-pos__product--bundle" type="button" :disabled="saving" @click="addVariant(bundle)">
@@ -517,13 +519,13 @@ onMounted(loadBootstrap);
       </main>
 
       <aside class="sale-pos__cart">
-        <h2>Panier <span>[{{ cart?.currency || 'CHF' }}]</span></h2>
-        <p v-if="!cartLines.length" class="text-muted">Aucun article.</p>
+        <h2>{{ t('sale.pos.cart') }} <span>[{{ cart?.currency || 'CHF' }}]</span></h2>
+        <p v-if="!cartLines.length" class="text-muted">{{ t('sale.pos.emptyCart') }}</p>
         <div v-for="line in cartLines" :key="line.id" class="sale-pos__line">
           <div>
             <strong>{{ line.product_name }}</strong>
           </div>
-          <button class="sale-pos__line-delete" type="button" :disabled="saving" aria-label="Retirer la ligne" @click="deleteLine(line)">
+          <button class="sale-pos__line-delete" type="button" :disabled="saving" :aria-label="t('sale.pos.removeLine')" @click="deleteLine(line)">
             <svg xmlns="http://www.w3.org/2000/svg" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true">
               <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
               <path d="M14.5 3a1 1 0 0 1-1 1H13l-.8 9.6A2 2 0 0 1 10.2 15H5.8a2 2 0 0 1-2-1.4L3 4h-.5a1 1 0 0 1 0-2H5V1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2.5a1 1 0 0 1 1 1M6 2h4V1H6zM4 4l.8 9.5a1 1 0 0 0 1 .5h4.4a1 1 0 0 0 1-.5L12 4z"/>
@@ -534,55 +536,55 @@ onMounted(loadBootstrap);
         </div>
 
         <div v-if="cartManualDiscountMinor > 0" class="sale-pos__summary-row">
-          <span>Réduction</span>
+          <span>{{ t('sale.pos.discount') }}</span>
           <strong>-{{ money(cartManualDiscountMinor) }}</strong>
         </div>
         <div v-if="cartSurchargeMinor > 0" class="sale-pos__summary-row">
-          <span>Montant supplémentaire</span>
+          <span>{{ t('sale.pos.surcharge') }}</span>
           <strong>+{{ money(cartSurchargeMinor) }}</strong>
         </div>
         <div class="sale-pos__total">
-          <span>Total</span>
+          <span>{{ t('common.total') }}</span>
           <strong>{{ money(cart?.grand_total_minor) }}</strong>
         </div>
         <div class="sale-pos__due" :class="{ 'sale-pos__due--overpaid': isOverpaid }">
-          <span>Solde à payer</span>
+          <span>{{ t('sale.pos.due') }}</span>
           <strong>{{ money(remainingDueMinor) }}</strong>
         </div>
         <div v-if="cartOfferDiscountMinor > 0" class="sale-pos__summary-row sale-pos__summary-row--offer">
-          <span>Offres</span>
+          <span>{{ t('sale.pos.offers') }}</span>
           <strong>-{{ money(cartOfferDiscountMinor) }}</strong>
         </div>
 
         <div class="sale-pos__adjustment">
           <select v-model="adjustmentMode" class="form-select form-select-sm" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
-            <option value="amount">Montant</option>
+            <option value="amount">{{ t('common.amount') }}</option>
             <option value="percent">%</option>
           </select>
           <input v-model.number="adjustmentValue" class="form-control form-control-sm" type="number" step="0.01" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
         </div>
 
-        <label class="form-label mt-3">Paiement</label>
+        <label class="form-label mt-3">{{ t('sale.pos.payment') }}</label>
         <select v-model="paymentMethod" class="form-select">
-          <option value="cash">Cash</option>
-          <option value="manual_card">Carte manuelle</option>
-          <option value="external_terminal">Terminal externe</option>
+          <option value="cash">{{ t('sale.pos.payment.cash') }}</option>
+          <option value="manual_card">{{ t('sale.pos.payment.manual_card') }}</option>
+          <option value="external_terminal">{{ t('sale.pos.payment.external_terminal') }}</option>
         </select>
 
         <div class="sale-pos__cash">
-          <label>Avance<input v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
-          <label>Versé<input v-model.number="paidAmount" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
+          <label>{{ t('sale.pos.advance') }}<input v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
+          <label>{{ t('sale.pos.paidAmount') }}<input v-model.number="paidAmount" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
         </div>
 
-        <button class="btn btn-success w-100 mt-3" :disabled="saving || !canCheckout" @click="checkout">Encaisser</button>
+        <button class="btn btn-success w-100 mt-3" :disabled="saving || !canCheckout" @click="checkout">{{ t('sale.pos.checkout') }}</button>
 
         <section v-if="receipt" class="sale-pos__receipt">
-          <h3>Reçu</h3>
+          <h3>{{ t('sale.pos.receipt') }}</h3>
           <pre>{{ receiptText }}</pre>
           <div class="sale-pos__receipt-actions">
-            <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">Imprimer</button>
-            <input v-model="receiptEmail" class="form-control form-control-sm" type="email" placeholder="Courriel">
-            <button class="btn btn-outline-primary btn-sm" type="button" :disabled="receiptSending || !receiptOrderId" @click="emailReceipt">{{ receiptSending ? 'Envoi...' : 'Envoyer' }}</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">{{ t('common.print') }}</button>
+            <input v-model="receiptEmail" class="form-control form-control-sm" type="email" :placeholder="t('sale.pos.emailPlaceholder')">
+            <button class="btn btn-outline-primary btn-sm" type="button" :disabled="receiptSending || !receiptOrderId" @click="emailReceipt">{{ receiptSending ? t('common.sending') : t('common.send') }}</button>
           </div>
         </section>
       </aside>
