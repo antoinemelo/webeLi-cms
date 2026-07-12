@@ -54,10 +54,14 @@ try {
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "reservation" AND quantity = 3')['count'] ?? 0), 'reservation is historized as movement');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.stock.reserved"')['count'] ?? 0), 'stock reservation is queued in sale outbox');
 
+    $retryReservation = $inventory->reserveForCart(1, $cartId, $tracked, 3);
+    $h->assertSame((int) $reservation['id'], (int) $retryReservation['id'], 'reservation retry replays the deterministic reservation');
+    $h->assertSame(3, (int) ($saleDb->one('SELECT reserved_quantity FROM sale_inventory_items WHERE business_variant_id=9002')['reserved_quantity'] ?? 0), 'reservation retry does not reserve twice');
+    $concurrentCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
     $h->expectException(
-        fn() => $inventory->reserveForCart(1, $cartId, $tracked, 3),
+        fn() => $inventory->reserveForCart(1, $concurrentCartId, $tracked, 3),
         SaleInventoryException::class,
-        'tracked product with insufficient available stock is refused'
+        'concurrent cart cannot reserve stock already held by the first cart'
     );
 
     $backorderCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
@@ -80,7 +84,9 @@ try {
     $h->assertSame(4, (int) ($item['available_quantity'] ?? 0), 'quantity decrease restores availability');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.stock.released"')['count'] ?? 0), 'stock release is queued in sale outbox');
 
+    $repository->confirmCartReservations($cartId);
     $saleDb->run('UPDATE sale_stock_reservations SET expires_at = datetime("now", "-1 minute") WHERE cart_id = ? AND status = "active"', [$cartId]);
+    $saleDb->run('UPDATE sale_stock_reservations SET expires_at = datetime("now", "-1 minute") WHERE cart_id = ? AND status = "confirmed"', [$cartId]);
     $h->assertSame(1, $inventory->expireDueReservations(1), 'expired cart reservation is released by expiry worker');
     $expired = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id = ? ORDER BY id DESC LIMIT 1', [$cartId]);
     $h->assertSame('expired', $expired['status'] ?? null, 'expired reservation status is stored');
@@ -90,13 +96,17 @@ try {
     $checkoutCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
     $orderId = createSaleInventoryTestOrder($saleDb, (int) $channel['id'], $checkoutCartId);
     $inventory->reserveForCart(1, $checkoutCartId, $tracked, 2);
+    $repository->confirmCartReservations($checkoutCartId);
+    $h->assertSame('confirmed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$checkoutCartId])['status'] ?? null, 'checkout confirmation is explicit');
     $inventory->consumeCartReservations($checkoutCartId, $orderId);
     $consumed = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id = ? LIMIT 1', [$checkoutCartId]);
     $h->assertSame('consumed', $consumed['status'] ?? null, 'checkout consumes active reservation');
     $item = $saleDb->one('SELECT * FROM sale_inventory_items WHERE business_variant_id = 9002 LIMIT 1');
     $h->assertSame(3, (int) ($item['on_hand_quantity'] ?? 0), 'checkout sale movement decreases on-hand stock');
     $h->assertSame(0, (int) ($item['reserved_quantity'] ?? 0), 'checkout clears consumed reserved stock');
-    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "sale" AND quantity = -2 AND reference_id = ?', [$orderId])['count'] ?? 0), 'checkout consumption is historized as sale movement');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "consumption" AND quantity = -2 AND reference_id = ?', [$orderId])['count'] ?? 0), 'checkout consumption is historized as immutable movement');
+    $inventory->consumeCartReservations($checkoutCartId, $orderId);
+    $h->assertSame(3, (int) ($saleDb->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=9002')['on_hand_quantity'] ?? 0), 'checkout retry cannot consume stock twice');
     $stockConsumed = $saleDb->one('SELECT payload_json FROM sale_outbox WHERE topic = "sale.stock.consumed" ORDER BY id DESC LIMIT 1');
     $stockConsumedEnvelope = json_decode((string) ($stockConsumed['payload_json'] ?? '{}'), true);
     $h->assertSame('sale.stock.consumed', $stockConsumedEnvelope['event_type'] ?? null, 'stock consumed outbox envelope exposes topic');
@@ -105,6 +115,14 @@ try {
     $restocked = $inventory->restockReturn(1, 9002, 2, 'TRACKED', 12, 'customer return', 1);
     $h->assertSame(5, (int) ($restocked['on_hand_quantity'] ?? 0), 'return restock increases on-hand stock');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "return" AND quantity = 2 AND reference_id = 12')['count'] ?? 0), 'return restock is historized as return movement');
+    $saleDb->run("INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(1,'secondary','Secondary','external','active')");
+    $secondaryLocationId = (int) $saleDb->lastInsertId();
+    $transfer = $inventory->transfer(1, 9002, 2, (int) $restocked['stock_location_id'], $secondaryLocationId, 'test-transfer-1', 1);
+    $h->assertSame(3, (int) $transfer['from']['on_hand_quantity'], 'transfer decrements its source location');
+    $h->assertSame(2, (int) $transfer['to']['on_hand_quantity'], 'transfer increments its destination location');
+    $retryTransfer = $inventory->transfer(1, 9002, 2, (int) $restocked['stock_location_id'], $secondaryLocationId, 'test-transfer-1', 1);
+    $h->assertSame(3, (int) $retryTransfer['from']['on_hand_quantity'], 'transfer retry does not move stock twice');
+    $h->assertSame(2, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_movements WHERE transfer_key='test-transfer-1'")['count'] ?? 0), 'transfer writes one immutable movement per location');
 } finally {
     $saleDb = null;
     gc_collect_cycles();

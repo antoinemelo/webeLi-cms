@@ -445,6 +445,7 @@ final class App
                 $services->saleFulfillment(),
                 $services->salesChannelResolver(),
                 $services->salesChannelIntegrity(),
+                $services->saleInventoryReconciliation(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),

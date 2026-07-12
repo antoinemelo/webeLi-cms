@@ -14,6 +14,7 @@ use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\PosCatalogRepository;
 use App\Modules\Business\Services\BusinessCatalogSellableReadService;
+use App\Modules\Business\Services\BusinessDatabaseConnection;
 use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleCartRepository;
@@ -33,6 +34,7 @@ use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleImportExportReportService;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleInventoryReconciliationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
 use App\Repository\AuthRepository;
@@ -82,6 +84,7 @@ try {
     $payments = new SalePaymentRepository($saleConnection);
     $inventoryRepository = new SaleInventoryRepository($saleConnection);
     $inventory = new SaleInventoryService($inventoryRepository);
+    $inventoryReconciliation = new SaleInventoryReconciliationService($saleConnection, new BusinessDatabaseConnection($businessPath));
     $events = new SaleEventService(new SaleEventRepository($saleConnection));
     $idempotency = new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection));
     $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, new BusinessSellableCatalogAdapter($sellables));
@@ -103,7 +106,7 @@ try {
         }
     };
 
-    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $saleConnection, $channels, $carts, $orders, $payments, $inventory, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer): SaleAdminApiController {
+    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($iam, $sites, $saleConnection, $channels, $carts, $orders, $payments, $inventory, $inventoryReconciliation, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer): SaleAdminApiController {
         if ($userId > 0) {
             $token = 'sale-api-test-token-' . $userId;
             $iam->run('DELETE FROM iam_sessions WHERE user_id = :user_id', ['user_id' => $userId]);
@@ -126,7 +129,7 @@ try {
         }
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
         $auth = new AuthRepository($iam);
-        return new SaleAdminApiController($request, $sites, $auth, new Authorization($auth), $saleConnection, $channels, $carts, $orders, $payments, $inventory, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer);
+        return new SaleAdminApiController($request, $sites, $auth, new Authorization($auth), $saleConnection, $channels, $carts, $orders, $payments, $inventory, $catalogSnapshots, $catalogExport, $cartService, $checkout, $paymentService, $orderService, $events, $importExportReports, $idempotency, $mailer, null, null, null, null, null, null, null, $inventoryReconciliation);
     };
 
     $routes = (new SaleModuleProvider())->adminRoutes();
@@ -163,6 +166,8 @@ try {
         ['GET', '/admin/api/sale/ai/customers/contact/1/analysis-context'],
         ['GET', '/admin/api/sale/ai/unpaid-orders-context'],
         ['GET', '/admin/api/sale/stock/items'],
+        ['POST', '/admin/api/sale/stock/transfers'],
+        ['POST', '/admin/api/sale/stock/reconciliation'],
         ['GET', '/admin/api/sale/reports/daily'],
         ['GET', '/admin/api/sale/reports/channels'],
         ['GET', '/admin/api/sale/reports/payment-methods'],
@@ -264,6 +269,10 @@ try {
 
     $stockResponse = $controllerFor(1, 'GET', '/admin/api/sale/stock/items')->stockItems();
     $h->assertSame(200, $stockResponse->status(), 'sale admin can list stock items');
+    $reconciliationResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reconciliation', [], ['repair_derived' => true])->reconcileInventory();
+    $h->assertSame(201, $reconciliationResponse->status(), 'sale admin can run inventory reconciliation');
+    $reconciliationPayload = json_decode($reconciliationResponse->body(), true);
+    $h->assertSame('sale.sqlite', $reconciliationPayload['data']['reconciliation']['source_of_truth'] ?? null, 'inventory reconciliation identifies the transactional source');
 
     $posBootstrapResponse = $controllerFor(1, 'GET', '/admin/api/sale/pos/bootstrap')->posBootstrap();
     $h->assertSame(200, $posBootstrapResponse->status(), 'sale POS bootstrap is available');
@@ -310,6 +319,8 @@ try {
     $posOrderId = (int) ($posCheckoutBody['data']['order']['id'] ?? 0);
     $h->assertTrue(str_starts_with((string) ($posCheckoutBody['data']['order']['order_number'] ?? ''), 'POS-'), 'sale POS checkout uses POS order number prefix');
     $h->assertSame('paid', $posCheckoutBody['data']['order']['payment_status'] ?? null, 'sale POS checkout records payment');
+    $posStockLocation = $saleDb->one('SELECT i.stock_location_id,r.stock_location_id AS register_location_id FROM sale_stock_reservations sr INNER JOIN sale_inventory_items i ON i.id=sr.inventory_item_id INNER JOIN sale_carts c ON c.id=sr.cart_id INNER JOIN sale_cash_sessions s ON s.id=c.register_session_id INNER JOIN sale_pos_registers r ON r.id=s.register_id WHERE sr.cart_id=?', [$posCartId]);
+    $h->assertSame((int) ($posStockLocation['register_location_id'] ?? 0), (int) ($posStockLocation['stock_location_id'] ?? -1), 'POS checkout consumes stock from its register location');
     $h->assertTrue(isset($posCheckoutBody['data']['receipt']['printable_text']), 'sale POS checkout returns printable receipt payload');
 
     $posCheckoutReplayResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/checkout', [], $posCheckoutPayload)->posCheckout();

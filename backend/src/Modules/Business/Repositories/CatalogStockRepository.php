@@ -20,19 +20,21 @@ final class CatalogStockRepository extends BusinessRepositoryBase
     public function stock(int $siteId, int $variantId): array
     {
         $variant = $this->variantForSite($siteId, $variantId);
+        $projection = $this->hasInventoryProjectionTable() ? $this->database()->one('SELECT * FROM business_inventory_availability_projections WHERE site_id=? AND sellable_id=?', [$siteId, $variantId]) : null;
         $trackStock = $this->trackStock($variant);
-        $quantity = (float) ($variant['stock_quantity'] ?? 0);
-        $reserved = (float) ($variant['stock_reserved'] ?? 0);
+        $quantity = $projection === null ? (float) ($variant['stock_quantity'] ?? 0) : (float) $projection['on_hand_quantity'];
+        $reserved = $projection === null ? (float) ($variant['stock_reserved'] ?? 0) : (float) $projection['reserved_quantity'];
         return [
             'variant_id' => (int) $variant['id'],
             'product_id' => (int) $variant['product_id'],
             'sku' => (string) $variant['sku'],
-            'track_stock' => $trackStock,
+            'track_stock' => $projection === null ? $trackStock : (bool) $projection['tracked'],
             'allow_backorder' => $this->allowBackorder($variant),
             'stock_quantity' => $quantity,
             'stock_reserved' => $reserved,
             'available_quantity' => $trackStock ? max(0, $quantity - $reserved) : null,
             'updated_at' => (string) ($variant['updated_at'] ?? ''),
+            'source' => $projection === null ? 'catalog_bootstrap' : 'sale_projection',
         ];
     }
 
@@ -46,6 +48,9 @@ final class CatalogStockRepository extends BusinessRepositoryBase
     /** @return array{variant:array<string,mixed>,movement:array<string,mixed>} */
     public function createMovement(int $siteId, int $variantId, string $movementType, float $quantity, ?string $reason = null, ?string $referenceType = null, ?int $referenceId = null, ?int $actorId = null): array
     {
+        if ($this->hasInventoryProjectionTable() && $this->database()->one('SELECT sellable_id FROM business_inventory_availability_projections WHERE site_id=? AND sellable_id=?', [$siteId, $variantId]) !== null) {
+            throw new \InvalidArgumentException('business.catalog.stock_transactional_source_sale');
+        }
         if ($quantity <= 0 && $movementType !== 'adjustment') {
             throw new \InvalidArgumentException('business.catalog.stock_quantity_invalid');
         }
@@ -182,5 +187,10 @@ final class CatalogStockRepository extends BusinessRepositoryBase
         return array_key_exists('allow_backorder', $variant) && $variant['allow_backorder'] !== null
             ? (bool) $variant['allow_backorder']
             : (bool) ($variant['product_allow_backorder'] ?? false);
+    }
+
+    private function hasInventoryProjectionTable(): bool
+    {
+        return $this->database()->one("SELECT 1 FROM sqlite_master WHERE type='table' AND name='business_inventory_availability_projections'") !== null;
     }
 }

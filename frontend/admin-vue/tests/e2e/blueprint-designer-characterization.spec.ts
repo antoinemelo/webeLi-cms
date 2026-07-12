@@ -296,7 +296,7 @@ test.describe('blueprint designer safe activation', () => {
     await dialog.getByText('Options expertes').click();
     const optionsJson = dialog.getByLabel('Options JSON');
     await optionsJson.fill('{ invalid');
-    await expect(dialog.getByText('JSON invalide dans options.')).toBeVisible();
+    await expect(dialog.getByText('JSON invalide pour options.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Appliquer localement' })).toBeDisabled();
     await dialog.getByRole('button', { name: 'Annuler', exact: true }).click();
 

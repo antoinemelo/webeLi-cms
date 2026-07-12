@@ -34,19 +34,88 @@ final class SaleInventoryService
     }
 
     /** @return array<string,mixed> */
-    public function adjust(int $siteId, int $businessVariantId, int $quantityDelta, ?string $sku = null, ?string $reason = null, ?int $actorId = null): array
+    public function adjust(int $siteId, int $businessVariantId, int $quantityDelta, ?string $sku = null, ?string $reason = null, ?int $actorId = null, ?int $locationId = null, string $movementType = 'adjustment', ?string $idempotencyKey = null): array
     {
-        return $this->movements->adjust($siteId, $businessVariantId, $quantityDelta, $sku, $reason, $actorId);
+        return $this->movements->adjust($siteId, $businessVariantId, $quantityDelta, $sku, $reason, $actorId, $locationId, $movementType, $idempotencyKey);
     }
 
     /** @param array<string,mixed> $snapshot @return array<string,mixed>|null */
-    public function reserveForCart(int $siteId, int $cartId, array $snapshot, int $quantity): ?array
+    public function reserveForCart(int $siteId, int $cartId, array $snapshot, int $quantity, int $ttlSeconds = 1800): ?array
     {
-        $reservation = $this->reservations->reserveForCart($siteId, $cartId, $snapshot, $quantity);
-        if ($reservation !== null) {
+        $reservation = $this->reservations->reserveForCart($siteId, $cartId, $snapshot, $quantity, $ttlSeconds);
+        if ($reservation !== null && !($reservation['_replayed'] ?? false)) {
             $this->emitStockReserved($siteId, $cartId, $reservation, $snapshot, 'cart line reservation');
         }
         return $reservation;
+    }
+
+    /**
+     * Reserve the deterministic stock demand when checkout starts. Cart edits
+     * remain a soft availability check and do not call this method.
+     *
+     * @param array<string,mixed> $cart
+     * @param list<array<string,mixed>> $lines
+     * @return list<array<string,mixed>>
+     */
+    public function prepareCartForCheckout(array $cart, array $lines, bool $confirm = false, int $ttlSeconds = 1800): array
+    {
+        $locationId = $this->inventory->locationIdForCart($cart);
+        $demands = [];
+        foreach ($lines as $line) {
+            $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+            $snapshot = is_array($metadata) && is_array($metadata['snapshot'] ?? null) ? $metadata['snapshot'] : [];
+            $type = (string) ($line['product_type'] ?? $snapshot['product_type'] ?? 'physical');
+            if (in_array($type, ['service', 'digital', 'gift_card'], true)) {
+                continue;
+            }
+            if (($snapshot['is_bundle'] ?? false) && ($snapshot['bundle_stock_mode'] ?? 'components') === 'components') {
+                foreach ((array) ($snapshot['bundle_components'] ?? []) as $component) {
+                    if (!is_array($component) || !((bool) ($component['is_required'] ?? true)) || !((bool) ($component['effective_track_stock'] ?? false))) {
+                        continue;
+                    }
+                    $variantId = (int) ($component['component_variant_id'] ?? 0);
+                    if ($variantId < 1) {
+                        throw new \App\Modules\Sale\Exceptions\SaleInventoryException('sale.bundle_component_variant_required');
+                    }
+                    $quantity = (int) ceil((float) ($component['quantity'] ?? 1) * (int) $line['quantity']);
+                    $this->addDemand($demands, $variantId, $quantity, [
+                        'business_variant_id' => $variantId,
+                        'sellable_id' => $variantId,
+                        'sku' => $component['component_sku'] ?? null,
+                        'track_stock' => true,
+                        'allow_backorder' => (bool) ($component['effective_allow_backorder'] ?? false),
+                        'stock_location_id' => $locationId,
+                        'metadata' => ['available_quantity' => max(0, (int) (($component['stock_quantity'] ?? 0) - ($component['stock_reserved'] ?? 0)))],
+                    ]);
+                }
+                continue;
+            }
+            if (($snapshot['is_bundle'] ?? false) && in_array((string) ($snapshot['bundle_stock_mode'] ?? ''), ['virtual', 'none'], true)) {
+                continue;
+            }
+            if (!((bool) ($snapshot['track_stock'] ?? false))) {
+                continue;
+            }
+            $sellableId = (int) ($line['sellable_id'] ?? $line['business_variant_id']);
+            $snapshot['business_variant_id'] = (int) $line['business_variant_id'];
+            $snapshot['sellable_id'] = $sellableId;
+            $snapshot['stock_location_id'] = $locationId;
+            $this->addDemand($demands, $sellableId, (int) $line['quantity'], $snapshot);
+        }
+
+        return $this->inventory->rawDatabase()->transaction(function () use ($demands, $cart, $ttlSeconds, $confirm): array {
+            $reservations = [];
+            foreach ($demands as $demand) {
+                $reservation = $this->reserveForCart((int) $cart['site_id'], (int) $cart['id'], $demand['snapshot'], $demand['quantity'], $ttlSeconds);
+                if ($reservation !== null) {
+                    $reservations[] = $reservation;
+                }
+            }
+            if ($confirm) {
+                $this->reservations->confirmCart((int) $cart['id']);
+            }
+            return $reservations;
+        });
     }
 
     public function consumeCartReservations(int $cartId, int $orderId): void
@@ -56,6 +125,18 @@ final class SaleInventoryService
         foreach ($reservations as $reservation) {
             $this->emitStockConsumed($reservation, $orderId);
         }
+    }
+
+    /** @param array<string,mixed> $cart */
+    public function locationIdForCart(array $cart): int
+    {
+        return $this->inventory->locationIdForCart($cart);
+    }
+
+    /** @return array{from:array<string,mixed>,to:array<string,mixed>} */
+    public function transfer(int $siteId, int $businessVariantId, int $quantity, int $fromLocationId, int $toLocationId, string $transferKey, ?int $actorId = null): array
+    {
+        return $this->inventory->transfer($siteId, $businessVariantId, $quantity, $fromLocationId, $toLocationId, $transferKey, $actorId);
     }
 
     public function releaseCartReservations(int $cartId, ?string $reason = null): void
@@ -176,10 +257,10 @@ final class SaleInventoryService
             $params[] = $businessVariantId;
         }
         return $this->inventory->rawDatabase()->all(
-            'SELECT r.*, i.site_id, i.business_variant_id, i.sku
+            "SELECT r.*, i.site_id, i.business_variant_id, i.sku
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.cart_id = ? AND r.status = \'active\'' . $variantSql,
+             WHERE r.cart_id = ? AND r.status IN ('active','confirmed')" . $variantSql,
             $params
         );
     }
@@ -190,7 +271,7 @@ final class SaleInventoryService
             'SELECT COALESCE(SUM(r.quantity), 0) AS total
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status = \'active\'',
+             WHERE r.cart_id = ? AND i.business_variant_id = ? AND r.status IN (\'active\',\'confirmed\')',
             [$cartId, $businessVariantId]
         );
         return (int) ($row['total'] ?? 0);
@@ -206,11 +287,23 @@ final class SaleInventoryService
             $params[] = $siteId;
         }
         return $this->inventory->rawDatabase()->all(
-            'SELECT r.*, i.site_id, i.business_variant_id, i.sku
+            "SELECT r.*, i.site_id, i.business_variant_id, i.sku
              FROM sale_stock_reservations r
              INNER JOIN sale_inventory_items i ON i.id = r.inventory_item_id
-             WHERE r.status = \'active\' AND r.expires_at IS NOT NULL AND r.expires_at <= ?' . $siteSql,
+             WHERE r.status IN ('active','confirmed') AND r.expires_at IS NOT NULL AND r.expires_at <= ?" . $siteSql,
             $params
         );
+    }
+
+    /** @param array<int,array{quantity:int,snapshot:array<string,mixed>}> $demands @param array<string,mixed> $snapshot */
+    private function addDemand(array &$demands, int $sellableId, int $quantity, array $snapshot): void
+    {
+        if ($quantity < 1) {
+            return;
+        }
+        if (!isset($demands[$sellableId])) {
+            $demands[$sellableId] = ['quantity' => 0, 'snapshot' => $snapshot];
+        }
+        $demands[$sellableId]['quantity'] += $quantity;
     }
 }

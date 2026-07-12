@@ -188,6 +188,7 @@ use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleImportExportReportService;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleInventoryReconciliationService;
 use App\Modules\Sale\Services\SaleStockMovementService;
 use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
@@ -754,6 +755,14 @@ final class ServiceFactory
             new SaleStockReservationService($this->saleInventoryRepository()),
             new SaleStockMovementService($this->saleInventoryRepository()),
             $this->saleEvents()
+        ));
+    }
+
+    public function saleInventoryReconciliation(): SaleInventoryReconciliationService
+    {
+        return $this->once('sale_inventory_reconciliation', fn() => new SaleInventoryReconciliationService(
+            $this->saleDatabaseConnection(),
+            $this->businessDatabaseConnection()
         ));
     }
 

@@ -17,9 +17,9 @@ final class SaleStockMovementService
     }
 
     /** @return array<string,mixed> */
-    public function adjust(int $siteId, int $businessVariantId, int $quantityDelta, ?string $sku = null, ?string $reason = null, ?int $actorId = null): array
+    public function adjust(int $siteId, int $businessVariantId, int $quantityDelta, ?string $sku = null, ?string $reason = null, ?int $actorId = null, ?int $locationId = null, string $movementType = 'adjustment', ?string $idempotencyKey = null): array
     {
-        return $this->inventory->adjust($siteId, $businessVariantId, $quantityDelta, $sku, $reason, $actorId);
+        return $this->inventory->adjust($siteId, $businessVariantId, $quantityDelta, $sku, $reason, $actorId, $locationId, $movementType, $idempotencyKey);
     }
 
     /** @return array<string,mixed> */

@@ -217,7 +217,7 @@ try {
 
     $saleDb->run("INSERT INTO sale_stock_locations(site_id, code, name, location_type, status) VALUES(1, 'test-stock', 'Test stock', 'main', 'active')");
     $locationId = $saleDb->lastInsertId();
-    $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990001, ?, "TEST-STOCK", 5, 0, 5)', [$locationId]);
+    $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, sellable_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990001, 990001, ?, "TEST-STOCK", 5, 0, 5)', [$locationId]);
     $inventoryItemId = $saleDb->lastInsertId();
     $h->expectException(
         fn() => $saleDb->run('INSERT INTO sale_stock_movements(inventory_item_id, movement_type, quantity) VALUES(?, "adjustment", 0)', [$inventoryItemId]),
@@ -225,7 +225,7 @@ try {
         'sale stock movement cannot be zero'
     );
     $h->expectException(
-        fn() => $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990002, ?, "BAD-STOCK", 5, 2, 5)', [$locationId]),
+        fn() => $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, sellable_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990002, 990002, ?, "BAD-STOCK", 5, 2, 5)', [$locationId]),
         PDOException::class,
         'sale inventory availability must match on-hand minus reserved'
     );

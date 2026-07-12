@@ -15,6 +15,7 @@ final class BusinessCatalogSellableReadService
     private readonly BusinessProductBundleService $bundles;
     private readonly BusinessProductCompletenessService $completenessService;
     private ?bool $hasVariantSalesNoteColumn = null;
+    private ?bool $hasInventoryProjectionTable = null;
 
     public function __construct(
         private readonly BusinessCatalogPricingRepository $pricingRepository,
@@ -194,10 +195,18 @@ final class BusinessCatalogSellableReadService
             'customer_segment' => $context['customer_segment'],
         ]);
 
-        $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
+        $inventoryProjection = $this->hasInventoryProjectionTable() ? $this->pricingRepository->rawDatabase()->one(
+            'SELECT * FROM business_inventory_availability_projections WHERE site_id=? AND sellable_id=?',
+            [$siteId, $variantId]
+        ) : null;
+        $trackStock = $inventoryProjection === null
+            ? ($row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'])
+            : (bool) $inventoryProjection['tracked'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
         $backorderDeliveryDays = $row['variant_backorder_delivery_days'] === null ? (int) $row['product_backorder_delivery_days'] : (int) $row['variant_backorder_delivery_days'];
-        $available = (float) $row['stock_quantity'] - (float) $row['stock_reserved'];
+        $stockQuantity = $inventoryProjection === null ? (float) $row['stock_quantity'] : (float) $inventoryProjection['on_hand_quantity'];
+        $stockReserved = $inventoryProjection === null ? (float) $row['stock_reserved'] : (float) $inventoryProjection['reserved_quantity'];
+        $available = $inventoryProjection === null ? $stockQuantity - $stockReserved : (float) $inventoryProjection['available_quantity'];
         $availability = $this->availability($trackStock, $allowBackorder, $available, $backorderDeliveryDays);
         $currency = strtoupper((string) ($context['currency'] ?: ($pricingSummary['currency'] ?? $row['sale_currency'] ?? 'CHF')));
         $regularSaleMinor = $this->moneyMinor($pricingSummary['regular_sale_price'] ?? $row['base_sale_price'] ?? null);
@@ -273,9 +282,10 @@ final class BusinessCatalogSellableReadService
                 'product_slug' => (string) $row['product_slug'],
                 'brand_id' => $row['brand_id'] === null ? null : (int) $row['brand_id'],
                 'category_id' => $row['category_id'] === null ? null : (int) $row['category_id'],
-                'stock_quantity' => (float) $row['stock_quantity'],
-                'stock_reserved' => (float) $row['stock_reserved'],
+                'stock_quantity' => $stockQuantity,
+                'stock_reserved' => $stockReserved,
                 'available_quantity' => $available,
+                'inventory_source' => $inventoryProjection === null ? 'catalog_bootstrap' : 'sale_projection',
                 'allow_backorder' => $allowBackorder,
                 'backorder_delivery_days' => $backorderDeliveryDays,
                 'availability_status' => $availability['status'],
@@ -758,6 +768,16 @@ final class BusinessCatalogSellableReadService
             return 0;
         }
         return (int) round(((float) $amount) * 100);
+    }
+
+    private function hasInventoryProjectionTable(): bool
+    {
+        if ($this->hasInventoryProjectionTable === null) {
+            $this->hasInventoryProjectionTable = $this->pricingRepository->rawDatabase()->one(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='business_inventory_availability_projections'"
+            ) !== null;
+        }
+        return $this->hasInventoryProjectionTable;
     }
 
     /** @return array<mixed> */

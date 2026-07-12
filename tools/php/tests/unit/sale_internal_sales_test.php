@@ -65,7 +65,7 @@ try {
     $db->run("INSERT INTO sale_order_tax_lines(order_id,tax_class_code,tax_rate_basis_points,taxable_amount_minor,tax_amount_minor,currency) VALUES(?,'standard',700,930,70,'CHF')", [$orderId]);
     $db->run("INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(1,'main','Point 11','main','active')");
     $locationId = (int) $db->lastInsertId();
-    $db->run("INSERT INTO sale_inventory_items(site_id,business_variant_id,stock_location_id,sku,on_hand_quantity,reserved_quantity,available_quantity) VALUES(1,11002,?,'P11-SKU',8,0,8)", [$locationId]);
+    $db->run("INSERT INTO sale_inventory_items(site_id,business_variant_id,sellable_id,stock_location_id,sku,on_hand_quantity,reserved_quantity,available_quantity) VALUES(1,11002,11002,?,'P11-SKU',8,0,8)", [$locationId]);
 
     $first = $paymentService->recordManualPayment($orderId, 400, 7, ['provider_key' => 'cash', 'idempotency_key' => 'p11-cash-400']);
     $firstReplay = $paymentService->recordManualPayment($orderId, 400, 7, ['provider_key' => 'cash', 'idempotency_key' => 'p11-cash-400']);

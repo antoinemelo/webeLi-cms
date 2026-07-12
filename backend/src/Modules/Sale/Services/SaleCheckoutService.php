@@ -50,6 +50,7 @@ final class SaleCheckoutService
                 if ((int) $cart['grand_total_minor'] < 0) {
                     throw new SaleValidationException('sale.total_negative');
                 }
+                $this->inventory->prepareCartForCheckout($cart, $lines, true);
                 if (array_key_exists('shipping_method_snapshot', $payload) || array_key_exists('shipping_method', $payload)) {
                     $shippingMethod = $payload['shipping_method_snapshot'] ?? $payload['shipping_method'];
                     $cart['shipping_method_snapshot_json'] = json_encode(is_array($shippingMethod) ? $shippingMethod : ['label' => (string) $shippingMethod], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';

@@ -415,6 +415,19 @@ CREATE TABLE IF NOT EXISTS business_storefront_projection_invalidations (
 );
 CREATE INDEX IF NOT EXISTS idx_business_storefront_invalidations_pending ON business_storefront_projection_invalidations(processed_at,site_id,product_id);
 
+-- Projection reconstruisible de la disponibilité Sale. Les colonnes de stock
+-- historiques des variantes restent des données d'amorçage catalogue et ne
+-- sont jamais une source transactionnelle après initialisation de Sale.
+CREATE TABLE IF NOT EXISTS business_inventory_availability_projections (
+    sellable_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, tracked INTEGER NOT NULL CHECK(tracked IN (0,1)),
+    on_hand_quantity INTEGER NOT NULL, reserved_quantity INTEGER NOT NULL, available_quantity INTEGER NOT NULL,
+    availability_status TEXT NOT NULL CHECK(availability_status IN ('available','backorder','unavailable','not_tracked')),
+    source_version INTEGER NOT NULL DEFAULT 0, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(sellable_id) REFERENCES business_sellables(sellable_id) ON DELETE CASCADE,
+    CHECK(site_id>0), CHECK(available_quantity=on_hand_quantity-reserved_quantity)
+);
+CREATE INDEX IF NOT EXISTS idx_business_inventory_projection_site ON business_inventory_availability_projections(site_id,availability_status);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_business_products_external_id
     ON business_products(site_id, external_id)
     WHERE external_id IS NOT NULL AND archived_at IS NULL;

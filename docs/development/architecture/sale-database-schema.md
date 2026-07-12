@@ -64,7 +64,7 @@ La commande copie les montants calcules depuis le panier :
 available_quantity = on_hand_quantity - reserved_quantity
 ```
 
-Une reservation cree une ligne `sale_stock_reservations` et un mouvement `reservation`. Une liberation ecrit `release`. Un checkout ecrit `sale` avec une quantite negative. Un retour restocke ecrit `return` avec une quantite positive. Le schema refuse un mouvement de stock a zero.
+Une réservation est créée au checkout et écrit un mouvement `reservation`. Une libération écrit `release`. Une conversion écrit `consumption` avec une quantité négative. Un retour écrit `return` avec une quantité positive. Les mouvements sont immuables et rejouables par clé d'idempotence ; le schéma refuse un mouvement nul.
 
 ## Idempotence
 

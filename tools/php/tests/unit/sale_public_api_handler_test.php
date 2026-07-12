@@ -178,6 +178,7 @@ try {
     $h->assertSame(3800, (int) ($reviewBody['data']['cart']['grand_total_minor'] ?? 0), 'client supplied total is ignored');
     $h->assertSame(900, (int) ($reviewBody['data']['cart']['shipping_method']['amount_minor'] ?? -1), 'fixed fulfillment rate is calculated by the server');
     $h->assertSame(false, $reviewBody['data']['cart']['marketing_consent'] ?? null, 'marketing refusal remains distinct from terms consent');
+    $h->assertSame('active', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront review creates the checkout reservation');
 
     $checkoutPayload = ['cart_token' => $token, 'idempotency_key' => 'public-sale-checkout'] + $guestData;
     $checkoutResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/checkout', $checkoutPayload)->checkout('web-main');
@@ -192,6 +193,7 @@ try {
     $h->assertSame(0, (int) ($placedOrder['marketing_consent'] ?? 1), 'marketing refusal is frozen separately');
     $h->assertSame('guest@example.test', json_decode((string) $placedOrder['customer_snapshot_json'], true)['email'] ?? null, 'guest identity snapshot is frozen on the order');
     $h->assertSame(900, (int) $placedOrder['shipping_total_minor'], 'fulfillment total is frozen on the order');
+    $h->assertSame('consumed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront checkout consumes its confirmed reservation');
     $h->assertTrue((int) ($saleDb->one('SELECT COUNT(*) AS c FROM sale_order_tax_lines WHERE order_id=?',[$orderId])['c']??0)>0, 'tax snapshots are persisted per order line');
     $shippingSnapshot=(string)$placedOrder['shipping_method_snapshot_json'];
     $saleDb->run("UPDATE sale_fulfillment_methods SET flat_rate_minor=1500 WHERE site_id=1 AND code='standard'");

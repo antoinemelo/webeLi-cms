@@ -21,6 +21,11 @@ final class SaleStockReservationService
         $this->inventory->consumeCartReservations($cartId, $orderId);
     }
 
+    public function confirmCart(int $cartId): int
+    {
+        return $this->inventory->confirmCartReservations($cartId);
+    }
+
     public function releaseCart(int $cartId, ?string $reason = null): void
     {
         $this->inventory->releaseCartReservations($cartId, $reason);

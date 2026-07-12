@@ -9,6 +9,7 @@
   const lang = root.dataset.lang || 'fr';
   const base = root.dataset.basePath || '';
   const endpoint = `${base}/api/v1/sale/channels/${encodeURIComponent(channel)}`;
+  let completed = false;
 
   const render = (cart) => {
     summary.textContent = '';
@@ -46,7 +47,7 @@
     ]);
     const select = form.elements.shipping_method; select.textContent = '';
     for (const method of bootstrap.data.fulfillment_methods || []) { const option = document.createElement('option'); option.value = method.code; option.textContent = `${method.label}${method.flat_rate_minor ? ` — ${(method.flat_rate_minor / 100).toFixed(2)} ${bootstrap.data.channel.currency}` : ''}`; select.append(option); }
-    render(payload.data.cart);
+    if (!completed) render(payload.data.cart);
   };
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); error.textContent = '';
@@ -63,7 +64,7 @@
     try {
       const key = crypto.randomUUID();
       const payload = await readJson(await fetch(`${endpoint}/checkout?lang=${lang}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify({ data }) }));
-      localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; form.hidden = true; offerAccount(payload.data.account_creation);
+      completed = true; localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; form.hidden = true; offerAccount(payload.data.account_creation);
     } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
   });
   load().catch((reason) => { error.textContent = reason instanceof Error ? reason.message : String(reason); });

@@ -68,6 +68,7 @@ final class SaleCartService
             [
                 'currency' => (string) ($cart['currency'] ?? $channel['currency'] ?? 'CHF'),
                 'customer_segment' => $payload['customer_segment'] ?? null,
+                'stock_location_id' => $this->inventory->locationIdForCart($cart),
             ]
         );
         $snapshot['line_options']=$this->validatedObject($payload['options']??[],'sale.cart_options_invalid');
@@ -79,7 +80,6 @@ final class SaleCartService
         $snapshot['calculation_version']=1;
         $amounts = $this->pricing->lineAmounts($snapshot);
         $this->carts->claimVersion($cartId, isset($payload['expected_version']) ? (int) $payload['expected_version'] : null);
-        $this->inventory->reserveForCart((int) $cart['site_id'], $cartId, $snapshot, $quantity);
         $line = $this->carts->addOrIncrementLine($cartId, $snapshot, $quantity, $amounts);
         $this->carts->markCheckoutDirty($cartId);
         $totals = $this->carts->recalculateTotals($cartId);
@@ -115,25 +115,19 @@ final class SaleCartService
         }
         $metadata = json_decode((string) ($existing['metadata_json'] ?? '{}'), true);
         $snapshot = is_array($metadata) && is_array($metadata['snapshot'] ?? null) ? $metadata['snapshot'] : [];
-        $allowBackorder = (bool) ($snapshot['allow_backorder'] ?? $snapshot['metadata']['allow_backorder'] ?? false);
         $channel=$this->channels->requireChannel((int)$cart['site_id'],(int)$cart['channel_id']);
         $fresh=$this->catalog->snapshotForVariant(
             (int) $cart['site_id'],
             (int) ($existing['sellable_id'] ?? $existing['business_variant_id']),
             $this->channels->channelCodeForCatalog($channel),
             true,
-            ['currency' => (string) $cart['currency']]
+            ['currency' => (string) $cart['currency'], 'stock_location_id' => $this->inventory->locationIdForCart($cart)]
         );
         $fresh['availability_state'] = $this->availabilityState($fresh);
         $this->carts->claimVersion($cartId, $expectedVersion);
-        if ($quantity > (int) $existing['quantity']) {
-            $this->inventory->syncCartLineReservation((int) $cart['site_id'], $cartId, (int) $existing['business_variant_id'], $quantity, $allowBackorder);
-        }
+        $this->inventory->releaseCartVariantReservations($cartId, (int) $existing['business_variant_id'], 'cart line quantity changed');
         $this->carts->refreshLineSnapshot($lineId,$fresh,$this->pricing->lineAmounts($fresh));
         $line = $this->carts->updateLineQuantity($cartId, $lineId, $quantity);
-        if ($quantity < (int) $existing['quantity']) {
-            $this->inventory->syncCartLineReservation((int) $cart['site_id'], $cartId, (int) $line['business_variant_id'], $quantity, $allowBackorder);
-        }
         $this->carts->markCheckoutDirty($cartId);
         return $line;
     }
@@ -166,7 +160,7 @@ final class SaleCartService
                 (int) ($line['sellable_id'] ?? $line['business_variant_id']),
                 $this->channels->channelCodeForCatalog($channel),
                 true,
-                ['currency' => (string) $cart['currency']]
+                ['currency' => (string) $cart['currency'], 'stock_location_id' => $this->inventory->locationIdForCart($cart)]
             );
             $fresh['availability_state'] = $this->availabilityState($fresh);
             $snapshots[] = [(int) $line['id'], $fresh, $this->pricing->lineAmounts($fresh)];

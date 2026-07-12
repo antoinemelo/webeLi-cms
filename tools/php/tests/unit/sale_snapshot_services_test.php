@@ -74,9 +74,9 @@ try {
     $saleDb->run('INSERT INTO sale_stock_locations(site_id, code, name, location_type, status) VALUES(1, "main", "Stock principal", "main", "active")');
     $stockLocationId = (int) $saleDb->lastInsertId();
     $saleDb->run(
-        'INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity)
-         VALUES(1, ?, ?, "DEMO-GOURDE-BLEU", 1, 7, 2, 5)',
-        [$variantId, $stockLocationId]
+        'INSERT INTO sale_inventory_items(site_id, business_variant_id, sellable_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity)
+         VALUES(1, ?, ?, ?, "DEMO-GOURDE-BLEU", 1, 7, 2, 5)',
+        [$variantId, $variantId, $stockLocationId]
     );
     $stockSearch = $saleCatalog->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-GOURDE-BLEU']);
     $h->assertSame(5, (int) ($stockSearch['items'][0]['available_quantity'] ?? -1), 'sale catalog search overlays transaction stock availability');

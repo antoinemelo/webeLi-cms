@@ -705,23 +705,31 @@ CREATE TABLE IF NOT EXISTS sale_inventory_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
     business_variant_id INTEGER NOT NULL,
+    sellable_id INTEGER NOT NULL,
     stock_location_id INTEGER NOT NULL,
     sku TEXT,
     tracked INTEGER NOT NULL DEFAULT 1 CHECK(tracked IN (0,1)),
+    allow_negative INTEGER NOT NULL DEFAULT 0 CHECK(allow_negative IN (0,1)),
     on_hand_quantity INTEGER NOT NULL DEFAULT 0,
     reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK(reserved_quantity >= 0),
     available_quantity INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(site_id, business_variant_id, stock_location_id),
+    UNIQUE(site_id, sellable_id, stock_location_id),
     FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(business_variant_id > 0),
+    CHECK(sellable_id > 0),
     CHECK(sku IS NULL OR trim(sku) <> ''),
+    CHECK(allow_negative = 1 OR on_hand_quantity >= 0),
+    CHECK(allow_negative = 1 OR available_quantity >= 0),
     CHECK(available_quantity = on_hand_quantity - reserved_quantity)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_variant
     ON sale_inventory_items(site_id, business_variant_id);
+CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_sellable
+    ON sale_inventory_items(site_id, sellable_id);
 CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_location
     ON sale_inventory_items(stock_location_id, tracked);
 CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_sku
@@ -734,9 +742,11 @@ CREATE TABLE IF NOT EXISTS sale_stock_reservations (
     order_id INTEGER,
     reservation_key TEXT NOT NULL,
     quantity INTEGER NOT NULL CHECK(quantity > 0),
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','released','consumed','expired')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','confirmed','released','consumed','expired')),
     expires_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TEXT,
     released_at TEXT,
     consumed_at TEXT,
     UNIQUE(inventory_item_id, reservation_key),
@@ -746,6 +756,7 @@ CREATE TABLE IF NOT EXISTS sale_stock_reservations (
     CHECK(cart_id IS NOT NULL OR order_id IS NOT NULL),
     CHECK(reservation_key = lower(trim(reservation_key)) AND reservation_key GLOB '[a-z0-9_.:-]*'),
     CHECK(status <> 'released' OR released_at IS NOT NULL),
+    CHECK(status <> 'confirmed' OR confirmed_at IS NOT NULL),
     CHECK(status <> 'consumed' OR consumed_at IS NOT NULL)
 );
 
@@ -759,17 +770,22 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_order
 CREATE TABLE IF NOT EXISTS sale_stock_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     inventory_item_id INTEGER NOT NULL,
-    movement_type TEXT NOT NULL CHECK(movement_type IN ('initial','adjustment','reservation','release','sale','return','refund','correction')),
+    movement_type TEXT NOT NULL CHECK(movement_type IN ('initial','receipt','issue','adjustment','correction','return','transfer_in','transfer_out','reservation','release','consumption')),
     quantity INTEGER NOT NULL,
+    idempotency_key TEXT,
+    transfer_key TEXT,
     reference_type TEXT,
     reference_id INTEGER,
     reason TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(inventory_item_id) REFERENCES sale_inventory_items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(idempotency_key),
     CHECK(quantity <> 0),
     CHECK(reference_type IS NULL OR (reference_type = lower(trim(reference_type)) AND reference_type GLOB '[a-z0-9_.:-]*')),
     CHECK(reference_id IS NULL OR reference_id > 0),
+    CHECK(idempotency_key IS NULL OR (idempotency_key=lower(trim(idempotency_key)) AND idempotency_key GLOB '[a-z0-9_.:-]*')),
+    CHECK(transfer_key IS NULL OR trim(transfer_key)<>''),
     CHECK(created_by_iam_user_id IS NULL OR created_by_iam_user_id > 0)
 );
 
@@ -777,6 +793,20 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_item
     ON sale_stock_movements(inventory_item_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_reference
     ON sale_stock_movements(reference_type, reference_id);
+CREATE TRIGGER IF NOT EXISTS trg_sale_stock_movements_immutable_update
+BEFORE UPDATE ON sale_stock_movements BEGIN SELECT RAISE(ABORT,'sale.stock_movement_immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_stock_movements_immutable_delete
+BEFORE DELETE ON sale_stock_movements BEGIN SELECT RAISE(ABORT,'sale.stock_movement_immutable'); END;
+
+CREATE TABLE IF NOT EXISTS sale_inventory_reconciliation_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running','clean','differences','failed')),
+    items_checked INTEGER NOT NULL DEFAULT 0, differences_count INTEGER NOT NULL DEFAULT 0,
+    repaired_count INTEGER NOT NULL DEFAULT 0, report_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(report_json)),
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT,
+    created_by_iam_user_id INTEGER, CHECK(site_id>0)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_inventory_reconciliation_runs_site ON sale_inventory_reconciliation_runs(site_id,started_at DESC);
 
 CREATE TABLE IF NOT EXISTS sale_receipts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

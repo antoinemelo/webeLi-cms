@@ -110,10 +110,7 @@ try {
     $h->assertSame(5300, (int) $discountedCart['grand_total_minor'], 'manual POS cart discount updates total');
     $h->assertSame(500, (int) $discountedCart['adjustments'][0]['amount_minor'], 'manual POS cart discount is stored');
 
-    $reservation = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = "active"', [(int) $cart['id']]);
-    $h->assertSame(2, (int) $reservation['quantity'], 'tracked variant reserves stock');
-    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
-    $h->assertSame(23, (int) $inventoryItem['available_quantity'], 'reservation decreases available stock');
+    $h->assertSame(0, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_reservations WHERE cart_id=?', [(int) $cart['id']])['count'] ?? -1), 'cart uses a soft stock check and does not reserve');
 
     $order = $checkout->placeOrder((int) $cart['id'], [
         'idempotency_key' => 'checkout-demo',
@@ -134,6 +131,9 @@ try {
     $h->assertSame('Gourde demo', $orderLine['product_name'] ?? null, 'order line freezes product name');
     $h->assertSame(2900, (int) ($orderLine['unit_price_minor'] ?? 0), 'order line freezes unit price');
     $h->assertSame(2900, (int) ($orderLineSnapshot['snapshot']['unit_price_minor'] ?? 0), 'order line snapshot JSON freezes unit price');
+    $reservation = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id=?', [(int) $cart['id']]);
+    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id=?', [(int) ($reservation['inventory_item_id'] ?? 0)]);
+    $h->assertSame(2, (int) ($reservation['quantity'] ?? 0), 'checkout reserves the exact line quantity before consumption');
     $businessDb->run("UPDATE business_products SET name = 'Gourde modifiée après commande' WHERE id = ?", [(int) $orderLine['business_product_id']]);
     $businessDb->run('UPDATE business_product_base_prices SET amount = 99 WHERE product_id = ? AND price_kind = "sale"', [(int) $orderLine['business_product_id']]);
     $frozenOrderLine = $saleDb->one('SELECT * FROM sale_order_lines WHERE id = ? LIMIT 1', [(int) $orderLine['id']]);

@@ -65,16 +65,16 @@ final class SaleGuestCheckoutService
             $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
         }
 
-        $priceChanged = false;
-        if (in_array($step, ['review','validated'], true)) {
-            $priceChanged = $this->revalidateLines($cart);
-            $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
-            $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
-        }
         if ($step === 'validated' && !$terms) {
             throw new SaleValidationException('sale.checkout.terms_required');
         }
-
+        $priceChanged = false;
+        if (in_array($step, ['review','validated'], true)) {
+            $priceChanged = $this->revalidateLines($cart);
+            $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated');
+            $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
+            $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
+        }
         $saved = $this->carts->saveGuestCheckout(
             $cartId, $identity, $billing, $shipping, $shippingMethod, $paymentMethod,
             $terms, $marketing, $step, $step === 'validated'
@@ -124,7 +124,7 @@ final class SaleGuestCheckoutService
             try {
                 $snapshot = $this->catalog->snapshotForVariant(
                     (int) $cart['site_id'], (int) $line['business_variant_id'],
-                    $this->channels->channelCodeForCatalog($channel), true, ['currency' => (string) $cart['currency']]
+                    $this->channels->channelCodeForCatalog($channel), true, ['currency' => (string) $cart['currency'], 'stock_location_id' => $this->inventory->locationIdForCart($cart)]
                 );
             } catch (\InvalidArgumentException) {
                 throw new SaleValidationException('sale.checkout.product_unavailable');
@@ -132,17 +132,6 @@ final class SaleGuestCheckoutService
             $amounts = $this->pricing->lineAmounts($snapshot);
             $changed = $changed || (int) $amounts['unit_price_minor'] !== (int) $line['unit_price_minor']
                 || (int) $amounts['tax_rate_basis_points'] !== (int) $line['tax_rate_basis_points'];
-            if ((bool) ($snapshot['track_stock'] ?? false)) {
-                $reserved = (int) ($this->db()->one(
-                    'SELECT COALESCE(SUM(r.quantity),0) AS total FROM sale_stock_reservations r
-                     INNER JOIN sale_inventory_items i ON i.id=r.inventory_item_id
-                     WHERE r.cart_id=? AND i.business_variant_id=? AND r.status=\'active\'',
-                    [(int) $cart['id'], (int) $line['business_variant_id']]
-                )['total'] ?? 0);
-                if ($reserved < (int) $line['quantity']) {
-                    throw new SaleInventoryException('sale.checkout.product_unavailable');
-                }
-            }
             $this->carts->refreshLineSnapshot((int) $line['id'], $snapshot, $amounts);
         }
         $this->carts->recalculateTotals((int) $cart['id']);
