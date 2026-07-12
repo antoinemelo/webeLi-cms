@@ -23,14 +23,14 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "44d09a97604636cc12211fafb1102b219cfff330",
+  "commit": "e0a1c4ea62ec478e72bdcc8debf7f26ce13cf927",
   "confidence": "high",
   "databases": [
     "core",
     "iam",
     "modules"
   ],
-  "dirty": false,
+  "dirty": true,
   "evaluation_documents": [
     "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",
@@ -43,6 +43,7 @@
     "docs/evaluation/product-scope.md",
     "docs/evaluation/release-audit-policy.md",
     "docs/evaluation/reproducible-checks.md",
+    "docs/evaluation/rm1-gap-analysis.md",
     "docs/evaluation/sale-module-review.md",
     "docs/evaluation/visual-editor.md"
   ],

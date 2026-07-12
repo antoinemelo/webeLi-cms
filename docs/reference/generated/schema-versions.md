@@ -33,6 +33,7 @@ generated: true
 | `database/migrations/core/073_backfill_ai_module_blueprint_storage.sql` | `073_backfill_ai_module_blueprint_storage` |
 | `database/migrations/core/075_cross_database_operations.sql` | `075_cross_database_operations` |
 | `database/migrations/core/076_business_product_content_links.sql` | `076_business_product_content_links` |
+| `database/migrations/core/077_outbox_reliability.sql` | `077_outbox_reliability` |
 | `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |

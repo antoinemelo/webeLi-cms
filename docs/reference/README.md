@@ -31,6 +31,8 @@ generated: false
 - [Versions de schéma](generated/schema-versions.md)
 - [Validateurs](generated/validators.md)
 - [Contenu de release](generated/release-contents.md)
+- [Registre d’aide contextuelle](contextual-help.md)
+- [Changelog par module](module-changelog.md)
 - [Smoke E2E éditorial](editorial-e2e-flow.md)
 
 ## Contrats versionnés

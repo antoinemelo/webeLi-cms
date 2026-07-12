@@ -368,6 +368,27 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/core/077_outbox_reliability.sql"
+    ],
+    "id": "database-source-database-migrations-core-077-outbox-reliability-sql-1780aa33f6",
+    "kind": "migration",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/077_outbox_reliability.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "outbox_consumptions",
+      "outbox_events_v2"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/forms/0001_baseline.sql"
     ],
     "id": "database-source-database-migrations-forms-0001-baseline-sql-5d5340a785",
@@ -901,6 +922,7 @@
       "module_permissions",
       "module_routes",
       "modules",
+      "outbox_consumptions",
       "outbox_events",
       "public_content_snapshots",
       "redirects",

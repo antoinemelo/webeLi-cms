@@ -211,6 +211,25 @@
   {
     "command": "python3 tools/cms.py test",
     "confidence": "high",
+    "discovered_test_functions": 2,
+    "evidence": [
+      "tools/python/tests/test_i18n_coverage.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-i18n-coverage-py-843b5d141f",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_i18n_coverage",
+    "source": [
+      "tools/python/tests/test_i18n_coverage.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
     "discovered_test_functions": 1,
     "evidence": [
       "tools/python/tests/test_instance_clone.py"
@@ -287,7 +306,7 @@
   {
     "command": "python3 tools/cms.py test",
     "confidence": "high",
-    "discovered_test_functions": 6,
+    "discovered_test_functions": 7,
     "evidence": [
       "tools/python/tests/test_qualification_orchestrator.py"
     ],

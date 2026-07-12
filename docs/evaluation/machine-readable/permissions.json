@@ -1424,6 +1424,62 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "id": "permission-common-apply-84304c3e13",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "common.apply",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/components/blueprints/BlueprintNavigationPanel.vue",
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/system/BlueprintsView.vue"
+    ],
+    "id": "permission-common-create-1accaea9b2",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "common.create",
+    "source": [
+      "frontend/admin-vue/src/components/blueprints/BlueprintNavigationPanel.vue",
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/system/BlueprintsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/system/BlueprintsView.vue"
+    ],
+    "id": "permission-common-delete-2e5e6c2fc7",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "common.delete",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/system/BlueprintsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Content/PublishContentEntry.php"
     ],
     "id": "permission-content-after-publish-42d7baa052",
@@ -2658,6 +2714,78 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "id": "permission-maintenance-action-audit-run-e80c656aad",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "maintenance.action.audit.run",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "id": "permission-maintenance-action-cache-run-bc6f7a1e41",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "maintenance.action.cache.run",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "id": "permission-maintenance-action-runtime-run-b90865149d",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "maintenance.action.runtime.run",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "id": "permission-maintenance-action-search-run-5e2f225531",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "maintenance.action.search.run",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php",
       "backend/src/Application/Api/Admin/MaintenanceApiController.php",
       "database/seeds/default/iam_default_seed.sql",
@@ -3090,6 +3218,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "id": "permission-modules-sale-b34de62bcf",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "modules.sale",
+    "source": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/config/app.php",
       "backend/src/Application/Api/Admin/SecurityAdminApiController.php"
     ],
@@ -3476,6 +3622,22 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts"
+    ],
+    "id": "permission-sale-status-admin-f626857da9",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.status.admin",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
@@ -3508,6 +3670,42 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
+      "frontend/admin-vue/src/i18n/messages.ts"
+    ],
+    "id": "permission-search-keyword-create-d7f6414899",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "search.keyword.create",
+    "source": [
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
+      "frontend/admin-vue/src/i18n/messages.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
+      "frontend/admin-vue/src/i18n/messages.ts"
+    ],
+    "id": "permission-search-section-create-74a904e40d",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "search.section.create",
+    "source": [
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
+      "frontend/admin-vue/src/i18n/messages.ts"
     ],
     "status": "supported"
   },
@@ -4196,6 +4394,24 @@
       "database/seeds/default/iam_default_seed.sql",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/system/SystemConfigurationView.vue"
+    ],
+    "id": "permission-settings-configuration-1ab116bfea",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "settings.configuration",
+    "source": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/system/SystemConfigurationView.vue"
     ],
     "status": "supported"
   },

@@ -41,7 +41,8 @@ Le CMS combine un modèle de contenu structuré et une édition visuelle contrô
 
 | Besoin | Espace canonique |
 |---|---|
-| Partir du bon profil | [Choisir son parcours documentaire](getting-started/choose-your-path.md) |
+| Partir du bon profil | [Choisir son parcours documentaire](getting-started/choose-your-path.md) et [Guides par rôle](getting-started/role-guides.md) |
+| Vérifier les scénarios clés | [Scénarios vérifiables](getting-started/verified-scenarios.md) |
 | Découvrir et installer localement | [Prise en main](getting-started/README.md) |
 | Créer, réviser et publier | [Guide utilisateur](user-guide/README.md) |
 | Administrer sites, langues, rôles et modules | [Administration](administration/README.md) |
@@ -59,6 +60,7 @@ Le CMS combine un modèle de contenu structuré et une édition visuelle contrô
 - L’OpenAPI public sous [`public-api/`](public-api/) est la référence des endpoints publics.
 - Les contrats JSON sous [`reference/contracts/`](reference/contracts/) sont la référence des réponses de l’API administrative interne.
 - Les limites connues sont regroupées dans [`evaluation/limitations.md`](evaluation/limitations.md).
+- L’aide contextuelle du back-office est recensée dans [`reference/contextual-help.md`](reference/contextual-help.md).
 - Les commandes et contrôles de release sont liés depuis leurs pages canoniques ; ils ne doivent pas être recopiés dans chaque guide.
 
 ## Vérification

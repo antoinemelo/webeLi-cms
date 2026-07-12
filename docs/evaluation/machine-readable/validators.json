@@ -162,6 +162,24 @@
     "status": "unverified"
   },
   {
+    "command": "python3 tools/cms.py validate --validator I18N_COVERAGE",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/content/i18n.py"
+    ],
+    "execution_result": null,
+    "id": "validator-i18n-coverage-b66fba2a2f",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "I18N_COVERAGE",
+    "source": [
+      "tools/python/validation/content/i18n.py"
+    ],
+    "status": "unverified"
+  },
+  {
     "command": "python3 tools/cms.py validate --validator PERMISSION_MODEL",
     "confidence": "high",
     "evidence": [

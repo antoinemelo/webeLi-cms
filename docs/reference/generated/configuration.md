@@ -18,7 +18,16 @@ generated: true
 
 | Variable | Références dans le dépôt |
 |---|---|
+| `AMCMS_M0_PERF_BASE_URL` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_CRITICAL_MS` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_REPEAT` | `tools/python/qualification/performance_baseline.py` |
 | `APP_BASE_PATH` | `backend/config/app.php`, `backend/src/Shared/Support/helpers.php`, `tools/python/operations/database/b2_cleanup_noindex_search_documents.py` |
+| `APP_DEPENDENCIES_HTTP_TIMEOUT` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_BUDGET` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_CACHE_TTL` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_ENABLED` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_REFRESH_BUDGET` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_REFRESH_HTTP_TIMEOUT` | `backend/config/updates.php` |
 | `APP_EDITORIAL_IMPORT_MAX_ARCHIVE_BYTES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_FILES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_UNCOMPRESSED_BYTES` | `backend/config/app.php` |

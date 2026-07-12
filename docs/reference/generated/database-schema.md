@@ -165,7 +165,8 @@ generated: true
 | `module_permissions` | id, module_key, permission_key, created_at |
 | `module_routes` | id, module_key, route_key, scope, method, path, handler, is_published, created_at, updated_at |
 | `modules` | id, module_key, name, version, provider_class, is_system, is_installed, is_enabled, config_json, installed_at, updated_at |
-| `outbox_events` | id, topic, payload_json, status, attempts, last_error, created_at, available_at, claimed_at, processed_at |
+| `outbox_consumptions` | id, event_id, consumer_key, processed_at, result_json |
+| `outbox_events` | id, event_id, event_type, schema_version, occurred_at, site_id, correlation_id, causation_id, aggregate_type, aggregate_id, topic, payload_json, metadata_json, status, attempts, max_attempts, last_error, error_type, created_at, available_at, locked_until, lock_token, claimed_at, processed_at, dead_lettered_at, archived_at, updated_at |
 | `public_content_snapshots` | id, site_id, language_code, resource_type, resource_id, route_path, title, slug, blocks_json, block_count, document_json, seo_json, source_published_revision_id, source_revision_checksum_sha256, published_at, projected_at |
 | `redirects` | id, site_id, language_code, old_path, new_path, http_code, redirect_reason, resource_type, resource_id, is_active, created_at, updated_at |
 | `revision_comments` | id, revision_id, language_code, anchor_path, comment_text, status, created_by_iam_user_id, created_at |
@@ -189,7 +190,7 @@ generated: true
 | `site_preferences` | id, site_id, preference_key, value_json, updated_by_iam_user_id, created_at, updated_at |
 | `site_settings` | id, site_id, namespace, setting_key, value_json, is_public, updated_by_iam_user_id, created_at, updated_at |
 | `sites` | id, site_key, name, default_language_code, is_active, created_at, updated_at |
-| `system_jobs` | id, job_key, last_run_at, last_status, last_message, updated_at |
+| `system_jobs` | id, job_key, last_run_at, last_heartbeat_at, last_status, last_message, locked_until, updated_at |
 | `taxonomies` | id, site_id, taxonomy_key, name, description, is_hierarchical, is_localized, seo_enabled, archive_enabled, sort_order |
 | `taxonomy_term_localizations` | id, site_id, taxonomy_id, term_id, language_code, name, slug, full_path, description, meta_title, meta_description, canonical_url, json_ld |
 | `taxonomy_terms` | id, taxonomy_id, parent_id, term_key, is_active, sort_order |

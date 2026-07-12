@@ -72,6 +72,8 @@ generated: true
 | `business.memo.read` |
 | `business.messaging.admin` |
 | `catalog.product.read` |
+| `common.create` |
+| `common.delete` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |
@@ -94,6 +96,10 @@ generated: true
 | `imports_exports.manage` |
 | `imports_exports.read` |
 | `imports_exports.write` |
+| `maintenance.action.audit.run` |
+| `maintenance.action.cache.run` |
+| `maintenance.action.runtime.run` |
+| `maintenance.action.search.run` |
 | `maintenance.manage` |
 | `media.delete` |
 | `media.read` |
@@ -122,8 +128,11 @@ generated: true
 | `sale.refunds.manage` |
 | `sale.reports.read` |
 | `sale.settings.manage` |
+| `sale.status.admin` |
 | `sale.stock.manage` |
 | `sale.stock.read` |
+| `search.keyword.create` |
+| `search.section.create` |
 | `security.cors.manage` |
 | `security.cors.read` |
 | `security.tokens.manage` |

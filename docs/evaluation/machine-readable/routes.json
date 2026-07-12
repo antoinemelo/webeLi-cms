@@ -5927,6 +5927,24 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-post-admin-api-maintenance-dependencies-refresh-backend-routes-api-php-3db54ea16a",
+    "last_verified": "2026-07-12",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/maintenance/dependencies/refresh",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-delete-admin-api-maintenance-runtime-logs-backend-routes-api-php-ba478276c1",
     "last_verified": "2026-07-12",
     "limitations": [

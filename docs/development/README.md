@@ -19,6 +19,7 @@ generated: false
 - [CLI et outils Python](python-tooling/cli.md)
 - [Tests et validations](testing-validation/README.md)
 - [Base de données](database/README.md)
+- [Internationalisation de l’administration](admin-i18n.md) / [Admin internationalization](admin-i18n.en.md)
 
 ## Étendre
 

@@ -431,6 +431,7 @@ generated: true
 | `POST` | `/admin/api/imports-exports/static/actions/rerun` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/imports-exports/static/actions/site` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/cache/clear` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/dependencies/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/search/reindex` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/folders` | API administrative | `backend/routes/api.php` |
