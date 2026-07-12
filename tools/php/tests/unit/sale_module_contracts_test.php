@@ -187,8 +187,8 @@ try {
     $h->assertSame([
         ['code' => 'admin-manual', 'channel_type' => 'admin', 'status' => 'active', 'is_public' => 0],
         ['code' => 'pos-main', 'channel_type' => 'pos', 'status' => 'draft', 'is_public' => 0],
-        ['code' => 'web-main', 'channel_type' => 'ecommerce', 'status' => 'draft', 'is_public' => 0],
-    ], $seededChannels, 'sale schema seeds non-public channels by default');
+        ['code' => 'web-main', 'channel_type' => 'ecommerce', 'status' => 'active', 'is_public' => 1],
+    ], $seededChannels, 'sale schema seeds a public ecommerce channel for headless smoke coverage');
 
     $adminChannel = $saleDb->one("SELECT id FROM sale_channels WHERE code = 'admin-manual'");
     $h->expectException(

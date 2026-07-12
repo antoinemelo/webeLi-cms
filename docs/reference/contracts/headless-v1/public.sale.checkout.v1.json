@@ -1,0 +1,68 @@
+{
+  "contract": "public.sale.checkout.v1",
+  "kind": "schema",
+  "summary": "Convertir un panier public en commande.",
+  "description": "Place une commande e-commerce depuis un panier public actif. Le checkout est idempotent si `Idempotency-Key` ou `data.idempotency_key` est fourni.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/checkout",
+  "source": "sale_carts + sale_orders + sale_order_lines",
+  "security": "Public endpoint: no bearer token is required; the opaque cart token is required.",
+  "headers": {
+    "Idempotency-Key": {"type": "string", "required": false, "description": "Clé optionnelle de rejeu idempotent pour le checkout."}
+  },
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$", "description": "Code du canal e-commerce public."}
+  },
+  "request_body": {
+    "required": true,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["cart_token"],
+          "properties": {
+            "cart_token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+            "token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+            "idempotency_key": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "response": {
+    "status": 201,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["order"],
+          "properties": {"order": {"$ref": "#/components/schemas/PublicSaleOrder"}},
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal ou panier public introuvable."},
+    {"code": "VALIDATION_FAILED", "status": 422, "description": "Panier vide, déjà converti ou idempotence invalide."}
+  ],
+  "examples": {
+    "request": {"data": {"cart_token": "opaque-cart-token", "idempotency_key": "checkout-1"}},
+    "response": {
+      "data": {
+        "order": {"id": 50, "order_number": "WEB-000050", "source": "ecommerce", "status": "placed", "payment_status": "unpaid", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []}
+      },
+      "meta": {"contract": "public.sale.checkout.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

@@ -81,9 +81,9 @@ try {
     }
     $h->assertSame(null, (new Router())->match('GET', '/api/v1/sale/orders', $routes), 'sale public API still has no public order listing');
 
+    $saleDb->run("UPDATE sale_channels SET status = 'draft', is_public = 0 WHERE site_id = 1 AND code = 'web-main'");
     $disabled = $handlerFor('GET', '/api/v1/sale/channels/web-main/bootstrap')->bootstrap('web-main');
-    $h->assertSame(404, $disabled->status(), 'draft non-public ecommerce channel is refused by default');
-
+    $h->assertSame(404, $disabled->status(), 'draft non-public ecommerce channel is refused');
     $saleDb->run("UPDATE sale_channels SET status = 'active', is_public = 1 WHERE site_id = 1 AND code = 'web-main'");
     $variant = $businessDb->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
 

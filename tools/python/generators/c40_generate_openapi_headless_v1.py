@@ -17,6 +17,8 @@ ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "
 CONTRACT_DIR = ROOT / "docs/reference/contracts/headless-v1"
 OUTPUT_JSON_PATH = ROOT / "docs/public-api/openapi.v1.json"
 OUTPUT_YAML_PATH = ROOT / "docs/public-api/openapi.v1.yaml"
+REFERENCE_JSON_PATH = ROOT / "docs/reference/contracts/public-api/openapi.v1.json"
+REFERENCE_YAML_PATH = ROOT / "docs/reference/contracts/public-api/openapi.v1.yaml"
 
 COMMON_CONTEXT_PARAMS = {"site", "site_id", "lang"}
 
@@ -30,6 +32,13 @@ COMPONENT_BY_RUNTIME_CONTRACT = {
     "public.media.show.v1": "PublicMediaResponse",
     "public.media.index.v1": "PublicMediaResponse",
     "public.search.index.v1": "PublicSearchResponse",
+    "public.sale.channels.bootstrap.v1": "PublicSaleBootstrapResponse",
+    "public.sale.cart.store.v1": "PublicSaleCartResponse",
+    "public.sale.cart.show.v1": "PublicSaleCartResponse",
+    "public.sale.cart.lines.store.v1": "PublicSaleCartLineMutationResponse",
+    "public.sale.cart.lines.update.v1": "PublicSaleCartLineMutationResponse",
+    "public.sale.cart.lines.delete.v1": "PublicSaleCartLineDeleteResponse",
+    "public.sale.checkout.v1": "PublicSaleCheckoutResponse",
 }
 
 SCHEMA_COMPONENTS_REQUIRED = [
@@ -42,6 +51,15 @@ SCHEMA_COMPONENTS_REQUIRED = [
     "PublicMenuResponse",
     "PublicMediaResponse",
     "PublicSearchResponse",
+    "PublicSaleChannel",
+    "PublicSaleCartLine",
+    "PublicSaleCart",
+    "PublicSaleOrder",
+    "PublicSaleBootstrapResponse",
+    "PublicSaleCartResponse",
+    "PublicSaleCartLineMutationResponse",
+    "PublicSaleCartLineDeleteResponse",
+    "PublicSaleCheckoutResponse",
 ]
 
 
@@ -93,6 +111,12 @@ def operation_parameters(contract: dict[str, Any], path: str) -> list[dict[str, 
     params: list[dict[str, Any]] = []
     query_params = contract.get("query_params") or {}
     path_params = contract.get("path_params") or {}
+    header_params = contract.get("headers") or {}
+    if isinstance(header_params, dict):
+        for name, spec in header_params.items():
+            if not isinstance(spec, dict):
+                continue
+            params.append(parameter(str(name), spec, "header"))
     if isinstance(query_params, dict):
         for name, spec in query_params.items():
             if not isinstance(spec, dict):
@@ -108,6 +132,24 @@ def operation_parameters(contract: dict[str, Any], path: str) -> list[dict[str, 
                 spec = {}
             params.append(parameter(str(name), spec, "path", force_required=True))
     return params
+
+
+def request_body(contract: dict[str, Any]) -> dict[str, Any] | None:
+    body = contract.get("request_body")
+    if not isinstance(body, dict):
+        return None
+    schema = body.get("schema")
+    if not isinstance(schema, dict):
+        return None
+    content_type = str(body.get("content_type") or "application/json")
+    return {
+        "required": bool(body.get("required", False)),
+        "content": {
+            content_type: {
+                "schema": normalize_schema(deepcopy(schema)),
+            }
+        },
+    }
 
 
 def extract_response_schema(contract: dict[str, Any], runtime_contract: str | None = None) -> dict[str, Any]:
@@ -145,13 +187,13 @@ def extract_examples(contract: dict[str, Any], runtime_contract: str | None = No
     return {}
 
 
-def response_object(schema_ref_or_schema: dict[str, Any], examples: dict[str, Any] | None = None) -> dict[str, Any]:
+def response_object(schema_ref_or_schema: dict[str, Any], examples: dict[str, Any] | None = None, content_type: str = "application/json") -> dict[str, Any]:
     media: dict[str, Any] = {"schema": schema_ref_or_schema}
     if examples:
         media["examples"] = examples
     return {
         "description": "Réponse normalisée de l'API publique headless v1.",
-        "content": {"application/json": media},
+        "content": {content_type: media},
     }
 
 
@@ -265,6 +307,78 @@ def base_components() -> dict[str, Any]:
                 },
                 "additionalProperties": True,
             },
+            "PublicSaleChannel": {
+                "type": "object",
+                "required": ["code", "name", "currency", "default_language", "tax_mode"],
+                "properties": {
+                    "code": {"type": "string"},
+                    "name": {"type": "string"},
+                    "currency": {"type": "string"},
+                    "default_language": {"type": "string"},
+                    "tax_mode": {"type": "string"},
+                },
+                "additionalProperties": True,
+            },
+            "PublicSaleCartLine": {
+                "type": "object",
+                "required": ["id", "business_variant_id", "quantity", "unit_price_minor", "currency", "line_total_minor"],
+                "properties": {
+                    "id": {"type": "integer"},
+                    "business_product_id": {"type": "integer"},
+                    "business_variant_id": {"type": "integer"},
+                    "sku": {"type": ["string", "null"]},
+                    "barcode": {"type": ["string", "null"]},
+                    "product_name": {"type": "string"},
+                    "variant_name": {"type": ["string", "null"]},
+                    "quantity": {"type": "integer", "minimum": 0},
+                    "unit_price_minor": {"type": "integer"},
+                    "regular_unit_price_minor": {"type": "integer"},
+                    "currency": {"type": "string"},
+                    "tax_rate_basis_points": {"type": "integer"},
+                    "tax_included": {"type": "boolean"},
+                    "line_subtotal_minor": {"type": "integer"},
+                    "line_discount_minor": {"type": "integer"},
+                    "line_tax_minor": {"type": "integer"},
+                    "line_total_minor": {"type": "integer"},
+                },
+                "additionalProperties": True,
+            },
+            "PublicSaleCart": {
+                "type": "object",
+                "required": ["id", "status", "currency", "subtotal_minor", "discount_total_minor", "tax_total_minor", "grand_total_minor"],
+                "properties": {
+                    "id": {"type": "integer"},
+                    "token": {"type": "string"},
+                    "status": {"type": "string"},
+                    "currency": {"type": "string"},
+                    "subtotal_minor": {"type": "integer"},
+                    "discount_total_minor": {"type": "integer"},
+                    "tax_total_minor": {"type": "integer"},
+                    "grand_total_minor": {"type": "integer"},
+                    "expires_at": {"type": ["string", "null"]},
+                    "lines": {"type": "array", "items": {"$ref": "#/components/schemas/PublicSaleCartLine"}},
+                },
+                "additionalProperties": True,
+            },
+            "PublicSaleOrder": {
+                "type": "object",
+                "required": ["id", "order_number", "source", "status", "payment_status", "currency", "grand_total_minor"],
+                "properties": {
+                    "id": {"type": "integer"},
+                    "order_number": {"type": "string"},
+                    "source": {"type": "string"},
+                    "status": {"type": "string"},
+                    "payment_status": {"type": "string"},
+                    "currency": {"type": "string"},
+                    "subtotal_minor": {"type": "integer"},
+                    "discount_total_minor": {"type": "integer"},
+                    "tax_total_minor": {"type": "integer"},
+                    "grand_total_minor": {"type": "integer"},
+                    "lines": {"type": "array", "items": {"$ref": "#/components/schemas/PublicSaleCartLine"}},
+                    "placed_at": {"type": ["string", "null"]},
+                },
+                "additionalProperties": True,
+            },
         },
     }
 
@@ -362,15 +476,18 @@ def build_openapi(contracts: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any
             continue
         component_name = COMPONENT_BY_RUNTIME_CONTRACT.get(runtime_contract)
         schema = {"$ref": f"#/components/schemas/{component_name}"} if component_name else extract_response_schema(contract, runtime_contract)
+        response = contract.get("response") if isinstance(contract.get("response"), dict) else {}
+        success_status = str(response.get("status") if isinstance(response.get("status"), int) else 200)
+        content_type = str(response.get("content_type") or "application/json")
         responses: dict[str, Any] = {
-            "200": response_object(schema, extract_examples(contract, runtime_contract)),
+            success_status: response_object(schema, extract_examples(contract, runtime_contract), content_type),
         }
         for err in contract.get("errors", []):
             if isinstance(err, dict) and isinstance(err.get("status"), int):
                 responses[str(err["status"])] = error_response(int(err["status"]), str(err.get("description", "")))
         security_description = str(contract.get("security") or "").lower()
         operation_security = [] if "no bearer" in security_description or "public endpoint" in security_description else [{"BearerAuth": []}]
-        paths.setdefault(path, {})[method] = {
+        operation_item: dict[str, Any] = {
             "operationId": operation_id(method, path, runtime_contract),
             "summary": str(contract.get("summary") or runtime_contract),
             "description": str(contract.get("description") or contract.get("summary") or ""),
@@ -379,6 +496,10 @@ def build_openapi(contracts: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any
             "parameters": operation_parameters(contract, path),
             "responses": responses,
         }
+        body = request_body(contract)
+        if body is not None:
+            operation_item["requestBody"] = body
+        paths.setdefault(path, {})[method] = operation_item
 
     return {
         "openapi": "3.1.0",
@@ -405,14 +526,19 @@ def main() -> int:
         contracts = load_contracts()
         openapi = build_openapi(contracts)
         OUTPUT_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REFERENCE_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
         OUTPUT_JSON_PATH.write_text(serialize_json(openapi), encoding="utf-8")
         OUTPUT_YAML_PATH.write_text(serialize_yaml(openapi), encoding="utf-8")
+        REFERENCE_JSON_PATH.write_text(serialize_json(openapi), encoding="utf-8")
+        REFERENCE_YAML_PATH.write_text(serialize_yaml(openapi), encoding="utf-8")
         path_count = len(openapi.get("paths", {}))
         schema_count = len(openapi.get("components", {}).get("schemas", {}))
         operation_count = sum(len(item) for item in openapi.get("paths", {}).values() if isinstance(item, dict))
         print("OK: OpenAPI headless v1 généré")
         print(f"- JSON: {OUTPUT_JSON_PATH.relative_to(ROOT)}")
         print(f"- YAML: {OUTPUT_YAML_PATH.relative_to(ROOT)}")
+        print(f"- Reference JSON: {REFERENCE_JSON_PATH.relative_to(ROOT)}")
+        print(f"- Reference YAML: {REFERENCE_YAML_PATH.relative_to(ROOT)}")
         print(f"Résumé: {path_count} chemins, {schema_count} schémas, {operation_count} opérations")
         return 0
     except Exception as exc:  # noqa: BLE001 - script CLI, message clair attendu.

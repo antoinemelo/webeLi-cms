@@ -7,6 +7,11 @@ import type {
   OpenApiPublicMenuResponse,
   OpenApiPublicMeta,
   OpenApiPublicRouteResponse,
+  OpenApiPublicSaleBootstrapResponse,
+  OpenApiPublicSaleCartLineDeleteResponse,
+  OpenApiPublicSaleCartLineMutationResponse,
+  OpenApiPublicSaleCartResponse,
+  OpenApiPublicSaleCheckoutResponse,
   OpenApiPublicSearchResponse,
 } from './generated/openapi-types';
 
@@ -56,6 +61,31 @@ export interface SearchOptions extends PaginationOptions {
   type?: string;
   taxonomy?: string;
   term?: string;
+}
+
+export interface MutationOptions extends CommonQueryOptions {
+  idempotencyKey?: string;
+}
+
+export interface SaleChannelOptions extends CommonQueryOptions {}
+
+export interface SaleCartCreateOptions extends CommonQueryOptions {}
+
+export interface SaleCartLinePayload {
+  business_variant_id?: number;
+  variant_id?: number;
+  quantity: number;
+  idempotency_key?: string;
+}
+
+export interface SaleCartLineUpdatePayload {
+  quantity: number;
+}
+
+export interface SaleCheckoutPayload {
+  cart_token?: string;
+  token?: string;
+  idempotency_key?: string;
 }
 
 // Types de base générés depuis docs/public-api/openapi.v1.json.
@@ -249,3 +279,8 @@ export interface PublicTaxonomiesResponse {
 
 export type PublicMediaResponse = OpenApiPublicMediaResponse;
 export type PublicSearchResponse = OpenApiPublicSearchResponse;
+export type PublicSaleBootstrapResponse = OpenApiPublicSaleBootstrapResponse;
+export type PublicSaleCartResponse = OpenApiPublicSaleCartResponse;
+export type PublicSaleCartLineMutationResponse = OpenApiPublicSaleCartLineMutationResponse;
+export type PublicSaleCartLineDeleteResponse = OpenApiPublicSaleCartLineDeleteResponse;
+export type PublicSaleCheckoutResponse = OpenApiPublicSaleCheckoutResponse;

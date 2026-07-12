@@ -890,4 +890,4 @@ INSERT OR IGNORE INTO sale_channels (
 ) VALUES
     (1, 'admin-manual', 'Saisie admin manuelle', 'admin', 'active', 'CHF', 'fr', 'tax_included', 1, 0),
     (1, 'pos-main', 'Caisse principale', 'pos', 'draft', 'CHF', 'fr', 'tax_included', 1, 0),
-    (1, 'web-main', 'Boutique web principale', 'ecommerce', 'draft', 'CHF', 'fr', 'tax_included', 1, 0);
+    (1, 'web-main', 'Boutique web principale', 'ecommerce', 'active', 'CHF', 'fr', 'tax_included', 1, 1);

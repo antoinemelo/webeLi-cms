@@ -21,8 +21,8 @@ Aucune dépendance runtime n’est déclarée dans `package.json`.
 Les types de réponse les plus précis sont générés depuis `docs/public-api/openapi.v1.json`, uniquement à partir de `components.schemas`, sans dépendance runtime et sans générateur npm lourd.
 
 ```bash
-python3 tools/python/c40_generate_openapi_headless_v1.py
-python3 tools/python/c44_generate_sdk_types_from_openapi.py
+python3 tools/python/generators/c40_generate_openapi_headless_v1.py
+python3 tools/python/generators/c44_generate_sdk_types_from_openapi.py
 python3 tools/cms.py docs check
 ```
 
@@ -183,8 +183,46 @@ Recherche dans les contenus publiés.
 const results = await cms.search('parapente', { type: 'article', limit: 10, lang: 'fr' });
 ```
 
+### Sale public e-commerce
+
+Les méthodes Sale appellent uniquement les endpoints e-commerce publics déjà
+contractés. Le canal doit être actif/public côté CMS et les opérations panier
+utilisent le token opaque retourné à la création.
+
+```ts
+const bootstrap = await cms.getSaleChannel('web-main', { lang: 'fr' });
+const cart = await cms.createSaleCart('web-main');
+const token = cart.data.cart.token;
+
+await cms.addSaleCartLine(
+  'web-main',
+  token,
+  { business_variant_id: 3, quantity: 1 },
+  { idempotencyKey: 'cart-line-1' },
+);
+
+await cms.updateSaleCartLine('web-main', token, 20, { quantity: 2 });
+await cms.deleteSaleCartLine('web-main', token, 20);
+
+const order = await cms.checkoutSaleCart(
+  'web-main',
+  { cart_token: token },
+  { idempotencyKey: 'checkout-1' },
+);
+```
+
+Méthodes disponibles :
+
+- `getSaleChannel(code, options?)`
+- `createSaleCart(code, options?)`
+- `getSaleCart(code, token, options?)`
+- `addSaleCartLine(code, token, payload, options?)`
+- `updateSaleCartLine(code, token, lineId, payload, options?)`
+- `deleteSaleCartLine(code, token, lineId, options?)`
+- `checkoutSaleCart(code, payload, options?)`
+
 ## Ce que ce SDK ne fait pas
 
-Ce client reflète uniquement l’API publique headless v1 existante. Il ne fournit pas de GraphQL, pas de mutations publiques, pas de gestion des brouillons, pas de preview avancée et pas d’intégration spécifique à React, Vue, Nuxt, Next ou Astro.
+Ce client reflète uniquement l’API publique headless v1 existante. Il ne fournit pas de GraphQL, pas de gestion des brouillons, pas de preview avancée et pas d’intégration spécifique à React, Vue, Nuxt, Next ou Astro. Les mutations disponibles sont limitées aux endpoints publics explicitement contractés, comme cookies, formulaires et Sale e-commerce.
 
-Le contrat machine-readable de référence reste `docs/public-api/openapi.v1.json`. Les types précis du SDK sont régénérés depuis ce fichier par `python3 tools/python/c44_generate_sdk_types_from_openapi.py`.
+Le contrat machine-readable de référence reste `docs/public-api/openapi.v1.json`. Les types précis du SDK sont régénérés depuis ce fichier par `python3 tools/python/generators/c44_generate_sdk_types_from_openapi.py`.

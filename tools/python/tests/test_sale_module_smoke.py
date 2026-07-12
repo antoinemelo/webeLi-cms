@@ -5,6 +5,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from tools.python.lib.database_inventory import database_specs, module_keys
 
 ROOT = Path(__file__).resolve().parents[3]
 SALE_DB = ROOT / "storage/database/sale.sqlite"
+SALE_SCHEMA = ROOT / "database/modules/sale.sql"
 CMS = ROOT / "tools/cms.py"
 
 EXPECTED_TABLES = {
@@ -72,11 +74,15 @@ EXPECTED_PERMISSIONS = {
 class SaleModuleSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.connection = sqlite3.connect(f"file:{SALE_DB}?mode=ro", uri=True)
+        cls.temporary_directory = tempfile.TemporaryDirectory(prefix="dec-sale-smoke-")
+        database = Path(cls.temporary_directory.name) / "sale.sqlite"
+        cls.connection = sqlite3.connect(database)
+        cls.connection.executescript(SALE_SCHEMA.read_text(encoding="utf-8"))
 
     @classmethod
     def tearDownClass(cls) -> None:
         cls.connection.close()
+        cls.temporary_directory.cleanup()
 
     def names(self, kind: str) -> set[str]:
         rows = self.connection.execute(
@@ -111,7 +117,6 @@ class SaleModuleSmokeTest(unittest.TestCase):
         sale_specs = [spec for spec in database_specs(root=ROOT) if spec.key == "sale"]
         self.assertEqual(1, len(sale_specs))
         self.assertEqual("sale", sale_specs[0].module_key)
-        self.assertTrue(SALE_DB.is_file(), "sale.sqlite doit exister après rebuild")
         self.assertTrue(EXPECTED_TABLES.issubset(self.names("table")))
         rows = self.connection.execute(
             "SELECT code, channel_type, status, is_public FROM sale_channels ORDER BY code"
@@ -120,7 +125,7 @@ class SaleModuleSmokeTest(unittest.TestCase):
             [
                 ("admin-manual", "admin", "active", 0),
                 ("pos-main", "pos", "draft", 0),
-                ("web-main", "ecommerce", "draft", 0),
+                ("web-main", "ecommerce", "active", 1),
             ],
             rows,
         )
@@ -162,7 +167,7 @@ class SaleModuleSmokeTest(unittest.TestCase):
         self.assertEqual(before, SALE_DB.read_bytes())
 
     def test_sale_sql_uses_integer_minor_amounts(self) -> None:
-        sql = (ROOT / "database/modules/sale.sql").read_text(encoding="utf-8")
+        sql = SALE_SCHEMA.read_text(encoding="utf-8")
         self.assertNotRegex(sql, re.compile(r"\bREAL\b", re.IGNORECASE))
         self.assertIn("amount_minor INTEGER", sql)
         self.assertIn("grand_total_minor INTEGER", sql)

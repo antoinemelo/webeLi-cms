@@ -49,6 +49,17 @@ foreach ($publicCookieOperations as [$path, $method]) {
 }
 $h->assertSame([['BearerAuth' => []]], $jsonPayload['paths']['/api/v1/content']['get']['security'] ?? null, 'canonical OpenAPI keeps protected content endpoint behind Bearer auth');
 $h->assertSame([], $jsonPayload['paths']['/api/v1/media']['get']['security'] ?? null, 'canonical OpenAPI keeps public media index endpoint anonymous');
+$saleLinePost = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines']['post'] ?? null;
+$h->assertTrue(is_array($saleLinePost), 'canonical OpenAPI exposes public Sale add-line operation');
+$h->assertTrue(array_key_exists('requestBody', $saleLinePost), 'canonical OpenAPI documents public Sale add-line body');
+$saleLineHeaders = array_values(array_filter($saleLinePost['parameters'] ?? [], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'header' && ($parameter['name'] ?? null) === 'Idempotency-Key'));
+$h->assertTrue($saleLineHeaders !== [], 'canonical OpenAPI documents Idempotency-Key for public Sale add-line');
+$saleLinePatch = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}']['patch'] ?? null;
+$saleLineDelete = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}']['delete'] ?? null;
+$h->assertTrue(is_array($saleLinePatch), 'canonical OpenAPI exposes public Sale PATCH line operation');
+$h->assertTrue(is_array($saleLineDelete), 'canonical OpenAPI exposes public Sale DELETE line operation');
+$saleCheckout = $jsonPayload['paths']['/api/v1/sale/channels/{code}/checkout']['post'] ?? null;
+$h->assertTrue(is_array($saleCheckout) && array_key_exists('201', $saleCheckout['responses'] ?? []), 'canonical OpenAPI documents public Sale checkout as 201');
 
 $referenceOpenApi = json_decode((string) file_get_contents(base_path('docs/reference/contracts/public-api/openapi.v1.json')), true);
 foreach ($publicCookieOperations as [$path, $method]) {
@@ -83,6 +94,10 @@ $h->assertTrue(in_array('taxonomies:read', $endpointScopes, true), 'taxonomies e
 $h->assertTrue(in_array('catalog:read', $endpointScopes, true), 'catalog endpoints keep a catalog:read scope');
 $h->assertTrue(in_array('pos.catalog.read', $endpointScopes, true), 'POS catalog endpoints keep a dedicated pos.catalog.read scope');
 $h->assertTrue(!in_array('pos.catalog.read', $scopeAliases['headless:read'] ?? [], true), 'POS catalog scope is not granted by the public headless alias');
+$cors = $config['public_api_cors'] ?? [];
+$h->assertTrue(in_array('PATCH', $cors['allowed_methods'] ?? [], true), 'public API CORS allows PATCH preflights');
+$h->assertTrue(in_array('DELETE', $cors['allowed_methods'] ?? [], true), 'public API CORS allows DELETE preflights');
+$h->assertTrue(in_array('Idempotency-Key', $cors['allowed_headers'] ?? [], true), 'public API CORS allows Idempotency-Key header');
 $rateLimitRules = $config['public_api_rate_limit']['endpoints'] ?? [];
 $saleRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/cart') === 1);
 $h->assertTrue($saleRateLimited !== [], 'optional sale ecommerce endpoints have a dedicated public rate-limit group');

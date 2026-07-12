@@ -1,0 +1,55 @@
+{
+  "contract": "public.sale.cart.store.v1",
+  "kind": "schema",
+  "summary": "Créer un panier e-commerce public.",
+  "description": "Crée un panier anonyme pour un canal e-commerce actif et public. Le token opaque est retourné une seule fois et stocké sous forme de hash.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/cart",
+  "source": "sale_carts",
+  "security": "Public endpoint: no bearer token is required; site and channel publication rules still apply.",
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$", "description": "Code du canal e-commerce public."}
+  },
+  "request_body": {
+    "required": false,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "data": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": true
+    }
+  },
+  "response": {
+    "status": 201,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["cart"],
+          "properties": {"cart": {"$ref": "#/components/schemas/PublicSaleCart"}},
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal public introuvable."},
+    {"code": "VALIDATION_FAILED", "status": 422, "description": "Panier public invalide."}
+  ],
+  "examples": {
+    "response": {
+      "data": {
+        "cart": {"id": 10, "token": "opaque-cart-token", "status": "active", "currency": "CHF", "subtotal_minor": 0, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 0, "lines": []}
+      },
+      "meta": {"contract": "public.sale.cart.show.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

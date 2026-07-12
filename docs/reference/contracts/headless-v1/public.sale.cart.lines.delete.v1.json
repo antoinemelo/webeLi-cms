@@ -1,0 +1,51 @@
+{
+  "contract": "public.sale.cart.lines.delete.v1",
+  "kind": "schema",
+  "summary": "Supprimer une ligne d'un panier public.",
+  "description": "Supprime une ligne de panier public actif, libère les réservations de stock associées et recalcule le panier.",
+  "method": "DELETE",
+  "path": "/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}",
+  "source": "sale_cart_lines + sale_stock_reservations",
+  "security": "Public endpoint: no bearer token is required; the opaque cart token is required.",
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$"},
+    "token": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+    "line_id": {"type": "integer", "required": true, "minimum": 1}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["deleted", "cart"],
+          "properties": {
+            "deleted": {"type": "boolean"},
+            "cart": {"$ref": "#/components/schemas/PublicSaleCart"}
+          },
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal, panier ou ligne introuvable."},
+    {"code": "VALIDATION_FAILED", "status": 422, "description": "Suppression invalide."}
+  ],
+  "examples": {
+    "response": {
+      "data": {
+        "deleted": true,
+        "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 0, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 0, "lines": []}
+      },
+      "meta": {"contract": "public.sale.cart.lines.delete.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

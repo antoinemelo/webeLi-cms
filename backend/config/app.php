@@ -55,8 +55,8 @@ return [
         'enabled' => $boolEnv('APP_PUBLIC_API_CORS_ENABLED', true),
         'allow_current_site_origin' => $boolEnv('APP_PUBLIC_API_CORS_ALLOW_CURRENT_SITE', true),
         'default_allowed_origins' => env('APP_PUBLIC_API_CORS_DEFAULT_ORIGINS', '[]'),
-        'allowed_methods' => ['GET', 'POST', 'OPTIONS'],
-        'allowed_headers' => ['Authorization', 'Content-Type', 'X-Requested-With'],
+        'allowed_methods' => ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        'allowed_headers' => ['Authorization', 'Content-Type', 'X-Requested-With', 'Idempotency-Key'],
         'max_age' => (int) env('APP_PUBLIC_API_CORS_MAX_AGE', 600),
     ],
 

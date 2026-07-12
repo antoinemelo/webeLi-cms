@@ -42,6 +42,7 @@ $tests = [
     'integration/auth_permissions_test.php',
     'integration/business_pim_http_test.php',
     'integration/sale_uses_business_sellable_snapshot_test.php',
+    'integration/public_sale_http_test.php',
     'integration/roles_matrix_http_test.php',
     'integration/blueprint_designer_characterization_test.php',
     'integration/webhook_repository_test.php',
@@ -65,6 +66,7 @@ $testTimeouts = [
     'unit/sale_public_api_handler_test.php' => 45,
     'integration/business_pim_http_test.php' => 45,
     'integration/sale_uses_business_sellable_snapshot_test.php' => 45,
+    'integration/public_sale_http_test.php' => 45,
 ];
 
 /**

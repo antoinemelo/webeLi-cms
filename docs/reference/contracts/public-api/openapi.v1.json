@@ -127,6 +127,640 @@
         }
       }
     },
+    "/api/v1/catalog/brands": {
+      "get": {
+        "operationId": "get_public_catalog_brands_index_v1",
+        "summary": "Lister les marques publiques du catalogue.",
+        "description": "Retourne les marques actives, publiques et non archivées du module Business.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "id": 1,
+                            "name": "Acme",
+                            "slug": "acme"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "contract": "public.catalog.brands.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/categories": {
+      "get": {
+        "operationId": "get_public_catalog_categories_index_v1",
+        "summary": "Lister les catégories publiques du catalogue.",
+        "description": "Retourne les catégories publiques non archivées du module Business.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "id": 1,
+                            "name": "Textile",
+                            "slug": "textile"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "contract": "public.catalog.categories.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/products": {
+      "get": {
+        "operationId": "get_public_catalog_products_index_v1",
+        "summary": "Lister les produits publics e-commerce.",
+        "description": "Retourne uniquement les produits actifs, publics, e-commerce et non archivés. Le payload public peut inclure main_asset, gallery_assets, public_attributes et is_sellable_public. Les prix d'achat, marges, fournisseurs, notes internes, métadonnées asset internes et stocks exacts ne sont jamais exposés.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand_id",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 24
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "pagination"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug",
+                              "variants"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "id": 1,
+                            "name": "T-shirt",
+                            "slug": "t-shirt",
+                            "main_asset": {
+                              "asset_id": 20,
+                              "media_id": 101,
+                              "role": "main",
+                              "url": "/media/101",
+                              "alt_text": "T-shirt"
+                            },
+                            "gallery_assets": [
+                              {
+                                "asset_id": 21,
+                                "media_id": 102,
+                                "role": "gallery",
+                                "url": "/media/102",
+                                "alt_text": "T-shirt détail"
+                              }
+                            ],
+                            "public_attributes": [
+                              {
+                                "code": "matiere",
+                                "name": "Matière",
+                                "data_type": "text",
+                                "value": "Coton",
+                                "language": "fr"
+                              }
+                            ],
+                            "is_sellable_public": true,
+                            "variants": [
+                              {
+                                "id": 10,
+                                "is_sellable_public": true,
+                                "pricing": {
+                                  "regular_sale_price": "38.50",
+                                  "final_sale_price": "36.58",
+                                  "currency": "CHF",
+                                  "discount": {
+                                    "label": "Offre spéciale",
+                                    "type": "percent",
+                                    "value": "5.00"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "pagination": {
+                          "total": 1,
+                          "limit": 24,
+                          "offset": 0,
+                          "has_more": false
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.catalog.products.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/products/{slug}": {
+      "get": {
+        "operationId": "get_public_catalog_products_show_v1",
+        "summary": "Lire un produit public e-commerce par slug.",
+        "description": "Retourne un produit actif, public, e-commerce et non archivé avec variantes actives, options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les métadonnées asset internes, attributs non publics, prix d'achat, marges et stocks exacts ne sont jamais exposés.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "product"
+                      ],
+                      "properties": {
+                        "product": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "product": {
+                          "id": 1,
+                          "name": "T-shirt",
+                          "slug": "t-shirt",
+                          "main_asset": {
+                            "asset_id": 20,
+                            "media_id": 101,
+                            "role": "main",
+                            "url": "/media/101",
+                            "alt_text": "T-shirt"
+                          },
+                          "gallery_assets": [],
+                          "public_attributes": [
+                            {
+                              "code": "matiere",
+                              "name": "Matière",
+                              "data_type": "text",
+                              "value": "Coton"
+                            }
+                          ],
+                          "is_sellable_public": true,
+                          "variants": []
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.catalog.products.show.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produit public introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Produit public introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/catalog/variants/{id}": {
+      "get": {
+        "operationId": "get_public_catalog_variants_show_v1",
+        "summary": "Lire une variante publique active.",
+        "description": "Retourne une variante active rattachée à un produit actif, public, e-commerce et non archivé avec options, médias publics, attributs PIM publics, verdict is_sellable_public et prix de vente publics. Les prix d'achat, marges, attributs non publics, métadonnées asset internes et stocks exacts ne sont pas exposés.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "variant"
+                      ],
+                      "properties": {
+                        "variant": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "variant": {
+                          "id": 10,
+                          "sku": "TSHIRT-M",
+                          "main_asset": {
+                            "asset_id": 20,
+                            "media_id": 101,
+                            "role": "main",
+                            "url": "/media/101",
+                            "alt_text": "T-shirt M"
+                          },
+                          "public_attributes": [
+                            {
+                              "code": "couleur",
+                              "name": "Couleur",
+                              "data_type": "text",
+                              "value": "Bleu"
+                            }
+                          ],
+                          "is_sellable_public": true,
+                          "pricing": {
+                            "regular_sale_price": "38.50",
+                            "final_sale_price": "36.58",
+                            "currency": "CHF",
+                            "discount": null
+                          }
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.catalog.variants.show.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Variante publique introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Variante publique introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/content": {
       "get": {
         "operationId": "get_public_content_index_v1",
@@ -2596,6 +3230,999 @@
         }
       }
     },
+    "/api/v1/openapi.json": {
+      "get": {
+        "operationId": "get_public_openapi_json_v1",
+        "summary": "Servir le contrat OpenAPI public JSON.",
+        "description": "Retourne le contrat OpenAPI 3.1 public généré depuis les contrats headless v1.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "openapi",
+                    "info",
+                    "paths"
+                  ],
+                  "properties": {
+                    "openapi": {
+                      "type": "string"
+                    },
+                    "info": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "paths": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "components": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "openapi": "3.1.0",
+                      "info": {
+                        "title": "DEC CMS Public Headless API",
+                        "version": "1.0.0"
+                      },
+                      "paths": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/openapi.yaml": {
+      "get": {
+        "operationId": "get_public_openapi_yaml_v1",
+        "summary": "Servir le contrat OpenAPI public YAML.",
+        "description": "Retourne le même contrat OpenAPI public que /api/v1/openapi.json, sérialisé en YAML.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/yaml": {
+                "schema": {
+                  "type": "string",
+                  "description": "Document OpenAPI 3.1 au format YAML."
+                },
+                "examples": {
+                  "default": {
+                    "value": "openapi: \"3.1.0\""
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pos/catalog/bootstrap": {
+      "get": {
+        "operationId": "get_pos_catalog_bootstrap_v1",
+        "summary": "Initialiser le catalogue POS.",
+        "description": "Retourne un bootstrap compact du catalogue POS : marques, catégories, produits actifs POS et variantes actives. Les prix d'achat, marges, notes internes, fournisseurs et stocks exacts ne sont jamais exposés.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updated_since",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "brands",
+                        "categories",
+                        "products",
+                        "pagination",
+                        "sync"
+                      ],
+                      "properties": {
+                        "brands": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        },
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": true
+                          }
+                        },
+                        "products": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "product_id",
+                              "name",
+                              "variants"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        },
+                        "sync": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "brands": [
+                          {
+                            "id": 1,
+                            "name": "Demo Outdoor",
+                            "slug": "demo-outdoor"
+                          }
+                        ],
+                        "categories": [
+                          {
+                            "id": 1,
+                            "name": "Boutique",
+                            "slug": "boutique"
+                          }
+                        ],
+                        "products": [
+                          {
+                            "product_id": 1,
+                            "name": "Gourde demo",
+                            "variants": [
+                              {
+                                "variant_id": 10,
+                                "sku": "DEMO-GOURDE",
+                                "barcode": "7612345678901",
+                                "pricing": {
+                                  "regular_sale_price": "120.00",
+                                  "final_sale_price": "108.00",
+                                  "currency": "CHF",
+                                  "discount": {
+                                    "label": "Remise POS",
+                                    "type": "percent",
+                                    "value": "10.00"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "pagination": {
+                          "total": 1,
+                          "limit": 100,
+                          "offset": 0,
+                          "has_more": false
+                        },
+                        "sync": {
+                          "updated_since": null,
+                          "generated_at": "2026-06-27T00:00:00Z"
+                        }
+                      },
+                      "meta": {
+                        "contract": "pos.catalog.bootstrap.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pos/catalog/brands": {
+      "get": {
+        "operationId": "get_pos_catalog_brands_index_v1",
+        "summary": "Lister les marques POS.",
+        "description": "Retourne les marques actives référencées par au moins un produit actif POS.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "id": 1,
+                            "name": "Demo Outdoor",
+                            "slug": "demo-outdoor"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "contract": "pos.catalog.brands.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pos/catalog/categories": {
+      "get": {
+        "operationId": "get_pos_catalog_categories_index_v1",
+        "summary": "Lister les catégories POS.",
+        "description": "Retourne les catégories non archivées référencées par au moins un produit actif POS.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "id": 1,
+                            "name": "Boutique",
+                            "slug": "boutique"
+                          }
+                        ]
+                      },
+                      "meta": {
+                        "contract": "pos.catalog.categories.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pos/catalog/products": {
+      "get": {
+        "operationId": "get_pos_catalog_products_index_v1",
+        "summary": "Lister les produits POS.",
+        "description": "Retourne uniquement les produits actifs avec is_pos_enabled=true. Les variantes ne sont pas incluses dans cette liste compacte ; utiliser le bootstrap ou /api/v1/pos/catalog/variants pour les obtenir.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updated_since",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "pagination"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "product_id",
+                              "name",
+                              "slug"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "product_id": 1,
+                            "name": "Gourde demo",
+                            "slug": "gourde-demo"
+                          }
+                        ],
+                        "pagination": {
+                          "total": 1,
+                          "limit": 100,
+                          "offset": 0,
+                          "has_more": false
+                        }
+                      },
+                      "meta": {
+                        "contract": "pos.catalog.products.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pos/catalog/variants": {
+      "get": {
+        "operationId": "get_pos_catalog_variants_index_v1",
+        "summary": "Lister ou rechercher les variantes POS.",
+        "description": "Retourne les variantes actives rattachées à des produits actifs POS. Le filtre barcode permet une recherche exacte pour scan POS.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "barcode",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "updated_since",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 250
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "pagination"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "variant_id",
+                              "product_id",
+                              "sku",
+                              "pricing"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "items": [
+                          {
+                            "variant_id": 10,
+                            "product_id": 1,
+                            "sku": "DEMO-GOURDE",
+                            "barcode": "7612345678901",
+                            "pricing": {
+                              "regular_sale_price": "120.00",
+                              "final_sale_price": "108.00",
+                              "currency": "CHF",
+                              "discount": {
+                                "label": "Remise POS",
+                                "type": "percent",
+                                "value": "10.00"
+                              }
+                            }
+                          }
+                        ],
+                        "pagination": {
+                          "total": 1,
+                          "limit": 250,
+                          "offset": 0,
+                          "has_more": false
+                        }
+                      },
+                      "meta": {
+                        "contract": "pos.catalog.variants.index.v1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erreur normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Erreur API publique.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/route": {
       "get": {
         "operationId": "get_public_route_show_v1",
@@ -2999,6 +4626,991 @@
                     }
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/bootstrap": {
+      "get": {
+        "operationId": "get_public_sale_channels_bootstrap_v1",
+        "summary": "Initialiser un canal e-commerce public.",
+        "description": "Retourne les informations publiques d'un canal Sale e-commerce actif et public. Les canaux brouillon, admin, POS ou non publics retournent 404.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "Code du canal e-commerce public.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleBootstrapResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "channel": {
+                          "code": "web-main",
+                          "name": "Boutique",
+                          "currency": "CHF",
+                          "default_language": "fr",
+                          "tax_mode": "tax_included"
+                        },
+                        "cart": {
+                          "enabled": true,
+                          "token_transport": "opaque_token"
+                        },
+                        "checkout": {
+                          "enabled": true,
+                          "idempotency_required": true
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.channels.bootstrap.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal public introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal public introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/cart": {
+      "post": {
+        "operationId": "post_public_sale_cart_store_v1",
+        "summary": "Créer un panier e-commerce public.",
+        "description": "Crée un panier anonyme pour un canal e-commerce actif et public. Le token opaque est retourné une seule fois et stocké sous forme de hash.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "Code du canal e-commerce public.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "cart": {
+                          "id": 10,
+                          "token": "opaque-cart-token",
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 0,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 0,
+                          "lines": []
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.show.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal public introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal public introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Panier public invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Panier public invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/cart/{token}": {
+      "get": {
+        "operationId": "get_public_sale_cart_show_v1",
+        "summary": "Lire un panier e-commerce public.",
+        "description": "Recharge un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "Code du canal e-commerce public.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "Token opaque du panier.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "cart": {
+                          "id": 10,
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 2900,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 2900,
+                          "lines": []
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.show.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal ou panier public introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal ou panier public introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/cart/{token}/lines": {
+      "post": {
+        "operationId": "post_public_sale_cart_lines_store_v1",
+        "summary": "Ajouter une ligne à un panier public.",
+        "description": "Ajoute une variante Business sellable à un panier public actif. Les prix sont recalculés côté serveur depuis le snapshot catalogue.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Clé optionnelle de rejeu idempotent pour l'ajout de ligne.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartLineMutationResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "cart": {
+                          "id": 10,
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 2900,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 2900,
+                          "lines": []
+                        },
+                        "line": {
+                          "id": 20,
+                          "business_variant_id": 3,
+                          "quantity": 1,
+                          "unit_price_minor": 2900,
+                          "currency": "CHF",
+                          "line_total_minor": 2900
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.lines.store.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal, panier ou variante introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal, panier ou variante introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Payload, stock ou idempotence invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Payload, stock ou idempotence invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "business_variant_id",
+                      "quantity"
+                    ],
+                    "properties": {
+                      "business_variant_id": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "variant_id": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "idempotency_key": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}": {
+      "delete": {
+        "operationId": "delete_public_sale_cart_lines_delete_v1",
+        "summary": "Supprimer une ligne d'un panier public.",
+        "description": "Supprime une ligne de panier public actif, libère les réservations de stock associées et recalcule le panier.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartLineDeleteResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "deleted": true,
+                        "cart": {
+                          "id": 10,
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 0,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 0,
+                          "lines": []
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.lines.delete.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal, panier ou ligne introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal, panier ou ligne introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Suppression invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Suppression invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch_public_sale_cart_lines_update_v1",
+        "summary": "Modifier la quantité d'une ligne de panier public.",
+        "description": "Met à jour la quantité d'une ligne de panier public actif et recalcule les totaux côté serveur.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCartLineMutationResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "cart": {
+                          "id": 10,
+                          "status": "active",
+                          "currency": "CHF",
+                          "subtotal_minor": 5800,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 5800,
+                          "lines": []
+                        },
+                        "line": {
+                          "id": 20,
+                          "business_variant_id": 3,
+                          "quantity": 2,
+                          "unit_price_minor": 2900,
+                          "currency": "CHF",
+                          "line_total_minor": 5800
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.cart.lines.update.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal, panier ou ligne introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal, panier ou ligne introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Quantité ou stock invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Quantité ou stock invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "quantity"
+                    ],
+                    "properties": {
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/channels/{code}/checkout": {
+      "post": {
+        "operationId": "post_public_sale_checkout_v1",
+        "summary": "Convertir un panier public en commande.",
+        "description": "Place une commande e-commerce depuis un panier public actif. Le checkout est idempotent si `Idempotency-Key` ou `data.idempotency_key` est fourni.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Clé optionnelle de rejeu idempotent pour le checkout.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "Langue active du site.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "description": "Code du canal e-commerce public.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSaleCheckoutResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "data": {
+                        "order": {
+                          "id": 50,
+                          "order_number": "WEB-000050",
+                          "source": "ecommerce",
+                          "status": "placed",
+                          "payment_status": "unpaid",
+                          "currency": "CHF",
+                          "subtotal_minor": 2900,
+                          "discount_total_minor": 0,
+                          "tax_total_minor": 0,
+                          "grand_total_minor": 2900,
+                          "lines": []
+                        }
+                      },
+                      "meta": {
+                        "contract": "public.sale.checkout.v1",
+                        "site_id": 1,
+                        "language_code": "fr"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Canal ou panier public introuvable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Canal ou panier public introuvable.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Panier vide, déjà converti ou idempotence invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Panier vide, déjà converti ou idempotence invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "cart_token"
+                    ],
+                    "properties": {
+                      "cart_token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{32,128}$"
+                      },
+                      "token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{32,128}$"
+                      },
+                      "idempotency_key": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": true
               }
             }
           }
@@ -3721,6 +6333,217 @@
           },
           "has_more": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "PublicSaleChannel": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "currency",
+          "default_language",
+          "tax_mode"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "default_language": {
+            "type": "string"
+          },
+          "tax_mode": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "PublicSaleCartLine": {
+        "type": "object",
+        "required": [
+          "id",
+          "business_variant_id",
+          "quantity",
+          "unit_price_minor",
+          "currency",
+          "line_total_minor"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "business_product_id": {
+            "type": "integer"
+          },
+          "business_variant_id": {
+            "type": "integer"
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "barcode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "variant_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unit_price_minor": {
+            "type": "integer"
+          },
+          "regular_unit_price_minor": {
+            "type": "integer"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "tax_rate_basis_points": {
+            "type": "integer"
+          },
+          "tax_included": {
+            "type": "boolean"
+          },
+          "line_subtotal_minor": {
+            "type": "integer"
+          },
+          "line_discount_minor": {
+            "type": "integer"
+          },
+          "line_tax_minor": {
+            "type": "integer"
+          },
+          "line_total_minor": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      },
+      "PublicSaleCart": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "currency",
+          "subtotal_minor",
+          "discount_total_minor",
+          "tax_total_minor",
+          "grand_total_minor"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "token": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "subtotal_minor": {
+            "type": "integer"
+          },
+          "discount_total_minor": {
+            "type": "integer"
+          },
+          "tax_total_minor": {
+            "type": "integer"
+          },
+          "grand_total_minor": {
+            "type": "integer"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSaleCartLine"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "PublicSaleOrder": {
+        "type": "object",
+        "required": [
+          "id",
+          "order_number",
+          "source",
+          "status",
+          "payment_status",
+          "currency",
+          "grand_total_minor"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "order_number": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "subtotal_minor": {
+            "type": "integer"
+          },
+          "discount_total_minor": {
+            "type": "integer"
+          },
+          "tax_total_minor": {
+            "type": "integer"
+          },
+          "grand_total_minor": {
+            "type": "integer"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicSaleCartLine"
+            }
+          },
+          "placed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": true
@@ -4702,6 +7525,149 @@
             "additionalProperties": true
           }
         }
+      },
+      "PublicSaleBootstrapResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "channel",
+              "cart",
+              "checkout"
+            ],
+            "properties": {
+              "channel": {
+                "$ref": "#/components/schemas/PublicSaleChannel"
+              },
+              "cart": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "checkout": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSaleCartResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "cart"
+            ],
+            "properties": {
+              "cart": {
+                "$ref": "#/components/schemas/PublicSaleCart"
+              }
+            },
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSaleCartLineMutationResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "cart",
+              "line"
+            ],
+            "properties": {
+              "cart": {
+                "$ref": "#/components/schemas/PublicSaleCart"
+              },
+              "line": {
+                "$ref": "#/components/schemas/PublicSaleCartLine"
+              }
+            },
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSaleCartLineDeleteResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "deleted",
+              "cart"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean"
+              },
+              "cart": {
+                "$ref": "#/components/schemas/PublicSaleCart"
+              }
+            },
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublicSaleCheckoutResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "order"
+            ],
+            "properties": {
+              "order": {
+                "$ref": "#/components/schemas/PublicSaleOrder"
+              }
+            },
+            "additionalProperties": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicMeta"
+          }
+        },
+        "additionalProperties": false
       },
       "PublicSearchResponse": {
         "type": "object",

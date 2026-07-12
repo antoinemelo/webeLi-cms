@@ -74,7 +74,8 @@ final class PublicApiCorsGuard
 
     private function isPublicApiV1Request(): bool
     {
-        return str_starts_with((string) $this->request->path, '/api/v1/');
+        $path = (string) $this->request->path;
+        return $path === '/api/v1' || str_starts_with($path, '/api/v1/');
     }
 
     /** @return array<string,mixed> */

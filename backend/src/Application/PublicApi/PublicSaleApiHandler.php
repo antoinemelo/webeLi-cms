@@ -355,7 +355,10 @@ final class PublicSaleApiHandler
     private function domainError(Throwable $e): Response
     {
         if ($e instanceof SaleValidationException) {
-            return Response::error(ErrorCode::PUBLIC_CONTENT_NOT_FOUND, 'Ressource Vente publique introuvable.', 404, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
+            if (in_array($e->getMessage(), ['sale.public_channel_not_found', 'sale.cart_not_found', 'sale.cart_line_not_found'], true)) {
+                return Response::error(ErrorCode::PUBLIC_CONTENT_NOT_FOUND, 'Ressource Vente publique introuvable.', 404, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
+            }
+            return Response::validation(['sale' => [$e->getMessage()]], 'Donnée Vente invalide.', 422, ['Cache-Control' => 'no-store']);
         }
         if ($e instanceof SaleInventoryException || $e instanceof SalePaymentException || $e instanceof SaleBusinessException || $e instanceof InvalidArgumentException) {
             return Response::validation(['sale' => [$e->getMessage()]], 'Donnée Vente invalide.', 422, ['Cache-Control' => 'no-store']);

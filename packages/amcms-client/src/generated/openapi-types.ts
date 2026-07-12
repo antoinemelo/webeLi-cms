@@ -257,6 +257,110 @@ export interface OpenApiPublicRouteResponse {
   };
 }
 
+export interface OpenApiPublicSaleBootstrapResponse {
+  data: {
+    cart: Record<string, unknown>;
+    channel: OpenApiPublicSaleChannel;
+    checkout: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCart {
+  currency: string;
+  discount_total_minor: number;
+  expires_at?: null | string;
+  grand_total_minor: number;
+  id: number;
+  lines?: Array<OpenApiPublicSaleCartLine>;
+  status: string;
+  subtotal_minor: number;
+  tax_total_minor: number;
+  token?: string;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCartLine {
+  barcode?: null | string;
+  business_product_id?: number;
+  business_variant_id: number;
+  currency: string;
+  id: number;
+  line_discount_minor?: number;
+  line_subtotal_minor?: number;
+  line_tax_minor?: number;
+  line_total_minor: number;
+  product_name?: string;
+  quantity: number;
+  regular_unit_price_minor?: number;
+  sku?: null | string;
+  tax_included?: boolean;
+  tax_rate_basis_points?: number;
+  unit_price_minor: number;
+  variant_name?: null | string;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCartLineDeleteResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    deleted: boolean;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCartLineMutationResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    line: OpenApiPublicSaleCartLine;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCartResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleChannel {
+  code: string;
+  currency: string;
+  default_language: string;
+  name: string;
+  tax_mode: string;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCheckoutResponse {
+  data: {
+    order: OpenApiPublicSaleOrder;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleOrder {
+  currency: string;
+  discount_total_minor?: number;
+  grand_total_minor: number;
+  id: number;
+  lines?: Array<OpenApiPublicSaleCartLine>;
+  order_number: string;
+  payment_status: string;
+  placed_at?: null | string;
+  source: string;
+  status: string;
+  subtotal_minor?: number;
+  tax_total_minor?: number;
+  [key: string]: unknown;
+}
+
 export interface OpenApiPublicSearchResponse {
   data: {
     items: Array<{
