@@ -71,6 +71,7 @@ generated: true
 | `business.memo.manage` |
 | `business.memo.read` |
 | `business.messaging.admin` |
+| `catalog.product.read` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |

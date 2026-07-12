@@ -63,6 +63,7 @@
         "docs/development/architecture/business-catalog-migrations.md",
         "docs/development/architecture/business-crm-redesign-guardrails.md",
         "docs/development/architecture/business-module-plan.md",
+        "docs/development/architecture/business-pim-lite-final-review.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
         "docs/development/backoffice/visual-editor.md",
@@ -70,6 +71,7 @@
         "docs/development/contributing-documentation.md",
         "docs/development/database/README.md",
         "docs/development/extending/README.md",
+        "docs/development/extending/capabilities.md",
         "docs/development/extending/command-validator.md",
         "docs/development/extending/module-content-type.md",
         "docs/development/extending/modules.md",
@@ -81,7 +83,9 @@
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/development/testing-validation/README.md",
         "docs/development/testing-validation/business-crm.md",
+        "docs/development/testing-validation/business-pim-lite.md",
         "docs/development/testing-validation/load-testing.md",
+        "docs/development/testing-validation/sale-module.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/evidence-index.md",
@@ -90,6 +94,7 @@
         "docs/evaluation/machine-readable/validators.json",
         "docs/evaluation/release-audit-policy.md",
         "docs/evaluation/reproducible-checks.md",
+        "docs/evaluation/sale-module-review.md",
         "docs/getting-started/README.md",
         "docs/installation/README.md",
         "docs/installation/install-release.md",
@@ -327,6 +332,7 @@
         "tools/cms.py",
         "tools/python/ARCHITECTURE.md",
         "tools/python/archive/c_validate.py",
+        "tools/python/tests/test_admin_menu.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py"
       ],
@@ -647,6 +653,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/business-crm.md",
+        "docs/development/testing-validation/sale-module.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
@@ -908,7 +915,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "tools/python/qualification/run_all.py"
+        "TREE.txt",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -1875,6 +1884,20 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_admin_menu.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_audit_and_release_export_layout.py",
       "category": "test",
       "public": false,
@@ -2172,6 +2195,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/sale-module.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2592,6 +2618,7 @@
         "tools/python/validation/qualification/static_export_dry_run.py",
         "tools/python/validation/security/baseline.py",
         "tools/python/validation/security/pii.py",
+        "tools/python/validation/shared/capabilities.py",
         "tools/python/validation/shared/dependency_boundaries.py"
       ],
       "replacement": null,
@@ -2952,6 +2979,21 @@
         "TREE.txt",
         "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/shared/capabilities.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
       ],
       "replacement": null,
       "status": "active",
