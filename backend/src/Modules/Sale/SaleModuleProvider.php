@@ -65,6 +65,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             ['key' => 'sale.stock.manage', 'name' => 'Gerer le stock Vente', 'description' => 'Creer reservations, mouvements et corrections de stock transactionnel.'],
             ['key' => 'sale.reports.read', 'name' => 'Lire les rapports Vente', 'description' => 'Consulter les rapports commerciaux et POS.'],
             ['key' => 'sale.settings.manage', 'name' => 'Gerer les reglages Vente', 'description' => 'Configurer canaux, moyens de paiement et reglages du module Vente.'],
+            ['key' => 'sale.customer_accounts.manage', 'name' => 'Fusionner les comptes clients', 'description' => 'Réaliser une fusion IAM–CRM–Vente contrôlée et auditée.'],
         ];
     }
 
@@ -78,7 +79,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
                 'sellable_catalog' => 'optional_port',
                 'customer_snapshot' => 'optional_port',
                 'crm_activity_sink' => 'planned_optional_port',
-                'cms_account_bridge' => 'planned_optional_port',
+                'cms_account_bridge' => 'active_iam_crm_sale_port',
             ],
             'defaults' => [
                 'currency' => 'CHF',
@@ -345,6 +346,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('GET', '/admin/api/sale/reports/stock', $c . 'stockReport'),
             $this->route('GET', '/admin/api/sale/reports/refunds', $c . 'refundsReport'),
             $this->route('GET', '/admin/api/sale/settings', $c . 'settings'),
+            $this->route('POST', '/admin/api/sale/customer-accounts/merge', $c . 'mergeCustomerAccounts'),
         ];
     }
 
@@ -365,6 +367,17 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', $c . 'saleCheckoutUpdate'),
             $this->route('DELETE', '/api/v1/sale/channels/{code}/cart/{token}', $c . 'saleCartAbandon'),
             $this->route('POST', '/api/v1/sale/channels/{code}/checkout', $c . 'saleCheckout'),
+            $this->route('POST', '/api/v1/customer/accounts/register', $c . 'customerRegister'),
+            $this->route('POST', '/api/v1/customer/login', $c . 'customerLogin'),
+            $this->route('DELETE', '/api/v1/customer/logout', $c . 'customerLogout'),
+            $this->route('GET', '/api/v1/customer/me', $c . 'customerMe'),
+            $this->route('PATCH', '/api/v1/customer/me', $c . 'customerProfileUpdate'),
+            $this->route('POST', '/api/v1/customer/orders/claim', $c . 'customerOrderClaim'),
+            $this->route('GET', '/api/v1/customer/orders', $c . 'customerOrders'),
+            $this->route('GET', '/api/v1/customer/orders/{id}', $c . 'customerOrder'),
+            $this->route('GET', '/api/v1/customer/addresses', $c . 'customerAddresses'),
+            $this->route('POST', '/api/v1/customer/addresses', $c . 'customerAddressStore'),
+            $this->route('POST', '/api/v1/customer/orders/{id}/returns', $c . 'customerReturnStore'),
         ];
     }
 
@@ -456,6 +469,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.reports.stock.v1', 'GET', '/admin/api/sale/reports/stock', 'sale.reports.read'),
             $this->contract('admin.sale.reports.refunds.v1', 'GET', '/admin/api/sale/reports/refunds', 'sale.reports.read'),
             $this->contract('admin.sale.settings.v1', 'GET', '/admin/api/sale/settings', 'sale.settings.manage'),
+            $this->contract('admin.sale.customer_accounts.merge.v1', 'POST', '/admin/api/sale/customer-accounts/merge', 'sale.customer_accounts.manage'),
             $this->contract('public.sale.channels.bootstrap.v1', 'GET', '/api/v1/sale/channels/{code}/bootstrap', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.show.v1', 'GET', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),
@@ -465,6 +479,17 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('public.sale.checkout.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.abandon.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),
             $this->contract('public.sale.checkout.v1', 'POST', '/api/v1/sale/channels/{code}/checkout', 'anonymous', 'headless'),
+            $this->contract('public.customer.accounts.register.v1', 'POST', '/api/v1/customer/accounts/register', 'claim_proof', 'headless'),
+            $this->contract('public.customer.login.v1', 'POST', '/api/v1/customer/login', 'anonymous', 'headless'),
+            $this->contract('public.customer.logout.v1', 'DELETE', '/api/v1/customer/logout', 'customer_session', 'headless'),
+            $this->contract('public.customer.me.v1', 'GET', '/api/v1/customer/me', 'customer_session', 'headless'),
+            $this->contract('public.customer.me.update.v1', 'PATCH', '/api/v1/customer/me', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.claim.v1', 'POST', '/api/v1/customer/orders/claim', 'customer_session+claim_proof', 'headless'),
+            $this->contract('public.customer.orders.index.v1', 'GET', '/api/v1/customer/orders', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.show.v1', 'GET', '/api/v1/customer/orders/{id}', 'customer_session', 'headless'),
+            $this->contract('public.customer.addresses.index.v1', 'GET', '/api/v1/customer/addresses', 'customer_session', 'headless'),
+            $this->contract('public.customer.addresses.store.v1', 'POST', '/api/v1/customer/addresses', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.returns.store.v1', 'POST', '/api/v1/customer/orders/{id}/returns', 'customer_session', 'headless'),
             $this->integrationContract('integration.sale.events.v1', SaleIntegrationEventContracts::payloads()),
             $this->integrationContract('integration.sale.ai_contexts.v1', SaleAiContextContracts::contexts()),
         ];

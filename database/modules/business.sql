@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS business_contacts (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_business_contacts_active_iam_user
-    ON business_contacts(iam_user_id)
+    ON business_contacts(site_id, iam_user_id)
     WHERE iam_user_id IS NOT NULL AND archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_business_companies_site_status ON business_companies(site_id, status, archived_at);
 CREATE INDEX IF NOT EXISTS idx_business_companies_name ON business_companies(site_id, normalized_name);

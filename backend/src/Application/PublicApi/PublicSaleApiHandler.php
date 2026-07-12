@@ -18,6 +18,7 @@ use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
+use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Repository\SiteRepository;
 use InvalidArgumentException;
@@ -37,6 +38,7 @@ final class PublicSaleApiHandler
         private readonly SaleCartService $cartService,
         private readonly SaleCheckoutService $checkout,
         private readonly SaleGuestCheckoutService $guestCheckout,
+        private readonly ?SaleCustomerAccountService $customerAccounts = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -164,7 +166,11 @@ final class PublicSaleApiHandler
                 'source' => 'ecommerce',
                 'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
             ]);
-            return $this->json(['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))], 'public.sale.checkout.v1', $site, $languageCode, 201);
+            $data = ['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))];
+            if ($this->customerAccounts !== null) {
+                $data['account_creation'] = $this->customerAccounts->issueClaimProof((int) $order['id']);
+            }
+            return $this->json($data, 'public.sale.checkout.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }

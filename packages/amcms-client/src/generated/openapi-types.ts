@@ -363,6 +363,10 @@ export interface OpenApiPublicSaleChannel {
 
 export interface OpenApiPublicSaleCheckoutResponse {
   data: {
+    account_creation: {
+      expires_at: string;
+      token: string;
+    };
     order: OpenApiPublicSaleOrder;
     [key: string]: unknown;
   };

@@ -53,7 +53,7 @@ vendable et des snapshots client via des ports optionnels :
   catalogue de vente ;
 - `CustomerSnapshotPort` pour copier un client externe dans `sale_customer_refs` ;
 - `CrmActivitySink` pour une future projection CRM des evenements Vente ;
-- `CmsAccountBridge` pour une future liaison compte/profil CMS.
+- `CmsAccountBridge` actif pour la liaison explicite IAM–CRM–Vente des comptes clients post-achat.
 
 L'adaptateur `BusinessSellableCatalogAdapter` branche le catalogue Operations
 quand `business` est actif. `BusinessCustomerSnapshotAdapter` branche les

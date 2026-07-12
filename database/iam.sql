@@ -4,6 +4,7 @@ CREATE TABLE iam_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,
     email_normalized TEXT NOT NULL UNIQUE,
+    email_verified_at TEXT,
     password_hash TEXT NOT NULL,
     first_name TEXT,
     last_name TEXT,
@@ -154,6 +155,25 @@ CREATE INDEX IF NOT EXISTS idx_iam_email_2fa_user_expires ON iam_email_2fa_chall
 CREATE INDEX IF NOT EXISTS idx_iam_email_2fa_consumed ON iam_email_2fa_challenges(consumed_at);
 CREATE INDEX IF NOT EXISTS idx_iam_sessions_token_hash_expiry ON iam_sessions(session_token_hash, expires_at);
 CREATE INDEX IF NOT EXISTS idx_iam_audit_logs_action_created ON iam_audit_logs(action_key, created_at);
+
+CREATE TABLE IF NOT EXISTS iam_customer_site_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, site_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','merged')), merged_into_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT, UNIQUE(user_id,site_id),
+    FOREIGN KEY(user_id) REFERENCES iam_users(id) ON DELETE CASCADE, CHECK(site_id>0)
+);
+CREATE TABLE IF NOT EXISTS iam_customer_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, site_id INTEGER NOT NULL, token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL, last_seen_at TEXT, revoked_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES iam_users(id) ON DELETE CASCADE, CHECK(site_id>0), CHECK(length(token_hash)>=32)
+);
+CREATE TABLE IF NOT EXISTS iam_customer_email_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, previous_email_normalized TEXT NOT NULL,
+    new_email_normalized TEXT NOT NULL, verification_method TEXT NOT NULL CHECK(verification_method IN ('current_password','admin','email_token')),
+    changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(user_id) REFERENCES iam_users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_iam_customer_site_accounts_site ON iam_customer_site_accounts(site_id,status,user_id);
+CREATE INDEX IF NOT EXISTS idx_iam_customer_sessions_user_site ON iam_customer_sessions(user_id,site_id,expires_at);
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

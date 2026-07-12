@@ -26,6 +26,7 @@ generated: true
 | `database/migrations/business/0005_activity_log.sql` | `0005_activity_log` |
 | `database/migrations/business/0005_variant_sales_note.sql` | `0005_variant_sales_note` |
 | `database/migrations/business/0006_bundle_product_type_check.sql` | `0006_bundle_product_type_check` |
+| `database/migrations/business/0006_customer_account_site_links.sql` | `0006_customer_account_site_links` |
 | `database/migrations/business/0007_pricing_offers_bundles.sql` | `0007_pricing_offers_bundles` |
 | `database/migrations/business/0008_pim_quality_import_channels.sql` | `0008_pim_quality_import_channels` |
 | `database/migrations/business/0009_pim_channel_visibility_site_guard.sql` | `0009_pim_channel_visibility_site_guard` |
@@ -46,8 +47,10 @@ generated: true
 | `database/migrations/iam/0006_imports_exports_permissions.sql` | `0006_imports_exports_permissions` |
 | `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |
 | `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
+| `database/migrations/iam/0009_customer_accounts.sql` | `0009_customer_accounts` |
 | `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
 | `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |
 | `database/migrations/sale/0003_state_machines_snapshots.sql` | `0003_state_machines_snapshots` |
 | `database/migrations/sale/0004_internal_sales_timeline.sql` | `0004_internal_sales_timeline` |
 | `database/migrations/sale/0005_guest_public_checkout.sql` | `0005_guest_public_checkout` |
+| `database/migrations/sale/0006_customer_accounts_links.sql` | `0006_customer_accounts_links` |

@@ -102,7 +102,9 @@ final class PublicApiCorsGuard
         }
         $allowed = $this->allowedOrigins($settings);
         if (in_array('*', $allowed, true)) {
-            return true;
+            // Les sessions client reposent sur un cookie : une origine
+            // explicite est obligatoire lorsque des credentials circulent.
+            return !str_starts_with($this->request->path, '/api/v1/customer/');
         }
         return in_array(strtolower($origin), array_map('strtolower', $allowed), true);
     }
@@ -218,13 +220,17 @@ final class PublicApiCorsGuard
         $headers = $this->headerList($settings['allowed_headers'] ?? ['Authorization', 'Content-Type']);
         $maxAge = max(0, (int) ($settings['max_age'] ?? 600));
 
-        return [
+        $result = [
             'Access-Control-Allow-Origin' => $origin,
             'Access-Control-Allow-Methods' => implode(', ', $methods ?: ['GET', 'OPTIONS']),
             'Access-Control-Allow-Headers' => implode(', ', $headers ?: ['Authorization', 'Content-Type']),
             'Access-Control-Max-Age' => (string) $maxAge,
             'Vary' => 'Origin',
         ];
+        if (str_starts_with($this->request->path, '/api/v1/customer/')) {
+            $result['Access-Control-Allow-Credentials'] = 'true';
+        }
+        return $result;
     }
 
     /** @param mixed $value @return list<string> */

@@ -10,6 +10,7 @@ use App\Application\PublicApi\PublicCookieConsentApiHandler;
 use App\Application\PublicApi\PublicCatalogApiHandler;
 use App\Application\PublicApi\PosCatalogApiHandler;
 use App\Application\PublicApi\PublicSaleApiHandler;
+use App\Application\PublicApi\PublicCustomerAccountApiHandler;
 use App\Application\PublicApi\PublicFormApiHandler;
 use App\Application\PublicApi\PublicSearchApiHandler;
 use App\Application\PublicApi\PublicTaxonomyApiHandler;
@@ -27,6 +28,7 @@ final class PublicHeadlessController
         private readonly PublicCatalogApiHandler $catalog,
         private readonly PosCatalogApiHandler $posCatalog,
         private readonly PublicSaleApiHandler $sale,
+        private readonly PublicCustomerAccountApiHandler $customer,
     ) {}
 
     public function health(): Response { return $this->api->health(); }
@@ -67,4 +69,15 @@ final class PublicHeadlessController
     public function saleCheckoutUpdate(string $code, string $token): Response { return $this->sale->updateCheckout($code, $token); }
     public function saleCartAbandon(string $code, string $token): Response { return $this->sale->abandonCart($code, $token); }
     public function saleCheckout(string $code): Response { return $this->sale->checkout($code); }
+    public function customerRegister(): Response { return $this->customer->register(); }
+    public function customerLogin(): Response { return $this->customer->login(); }
+    public function customerLogout(): Response { return $this->customer->logout(); }
+    public function customerMe(): Response { return $this->customer->me(); }
+    public function customerProfileUpdate(): Response { return $this->customer->updateProfile(); }
+    public function customerOrderClaim(): Response { return $this->customer->claimOrder(); }
+    public function customerOrders(): Response { return $this->customer->orders(); }
+    public function customerOrder(string|int $id): Response { return $this->customer->order($id); }
+    public function customerAddresses(): Response { return $this->customer->addresses(); }
+    public function customerAddressStore(): Response { return $this->customer->storeAddress(); }
+    public function customerReturnStore(string|int $id): Response { return $this->customer->requestReturn($id); }
 }

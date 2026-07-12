@@ -41,6 +41,7 @@ $tests = [
     'unit/sale_state_machines_snapshots_test.php',
     'unit/sale_admin_api_controller_test.php',
     'unit/sale_public_api_handler_test.php',
+    'unit/sale_customer_accounts_test.php',
     'unit/outbox_service_test.php',
     'unit/docs_access_test.php',
     'unit/public_api_discovery_test.php',

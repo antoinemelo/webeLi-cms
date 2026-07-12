@@ -69,6 +69,7 @@ $expectedPermissions = [
     'sale.stock.manage',
     'sale.reports.read',
     'sale.settings.manage',
+    'sale.customer_accounts.manage',
 ];
 
 $h->assertSame('sale', $provider->key(), 'sale provider key is stable');
@@ -81,7 +82,7 @@ $settings = $provider->settingsSchema();
 $h->assertSame('optional_port', $settings['integrations']['sellable_catalog'] ?? null, 'sellable catalog stays an optional port');
 $h->assertSame('optional_port', $settings['integrations']['customer_snapshot'] ?? null, 'customer snapshot stays an optional port');
 $h->assertSame('planned_optional_port', $settings['integrations']['crm_activity_sink'] ?? null, 'CRM integration stays planned');
-$h->assertSame('planned_optional_port', $settings['integrations']['cms_account_bridge'] ?? null, 'CMS integration stays planned');
+$h->assertSame('active_iam_crm_sale_port', $settings['integrations']['cms_account_bridge'] ?? null, 'CMS account integration is active');
 
 $capabilities = [];
 foreach ($provider->capabilities() as $capability) {
@@ -150,7 +151,7 @@ foreach ($contracts as $contract) {
     $routeContracts[$routeKey] = $contract;
     if ($scope === 'headless') {
         $h->assertTrue(isset($publicRouteKeys[$routeKey]), 'headless sale contract has public route: ' . $routeKey);
-        $h->assertSame('anonymous', $contract['permission'] ?? null, 'headless sale contract stays anonymous: ' . $key);
+        $h->assertTrue(trim((string) ($contract['permission'] ?? '')) !== '', 'headless sale contract declares its authentication mode: ' . $key);
         continue;
     }
 

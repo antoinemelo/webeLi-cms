@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 use App\Application\Frontend\PublicApiDocsController;
 use App\Core\Request;
 use App\Core\Database;
+use App\Core\Response;
 use App\Security\PublicApiCorsGuard;
 use App\Core\Router;
 
@@ -115,6 +116,13 @@ $corsDb = new Database($corsDbDir . '/core.sqlite');
 $sameOriginRequest = new Request('POST', '/api/v1/sale/channels/web-main/checkout', [], [], ['HTTP_HOST' => '127.0.0.1:8080', 'HTTP_ORIGIN' => 'http://127.0.0.1:8080'], [], []);
 $sameOriginGuard = new PublicApiCorsGuard($sameOriginRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => []]]]);
 $h->assertSame(null, $sameOriginGuard->enforce(), 'same-origin storefront mutations are accepted without explicit CORS configuration');
+$customerRequest = new Request('GET', '/api/v1/customer/orders', [], [], ['HTTP_HOST' => 'api.example.test', 'HTTP_ORIGIN' => 'https://shop.example.test'], [], []);
+$customerGuard = new PublicApiCorsGuard($customerRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => ['https://shop.example.test']]]]);
+$h->assertSame(null, $customerGuard->enforce(), 'explicit customer storefront origin is accepted');
+$customerHeaders = $customerGuard->withCorsHeaders(Response::json([]))->headers();
+$h->assertSame('true', $customerHeaders['Access-Control-Allow-Credentials'] ?? null, 'customer CORS response explicitly allows session credentials');
+$wildcardGuard = new PublicApiCorsGuard($customerRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => ['*']]]]);
+$h->assertSame(403, $wildcardGuard->enforce()?->status(), 'wildcard CORS cannot authorize customer session credentials');
 $corsDb = null;
 test_remove_tree($corsDbDir);
 

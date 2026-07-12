@@ -157,7 +157,6 @@ use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
 use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
-use App\Modules\Sale\Adapters\NullCmsAccountBridge;
 use App\Modules\Sale\Adapters\NullCrmActivitySink;
 use App\Modules\Sale\Adapters\NullCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\UnavailableSellableCatalogAdapter;
@@ -169,6 +168,7 @@ use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCustomerSnapshotService;
+use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
@@ -658,7 +658,19 @@ final class ServiceFactory
 
     public function saleCmsAccountBridge(): CmsAccountBridge
     {
-        return $this->once('sale_cms_account_bridge', fn() => new NullCmsAccountBridge());
+        return $this->saleCustomerAccounts();
+    }
+
+    public function saleCustomerAccounts(): SaleCustomerAccountService
+    {
+        return $this->once('sale_customer_accounts', fn() => new SaleCustomerAccountService(
+            $this->iamDatabase(),
+            $this->saleDatabaseConnection(),
+            $this->businessCompanies(),
+            $this->businessContacts(),
+            $this->businessConsents(),
+            $this->saleReturnService(),
+        ));
     }
 
     public function saleChannels(): SaleChannelRepository

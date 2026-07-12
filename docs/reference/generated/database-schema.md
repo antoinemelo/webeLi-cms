@@ -31,7 +31,7 @@ generated: true
 | `ai_task_results` | id, task_id, result_type, result_json, summary, warnings_json, created_at |
 | `ai_tasks` | id, site_id, user_id, title, task_type, provider_key, model_key, status, input_hash, payload_json, target_type, target_id, result_id, error_type, error_message, attempts, max_attempts, created_at, started_at, finished_at |
 | `ai_usage_events` | id, site_id, user_id, provider_key, model_key, task_type, input_tokens, output_tokens, total_tokens, duration_ms, estimated_cost, currency, status, details_json, created_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `business.sqlite`
 
@@ -93,7 +93,7 @@ generated: true
 | `crm_message_outbox` | id, site_id, provider_id, template_id, mailing_id, contact_id, channel, recipient_value, subject, body_text, body_html, payload_json, status, attempts, max_attempts, next_attempt_at, locked_at, sent_at, failed_at, last_error, created_by_iam_user_id, created_at, updated_at |
 | `crm_message_templates` | id, site_id, template_key, channel, name, subject, body_text, body_html, provider_template_ref, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_messaging_providers` | id, site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `cookies.sqlite`
 
@@ -108,7 +108,7 @@ generated: true
 | `cookie_service_cookies` | id, service_id, cookie_name, purpose, duration, domain, created_at |
 | `cookie_service_translations` | id, service_id, language_code, name, purpose, description, fallback_message, created_at, updated_at |
 | `cookie_services` | id, site_id, category_id, service_key, provider_name, service_type, cookie_type, domain, duration, privacy_url, is_enabled, sort_order, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `core.sqlite`
 
@@ -179,7 +179,7 @@ generated: true
 | `revisions` | id, resource_type, resource_id, blueprint_id, blueprint_version_id, revision_number, language_code, workflow_status, document_schema_version, base_revision_id, source_published_revision_id, created_from_event, revision_label, summary, change_notes, document_json, checksum_sha256, scheduled_for, created_by_iam_user_id, updated_by_iam_user_id, published_by_iam_user_id, created_at, updated_at, published_at |
 | `routes` | id, site_id, language_code, resource_type, resource_id, route_type, slug, full_path, is_primary, is_canonical, status, source_published_revision_id, source_revision_checksum_sha256, created_at, updated_at |
 | `schema_field_types` | id, type_key, label, storage_mode, component_key, is_implemented, definition_json, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 | `search_documents` | id, site_id, resource_type, resource_id, language_code, path, title, summary, search_text, source_published_revision_id, source_revision_checksum_sha256, updated_at |
 | `search_documents_fts` | title, summary, search_text |
 | `search_documents_fts_config` | k, v |
@@ -216,7 +216,7 @@ generated: true
 | `form_submissions` | id, form_id, site_id, language_code, submission_status, spam_score, spam_reasons_json, ip_hash, user_agent, referer_url, payload_json, created_at |
 | `form_translations` | id, form_id, language_code, name, description_text, submit_label, success_message, updated_at |
 | `forms` | id, site_id, form_key, status, is_active, store_submissions, notification_enabled, notification_recipients_json, notification_subject, honeypot_field, min_submit_seconds, rate_limit_max_attempts, rate_limit_window_seconds, settings_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `iam.sqlite`
 
@@ -224,6 +224,9 @@ generated: true
 |---|---|
 | `api_tokens` | id, name, token_hash, site_id, scopes, is_active, expires_at, last_used_at, created_at, updated_at |
 | `iam_audit_logs` | id, actor_user_id, action_key, resource_type, resource_id, context_json, ip_address, user_agent, created_at |
+| `iam_customer_email_changes` | id, user_id, previous_email_normalized, new_email_normalized, verification_method, changed_at |
+| `iam_customer_sessions` | id, user_id, site_id, token_hash, expires_at, last_seen_at, revoked_at, created_at |
+| `iam_customer_site_accounts` | id, user_id, site_id, status, merged_into_user_id, created_at, updated_at |
 | `iam_email_2fa_challenges` | id, user_id, code_hash, ip_address, user_agent, attempt_count, expires_at, consumed_at, created_at |
 | `iam_permissions` | id, permission_key, name, description |
 | `iam_rate_limits` | id, rate_key, created_at |
@@ -232,8 +235,8 @@ generated: true
 | `iam_sessions` | id, user_id, session_token_hash, ip_address, user_agent, last_seen_at, expires_at, created_at |
 | `iam_user_roles` | id, user_id, role_id |
 | `iam_user_site_roles` | id, user_id, site_id, role_id, created_at |
-| `iam_users` | id, email, email_normalized, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, login_mode, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at |
-| `schema_migrations` | id, migration, migrated_at |
+| `iam_users` | id, email, email_normalized, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, login_mode, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at, email_verified_at |
+| `schema_migrations` | id, migration, migrated_at, checksum, source |
 
 ## `sale.sqlite`
 
@@ -248,6 +251,10 @@ generated: true
 | `sale_channel_catalog_scopes` | id, channel_id, scope_type, scope_id, created_at |
 | `sale_channels` | id, site_id, code, name, channel_type, status, currency, default_language, tax_mode, price_tax_included, is_public, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `sale_coupons` | id, promotion_id, coupon_code_hash, status, usage_limit, used_count, starts_at, ends_at, created_at |
+| `sale_customer_account_links` | id, site_id, iam_user_id, crm_company_id, crm_contact_id, status, linked_by, merged_into_iam_user_id, created_at, updated_at |
+| `sale_customer_addresses` | id, site_id, iam_user_id, label, address_type, address_json, is_default, created_at, updated_at, archived_at |
+| `sale_customer_merge_audit` | id, site_id, source_iam_user_id, target_iam_user_id, status, reason, before_json, after_json, actor_iam_user_id, created_at, reversed_at |
+| `sale_customer_order_links` | id, site_id, order_id, iam_user_id, claim_proof_id, link_source, status, linked_by_iam_user_id, linked_at, revoked_at |
 | `sale_customer_refs` | id, site_id, company_id, contact_id, display_name, email, phone, billing_address_json, shipping_address_json, created_at, updated_at |
 | `sale_events` | id, site_id, event_type, aggregate_type, aggregate_id, payload_json, correlation_id, created_by_iam_user_id, created_at |
 | `sale_financial_corrections` | id, order_id, payment_transaction_id, amount_delta_minor, currency, reason, idempotency_key, correlation_id, created_by_iam_user_id, created_at |
@@ -256,6 +263,7 @@ generated: true
 | `sale_idempotency_keys` | id, site_id, key_hash, scope, request_hash, response_json, status, locked_until, created_at, updated_at |
 | `sale_inventory_items` | id, site_id, business_variant_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity, updated_at |
 | `sale_order_adjustments` | id, order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
+| `sale_order_claim_proofs` | id, site_id, order_id, token_hash, email_hash, status, expires_at, consumed_by_iam_user_id, consumed_at, created_at |
 | `sale_order_customer_reconciliations` | id, order_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, correlation_id, linked_by_iam_user_id, created_at |
 | `sale_order_lines` | id, order_id, line_number, business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type, quantity, fulfilled_quantity, returned_quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, snapshot_json, created_at |
 | `sale_order_status_history` | id, order_id, from_status, to_status, changed_by_iam_user_id, reason, correlation_id, created_at |

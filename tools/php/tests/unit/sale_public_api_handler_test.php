@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Application\PublicApi\PublicSaleApiHandler;
 use App\Application\Frontend\PublicSaleCheckoutController;
+use App\Application\Frontend\PublicCustomerAccountController;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
@@ -88,10 +89,15 @@ try {
     $h->assertSame(null, (new Router())->match('GET', '/api/v1/sale/orders', $routes), 'sale public API still has no public order listing');
     $webRoutes = require __DIR__ . '/../../../../backend/routes/web.php';
     $h->assertTrue((new Router())->match('GET', '/checkout', $webRoutes) !== null, 'native guest checkout SSR route is declared');
+    $h->assertTrue((new Router())->match('GET', '/account', $webRoutes) !== null, 'secure customer account SSR route is declared');
     $ssr = (new PublicSaleCheckoutController(new Request('GET', '/checkout', ['channel' => 'web-main', 'cart_token' => str_repeat('A', 43)], [], ['HTTP_HOST' => 'example.test'], [], [])))->show();
     $h->assertSame(200, $ssr->status(), 'native guest checkout SSR renders');
     $h->assertTrue(str_contains($ssr->body(), 'data-checkout-form'), 'native guest checkout SSR includes the accessible form');
     $h->assertTrue(str_contains($ssr->body(), 'guest-checkout.js'), 'native guest checkout SSR loads the checkout client progressively');
+    $accountPage = (new PublicCustomerAccountController())->show();
+    $h->assertSame(200, $accountPage->status(), 'customer account SSR renders');
+    $h->assertTrue(str_contains($accountPage->body(), 'data-customer-account'), 'customer account SSR exposes the secure client root');
+    $h->assertSame('no-store, private', $accountPage->headers()['Cache-Control'] ?? null, 'customer account page is never cached');
 
     $saleDb->run("UPDATE sale_channels SET status = 'draft', is_public = 0 WHERE site_id = 1 AND code = 'web-main'");
     $disabled = $handlerFor('GET', '/api/v1/sale/channels/web-main/bootstrap')->bootstrap('web-main');

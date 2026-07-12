@@ -81,6 +81,7 @@ return [
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
+            '#^/api/v1/customer(?:/|$)#',
             '#^/api/v1/media$#',
         ],
         'protected_paths' => [
@@ -114,6 +115,11 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
+            '#^/api/v1/customer/(?:login|accounts/register)$#' => [
+                'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX', 10),
+                'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW', 900),
+                'group' => '/api/v1/customer/auth',
+            ],
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:checkout|cart/[A-Za-z0-9_-]+/checkout)$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX', 20),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW', 60),

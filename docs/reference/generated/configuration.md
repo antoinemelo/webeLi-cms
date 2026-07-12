@@ -53,6 +53,8 @@ generated: true
 | `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_CLEANUP_PROBABILITY` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX` | `backend/config/app.php` |

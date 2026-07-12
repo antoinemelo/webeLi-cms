@@ -97,7 +97,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | PIM produits physiques/services/bundles/variantes | partiel | Business products, variants, bundles, services visibles dans code/tests. | Bons cadeaux et règles avancées non vérifiés. | P2 |
 | Import/export catalogue | présent | `CatalogCsvService`, imports/exports Business et Sale, docs d'administration. | À relier aux critères de release RM1. | P2 |
 | Checkout public | partiel | `PublicSaleApiHandler`, `SaleModuleProvider::publicHeadlessRoutes()`. | Non publié en OpenAPI/SDK ; pas de parcours CMS complet panier/paiement/livraison. | P0 |
-| Comptes clients | absent | `NullCmsAccountBridge` ; pas de lien IAM/CRM/Sale public prouvé. | Comptes, profil, historique commandes et claim guest manquants. | P2 |
+| Comptes clients | couvert | `SaleCustomerAccountService`, preuve post-achat à usage unique, session IAM client et liens explicites CRM/Sale. | Les téléchargements et cartes cadeaux ne sont exposés que lorsqu’un module métier les fournit. | P3 |
 | Livraison | partiel | Champs shipping address/totals et fulfillment status dans Sale ; docs Sale mentionnent le shipping avancé hors v1. | Méthodes/zones/tarifs/transporteurs et fulfilment complet absents. | P2 |
 | Fiscalité | partiel | `business_tax_classes`, tax rate snapshots, tax lines Sale. | Fiscalité avancée multi-pays/règles légales non prouvée. | P2 |
 | Événements et outbox | partiel | `outbox_events` core, `sale_outbox`, `crm_message_outbox`, attempts/max_attempts côté Business. | Worker générique, dead-letter, retries observables et supervision non formalisés. | P1 |

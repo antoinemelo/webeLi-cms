@@ -21,6 +21,21 @@
     const total = document.createElement('p'); total.textContent = `Total: ${(cart.grand_total_minor / 100).toFixed(2)} ${cart.currency}`; summary.append(total);
   };
   const readJson = async (response) => { const payload = await response.json(); if (!response.ok) throw new Error(payload?.error?.message || 'Checkout invalid'); return payload; };
+  const offerAccount = (proof) => {
+    if (!proof?.token) return;
+    const box = document.createElement('form'); const title = document.createElement('h3');
+    title.textContent = lang === 'en' ? 'Create an optional account' : 'Créer un compte (facultatif)';
+    const password = document.createElement('input'); password.type = 'password'; password.minLength = 10; password.required = true; password.autocomplete = 'new-password'; password.placeholder = lang === 'en' ? 'Password (10 characters)' : 'Mot de passe (10 caractères)';
+    const button = document.createElement('button'); button.textContent = lang === 'en' ? 'Create my account' : 'Créer mon compte';
+    box.append(title, password, button); summary.append(box);
+    box.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await readJson(await fetch(`${base}/api/v1/customer/accounts/register`, { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json'}, body: JSON.stringify({data:{proof_token:proof.token,password:password.value}}) }));
+        location.href = `${base}/account`;
+      } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
+    });
+  };
   const load = async () => {
     if (!token) { error.textContent = lang === 'en' ? 'Missing cart token.' : 'Token de panier manquant.'; return; }
     const payload = await readJson(await fetch(`${endpoint}/cart/${encodeURIComponent(token)}?lang=${lang}`, { headers: { Accept: 'application/json' } })); render(payload.data.cart);
@@ -40,7 +55,7 @@
     try {
       const key = crypto.randomUUID();
       const payload = await readJson(await fetch(`${endpoint}/checkout?lang=${lang}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify({ data }) }));
-      localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; form.hidden = true;
+      localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; form.hidden = true; offerAccount(payload.data.account_creation);
     } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
   });
   load().catch((reason) => { error.textContent = reason instanceof Error ? reason.message : String(reason); });

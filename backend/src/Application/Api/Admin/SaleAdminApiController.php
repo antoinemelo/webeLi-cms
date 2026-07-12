@@ -22,6 +22,7 @@ use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
@@ -65,6 +66,7 @@ final class SaleAdminApiController
         private readonly ?SaleReceiptService $receiptService = null,
         private readonly ?SaleReturnService $returnService = null,
         private readonly ?SaleOrderTimelineService $timelineService = null,
+        private readonly ?SaleCustomerAccountService $customerAccounts = null,
     ) {}
 
     public function schema(): Response
@@ -940,6 +942,27 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.settings.manage');
         return $this->ok(['settings' => $this->db()->all('SELECT * FROM sale_settings WHERE site_id = ? ORDER BY setting_key ASC', [(int) $site['id']])], 'admin.sale.settings.v1', $site, $languageCode);
+    }
+
+    public function mergeCustomerAccounts(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.customer_accounts.manage');
+        try {
+            if ($this->customerAccounts === null) {
+                throw new SaleBusinessException('sale.customer_accounts_unavailable');
+            }
+            $payload = $this->payload();
+            $audit = $this->customerAccounts->mergeAccounts(
+                (int) $site['id'],
+                (int) ($payload['source_iam_user_id'] ?? 0),
+                (int) ($payload['target_iam_user_id'] ?? 0),
+                $this->actorId(),
+                (string) ($payload['reason'] ?? '')
+            );
+            return $this->ok(['merge' => $audit], 'admin.sale.customer_accounts.merge.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
     }
 
     public function dailyReport(): Response

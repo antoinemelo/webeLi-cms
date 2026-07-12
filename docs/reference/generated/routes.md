@@ -75,6 +75,7 @@ generated: true
 | `DELETE` | `/admin/api/taxonomies/{key}/terms/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/visual/entries/{id}/block-lock` | API administrative | `backend/routes/api.php` |
 | `GET` | `/` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/account` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/admin` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/api/ai/actions` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |

@@ -1666,6 +1666,587 @@
         }
       }
     },
+    "/api/v1/customer/accounts/register": {
+      "post": {
+        "operationId": "post_public_customer_accounts_register_v1",
+        "summary": "Créer un compte client après achat.",
+        "description": "Consomme une preuve de commande dédiée, vérifie l’e-mail de la commande et lie explicitement IAM, CRM et Vente.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Preuve ou mot de passe invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Preuve ou mot de passe invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "proof_token",
+                      "password"
+                    ],
+                    "properties": {
+                      "proof_token": {
+                        "type": "string"
+                      },
+                      "password": {
+                        "type": "string",
+                        "minLength": 10
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/addresses": {
+      "get": {
+        "operationId": "get_public_customer_addresses_index_v1",
+        "summary": "Lister les adresses enregistrées.",
+        "description": "Lister les adresses enregistrées.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "post_public_customer_addresses_store_v1",
+        "summary": "Enregistrer une adresse client.",
+        "description": "Enregistrer une adresse client.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/login": {
+      "post": {
+        "operationId": "post_public_customer_login_v1",
+        "summary": "Ouvrir une session client.",
+        "description": "Ouvrir une session client.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Identifiants invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Identifiants invalides.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "email",
+                      "password"
+                    ],
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "password": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/logout": {
+      "delete": {
+        "operationId": "delete_public_customer_logout_v1",
+        "summary": "Fermer la session client.",
+        "description": "Fermer la session client.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/me": {
+      "get": {
+        "operationId": "get_public_customer_me_v1",
+        "summary": "Lire le profil client lié.",
+        "description": "Lire le profil client lié.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session absente ou inactive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Session absente ou inactive.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patch_public_customer_me_update_v1",
+        "summary": "Modifier le profil client.",
+        "description": "L’identifiant IAM reste stable; un changement d’e-mail est historisé et révoque sa vérification sans modifier les snapshots Vente.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders": {
+      "get": {
+        "operationId": "get_public_customer_orders_index_v1",
+        "summary": "Lister les commandes du compte.",
+        "description": "Lister les commandes du compte.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders/claim": {
+      "post": {
+        "operationId": "post_public_customer_orders_claim_v1",
+        "summary": "Rattacher une commande invitée.",
+        "description": "Le rattachement exige une session IAM vérifiée et une preuve dédiée dont l’e-mail correspond exactement.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Preuve invalide ou commande déjà rattachée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Preuve invalide ou commande déjà rattachée.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "proof_token"
+                    ],
+                    "properties": {
+                      "proof_token": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders/{id}": {
+      "get": {
+        "operationId": "get_public_customer_orders_show_v1",
+        "summary": "Lire une commande du compte.",
+        "description": "Lire une commande du compte.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Commande inaccessible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Commande inaccessible.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customer/orders/{id}/returns": {
+      "post": {
+        "operationId": "post_public_customer_orders_returns_store_v1",
+        "summary": "Demander un retour sur une commande du compte.",
+        "description": "Demander un retour sur une commande du compte.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/forms/{key}": {
       "get": {
         "operationId": "get_public_forms_show_v1",
@@ -5814,6 +6395,10 @@
                           "tax_total_minor": 0,
                           "grand_total_minor": 2900,
                           "lines": []
+                        },
+                        "account_creation": {
+                          "token": "opaque-one-time-proof",
+                          "expires_at": "2026-07-19 12:00:00"
                         }
                       },
                       "meta": {
@@ -8186,11 +8771,27 @@
           "data": {
             "type": "object",
             "required": [
-              "order"
+              "order",
+              "account_creation"
             ],
             "properties": {
               "order": {
                 "$ref": "#/components/schemas/PublicSaleOrder"
+              },
+              "account_creation": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "expires_at"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "expires_at": {
+                    "type": "string"
+                  }
+                }
               }
             },
             "additionalProperties": true
