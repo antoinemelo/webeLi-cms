@@ -118,6 +118,7 @@ generated: true
 | `roles.manage` |
 | `roles.read` |
 | `sale.cash.manage` |
+| `sale.channels.manage` |
 | `sale.customer_accounts.manage` |
 | `sale.manage` |
 | `sale.orders.manage` |

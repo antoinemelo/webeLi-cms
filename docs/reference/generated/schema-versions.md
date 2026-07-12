@@ -30,6 +30,7 @@ generated: true
 | `database/migrations/business/0007_pricing_offers_bundles.sql` | `0007_pricing_offers_bundles` |
 | `database/migrations/business/0008_pim_quality_import_channels.sql` | `0008_pim_quality_import_channels` |
 | `database/migrations/business/0009_pim_channel_visibility_site_guard.sql` | `0009_pim_channel_visibility_site_guard` |
+| `database/migrations/business/0010_sales_channel_configs.sql` | `0010_sales_channel_configs` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
@@ -38,6 +39,7 @@ generated: true
 | `database/migrations/core/075_cross_database_operations.sql` | `075_cross_database_operations` |
 | `database/migrations/core/076_business_product_content_links.sql` | `076_business_product_content_links` |
 | `database/migrations/core/077_outbox_reliability.sql` | `077_outbox_reliability` |
+| `database/migrations/core/078_sales_channel_storefronts.sql` | `078_sales_channel_storefronts` |
 | `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |
@@ -48,6 +50,7 @@ generated: true
 | `database/migrations/iam/0007_login_mode.sql` | `0007_login_mode` |
 | `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
 | `database/migrations/iam/0009_customer_accounts.sql` | `0009_customer_accounts` |
+| `database/migrations/iam/0010_sales_channel_permission.sql` | `0010_sales_channel_permission` |
 | `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
 | `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |
 | `database/migrations/sale/0003_state_machines_snapshots.sql` | `0003_state_machines_snapshots` |
@@ -55,3 +58,4 @@ generated: true
 | `database/migrations/sale/0005_guest_public_checkout.sql` | `0005_guest_public_checkout` |
 | `database/migrations/sale/0006_customer_accounts_links.sql` | `0006_customer_accounts_links` |
 | `database/migrations/sale/0007_fulfillment_tax_v1.sql` | `0007_fulfillment_tax_v1` |
+| `database/migrations/sale/0008_sales_channel_contract.sql` | `0008_sales_channel_contract` |

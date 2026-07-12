@@ -22,15 +22,15 @@ final class SaleChannelRepository extends SaleRepositoryBase
             $params['status'] = trim((string) $filters['status']);
         }
         if (trim((string) ($filters['type'] ?? $filters['channel_type'] ?? '')) !== '') {
-            $where[] = 'channel_type = :channel_type';
-            $params['channel_type'] = trim((string) ($filters['type'] ?? $filters['channel_type']));
+            $where[] = 'channel_kind = :channel_kind';
+            $params['channel_kind'] = $this->channelKind((string) ($filters['type'] ?? $filters['channel_type']));
         }
         $sqlWhere = implode(' AND ', $where);
         $total = (int) ($this->rawDatabase()->one('SELECT COUNT(*) AS count FROM sale_channels WHERE ' . $sqlWhere, $params)['count'] ?? 0);
-        $items = $this->rawDatabase()->all(
+        $items = array_map($this->contractRow(...), $this->rawDatabase()->all(
             'SELECT * FROM sale_channels WHERE ' . $sqlWhere . ' ORDER BY code ASC LIMIT :limit OFFSET :offset',
             $params + ['limit' => max(1, min(100, $limit)), 'offset' => max(0, $offset)]
-        );
+        ));
         return ['items' => $items, 'limit' => $limit, 'offset' => $offset, 'total' => $total, 'has_more' => ($offset + $limit) < $total];
     }
 
@@ -39,14 +39,16 @@ final class SaleChannelRepository extends SaleRepositoryBase
     {
         $this->rawDatabase()->run(
             'INSERT INTO sale_channels(
-                site_id, code, name, channel_type, status, currency, default_language,
+                site_id, code, name, channel_type, channel_kind, is_default, status, currency, default_language,
                 tax_mode, price_tax_included, is_public, created_by_iam_user_id
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $siteId,
                 $this->code((string) ($payload['code'] ?? '')),
                 trim((string) ($payload['name'] ?? '')),
-                $this->channelType((string) ($payload['channel_type'] ?? $payload['type'] ?? 'admin')),
+                $this->legacyType((string) ($payload['channel_type'] ?? $payload['type'] ?? 'admin')),
+                $this->channelKind((string) ($payload['type'] ?? $payload['channel_type'] ?? 'admin')),
+                (int) (bool) ($payload['is_default'] ?? false),
                 $this->status((string) ($payload['status'] ?? 'draft')),
                 strtoupper((string) ($payload['currency'] ?? 'CHF')),
                 strtolower((string) ($payload['default_language'] ?? 'fr')),
@@ -65,13 +67,15 @@ final class SaleChannelRepository extends SaleRepositoryBase
         $current = $this->requireChannel($siteId, $channelId);
         $this->rawDatabase()->run(
             'UPDATE sale_channels
-             SET name = ?, channel_type = ?, status = ?, currency = ?, default_language = ?,
+             SET name = ?, channel_type = ?, channel_kind = ?, is_default = ?, status = ?, currency = ?, default_language = ?,
                  tax_mode = ?, price_tax_included = ?, is_public = ?, updated_by_iam_user_id = ?,
                  updated_at = CURRENT_TIMESTAMP
              WHERE site_id = ? AND id = ?',
             [
                 trim((string) ($payload['name'] ?? $current['name'])),
-                $this->channelType((string) ($payload['channel_type'] ?? $payload['type'] ?? $current['channel_type'])),
+                $this->legacyType((string) ($payload['channel_type'] ?? $payload['type'] ?? $current['type'])),
+                $this->channelKind((string) ($payload['type'] ?? $payload['channel_type'] ?? $current['type'])),
+                (int) (bool) ($payload['is_default'] ?? (bool) $current['is_default']),
                 $this->status((string) ($payload['status'] ?? $current['status'])),
                 strtoupper((string) ($payload['currency'] ?? $current['currency'])),
                 strtolower((string) ($payload['default_language'] ?? $current['default_language'])),
@@ -108,13 +112,27 @@ final class SaleChannelRepository extends SaleRepositoryBase
         if ($row === null) {
             throw new SaleValidationException('sale.channel_not_found');
         }
-        return $row;
+        return $this->contractRow($row);
+    }
+
+    /** @return array<string,mixed> */
+    public function requireByCode(int $siteId, string $code): array
+    {
+        $row = $this->rawDatabase()->one('SELECT * FROM sale_channels WHERE site_id = ? AND code = ? LIMIT 1', [$siteId, $code]);
+        if ($row === null) {
+            throw new SaleValidationException('sale.channel_not_found');
+        }
+        return $this->contractRow($row);
     }
 
     public function channelCodeForCatalog(array $channel): string
     {
-        $type = (string) ($channel['channel_type'] ?? 'admin');
-        return in_array($type, ['admin', 'pos', 'ecommerce'], true) ? $type : 'admin';
+        return match ((string) ($channel['type'] ?? $channel['channel_kind'] ?? 'admin')) {
+            'storefront' => 'ecommerce',
+            'pos' => 'pos',
+            'partner' => 'catalogue',
+            default => 'admin',
+        };
     }
 
     private function code(string $code): string
@@ -126,12 +144,35 @@ final class SaleChannelRepository extends SaleRepositoryBase
         return $code;
     }
 
-    private function channelType(string $type): string
+    private function channelKind(string $type): string
     {
-        if (!in_array($type, ['ecommerce', 'pos', 'admin'], true)) {
+        $type = $type === 'ecommerce' ? 'storefront' : $type;
+        if (!in_array($type, ['storefront', 'pos', 'admin', 'partner'], true)) {
             throw new SaleValidationException('sale.channel_type_invalid');
         }
         return $type;
+    }
+
+    private function legacyType(string $type): string
+    {
+        return match ($this->channelKind($type)) {
+            'storefront' => 'ecommerce',
+            'pos' => 'pos',
+            default => 'admin',
+        };
+    }
+
+    /** @param array<string,mixed> $row @return array<string,mixed> */
+    private function contractRow(array $row): array
+    {
+        $kind = (string) ($row['channel_kind'] ?? match ((string) ($row['channel_type'] ?? 'admin')) {
+            'ecommerce' => 'storefront', 'pos' => 'pos', default => 'admin',
+        });
+        $row['channel_id'] = (int) $row['id'];
+        $row['type'] = $kind;
+        $row['default_locale'] = (string) $row['default_language'];
+        $row['default_currency'] = (string) $row['currency'];
+        return $row;
     }
 
     private function status(string $status): string

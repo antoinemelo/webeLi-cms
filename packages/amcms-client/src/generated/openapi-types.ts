@@ -356,11 +356,16 @@ export interface OpenApiPublicSaleCartResponse {
 }
 
 export interface OpenApiPublicSaleChannel {
+  channel_id: number;
   code: string;
   currency: string;
+  default_currency: string;
   default_language: string;
+  default_locale: string;
   name: string;
+  site_id: number;
   tax_mode: string;
+  type: "admin" | "partner" | "pos" | "storefront";
   [key: string]: unknown;
 }
 

@@ -13,12 +13,14 @@ CREATE TABLE IF NOT EXISTS sale_channels (
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     channel_type TEXT NOT NULL CHECK(channel_type IN ('ecommerce','pos','admin')),
+    channel_kind TEXT NOT NULL CHECK(channel_kind IN ('storefront','pos','admin','partner')),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
     default_language TEXT NOT NULL DEFAULT 'fr',
     tax_mode TEXT NOT NULL DEFAULT 'tax_included' CHECK(tax_mode IN ('tax_included','tax_excluded')),
     price_tax_included INTEGER NOT NULL DEFAULT 1 CHECK(price_tax_included IN (0,1)),
     is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
+    is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0,1)),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -39,6 +41,14 @@ CREATE INDEX IF NOT EXISTS idx_sale_channels_site_type_status
     ON sale_channels(site_id, channel_type, status);
 CREATE INDEX IF NOT EXISTS idx_sale_channels_site_public
     ON sale_channels(site_id, is_public, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_channels_default_kind ON sale_channels(site_id,channel_kind) WHERE is_default=1 AND status<>'archived';
+
+CREATE TABLE IF NOT EXISTS sale_channel_checkout_configs (
+    channel_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, cart_enabled INTEGER NOT NULL DEFAULT 1 CHECK(cart_enabled IN (0,1)),
+    checkout_enabled INTEGER NOT NULL DEFAULT 1 CHECK(checkout_enabled IN (0,1)), guest_checkout_enabled INTEGER NOT NULL DEFAULT 1 CHECK(guest_checkout_enabled IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE CASCADE, CHECK(site_id>0)
+);
 
 CREATE TABLE IF NOT EXISTS sale_channel_catalog_scopes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -541,11 +551,13 @@ CREATE TABLE IF NOT EXISTS sale_pos_registers (
     name TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','archived')),
     location_name TEXT,
+    stock_location_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     archived_at TEXT,
     UNIQUE(site_id, code),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
     CHECK(trim(name) <> ''),
@@ -645,6 +657,14 @@ CREATE TABLE IF NOT EXISTS sale_stock_locations (
 
 CREATE INDEX IF NOT EXISTS idx_sale_stock_locations_site_status
     ON sale_stock_locations(site_id, status, location_type);
+
+CREATE TABLE IF NOT EXISTS sale_inventory_channel_configs (
+    channel_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, stock_location_id INTEGER NOT NULL,
+    availability_policy TEXT NOT NULL DEFAULT 'available' CHECK(availability_policy IN ('available','on_hand','allow_backorder')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT, CHECK(site_id>0)
+);
 
 CREATE TABLE IF NOT EXISTS sale_inventory_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1132,6 +1152,8 @@ INSERT OR IGNORE INTO sale_channels (
     code,
     name,
     channel_type,
+    channel_kind,
+    is_default,
     status,
     currency,
     default_language,
@@ -1139,9 +1161,16 @@ INSERT OR IGNORE INTO sale_channels (
     price_tax_included,
     is_public
 ) VALUES
-    (1, 'admin-manual', 'Saisie admin manuelle', 'admin', 'active', 'CHF', 'fr', 'tax_included', 1, 0),
-    (1, 'pos-main', 'Caisse principale', 'pos', 'draft', 'CHF', 'fr', 'tax_included', 1, 0),
-    (1, 'web-main', 'Boutique web principale', 'ecommerce', 'active', 'CHF', 'fr', 'tax_included', 1, 1);
+    (1, 'admin-manual', 'Saisie admin manuelle', 'admin', 'admin', 1, 'active', 'CHF', 'fr', 'tax_included', 1, 0),
+    (1, 'pos-main', 'Caisse principale', 'pos', 'pos', 1, 'draft', 'CHF', 'fr', 'tax_included', 1, 0),
+    (1, 'web-main', 'Boutique web principale', 'ecommerce', 'storefront', 1, 'active', 'CHF', 'fr', 'tax_included', 1, 1);
+
+INSERT OR IGNORE INTO sale_channel_checkout_configs(channel_id,site_id,cart_enabled,checkout_enabled,guest_checkout_enabled,status)
+SELECT id,site_id,1,1,CASE WHEN channel_kind='storefront' THEN 1 ELSE 0 END,CASE WHEN status='active' THEN 'active' ELSE 'disabled' END FROM sale_channels;
+INSERT OR IGNORE INTO sale_stock_locations(site_id,code,name,location_type,status)
+SELECT DISTINCT site_id,'channel-default','Stock canal par défaut','main','active' FROM sale_channels;
+INSERT OR IGNORE INTO sale_inventory_channel_configs(channel_id,site_id,stock_location_id,availability_policy,status)
+SELECT c.id,c.site_id,l.id,'available',CASE WHEN c.status='active' THEN 'active' ELSE 'disabled' END FROM sale_channels c JOIN sale_stock_locations l ON l.site_id=c.site_id AND l.code='channel-default';
 
 INSERT OR IGNORE INTO sale_payment_methods(site_id, channel_id, code, name, provider_key, method_type, status)
 SELECT c.site_id, c.id, m.code, m.name, m.provider_key, m.method_type, 'active'

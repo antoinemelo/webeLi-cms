@@ -73,6 +73,16 @@ CREATE UNIQUE INDEX idx_site_domains_one_primary_per_site
 CREATE INDEX idx_site_domains_lookup
     ON site_domains(host, base_path, is_active);
 
+CREATE TABLE IF NOT EXISTS cms_sales_channel_storefronts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id INTEGER NOT NULL UNIQUE, site_id INTEGER NOT NULL,
+    domain_id INTEGER, route_prefix TEXT NOT NULL DEFAULT '/', is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE, FOREIGN KEY(domain_id) REFERENCES site_domains(id) ON DELETE SET NULL,
+    CHECK(channel_id>0), CHECK(route_prefix LIKE '/%')
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cms_sales_channel_storefront_default ON cms_sales_channel_storefronts(site_id) WHERE is_default=1 AND status='active';
+
 CREATE TABLE site_localizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,

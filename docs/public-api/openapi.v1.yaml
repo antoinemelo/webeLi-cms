@@ -3665,8 +3665,13 @@ paths:
                   value:
                     data:
                       channel:
+                        channel_id: 3
+                        site_id: 1
                         code: "web-main"
+                        type: "storefront"
                         name: "Boutique"
+                        default_currency: "CHF"
+                        default_locale: "fr"
                         currency: "CHF"
                         default_language: "fr"
                         tax_mode: "tax_included"
@@ -5097,15 +5102,37 @@ components:
     PublicSaleChannel:
       type: "object"
       required:
+        - "channel_id"
+        - "site_id"
         - "code"
+        - "type"
         - "name"
+        - "default_currency"
+        - "default_locale"
         - "currency"
         - "default_language"
         - "tax_mode"
       properties:
+        channel_id:
+          type: "integer"
+          minimum: 1
+        site_id:
+          type: "integer"
+          minimum: 1
         code:
           type: "string"
+        type:
+          type: "string"
+          enum:
+            - "storefront"
+            - "pos"
+            - "admin"
+            - "partner"
         name:
+          type: "string"
+        default_currency:
+          type: "string"
+        default_locale:
           type: "string"
         currency:
           type: "string"

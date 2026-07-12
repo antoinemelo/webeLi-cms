@@ -56,7 +56,7 @@ try {
     $otherProof = $accounts->issueClaimProof($otherOrder);
     $h->expectException(fn() => $accounts->claimForAuthenticatedAccount(1, $user1, $otherProof['token']), SaleValidationException::class, 'account cannot claim another customer order');
 
-    $sale->run("INSERT INTO sale_channels(site_id,code,name,channel_type,status,is_public,currency,default_language,tax_mode) VALUES(2,'web-2','Web 2','ecommerce','active',1,'CHF','fr','tax_included')");
+    $sale->run("INSERT INTO sale_channels(site_id,code,name,channel_type,channel_kind,status,is_public,currency,default_language,tax_mode) VALUES(2,'web-2','Web 2','ecommerce','storefront','active',1,'CHF','fr','tax_included')");
     $channel2 = (int) $sale->lastInsertId();
     $order2 = $insertOrder(2, $channel2, 'P13-SITE2', 'alice@example.test');
     $site2 = $accounts->registerWithProof(2, $accounts->issueClaimProof($order2)['token'], 'mot-de-passe-solide');

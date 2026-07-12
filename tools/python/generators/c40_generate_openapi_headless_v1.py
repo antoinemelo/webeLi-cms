@@ -313,10 +313,15 @@ def base_components() -> dict[str, Any]:
             },
             "PublicSaleChannel": {
                 "type": "object",
-                "required": ["code", "name", "currency", "default_language", "tax_mode"],
+                "required": ["channel_id", "site_id", "code", "type", "name", "default_currency", "default_locale", "currency", "default_language", "tax_mode"],
                 "properties": {
+                    "channel_id": {"type": "integer", "minimum": 1},
+                    "site_id": {"type": "integer", "minimum": 1},
                     "code": {"type": "string"},
+                    "type": {"type": "string", "enum": ["storefront", "pos", "admin", "partner"]},
                     "name": {"type": "string"},
+                    "default_currency": {"type": "string"},
+                    "default_locale": {"type": "string"},
                     "currency": {"type": "string"},
                     "default_language": {"type": "string"},
                     "tax_mode": {"type": "string"},

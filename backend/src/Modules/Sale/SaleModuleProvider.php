@@ -65,6 +65,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             ['key' => 'sale.stock.manage', 'name' => 'Gerer le stock Vente', 'description' => 'Creer reservations, mouvements et corrections de stock transactionnel.'],
             ['key' => 'sale.reports.read', 'name' => 'Lire les rapports Vente', 'description' => 'Consulter les rapports commerciaux et POS.'],
             ['key' => 'sale.settings.manage', 'name' => 'Gerer les reglages Vente', 'description' => 'Configurer canaux, moyens de paiement et reglages du module Vente.'],
+            ['key' => 'sale.channels.manage', 'name' => 'Gérer les canaux de vente', 'description' => 'Résoudre, configurer et contrôler les références SalesChannel intermodules.'],
             ['key' => 'sale.customer_accounts.manage', 'name' => 'Fusionner les comptes clients', 'description' => 'Réaliser une fusion IAM–CRM–Vente contrôlée et auditée.'],
         ];
     }
@@ -275,6 +276,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('GET', '/admin/api/sale/dashboard', $c . 'dashboard'),
             $this->route('GET', '/admin/api/sale/channels', $c . 'channels'),
             $this->route('POST', '/admin/api/sale/channels', $c . 'storeChannel'),
+            $this->route('GET', '/admin/api/sale/channels/resolve', $c . 'resolveChannel'),
+            $this->route('GET', '/admin/api/sale/channels/integrity', $c . 'channelIntegrity'),
             $this->route('GET', '/admin/api/sale/channels/{id}', $c . 'showChannel'),
             $this->route('PATCH', '/admin/api/sale/channels/{id}', $c . 'updateChannel'),
             $this->route('POST', '/admin/api/sale/channels/{id}/archive', $c . 'archiveChannel'),
@@ -403,6 +406,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.dashboard.v1', 'GET', '/admin/api/sale/dashboard', 'sale.read'),
             $this->contract('admin.sale.channels.index.v1', 'GET', '/admin/api/sale/channels', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.store.v1', 'POST', '/admin/api/sale/channels', 'sale.settings.manage'),
+            $this->contract('admin.sale.channels.resolve.v1', 'GET', '/admin/api/sale/channels/resolve', 'sale.channels.manage'),
+            $this->contract('admin.sale.channels.integrity.v1', 'GET', '/admin/api/sale/channels/integrity', 'sale.channels.manage'),
             $this->contract('admin.sale.channels.show.v1', 'GET', '/admin/api/sale/channels/{id}', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.update.v1', 'PATCH', '/admin/api/sale/channels/{id}', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.archive.v1', 'POST', '/admin/api/sale/channels/{id}/archive', 'sale.settings.manage'),

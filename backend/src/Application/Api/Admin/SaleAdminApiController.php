@@ -22,6 +22,8 @@ use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
+use App\Modules\Sale\Services\SalesChannelIntegrityService;
+use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
@@ -69,6 +71,8 @@ final class SaleAdminApiController
         private readonly ?SaleOrderTimelineService $timelineService = null,
         private readonly ?SaleCustomerAccountService $customerAccounts = null,
         private readonly ?SaleFulfillmentService $fulfillment = null,
+        private readonly ?SalesChannelResolverService $channelResolver = null,
+        private readonly ?SalesChannelIntegrityService $channelIntegrity = null,
     ) {}
 
     public function schema(): Response
@@ -240,6 +244,35 @@ final class SaleAdminApiController
         [$site, $languageCode] = $this->authorize('sale.settings.manage');
         $result = $this->channels->list((int) $site['id'], $this->request->query, $this->limit(), $this->offset());
         return $this->ok(['channels' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.channels.index.v1', $site, $languageCode);
+    }
+
+    public function resolveChannel(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.channels.manage');
+        try {
+            if ($this->channelResolver === null) {
+                throw new SaleValidationException('sale.channel_resolver_unavailable');
+            }
+            $context = (string) ($this->request->query['context'] ?? 'storefront');
+            $channelId = isset($this->request->query['channel_id']) ? $this->id($this->request->query['channel_id']) : null;
+            $resolved = match ($context) {
+                'storefront' => $this->channelResolver->storefront((int) $site['id'], isset($this->request->query['code']) ? (string) $this->request->query['code'] : null),
+                'headless' => $this->channelResolver->headless((int) $site['id'], $channelId, isset($this->request->query['code']) ? (string) $this->request->query['code'] : null),
+                'admin' => $this->channelResolver->admin((int) $site['id'], $channelId),
+                'pos' => $this->channelResolver->pos((int) $site['id'], isset($this->request->query['register_id']) ? $this->id($this->request->query['register_id']) : null),
+                default => throw new SaleValidationException('sale.channel_context_invalid'),
+            };
+            return $this->ok(['context' => $context, 'resolved' => $resolved], 'admin.sale.channels.resolve.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function channelIntegrity(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.channels.manage');
+        $result = $this->channelIntegrity?->validate((int) $site['id']) ?? ['valid' => false, 'issues' => [['code' => 'validator_unavailable']]];
+        return $this->ok(['integrity' => $result], 'admin.sale.channels.integrity.v1', $site, $languageCode);
     }
 
     public function storeChannel(): Response

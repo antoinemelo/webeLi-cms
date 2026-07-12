@@ -16,6 +16,11 @@ SELECT s.id, 'de', 'de-CH', '/de', 'de-CH', 'fr', 0, 1, 3 FROM sites s WHERE s.s
 INSERT INTO site_domains(site_id, host, base_path, scheme, is_primary, is_active, enforce_https)
 SELECT id, 'webe.li', '', 'https', 1, 1, 1 FROM sites WHERE site_key='main';
 
+INSERT INTO cms_sales_channel_storefronts(channel_id,site_id,domain_id,route_prefix,is_default,status)
+SELECT 3,s.id,d.id,'/',1,'active'
+FROM sites s JOIN site_domains d ON d.site_id=s.id AND d.is_primary=1
+WHERE s.site_key='main';
+
 INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json) VALUES
 ('default', 'Default Theme', '2.0.0', 1, 1, '{"path":"frontend/theme-default","supports":{"custom_blocks":true,"seo_meta_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"system","color_background":"#fbfcfe","color_surface":"#ffffff","color_text":"#102033","color_muted":"#627086","color_primary":"#1b5fc1","color_accent":"#ffb21e","main_heading_font_family":"heading","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),
 ('aurora', 'Aurora Fullscreen', '1.0.0', 0, 1, '{"path":"frontend/theme-aurora","supports":{"custom_blocks":true,"seo_meta_preview":true,"fullscreen_hero":true,"theme_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"serif","color_background":"#fbf7ef","color_surface":"#fffaf2","color_text":"#162026","color_muted":"#66747d","color_primary":"#13242b","color_accent":"#ef8f4e","main_heading_font_family":"arial","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),

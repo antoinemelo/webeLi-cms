@@ -90,9 +90,9 @@ Les commandes validees doivent conserver leurs propres snapshots. Une commande p
 
 Un site ou sous-site reste un contexte de contenu : domaine, langue, SEO, pages et rendu public.
 
-Un canal de vente est un contexte commercial :
+Un canal de vente suit le [contrat transversal SalesChannel](sales-channel-contract.md) et constitue un contexte commercial :
 
-- type : admin, POS ou e-commerce ;
+- type canonique : storefront, POS, admin ou partenaire ;
 - site rattache ;
 - devise ;
 - taxes ;

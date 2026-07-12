@@ -195,6 +195,8 @@ use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
+use App\Modules\Sale\Services\SalesChannelIntegrityService;
+use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
 
 final class ServiceFactory
@@ -677,6 +679,20 @@ final class ServiceFactory
     public function saleChannels(): SaleChannelRepository
     {
         return $this->once('sale_channels', fn() => new SaleChannelRepository($this->saleDatabaseConnection()));
+    }
+
+    public function salesChannelResolver(): SalesChannelResolverService
+    {
+        return $this->once('sales_channel_resolver', fn() => new SalesChannelResolverService(
+            $this->saleChannels(), $this->saleDatabaseConnection(), $this->coreDatabase()
+        ));
+    }
+
+    public function salesChannelIntegrity(): SalesChannelIntegrityService
+    {
+        return $this->once('sales_channel_integrity', fn() => new SalesChannelIntegrityService(
+            $this->saleDatabaseConnection(), $this->coreDatabase(), $this->businessDatabaseConnection()
+        ));
     }
 
     public function saleCarts(): SaleCartRepository

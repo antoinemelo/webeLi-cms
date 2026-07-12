@@ -20,6 +20,7 @@ use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleFulfillmentService;
+use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Repository\SiteRepository;
 use InvalidArgumentException;
@@ -41,6 +42,7 @@ final class PublicSaleApiHandler
         private readonly SaleGuestCheckoutService $guestCheckout,
         private readonly ?SaleCustomerAccountService $customerAccounts = null,
         private readonly ?SaleFulfillmentService $fulfillment = null,
+        private readonly ?SalesChannelResolverService $channelResolver = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -237,11 +239,15 @@ final class PublicSaleApiHandler
     private function publicChannel(int $siteId, string $code): array
     {
         $code = $this->code($code);
-        $channel = $this->db()->one(
-            'SELECT * FROM sale_channels WHERE site_id = ? AND code = ? AND channel_type = \'ecommerce\' AND status = \'active\' AND is_public = 1 LIMIT 1',
-            [$siteId, $code]
-        );
-        if ($channel === null) {
+        try {
+            $channel = $this->channelResolver?->storefront($siteId, $code)
+                ?? $this->channels->requireByCode($siteId, $code);
+        } catch (Throwable) {
+            throw new SaleValidationException('sale.public_channel_not_found');
+        }
+        if (($channel['type'] ?? $channel['channel_kind'] ?? null) !== 'storefront'
+            || ($channel['status'] ?? null) !== 'active'
+            || (int) ($channel['is_public'] ?? 0) !== 1) {
             throw new SaleValidationException('sale.public_channel_not_found');
         }
         return $channel;
@@ -368,8 +374,13 @@ final class PublicSaleApiHandler
     private function channelPayload(array $channel): array
     {
         return [
+            'channel_id' => (int) $channel['id'],
+            'site_id' => (int) $channel['site_id'],
             'code' => (string) $channel['code'],
+            'type' => (string) ($channel['type'] ?? $channel['channel_kind'] ?? 'storefront'),
             'name' => (string) $channel['name'],
+            'default_currency' => (string) $channel['currency'],
+            'default_locale' => (string) $channel['default_language'],
             'currency' => (string) $channel['currency'],
             'default_language' => (string) $channel['default_language'],
             'tax_mode' => (string) $channel['tax_mode'],
