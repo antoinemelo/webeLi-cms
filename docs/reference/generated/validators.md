@@ -26,7 +26,6 @@ generated: true
 | `BLUEPRINT_SCHEMA` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.blueprints` |
 | `CONTENT_CONTRACTS` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.contracts` |
 | `MULTISITE_LOCALE_MODEL` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.site_locale` |
-| `I18N_COVERAGE` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.i18n` |
 | `PERMISSION_MODEL` | `permissions` | `fast`, `full`, `slow` | `tools.python.validation.permissions.model` |
 | `API_SPEC` | `api` | `fast`, `full`, `slow` | `tools.python.validation.api.specification` |
 | `SECURITY_BASELINE` | `security` | `fast`, `full`, `slow` | `tools.python.validation.security.baseline` |
