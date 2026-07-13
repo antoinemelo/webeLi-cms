@@ -60,6 +60,7 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - signature du corps brut avec tolérance temporelle, rotation et déduplication ;
 - rate-limit webhook, payload expurgé, métriques et reprise idempotente ;
 - secrets exclusivement hors base et aucune donnée de carte persistée.
+- TWINT proposé dans Stripe Checkout pour les commandes CHF, en mode dynamique ou explicite ; distinction documentée avec TWINT Express Checkout direct.
 
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 

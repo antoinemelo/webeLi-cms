@@ -163,6 +163,7 @@ return [
             ])),
             'signature_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
             'api_version' => (string) env('STRIPE_API_VERSION', ''),
+            'twint_mode' => strtolower((string) env('PAYMENT_STRIPE_TWINT_MODE', 'dynamic')),
         ],
     ],
 

@@ -19,6 +19,7 @@ final class StripeCheckoutPaymentProvider implements OnlinePaymentProvider
         private readonly string $environment,
         private readonly int $signatureTolerance = 300,
         private readonly string $expectedApiVersion = '',
+        private readonly string $twintMode = 'dynamic',
     ) {}
 
     public function key(): string { return 'stripe_checkout'; }
@@ -36,7 +37,7 @@ final class StripeCheckoutPaymentProvider implements OnlinePaymentProvider
         if ($base === '') throw new SalePaymentException('sale.payment_provider_public_url_missing');
         $success = $base . '/checkout/confirmation?provider=stripe_checkout&reference={CHECKOUT_SESSION_ID}';
         $cancel = (string) ($payload['cancel_url'] ?? '') ?: $base . '/checkout?payment=cancelled';
-        $session = $this->gateway->createCheckoutSession([
+        $params = [
             'mode' => 'payment',
             'success_url' => $success,
             'cancel_url' => $cancel,
@@ -47,7 +48,13 @@ final class StripeCheckoutPaymentProvider implements OnlinePaymentProvider
             ]],
             'metadata' => ['cms_order_id' => (string) $orderId, 'cms_payment_intent_id' => (string) $intentId],
             'payment_intent_data' => ['metadata' => ['cms_order_id' => (string) $orderId, 'cms_payment_intent_id' => (string) $intentId]],
-        ], (string) ($payload['idempotency_key'] ?? 'cms-payment-' . $intentId));
+        ];
+        if ($this->twintMode === 'explicit') {
+            $params['payment_method_types'] = $currency === 'chf' ? ['card','twint'] : ['card'];
+        } elseif ($this->twintMode === 'off') {
+            $params['payment_method_types'] = ['card'];
+        }
+        $session = $this->gateway->createCheckoutSession($params, (string) ($payload['idempotency_key'] ?? 'cms-payment-' . $intentId));
         return ['provider_key'=>$this->key(),'status'=>$this->status($session),'provider_reference'=>$session['id']??null,'checkout_url'=>$session['url']??null,'payload'=>['provider'=>$this->key(),'environment'=>$this->environment,'request_id'=>$session['last_response']['request_id']??null]];
     }
 

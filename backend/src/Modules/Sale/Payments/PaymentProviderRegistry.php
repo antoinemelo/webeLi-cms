@@ -60,7 +60,7 @@ final class PaymentProviderRegistry
         return ['provider'=>'stripe_checkout','selected'=>$selected,'environment'=>(string)($stripe['environment']??'test'),
             'connected'=>in_array('stripe_checkout',$this->keys(),true),'sdk_available'=>class_exists(\Stripe\StripeClient::class),
             'secret_configured'=>trim((string)($stripe['secret_key']??''))!=='','webhook_secret_configured'=>($stripe['webhook_secrets']??[])!==[],
-            'last_verified_at'=>null,'webhook_url'=>rtrim((string)($this->paymentConfig['public_base_url']??''),'/').'/api/v1/sale/payments/webhooks/stripe_checkout'];
+            'twint_mode'=>(string)($stripe['twint_mode']??'dynamic'),'last_verified_at'=>null,'webhook_url'=>rtrim((string)($this->paymentConfig['public_base_url']??''),'/').'/api/v1/sale/payments/webhooks/stripe_checkout'];
     }
 
     public function normalize(string $key): string
@@ -97,7 +97,8 @@ final class PaymentProviderRegistry
             $providers[] = new StripeCheckoutPaymentProvider(
                 new OfficialStripeGateway((string)$stripe['secret_key']), array_values(array_map('strval',$stripe['webhook_secrets'])),
                 (string)($paymentConfig['public_base_url']??''), (string)($stripe['environment']??'test'),
-                max(1,(int)($stripe['signature_tolerance']??300)), (string)($stripe['api_version']??'')
+                max(1,(int)($stripe['signature_tolerance']??300)), (string)($stripe['api_version']??''),
+                in_array((string)($stripe['twint_mode']??'dynamic'),['dynamic','explicit','off'],true)?(string)($stripe['twint_mode']??'dynamic'):'dynamic'
             );
         }
         return $providers;

@@ -825,6 +825,7 @@ onMounted(load);
             <b>Stripe Checkout · {{ String(providerStatus.environment).toUpperCase() }}</b>
             <p>{{ providerStatus.connected ? t('sale.payments.providerConnected') : t('sale.payments.providerNotConnected') }}</p>
             <small>{{ t('sale.payments.webhookUrl') }}: <code>{{ providerStatus.webhook_url }}</code></small>
+            <p><small>TWINT: {{ providerStatus.twint_mode || 'dynamic' }}</small></p>
             <p><small>{{ t('sale.payments.secretMasked') }} · {{ t('sale.payments.lastVerification') }}: {{ providerStatus.last_verified_at || '—' }}</small></p>
           </div>
           <div v-for="method in paymentMethods" :key="String(method.id)" class="sale-admin__list-row">

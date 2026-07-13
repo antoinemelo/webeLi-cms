@@ -29,6 +29,9 @@ $h->assertSame('cs_test_fixture',$session['provider_reference']??null,'Stripe Ch
 $h->assertSame('checkout-once',$fake->created[1]??null,'Stripe create uses CMS idempotency key');
 $h->assertSame(1290,$fake->created[0]['line_items'][0]['price_data']['unit_amount']??null,'Stripe hosted checkout receives the immutable amount');
 $h->assertTrue(str_contains((string)($fake->created[0]['success_url']??''),'{CHECKOUT_SESSION_ID}'),'recoverable Shop confirmation URL uses Stripe placeholder');
+$explicit=new StripeCheckoutPaymentProvider($fake,['whsec_fixture'],'https://shop.example.test','test',300,'2025-01-01','explicit');
+$explicit->createIntent(['intent_id'=>8,'order_id'=>43,'amount_minor'=>2000,'currency'=>'CHF','idempotency_key'=>'checkout-twint']);
+$h->assertSame(['card','twint'],$fake->created[0]['payment_method_types']??null,'explicit CHF Checkout offers card and TWINT');
 
 $event=['id'=>'evt_fixture_1','type'=>'checkout.session.completed','api_version'=>'2025-01-01','created'=>time(),'livemode'=>false,'data'=>['object'=>['id'=>'cs_test_fixture','amount_total'=>1290,'currency'=>'chf','payment_status'=>'paid','payment_intent'=>'pi_fixture']]];
 $raw=json_encode($event,JSON_UNESCAPED_SLASHES)?:'{}';
