@@ -30,6 +30,7 @@
         "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "ops/deployment-notes.md",
+        "tools/python/tests/test_admin_menu.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -191,6 +192,7 @@
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/omnichannel_gate.py",
+        "tools/python/qualification/payment_provider_gate.py",
         "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
@@ -1851,13 +1853,33 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_omnichannel_gate.py",
         "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/payment_provider_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/payment-provider-ux-comparison.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_payment_provider_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py"
       ],
       "replacement": null,
       "status": "active",
@@ -2220,8 +2242,24 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_payment_provider_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",

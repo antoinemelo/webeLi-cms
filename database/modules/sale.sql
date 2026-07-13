@@ -1538,7 +1538,7 @@ CROSS JOIN (
            'manual_card','manual_card',20,'{"public_mode":"manual","next_action":"await_confirmation","recoverable":true,"create_session":true,"defer_order_until_payment":true,"allow_partial":true,"ttl_seconds":604800}'
     UNION ALL SELECT 'sandbox_online','Paiement sandbox','Paiement en ligne (sandbox)','Online payment (sandbox)',
            'Environnement de démonstration sans saisie de carte.','Demo environment without card entry.',
-           'sandbox','online_provider',90,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"test_mode":true}'
+           'sandbox','online_provider',90,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"create_session":true,"defer_order_until_payment":true,"test_mode":true,"ttl_seconds":1800}'
     UNION ALL SELECT 'stripe_checkout','Stripe','Carte ou TWINT','Card or TWINT',
            'Stripe affiche les moyens disponibles, dont TWINT pour les paiements CHF activés.','Stripe displays available methods, including TWINT for enabled CHF payments.',
            'stripe_checkout','online_provider',40,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"create_session":true,"defer_order_until_payment":true,"display_name":"Carte ou TWINT","logo":"stripe"}'

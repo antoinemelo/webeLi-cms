@@ -25,6 +25,7 @@ generated: false
 | Permissions | [Permissions générées](../reference/generated/permissions.md) | [Administration des rôles](../administration/users-roles-permissions/overview.md) |
 | Fonctionnalités | [Matrice des capacités](feature-matrix.md) | [`machine-readable/features.json`](machine-readable/features.json) |
 | Tests | [Couverture fonctionnelle](../development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md) | [`machine-readable/tests.json`](machine-readable/tests.json) |
+| Providers de paiement M5 | [Comparaison UX](payment-provider-ux-comparison.md) | [`machine-readable/sale-payment-provider-interchangeability.json`](machine-readable/sale-payment-provider-interchangeability.json) |
 | Validations | [Registre généré](../reference/generated/validators.md) | [`machine-readable/validators.json`](machine-readable/validators.json) |
 | Release | [Contenu généré](../reference/generated/release-contents.md) | [`machine-readable/release-contents.json`](machine-readable/release-contents.json) |
 | Audit de release | [Politique d’audit](release-audit-policy.md) | `latest-release-audit.md` et `machine-readable/latest-release-audit.json` après une mineure/majeure |

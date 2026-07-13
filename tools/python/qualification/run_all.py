@@ -62,6 +62,7 @@ E2E_INPUTS = (
     "tools/python/operations/database",
     "tools/python/operations/testing/run_playwright_e2e.py",
     "tools/python/qualification/omnichannel_gate.py",
+    "tools/python/qualification/payment_provider_gate.py",
 )
 
 
@@ -146,6 +147,7 @@ def _artifact_hashes() -> dict[str, str]:
         "sdk_openapi_types": ROOT / "packages/amcms-client/src/generated/openapi-types.ts",
         "qualification_performance": ROOT / "storage/qualification/performance/latest.json",
         "qualification_omnichannel": ROOT / "storage/qualification/omnichannel/latest.json",
+        "payment_provider_interchangeability": ROOT / "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
     }
     latest = _latest_archive()
     if latest is not None:
@@ -161,6 +163,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "reconstruction from scratch", "source_steps": ["browser-e2e", "performance-baseline"], "release_commands": ["tools/cms.py rebuild"]},
         {"requirement": "smoke HTTP et E2E", "source_steps": ["browser-e2e", "fresh-install"], "release_commands": ["tools/cms.py smoke"]},
         {"requirement": "gate E2E omnicanale storefront/POS", "source_steps": ["browser-e2e"], "release_commands": ["tools/cms.py e2e --use-built-assets --omnichannel-only"]},
+        {"requirement": "gate M5 interchangeabilité providers", "source_steps": ["payment-provider-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/payment_provider_gate.py"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
         {"requirement": "backup/restore et intégrité SQLite", "source_steps": ["backup-restore", "runtime-integrity"], "release_commands": ["tools/cms.py backup", "tools/cms.py backup --restore"]},
         {"requirement": "documentation OpenAPI SDK", "source_steps": ["docs-generate", "docs-check", "validate-core"], "release_commands": ["tools/cms.py docs check"]},
@@ -247,6 +250,19 @@ def steps() -> tuple[Step, ...]:
             ),
             action=_frontend_build_check,
             timeout=600,
+        ),
+        Step(
+            "payment-provider-gate",
+            "Gate M5 interchangeabilité providers",
+            ("complete", "release"),
+            (py, "tools/python/qualification/payment_provider_gate.py"),
+            files=(
+                "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
+                "tools/python/qualification/payment_provider_gate.py",
+                "tools/php/tests/unit/sale_payment_provider_interchangeability_test.php",
+                "frontend/admin-vue/tests/e2e/payment-provider-interchangeability.spec.ts",
+            ),
+            timeout=60,
         ),
         Step(
             "browser-e2e",

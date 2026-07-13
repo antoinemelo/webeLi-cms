@@ -80,6 +80,15 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - écran Paiements enrichi avec capture et remboursement guidés, santé et opérations en attente ;
 - scénarios de test couvrant rejeu, dépassements, capture multiple, crash ambigu et réparation contrôlée.
 
+# 2026-07-13 — Sale M5.5 : gate d’interchangeabilité providers
+
+- matrice explicite authorize, capture différée/partielle, remboursement partiel, webhook et réconciliation ;
+- suite contractuelle commune au provider test, au manuel, au virement, à Stripe et à Revolut ;
+- gate M5 machine-readable intégrée aux profils de qualification `complete` et `release` ;
+- comparaison UX Stripe/Revolut sur desktop, mobile, clavier, FR/EN, refus et reprise sans cul-de-sac ;
+- sélection par méthode de paiement du canal, support de `PROVIDER_REAL_2` et absence de branche provider dans les contrôleurs ou le Shop ;
+- rapport UX et preuves de sécurité sans PII ni secret.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;

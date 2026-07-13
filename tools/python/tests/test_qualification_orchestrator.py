@@ -38,6 +38,8 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertNotIn("fresh-install", by_profile["complete"])
 
         self.assertIn("browser-e2e", by_profile["release"])
+        self.assertIn("payment-provider-gate", by_profile["complete"])
+        self.assertIn("payment-provider-gate", by_profile["release"])
         self.assertIn("php-dependencies", by_profile["release"])
         self.assertIn("performance-baseline", by_profile["release"])
         self.assertIn("preflight", by_profile["release"])
@@ -102,8 +104,10 @@ class QualificationOrchestratorTest(unittest.TestCase):
 
         self.assertIn("baseline performance", requirements)
         self.assertIn("gate E2E omnicanale storefront/POS", requirements)
+        self.assertIn("gate M5 interchangeabilité providers", requirements)
         self.assertEqual(["performance-baseline"], requirements["baseline performance"]["source_steps"])
         self.assertEqual(["browser-e2e"], requirements["gate E2E omnicanale storefront/POS"]["source_steps"])
+        self.assertEqual(["payment-provider-gate", "browser-e2e"], requirements["gate M5 interchangeabilité providers"]["source_steps"])
         self.assertIn("tools/cms.py validate", requirements["validation statique"]["release_commands"])
         self.assertIn("tools/cms.py backup --restore", requirements["backup/restore et intégrité SQLite"]["release_commands"])
 
@@ -114,6 +118,7 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("frontend/admin-vue/tests/e2e", E2E_INPUTS)
         self.assertIn("backend/src", E2E_INPUTS)
         self.assertIn("tools/python/qualification/omnichannel_gate.py", E2E_INPUTS)
+        self.assertIn("tools/python/qualification/payment_provider_gate.py", E2E_INPUTS)
 
         class Parser:
             def __init__(self) -> None:

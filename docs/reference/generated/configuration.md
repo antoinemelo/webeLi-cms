@@ -32,7 +32,7 @@ generated: true
 | `APP_EDITORIAL_IMPORT_MAX_ARCHIVE_BYTES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_FILES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_UNCOMPRESSED_BYTES` | `backend/config/app.php` |
-| `APP_ENV` | `backend/config/app.php`, `backend/config/security.php`, `backend/src/Security/PreviewSigner.php` |
+| `APP_ENV` | `backend/config/app.php`, `backend/config/security.php`, `backend/src/Application/PublicApi/PublicSaleApiHandler.php`, `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php`, `backend/src/Security/PreviewSigner.php` |
 | `APP_FALLBACK_LOCALE` | `backend/config/app.php` |
 | `APP_HEALTH_DB_BUSY_TIMEOUT_MS` | `backend/config/health.php` |
 | `APP_HEALTH_READY_TIMEOUT_MS` | `backend/config/health.php` |
@@ -97,7 +97,26 @@ generated: true
 | `MAIL_FROM_EMAIL` | `backend/config/app.php` |
 | `MAIL_FROM_NAME` | `backend/config/app.php` |
 | `MAIL_TRANSPORT` | `backend/config/app.php` |
+| `PAYMENT_REAL_PROVIDER` | `backend/config/app.php` |
+| `PAYMENT_REAL_PROVIDERS` | `backend/config/app.php` |
+| `PAYMENT_REVOLUT_ENV` | `backend/config/app.php` |
+| `PAYMENT_STRIPE_ENV` | `backend/config/app.php` |
+| `PAYMENT_STRIPE_TWINT_MODE` | `backend/config/app.php` |
+| `PAYMENT_WEBHOOK_RATE_LIMIT_MAX` | `backend/config/app.php` |
+| `PAYMENT_WEBHOOK_RATE_LIMIT_WINDOW` | `backend/config/app.php` |
+| `PROVIDER_REAL_2` | `backend/config/app.php` |
+| `REVOLUT_API_TIMEOUT_SECONDS` | `backend/config/app.php` |
+| `REVOLUT_API_VERSION` | `backend/config/app.php` |
+| `REVOLUT_MERCHANT_SECRET_KEY` | `backend/config/app.php` |
+| `REVOLUT_WEBHOOK_SECRET` | `backend/config/app.php` |
+| `REVOLUT_WEBHOOK_SECRET_PREVIOUS` | `backend/config/app.php` |
+| `REVOLUT_WEBHOOK_TOLERANCE_SECONDS` | `backend/config/app.php` |
 | `SALE_SANDBOX_WEBHOOK_SECRET` | `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php` |
 | `SFTP_PORT` | `tools/python/operations/deployment/d11_ci_release.py` |
+| `STRIPE_API_VERSION` | `backend/config/app.php` |
+| `STRIPE_SECRET_KEY` | `backend/config/app.php` |
+| `STRIPE_WEBHOOK_SECRET` | `backend/config/app.php` |
+| `STRIPE_WEBHOOK_SECRET_PREVIOUS` | `backend/config/app.php` |
+| `STRIPE_WEBHOOK_TOLERANCE_SECONDS` | `backend/config/app.php` |
 
 Les secrets et valeurs propres à un environnement ne sont jamais inclus dans cette page.

@@ -7,7 +7,7 @@ namespace App\Modules\Sale\Payments;
 final class LocalPaymentProvider implements PaymentProvider
 {
     /** @param list<string> $operations */
-    public function __construct(private readonly string $key, private readonly array $operations = ['create_intent', 'record_payment', 'capture', 'multiple_capture', 'refund', 'void']) {}
+    public function __construct(private readonly string $key, private readonly array $operations = ['create_intent', 'record_payment', 'capture', 'partial_capture', 'multiple_capture', 'refund', 'partial_refund', 'void']) {}
 
     public function key(): string
     {

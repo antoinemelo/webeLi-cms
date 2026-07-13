@@ -145,7 +145,8 @@ final class SalePaymentService
         if (!($provider->capabilities()['refund'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_unsupported');
         }
-        $refund = $this->payments->rawDatabase()->transaction(function () use ($tx, $amountMinor, $reason, $reasonCode, $reasonNote, $iamUserId, $key, $options): array {
+        $supportsPartialRefund = (bool) ($provider->capabilities()['partial_refund'] ?? false);
+        $refund = $this->payments->rawDatabase()->transaction(function () use ($tx, $amountMinor, $reason, $reasonCode, $reasonNote, $iamUserId, $key, $options, $supportsPartialRefund): array {
             $existing = $this->payments->refundByIdempotency((int) $tx['order_id'], $key);
             if ($existing !== null) {
                 if ((int) $existing['payment_transaction_id'] !== (int) $tx['id'] || (int) $existing['amount_minor'] !== $amountMinor) {
@@ -157,9 +158,12 @@ final class SalePaymentService
             if (!in_array((string) $tx['transaction_type'], ['payment', 'capture'], true) || (string) $tx['status'] !== 'succeeded') {
                 throw new SalePaymentException('sale.payment_transaction_not_refundable');
             }
-            if ($this->payments->refundedForTransaction((int) $tx['id']) + $amountMinor > (int) $tx['amount_minor']) {
+            $alreadyRefunded = $this->payments->refundedForTransaction((int) $tx['id']);
+            $available = (int) $tx['amount_minor'] - $alreadyRefunded;
+            if ($amountMinor > $available) {
                 throw new SalePaymentException('sale.refund_exceeds_payment');
             }
+            if ($amountMinor < $available && !$supportsPartialRefund) throw new SalePaymentException('sale.payment_partial_refund_unsupported');
             $created = $this->payments->createRefund(
                 (int) $tx['order_id'], (int) $tx['id'], $amountMinor, (string) $tx['currency'], $reasonNote !== '' ? $reasonNote : $reason,
                 $iamUserId, 'draft', ['reason_code' => $reasonCode, 'reason_note' => $reasonNote, 'return_id' => $options['return_id'] ?? null, 'idempotency_key' => $key]
@@ -268,6 +272,9 @@ final class SalePaymentService
             )['total'] ?? 0));
             $remaining = (int) $intent['authorized_minor'] - (int) $intent['captured_minor'] - $reserved;
             if ($amountMinor < 1 || $amountMinor > $remaining) throw new SalePaymentException('sale.payment_capture_amount_invalid');
+            if ($amountMinor < $remaining && !($contract->capabilities()['partial_capture'] ?? false)) {
+                throw new SalePaymentException('sale.payment_partial_capture_unsupported');
+            }
             $correlationId = SaleStateMachineService::correlationId($options['correlation_id'] ?? null);
             $created = $this->payments->recordTransaction((int) $intent['order_id'], $amountMinor, (string) $intent['currency'], 'capture', [
                 'payment_intent_id' => $intentId, 'status' => 'pending', 'operation_key' => $key, 'allocate' => false,

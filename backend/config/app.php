@@ -29,6 +29,12 @@ $runtimePath = static function (string $key, string $default, array $aliases = [
 
 $vueNodeModulesPath = $runtimePath('APP_VUE_NODE_MODULES_PATH', './vendor/node_modules/', ['APP_NODE_MODULES_PATH']);
 $twigVendorPath = $runtimePath('APP_TWIG_VENDOR_PATH', './vendor/twig/', ['APP_TWIG_PATH']);
+$primaryPaymentProvider = strtolower(trim((string) env('PAYMENT_REAL_PROVIDER', '')));
+$secondPaymentProvider = strtolower(trim((string) env('PROVIDER_REAL_2', '')));
+$configuredPaymentProviders = trim((string) env('PAYMENT_REAL_PROVIDERS', $primaryPaymentProvider));
+if ($secondPaymentProvider !== '') {
+    $configuredPaymentProviders = trim($configuredPaymentProviders . ' ' . $secondPaymentProvider);
+}
 
 $twigCache = env('APP_TWIG_CACHE', base_path('storage/cache/twig'));
 if (is_string($twigCache) && $twigCache !== '' && $twigCache !== '0' && !str_starts_with($twigCache, DIRECTORY_SEPARATOR) && !preg_match('#^[A-Z]:[\\/]#i', $twigCache)) {
@@ -151,10 +157,10 @@ return [
     ],
 
     'payments' => [
-        'real_provider' => strtolower((string) env('PAYMENT_REAL_PROVIDER', '')),
+        'real_provider' => $primaryPaymentProvider,
         'real_providers' => array_values(array_filter(array_map(
             static fn(string $provider): string => strtolower(trim($provider)),
-            preg_split('/[,\s]+/', (string) env('PAYMENT_REAL_PROVIDERS', (string) env('PAYMENT_REAL_PROVIDER', ''))) ?: []
+            preg_split('/[,\s]+/', $configuredPaymentProviders) ?: []
         ))),
         'public_base_url' => (string) env('APP_PUBLIC_BASE_URL', ''),
         'stripe' => [

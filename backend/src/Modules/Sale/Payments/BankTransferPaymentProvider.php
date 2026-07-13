@@ -7,7 +7,7 @@ namespace App\Modules\Sale\Payments;
 final class BankTransferPaymentProvider implements PaymentProvider
 {
     public function key(): string { return 'bank_transfer'; }
-    public function supports(string $operation): bool { return in_array($operation, ['create_intent','record_payment','capture','multiple_capture','refund','void'], true); }
+    public function supports(string $operation): bool { return in_array($operation, ['create_intent','record_payment','capture','partial_capture','multiple_capture','refund','partial_refund','void'], true); }
 
     public function createIntent(array $payload): array
     {

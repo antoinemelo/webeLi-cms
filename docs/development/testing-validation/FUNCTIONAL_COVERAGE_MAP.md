@@ -31,6 +31,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Multisite | colonnes et seeds | intégration PHP + E2E | accès et permissions isolés par site | ajouté |
 | Multilingue | colonnes et seeds | intégration PHP | documents de recherche isolés par langue | ajouté |
 | API | routes non dupliquées | test API/Playwright request | refus 401/403 sur appel direct webhook | ajouté partiellement |
+| Providers de paiement | tests séparés par adapter | contrat commun + gate PHP/Python/Playwright | capacités explicites, succès, refus/reprise, capture/remboursement, signature, doublon, réconciliation et UX Stripe/Revolut | ajouté pour M5.5 |
 
 ## Tests ajoutés
 
@@ -41,6 +42,9 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/python/tests/integration/test_php_functional_suites.py`
 - `tools/python/tests/integration/test_webhook_ping_persistence.py`
 - `frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts`
+- `tools/php/tests/unit/sale_payment_provider_interchangeability_test.php`
+- `tools/python/tests/test_payment_provider_gate.py`
+- `frontend/admin-vue/tests/e2e/payment-provider-interchangeability.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

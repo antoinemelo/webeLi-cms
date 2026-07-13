@@ -275,6 +275,7 @@ generated: true
 | `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/cart` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/checkout` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/checkout/confirmation` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |

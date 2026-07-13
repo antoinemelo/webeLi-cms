@@ -15,7 +15,7 @@ final class DeterministicTestPaymentProvider implements OnlinePaymentProvider
     public function __construct(private readonly Database $db, private readonly string $secret) {}
     public function key(): string { return 'test'; }
     public function contractVersion(): string { return self::CONTRACT; }
-    public function supports(string $operation): bool { return in_array($operation, ['create_intent','capture','multiple_capture','refund','void','read_state','webhook'], true); }
+    public function supports(string $operation): bool { return in_array($operation, ['create_intent','capture','partial_capture','multiple_capture','refund','partial_refund','void','read_state','webhook'], true); }
 
     public function createIntent(array $payload): array
     {

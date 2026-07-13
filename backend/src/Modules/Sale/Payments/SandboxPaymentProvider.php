@@ -23,7 +23,7 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['create_intent','capture','multiple_capture','refund','void','read_state','webhook'], true);
+        return in_array($operation, ['create_intent','capture','partial_capture','multiple_capture','refund','partial_refund','void','read_state','webhook'], true);
     }
 
     public function createIntent(array $payload): array

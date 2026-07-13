@@ -44,6 +44,7 @@ $tests = [
     'unit/sale_internal_sales_test.php',
     'unit/sale_online_payment_workflow_test.php',
     'unit/sale_payment_provider_contract_test.php',
+    'unit/sale_payment_provider_interchangeability_test.php',
     'unit/sale_reference_payment_providers_test.php',
     'unit/stripe_checkout_payment_provider_test.php',
     'unit/revolut_checkout_payment_provider_test.php',

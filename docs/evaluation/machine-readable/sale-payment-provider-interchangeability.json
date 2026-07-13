@@ -1,0 +1,78 @@
+{
+  "format_version": 1,
+  "gate": "sale.payment-provider-interchangeability.m5.v1",
+  "status": "passed",
+  "contract_version": "sale.payment_provider.v1",
+  "primary_real_provider": "stripe_checkout",
+  "second_real_provider": "revolut_checkout",
+  "public_contract_fields": [
+    "id",
+    "code",
+    "label",
+    "description",
+    "mode",
+    "next_action",
+    "recoverable",
+    "create_session",
+    "defer_order_until_payment",
+    "allow_partial",
+    "test_mode",
+    "badge",
+    "scenarios",
+    "capabilities",
+    "provider_key",
+    "contract_version"
+  ],
+  "providers": {
+    "test": {
+      "kind": "test",
+      "capabilities": {"authorize": false, "delayed_capture": true, "partial_capture": true, "refund": true, "partial_refund": true, "webhook": true, "reconciliation": true},
+      "scenarios": {"success": "passed", "failure": "passed", "retry": "passed", "capture": "passed", "refund": "passed", "duplicate_webhook": "passed", "invalid_signature": "passed", "reconciliation": "passed"}
+    },
+    "manual_card": {
+      "kind": "manual",
+      "capabilities": {"authorize": true, "delayed_capture": true, "partial_capture": true, "refund": true, "partial_refund": true, "webhook": false, "reconciliation": false},
+      "scenarios": {"success": "passed", "failure": "not_applicable", "retry": "not_applicable", "capture": "passed", "refund": "passed", "duplicate_webhook": "not_applicable", "invalid_signature": "not_applicable", "reconciliation": "not_applicable"}
+    },
+    "bank_transfer": {
+      "kind": "offline",
+      "capabilities": {"authorize": true, "delayed_capture": true, "partial_capture": true, "refund": true, "partial_refund": true, "webhook": false, "reconciliation": false},
+      "scenarios": {"success": "passed", "failure": "not_applicable", "retry": "not_applicable", "capture": "passed", "refund": "passed", "duplicate_webhook": "not_applicable", "invalid_signature": "not_applicable", "reconciliation": "not_applicable"}
+    },
+    "stripe_checkout": {
+      "kind": "real",
+      "capabilities": {"authorize": false, "delayed_capture": true, "partial_capture": true, "refund": true, "partial_refund": true, "webhook": true, "reconciliation": true},
+      "scenarios": {"success": "passed", "failure": "passed", "retry": "passed", "capture": "passed", "refund": "passed", "duplicate_webhook": "passed", "invalid_signature": "passed", "reconciliation": "passed"},
+      "ux": {"mode": "redirect", "next_action": "redirect", "meaningful_step_count": 2, "fr_action": "Continuer le paiement", "en_action": "Continue payment", "keyboard": "passed", "mobile": "passed", "no_dead_end": "passed"}
+    },
+    "revolut_checkout": {
+      "kind": "real",
+      "capabilities": {"authorize": false, "delayed_capture": false, "partial_capture": false, "refund": false, "partial_refund": false, "webhook": true, "reconciliation": true},
+      "scenarios": {"success": "passed", "failure": "passed", "retry": "passed", "capture": "not_applicable", "refund": "not_applicable", "duplicate_webhook": "passed", "invalid_signature": "passed", "reconciliation": "passed"},
+      "ux": {"mode": "redirect", "next_action": "redirect", "meaningful_step_count": 2, "fr_action": "Continuer le paiement", "en_action": "Continue payment", "keyboard": "passed", "mobile": "passed", "no_dead_end": "passed"}
+    }
+  },
+  "comparisons": {
+    "same_shop_contract": true,
+    "same_checkout_steps": true,
+    "same_success_states": true,
+    "same_failure_states": true,
+    "same_recovery_action": true,
+    "same_layout": true,
+    "same_fr_en_labels": true,
+    "keyboard_accessible": true,
+    "mobile_accessible": true,
+    "test_mode_isolated": true,
+    "backoffice_consistent": true,
+    "no_controller_provider_selection": true,
+    "no_dead_end": true
+  },
+  "evidence": {
+    "contract_suite": "tools/php/tests/unit/sale_payment_provider_interchangeability_test.php",
+    "ux_suite": "frontend/admin-vue/tests/e2e/payment-provider-interchangeability.spec.ts",
+    "shop_runtime": "frontend/theme-default/assets/js/guest-checkout.js",
+    "channel_configuration": "database/modules/sale.sql",
+    "ux_report": "docs/evaluation/payment-provider-ux-comparison.md"
+  },
+  "security": {"contains_pii": false, "contains_secret": false}
+}

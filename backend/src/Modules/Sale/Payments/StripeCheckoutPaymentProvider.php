@@ -24,7 +24,7 @@ final class StripeCheckoutPaymentProvider implements OnlinePaymentProvider
 
     public function key(): string { return 'stripe_checkout'; }
     public function contractVersion(): string { return PaymentProviderContractV1::VERSION; }
-    public function supports(string $operation): bool { return in_array($operation, ['create_intent','capture','refund','void','read_state','webhook'], true); }
+    public function supports(string $operation): bool { return in_array($operation, ['create_intent','capture','partial_capture','refund','partial_refund','void','read_state','webhook'], true); }
 
     public function createIntent(array $payload): array
     {
