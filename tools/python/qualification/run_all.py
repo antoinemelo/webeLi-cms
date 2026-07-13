@@ -29,6 +29,7 @@ from typing import Callable
 from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.change_cache import fingerprint_paths, read_success, write_success
 from tools.python.lib.release_metadata import load_release_metadata
+from tools.python.qualification.omnichannel_gate import validate_report_file
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
@@ -60,6 +61,7 @@ E2E_INPUTS = (
     "tools/python/commands/e2e.py",
     "tools/python/operations/database",
     "tools/python/operations/testing/run_playwright_e2e.py",
+    "tools/python/qualification/omnichannel_gate.py",
 )
 
 
@@ -143,6 +145,7 @@ def _artifact_hashes() -> dict[str, str]:
         "public_openapi_yaml": ROOT / "docs/reference/contracts/public-api/openapi.v1.yaml",
         "sdk_openapi_types": ROOT / "packages/amcms-client/src/generated/openapi-types.ts",
         "qualification_performance": ROOT / "storage/qualification/performance/latest.json",
+        "qualification_omnichannel": ROOT / "storage/qualification/omnichannel/latest.json",
     }
     latest = _latest_archive()
     if latest is not None:
@@ -155,9 +158,9 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "validation statique", "source_steps": ["python-lint", "php-lint", "validate-core"], "release_commands": ["tools/cms.py validate"]},
         {"requirement": "tests PHP/Python/TypeScript", "source_steps": ["tests", "frontend-build"], "release_commands": []},
         {"requirement": "build back-office", "source_steps": ["frontend-build"], "release_commands": []},
-        {"requirement": "rebuild complet", "source_steps": ["browser-e2e", "performance-baseline"], "release_commands": []},
-        {"requirement": "plan de migration", "source_steps": ["validate-core"], "release_commands": ["tools/cms.py migrate --plan"]},
+        {"requirement": "reconstruction from scratch", "source_steps": ["browser-e2e", "performance-baseline"], "release_commands": ["tools/cms.py rebuild"]},
         {"requirement": "smoke HTTP et E2E", "source_steps": ["browser-e2e", "fresh-install"], "release_commands": ["tools/cms.py smoke"]},
+        {"requirement": "gate E2E omnicanale storefront/POS", "source_steps": ["browser-e2e"], "release_commands": ["tools/cms.py e2e --use-built-assets --omnichannel-only"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
         {"requirement": "backup/restore et intégrité SQLite", "source_steps": ["backup-restore", "runtime-integrity"], "release_commands": ["tools/cms.py backup", "tools/cms.py backup --restore"]},
         {"requirement": "documentation OpenAPI SDK", "source_steps": ["docs-generate", "docs-check", "validate-core"], "release_commands": ["tools/cms.py docs check"]},
@@ -360,12 +363,15 @@ def _browser_e2e_check() -> tuple[int, str, str]:
 
     fingerprint = _e2e_fingerprint()
     cache_file = CACHE_DIR / "browser-e2e.json"
-    if USE_CACHE and read_success(cache_file, fingerprint) is not None:
+    report_file = ROOT / "storage/qualification/omnichannel/latest.json"
+    _report, report_errors = validate_report_file(report_file, ROOT)
+    if USE_CACHE and not report_errors and read_success(cache_file, fingerprint) is not None:
         return (
             0,
             browser_stdout
             + "\nCache qualification: E2E Playwright inchangés, dernier succès réutilisé."
-            + f"\nEmpreinte: {fingerprint}",
+            + f"\nEmpreinte: {fingerprint}"
+            + f"\nGate omnicanale: {_display_path(report_file)}",
             "",
         )
 
@@ -702,7 +708,7 @@ def main(argv: list[str] | None = None) -> int:
             "step_availability": {step.id: list(step.available_in) for step in selected},
             "limits": [
                 "Les tests source, le build frontend, Composer, npm et Playwright exigent le dépôt source complet.",
-                "Une archive distribuée expose les contrôles autonomes smoke, validate, docs check, backup/restore et migrate plan.",
+                "Une archive distribuée expose les contrôles autonomes smoke, validate, docs check et backup/restore.",
                 "La baseline performance locale qualifie la machine courante; elle ne remplace pas un test de charge externe.",
             ],
         },

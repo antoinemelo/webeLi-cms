@@ -96,7 +96,9 @@ class QualificationOrchestratorTest(unittest.TestCase):
         requirements = {entry["requirement"]: entry for entry in matrix}
 
         self.assertIn("baseline performance", requirements)
+        self.assertIn("gate E2E omnicanale storefront/POS", requirements)
         self.assertEqual(["performance-baseline"], requirements["baseline performance"]["source_steps"])
+        self.assertEqual(["browser-e2e"], requirements["gate E2E omnicanale storefront/POS"]["source_steps"])
         self.assertIn("tools/cms.py validate", requirements["validation statique"]["release_commands"])
         self.assertIn("tools/cms.py backup --restore", requirements["backup/restore et intégrité SQLite"]["release_commands"])
 
@@ -106,6 +108,7 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("frontend/admin-vue/src", FRONTEND_BUILD_INPUTS)
         self.assertIn("frontend/admin-vue/tests/e2e", E2E_INPUTS)
         self.assertIn("backend/src", E2E_INPUTS)
+        self.assertIn("tools/python/qualification/omnichannel_gate.py", E2E_INPUTS)
 
         class Parser:
             def __init__(self) -> None:

@@ -4,10 +4,11 @@ audience:
   - operator
   - developer
 status: draft
-last_verified: 2026-07-12
+last_verified: 2026-07-13
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/tests/e2e/m0-m4-release-candidate.spec.ts
+  - frontend/admin-vue/tests/e2e/omnichannel-release-gate.spec.ts
   - tools/python/qualification/run_all.py
   - tools/cms.py
 owners:
@@ -24,11 +25,10 @@ Le scénario Playwright `m0-m4-release-candidate.spec.ts` vérifie le catalogue 
 Exécution de référence :
 
 ```bash
-python3 tools/cms.py migrate --plan
-python3 tools/cms.py e2e
+python3 tools/cms.py e2e --use-built-assets
 python3 tools/cms.py qualify --profile release --continue-on-failure --no-cache
 ```
 
-La qualification release contrôle également routes/OpenAPI/SDK, CORS, FR/EN, permissions, multisite, migrations et reconstruction, sauvegarde/restauration incluant Business et Sale, événements/outbox, baseline de performance, secrets/PII, documentation, builds et structure de release. Les rapports et preuves sont écrits sous `storage/qualification/` et dans le répertoire de preuves configuré par la commande.
+La qualification release contrôle également la gate omnicanale storefront/POS, routes/OpenAPI/SDK, CORS, FR/EN, permissions, multisite, reconstruction from scratch, sauvegarde/restauration incluant Business et Sale, événements/outbox, baseline de performance, secrets/PII, documentation, builds et structure de release. Les rapports et preuves sont écrits sous `storage/qualification/` et dans le répertoire de preuves configuré par la commande.
 
-Une étape ignorée faute d’identifiants ou d’environnement E2E ne constitue pas une preuve verte : le candidat release doit être exécuté avec `E2E_BASE_URL`, `E2E_ADMIN_EMAIL` et `E2E_ADMIN_PASSWORD` sur l’instance isolée préparée par l’outil.
+Une étape ignorée ne constitue pas une preuve verte. La commande prépare automatiquement une instance isolée, les bases reconstruites, le compte administrateur et le récepteur webhook ; aucune variable `E2E_*` n’est requise.

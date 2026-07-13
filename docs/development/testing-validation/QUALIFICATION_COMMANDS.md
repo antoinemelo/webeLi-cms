@@ -5,11 +5,12 @@ audience:
   - administrator
   - evaluator
 status: current
-last_verified: 2026-07-11
+last_verified: 2026-07-13
 source_of_truth: code
 source_paths:
   - tools/python/qualification/run_all.py
   - tools/python/qualification/performance_baseline.py
+  - tools/python/qualification/omnichannel_gate.py
   - tools/python/commands/qualify.py
   - tools/admin.py
 owners:
@@ -63,9 +64,9 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Validation statique | `python-lint`, `php-lint`, `validate-core` | `tools/cms.py validate` |
 | Tests PHP/Python/TypeScript | `tools/cms.py test`, `frontend-build` | non inclus dans l’archive |
 | Build back-office | `npm run build` via `frontend-build` | assets déjà livrés |
-| Rebuild complet | instance isolée Playwright et baseline performance | non destructif uniquement |
-| Plan de migration | validateurs + `migrate --plan` dans les procédures | `tools/cms.py migrate --plan` |
+| Reconstruction from scratch | instance isolée Playwright et baseline performance | `tools/cms.py rebuild` explicite |
 | Smoke HTTP / E2E | Playwright isolé et installation neuve | `tools/cms.py smoke` |
+| Gate omnicanale storefront/POS | Playwright isolé, preuve JSON validée | commande ciblée disponible depuis le dépôt source |
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
@@ -92,6 +93,16 @@ AMCMS_M0_PERF_CRITICAL_MS=2500 AMCMS_M0_PERF_REPEAT=5 \
 ```
 
 Le rapport détaillé est écrit dans `storage/qualification/performance/latest.json`. Cette baseline qualifie la machine courante et doit être lue avec son contexte matériel ; elle ne remplace pas un test de charge réseau externe.
+
+## Gate omnicanale storefront/POS
+
+Le profil `release` exige une preuve JSON valide sous `storage/qualification/omnichannel/latest.json`. Une exécution ciblée est disponible pour diagnostiquer uniquement ce contrat :
+
+```bash
+python3 tools/cms.py e2e --use-built-assets --omnichannel-only
+```
+
+Le détail des deux parcours, des comparaisons croisées et des mutations négatives est documenté dans [Gate E2E omnicanale storefront et POS](OMNICHANNEL_E2E_GATE.md).
 
 ## Cache local
 

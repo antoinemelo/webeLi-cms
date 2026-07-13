@@ -7,7 +7,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-11
+last_verified: 2026-07-13
 source_of_truth: manual
 source_paths:
   - backend/src/Modules
@@ -21,11 +21,11 @@ generated: false
 ---
 # Changelog par module
 
-Cette page centralise le suivi lisible des changements module par module. Les versions installées et attendues sont inventoriées dans **Maintenance** ; les sources techniques restent les manifests de modules et les migrations.
+Cette page centralise le suivi lisible des changements module par module. Les versions installées et attendues sont inventoriées dans **Maintenance** ; les sources techniques restent les manifests et schémas canoniques des modules.
 
 | Module | État documentaire | Source de vérité | Notes de changement |
 |---|---|---|---|
-| Core | Maintenu | `backend/config/updates.php`, `database/schema/core.sql` | Les changements de structure passent par migrations et validation documentaire. |
+| Core | Maintenu | `backend/config/updates.php`, `database/schema/core.sql` | Les changements de structure sont portés par le schéma canonique et validés sur une reconstruction from scratch. |
 | Business CRM | Maintenu | `backend/src/Modules/Business`, `docs/business` | CRM, contacts, sociétés, mémos, consentements et messagerie. |
 | Catalogue/PIM | Maintenu | `backend/routes/api.php`, `docs/business/catalogue.md` | Produits, variantes, marques, catégories, qualité et exports. |
 | Vente/POS | Maintenu | `backend/src/Modules/Sale`, `docs/business/vente.md` | Commandes, POS, paiements, stock transactionnel et canaux. |
@@ -43,3 +43,11 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - réconciliation des activités manquantes ou dupliquées ;
 - contrat Pricing en lecture seule avec segments et état du consentement marketing ;
 - schémas canoniques uniquement, sans migration.
+
+# 2026-07-13 — Gate omnicanale storefront × POS
+
+- même produit et même vendable démontrés sur les deux canaux ;
+- paiement sandbox web, paiement comptant POS, reçus, retours et fermeture de caisse ;
+- schéma de commande partagé, snapshots immuables, stock et CRM idempotent ;
+- rapport JSON sans PII ni secret, validé indépendamment et bloquant pour la qualification release ;
+- mutations canal, prix, stock et permission couvertes par tests négatifs.

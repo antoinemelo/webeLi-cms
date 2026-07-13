@@ -7,7 +7,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-11
+last_verified: 2026-07-13
 source_of_truth: procedure
 source_paths:
   - docs/operations/client-instance-update.md
@@ -26,9 +26,9 @@ Le dépôt source sert au développement, à la génération et à la validation
 |---|---|---|
 | Dépendances | Peut contenir outils de développement, tests et sources front-end. | Ne doit contenir que le runtime requis et les assets construits. |
 | Documentation | Inclut sources manuelles, références générées et contrats. | Inclut la documentation utile à l’exploitation et à l’intégration. |
-| Bases SQLite | Peuvent être reconstruites from scratch en développement. | Données client protégées ; appliquer sauvegarde puis migrations. |
+| Bases SQLite | Reconstruites from scratch pour le développement et les tests isolés. | Recréées from scratch selon la procédure d’installation ; sauvegarde/restauration disponibles pour les données explicitement conservées. |
 | Assets admin | Construits par `npm run build`. | Déjà construits dans `admin-app/`. |
-| Validation | `docs generate`, `docs check`, `validate`, `test`, `e2e`. | Smoke, migration plan, backup/restore et contrôles de santé. |
+| Validation | `docs generate`, `docs check`, `validate`, `test`, `e2e`. | Smoke, backup/restore et contrôles de santé. |
 
 ## Avant diffusion
 

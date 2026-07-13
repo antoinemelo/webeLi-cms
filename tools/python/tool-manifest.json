@@ -66,6 +66,7 @@
         "docs/development/architecture/business-crm-redesign-guardrails.md",
         "docs/development/architecture/business-module-plan.md",
         "docs/development/architecture/business-pim-lite-final-review.md",
+        "docs/development/architecture/sale-internal-payments-returns-timeline.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
         "docs/development/architecture/sale-state-machines-snapshots.md",
@@ -83,6 +84,7 @@
         "docs/development/testing-validation/CI_VALIDATION_RESULTS.md",
         "docs/development/testing-validation/E2E_RESULTS.md",
         "docs/development/testing-validation/FRONTEND_DEPENDENCIES.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/development/testing-validation/README.md",
         "docs/development/testing-validation/business-crm.md",
@@ -114,6 +116,7 @@
         "docs/operations/instance-clone.md",
         "docs/operations/instance-update.md",
         "docs/operations/local-update.md",
+        "docs/operations/m0-m4-final-qualification.md",
         "docs/operations/m0-release-gate.md",
         "docs/operations/module-migrations.md",
         "docs/operations/outbox.md",
@@ -187,6 +190,7 @@
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/omnichannel_gate.py",
         "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
@@ -517,6 +521,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/E2E_RESULTS.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/qualification/run_all.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1811,6 +1816,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/E2E_RESULTS.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/commands/e2e.py",
         "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
@@ -1836,6 +1842,26 @@
       "replacement": null,
       "status": "active",
       "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/omnichannel_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_omnichannel_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -1867,6 +1893,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/README.md",
         "docs/evaluation/evidence-index.md",
@@ -1876,6 +1903,7 @@
         "docs/evaluation/reproducible-checks.md",
         "docs/getting-started/verified-scenarios.md",
         "docs/operations/backup-restore.md",
+        "docs/operations/m0-m4-final-qualification.md",
         "docs/operations/m0-release-gate.md",
         "docs/operations/production-checklist.md",
         "docs/operations/source-vs-release.md",
@@ -2178,6 +2206,21 @@
       "called_by": [
         "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_omnichannel_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2615,6 +2658,8 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
@@ -2631,6 +2676,8 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
@@ -2687,7 +2734,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/architecture/sale-state-machines-snapshots.md",
+        "docs/evaluation/machine-readable/validators.json",
         "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
@@ -2995,6 +3044,7 @@
         "docs/evaluation/machine-readable/validators.json",
         "docs/operations/m0-release-gate.md",
         "docs/reference/generated/validators.md",
+        "tools/python/qualification/omnichannel_gate.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],

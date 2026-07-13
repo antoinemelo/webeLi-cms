@@ -12,7 +12,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-11
+last_verified: 2026-07-13
 source_of_truth: procedure
 source_paths:
   - frontend/admin-vue/tests/e2e
@@ -34,9 +34,10 @@ Les scénarios ci-dessous indiquent l’état démontré par le dépôt. Lorsqu�
 | `content-article-publish` | Créer, prévisualiser, publier et lire un article. | Démontré par E2E | `python3 tools/cms.py e2e --use-built-assets` |
 | `catalog-product-create` | Créer un produit catalogue/PIM. | Vérifiable par tests module et contrats API, UX complète à renforcer selon le module actif. | `python3 tools/cms.py validate --full --category api --category documentation` |
 | `cms-product-link` | Lier un produit à une page CMS. | Partiel : les contrats catalogue et contenus existent, la qualification E2E croisée doit rester explicite. | Voir [Limites](../evaluation/limitations.md) |
-| `internal-sale` | Effectuer une vente interne. | Démontré par smoke Vente/CRM selon les fixtures isolées. | `python3 tools/cms.py e2e --use-built-assets` |
-| `sale-return` | Traiter un retour. | À qualifier selon le modèle de retour activé ; ne pas présenter comme complet sans test dédié. | Voir [Vente POS](../business/vente-pos.md) |
-| `public-cart` | Tester un panier public. | Contrats publics présents ; E2E invité complet à valider dans les lots M3/M4. | [Contrats Headless](../reference/contracts/headless-v1/README.md) |
+| `internal-sale` | Effectuer une vente POS comptant, émettre le reçu et fermer la caisse. | Démontré par E2E isolé. | `python3 tools/cms.py e2e --use-built-assets --omnichannel-only` |
+| `sale-return` | Traiter un retour web et un retour POS, puis un remboursement web. | Démontré par la gate omnicanale. | [Gate E2E omnicanale](../development/testing-validation/OMNICHANNEL_E2E_GATE.md) |
+| `public-cart` | Acheter en invité avec paiement sandbox capturé. | Démontré par E2E isolé. | `python3 tools/cms.py e2e --use-built-assets --omnichannel-only` |
+| `omnichannel-sale` | Acheter le même vendable sur le storefront et le POS avec contrats, stock et CRM cohérents. | Gate release bloquante et preuve JSON. | [Gate E2E omnicanale](../development/testing-validation/OMNICHANNEL_E2E_GATE.md) |
 | `backup-restore` | Sauvegarder et restaurer une instance. | Procédure documentée et validateur dédié. | [Sauvegarde et restauration](../operations/backup-restore.md) |
 
 ## Commandes de contrôle recommandées
