@@ -314,8 +314,8 @@ def maybe_push_after_ftp() -> None:
 
     if git_has_changes():
         print(
-            "Changements locaux détectés : commit et push automatiques désactivés. "
-            "Créez un commit ciblé après revue du diff."
+            "Changements locaux détectés : push automatique désactivé. "
+            "admin.py ne crée aucun commit ; créez un commit ciblé après revue du diff."
         )
         return
 

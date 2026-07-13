@@ -30,7 +30,8 @@ class AdminMenuTest(unittest.TestCase):
             admin.maybe_push_after_ftp()
 
         git_command.assert_not_called()
-        self.assertIn("commit et push automatiques désactivés", output.getvalue())
+        self.assertIn("push automatique désactivé", output.getvalue())
+        self.assertIn("admin.py ne crée aucun commit", output.getvalue())
 
     def test_special_action_failure_is_returned_when_quitting(self) -> None:
         with (
