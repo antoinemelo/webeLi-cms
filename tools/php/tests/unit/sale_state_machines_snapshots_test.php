@@ -15,7 +15,7 @@ try {
     $channelId = (int) ($db->one("SELECT id FROM sale_channels WHERE code='admin-manual'")['id'] ?? 0);
     $h->assertSame(['abandoned', 'converted', 'expired', 'cancelled'], $states->allowedTransitions('cart', 'active'), 'cart transition matrix is explicit');
     $h->assertSame(['confirmed', 'cancelled'], $states->allowedTransitions('order', 'placed'), 'order transition matrix is explicit');
-    $h->assertSame(['captured', 'cancelled', 'failed', 'expired'], $states->allowedTransitions('payment_intent', 'authorized'), 'payment transition matrix is explicit');
+    $h->assertSame(['partially_captured', 'captured', 'cancelled', 'failed', 'expired'], $states->allowedTransitions('payment_intent', 'authorized'), 'payment transition matrix is explicit');
     $h->assertSame(['delivered', 'returned'], $states->allowedTransitions('fulfillment', 'shipped'), 'fulfillment transition matrix is explicit');
     $h->assertSame(['received', 'cancelled'], $states->allowedTransitions('return', 'approved'), 'return transition matrix is explicit');
     $h->assertSame(['succeeded', 'failed', 'cancelled'], $states->allowedTransitions('refund', 'pending'), 'refund transition matrix is explicit');

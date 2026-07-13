@@ -189,6 +189,7 @@ final class SaleGuestCheckoutService
         return match ($code) {
             'bank_transfer' => ['code' => 'bank_transfer', 'label' => 'Virement bancaire', 'requires_online_secret' => false],
             'manual' => ['code' => 'manual', 'label' => 'Paiement à confirmer', 'requires_online_secret' => false],
+            'sandbox_online' => ['code' => 'sandbox_online', 'label' => 'Paiement sandbox', 'provider' => 'sandbox', 'requires_online_secret' => false],
             default => [],
         };
     }

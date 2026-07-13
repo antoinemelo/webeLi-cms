@@ -55,14 +55,28 @@ final class SaleCheckoutService
                     $shippingMethod = $payload['shipping_method_snapshot'] ?? $payload['shipping_method'];
                     $cart['shipping_method_snapshot_json'] = json_encode(is_array($shippingMethod) ? $shippingMethod : ['label' => (string) $shippingMethod], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
                 }
-                $order = $this->orders->createFromCart($cart, $lines, (string) ($payload['source'] ?? 'admin'), $this->carts->adjustments($cartId), $correlationId);
+                $deferInventory = ($payload['defer_inventory_until_payment'] ?? false) === true;
+                $initialStatus = $deferInventory ? 'pending_payment' : 'placed';
+                $order = $this->orders->createFromCart(
+                    $cart,
+                    $lines,
+                    (string) ($payload['source'] ?? 'admin'),
+                    $this->carts->adjustments($cartId),
+                    $correlationId,
+                    $initialStatus
+                );
                 $fulfillmentSnapshot = json_decode((string) ($cart['shipping_method_snapshot_json'] ?? '{}'), true);
                 $fulfillmentStatus = is_array($fulfillmentSnapshot) && ($fulfillmentSnapshot['type'] ?? 'none') !== 'none' ? 'unfulfilled' : 'not_required';
                 $db->run('UPDATE sale_orders SET fulfillment_status=? WHERE id=?', [$fulfillmentStatus, (int) $order['id']]);
                 $order['fulfillment_status'] = $fulfillmentStatus;
                 $states = $this->states ?? new SaleStateMachineService($this->connection->database() ?? throw new SaleValidationException('sale.database_unavailable'));
-                $states->recordInitial((int) $cart['site_id'], 'order', (int) $order['id'], 'placed', $correlationId, $payload['iam_user_id'] ?? null, 'checkout');
-                $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
+                $states->recordInitial((int) $cart['site_id'], 'order', (int) $order['id'], $initialStatus, $correlationId, $payload['iam_user_id'] ?? null, 'checkout');
+                if ($deferInventory) {
+                    $expiresAt = gmdate('Y-m-d H:i:s', time() + max(300, (int) ($payload['payment_reservation_ttl_seconds'] ?? 1800)));
+                    $this->inventory->holdCartReservationsForPayment($cartId, (int) $order['id'], $expiresAt);
+                } else {
+                    $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
+                }
                 $states->convertCart($cartId, (int) $order['id'], $payload['iam_user_id'] ?? null, $correlationId);
                 $this->events->emit((int) $cart['site_id'], 'sale.order.placed', 'order', (int) $order['id'], [
                     'site_id' => (int) $cart['site_id'],

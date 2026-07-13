@@ -194,6 +194,7 @@ use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
@@ -826,8 +827,21 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            new PaymentProviderRegistry(),
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
             $this->saleStateMachines()
+        ));
+    }
+
+    public function saleOnlinePayments(): SaleOnlinePaymentService
+    {
+        return $this->once('sale_online_payments', fn() => new SaleOnlinePaymentService(
+            $this->saleDatabaseConnection(),
+            $this->salePayments(),
+            $this->saleOrders(),
+            $this->saleInventory(),
+            $this->saleStateMachines(),
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
+            $this->logger()
         ));
     }
 

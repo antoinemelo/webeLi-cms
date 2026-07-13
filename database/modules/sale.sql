@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     channel_id INTEGER NOT NULL,
     order_number TEXT NOT NULL,
     source TEXT NOT NULL CHECK(source IN ('ecommerce','pos','admin')),
-    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','placed','confirmed','completed','cancelled')),
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','pending_payment','placed','confirmed','completed','cancelled')),
     payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK(payment_status IN ('unpaid','pending','authorized','partially_paid','paid','partially_refunded','refunded','failed')),
     fulfillment_status TEXT NOT NULL DEFAULT 'not_required' CHECK(fulfillment_status IN ('not_required','unfulfilled','partially_fulfilled','fulfilled','returned')),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
@@ -315,8 +315,8 @@ CREATE INDEX IF NOT EXISTS idx_sale_order_tax_lines_order
 CREATE TABLE IF NOT EXISTS sale_order_status_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
-    from_status TEXT CHECK(from_status IN ('draft','placed','confirmed','completed','cancelled')),
-    to_status TEXT NOT NULL CHECK(to_status IN ('draft','placed','confirmed','completed','cancelled')),
+    from_status TEXT CHECK(from_status IN ('draft','pending_payment','placed','confirmed','completed','cancelled')),
+    to_status TEXT NOT NULL CHECK(to_status IN ('draft','pending_payment','placed','confirmed','completed','cancelled')),
     changed_by_iam_user_id INTEGER,
     reason TEXT,
     correlation_id TEXT,
@@ -512,10 +512,20 @@ CREATE TABLE IF NOT EXISTS sale_payment_intents (
     order_id INTEGER NOT NULL,
     provider_key TEXT NOT NULL,
     intent_reference TEXT,
-    status TEXT NOT NULL DEFAULT 'requires_payment' CHECK(status IN ('requires_payment','requires_action','authorized','captured','cancelled','failed','expired')),
+    contract_version TEXT NOT NULL DEFAULT 'sale.payment_provider.v1',
+    status TEXT NOT NULL DEFAULT 'requires_payment' CHECK(status IN ('requires_payment','requires_action','authorized','partially_captured','captured','cancelled','failed','expired')),
     amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
     idempotency_key TEXT,
+    checkout_url TEXT,
+    return_url TEXT,
+    cancel_url TEXT,
+    authorized_minor INTEGER NOT NULL DEFAULT 0 CHECK(authorized_minor >= 0),
+    captured_minor INTEGER NOT NULL DEFAULT 0 CHECK(captured_minor >= 0),
+    refunded_minor INTEGER NOT NULL DEFAULT 0 CHECK(refunded_minor >= 0),
+    last_provider_status TEXT,
+    last_provider_event_at TEXT,
+    provider_synced_at TEXT,
     expires_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
@@ -526,6 +536,9 @@ CREATE TABLE IF NOT EXISTS sale_payment_intents (
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(site_id > 0),
+    CHECK(authorized_minor <= amount_minor),
+    CHECK(captured_minor <= amount_minor),
+    CHECK(refunded_minor <= captured_minor),
     CHECK(provider_key = lower(trim(provider_key)) AND provider_key GLOB '[a-z0-9_.-]*'),
     CHECK(intent_reference IS NULL OR trim(intent_reference) <> ''),
     CHECK(idempotency_key IS NULL OR trim(idempotency_key) <> '')
@@ -535,6 +548,99 @@ CREATE INDEX IF NOT EXISTS idx_sale_payment_intents_order
     ON sale_payment_intents(order_id, status);
 CREATE INDEX IF NOT EXISTS idx_sale_payment_intents_site_status
     ON sale_payment_intents(site_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sale_payment_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    payment_intent_id INTEGER NOT NULL,
+    attempt_number INTEGER NOT NULL CHECK(attempt_number > 0),
+    status TEXT NOT NULL DEFAULT 'created' CHECK(status IN ('created','redirected','pending','succeeded','failed','cancelled','timed_out')),
+    provider_reference TEXT,
+    error_code TEXT,
+    error_message TEXT,
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    UNIQUE(payment_intent_id, attempt_number),
+    FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_payment_attempts_intent_status
+    ON sale_payment_attempts(payment_intent_id, status, started_at DESC);
+
+-- Etat distant émulé par le provider sandbox. Aucune donnée carte ni secret
+-- client n'est stocké : uniquement des références opaques et montants.
+CREATE TABLE IF NOT EXISTS sale_sandbox_payment_states (
+    provider_reference TEXT PRIMARY KEY,
+    payment_intent_id INTEGER NOT NULL UNIQUE,
+    status TEXT NOT NULL CHECK(status IN ('requires_action','authorized','partially_captured','captured','failed','cancelled','expired')),
+    amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
+    authorized_minor INTEGER NOT NULL DEFAULT 0 CHECK(authorized_minor >= 0),
+    captured_minor INTEGER NOT NULL DEFAULT 0 CHECK(captured_minor >= 0),
+    refunded_minor INTEGER NOT NULL DEFAULT 0 CHECK(refunded_minor >= 0),
+    currency TEXT NOT NULL CHECK(length(currency) = 3 AND currency = upper(currency)),
+    sandbox_token_hash TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(authorized_minor <= amount_minor),
+    CHECK(captured_minor <= amount_minor),
+    CHECK(refunded_minor <= captured_minor)
+);
+
+CREATE TABLE IF NOT EXISTS sale_payment_webhook_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    provider_key TEXT NOT NULL,
+    provider_event_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    provider_reference TEXT NOT NULL,
+    provider_occurred_at TEXT NOT NULL,
+    signature_valid INTEGER NOT NULL DEFAULT 1 CHECK(signature_valid IN (0,1)),
+    processing_status TEXT NOT NULL DEFAULT 'received' CHECK(processing_status IN ('received','processed','duplicate','ignored_out_of_order','rejected','failed')),
+    payload_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payload_json)),
+    error_code TEXT,
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TEXT,
+    UNIQUE(provider_key, provider_event_id),
+    CHECK(site_id > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_payment_webhooks_reference
+    ON sale_payment_webhook_events(provider_key, provider_reference, provider_occurred_at);
+CREATE INDEX IF NOT EXISTS idx_sale_payment_webhooks_status
+    ON sale_payment_webhook_events(site_id, processing_status, received_at DESC);
+
+CREATE TABLE IF NOT EXISTS sale_payment_reconciliation_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    payment_intent_id INTEGER,
+    trigger_kind TEXT NOT NULL CHECK(trigger_kind IN ('manual','scheduled','webhook_retry','return_read')),
+    status TEXT NOT NULL CHECK(status IN ('consistent','repaired','attention_required','failed')),
+    provider_status TEXT,
+    local_status TEXT,
+    findings_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(findings_json)),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CHECK(site_id > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_payment_reconciliation_site
+    ON sale_payment_reconciliation_runs(site_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sale_payment_observability (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    metric_key TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'info' CHECK(severity IN ('info','warning','critical')),
+    payment_intent_id INTEGER,
+    dimensions_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(dimensions_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CHECK(site_id > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_payment_observability_metric
+    ON sale_payment_observability(site_id, metric_key, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS sale_payment_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -562,6 +668,9 @@ CREATE INDEX IF NOT EXISTS idx_sale_payment_transactions_order
     ON sale_payment_transactions(order_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_payment_transactions_intent
     ON sale_payment_transactions(payment_intent_id, transaction_type, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_payment_transactions_provider_unique
+    ON sale_payment_transactions(provider_transaction_id)
+    WHERE provider_transaction_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS sale_payment_allocations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -988,6 +1097,12 @@ CREATE INDEX IF NOT EXISTS idx_sale_customer_addresses_account ON sale_customer_
 
 CREATE TRIGGER IF NOT EXISTS trg_sale_payment_transactions_no_delete
 BEFORE DELETE ON sale_payment_transactions BEGIN SELECT RAISE(ABORT, 'sale financial transactions are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_payment_webhooks_no_update
+BEFORE UPDATE ON sale_payment_webhook_events
+WHEN OLD.processing_status IN ('processed','ignored_out_of_order','rejected')
+BEGIN SELECT RAISE(ABORT, 'sale processed payment webhooks are immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_payment_webhooks_no_delete
+BEFORE DELETE ON sale_payment_webhook_events BEGIN SELECT RAISE(ABORT, 'sale payment webhooks are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS trg_sale_payment_allocations_no_delete
 BEFORE DELETE ON sale_payment_allocations BEGIN SELECT RAISE(ABORT, 'sale payment allocations are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS trg_sale_refunds_no_delete

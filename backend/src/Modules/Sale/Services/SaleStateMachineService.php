@@ -17,15 +17,17 @@ final class SaleStateMachineService
             'expired' => [], 'converted' => [], 'cancelled' => [],
         ],
         'order' => [
-            'draft' => ['placed', 'cancelled'],
+            'draft' => ['pending_payment', 'placed', 'cancelled'],
+            'pending_payment' => ['placed', 'confirmed', 'cancelled'],
             'placed' => ['confirmed', 'cancelled'],
             'confirmed' => ['completed', 'cancelled'],
             'completed' => [], 'cancelled' => [],
         ],
         'payment_intent' => [
-            'requires_payment' => ['requires_action', 'authorized', 'captured', 'cancelled', 'failed', 'expired'],
-            'requires_action' => ['authorized', 'captured', 'cancelled', 'failed', 'expired'],
-            'authorized' => ['captured', 'cancelled', 'failed', 'expired'],
+            'requires_payment' => ['requires_action', 'authorized', 'partially_captured', 'captured', 'cancelled', 'failed', 'expired'],
+            'requires_action' => ['authorized', 'partially_captured', 'captured', 'cancelled', 'failed', 'expired'],
+            'authorized' => ['partially_captured', 'captured', 'cancelled', 'failed', 'expired'],
+            'partially_captured' => ['captured', 'cancelled', 'failed'],
             'captured' => [], 'cancelled' => [], 'failed' => [], 'expired' => [],
         ],
         'fulfillment' => [

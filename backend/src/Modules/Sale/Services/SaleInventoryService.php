@@ -127,6 +127,11 @@ final class SaleInventoryService
         }
     }
 
+    public function holdCartReservationsForPayment(int $cartId, int $orderId, string $expiresAt): int
+    {
+        return $this->inventory->holdCartReservationsForOrder($cartId, $orderId, $expiresAt);
+    }
+
     /** @param array<string,mixed> $cart */
     public function locationIdForCart(array $cart): int
     {

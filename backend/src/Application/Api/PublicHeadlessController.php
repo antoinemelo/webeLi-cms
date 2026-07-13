@@ -72,6 +72,10 @@ final class PublicHeadlessController
     public function saleCheckoutUpdate(string $code, string $token): Response { return $this->sale->updateCheckout($code, $token); }
     public function saleCartAbandon(string $code, string $token): Response { return $this->sale->abandonCart($code, $token); }
     public function saleCheckout(string $code): Response { return $this->sale->checkout($code); }
+    public function salePaymentReturn(): Response { return $this->sale->paymentReturn(); }
+    public function salePaymentSandbox(string $reference): Response { return $this->sale->sandbox($reference); }
+    public function salePaymentSandboxSimulate(string $reference): Response { return $this->sale->simulateSandbox($reference); }
+    public function salePaymentWebhook(string $provider): Response { return $this->sale->paymentWebhook($provider); }
     public function customerRegister(): Response { return $this->customer->register(); }
     public function customerLogin(): Response { return $this->customer->login(); }
     public function customerLogout(): Response { return $this->customer->logout(); }

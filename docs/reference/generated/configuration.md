@@ -96,6 +96,7 @@ generated: true
 | `MAIL_FROM_EMAIL` | `backend/config/app.php` |
 | `MAIL_FROM_NAME` | `backend/config/app.php` |
 | `MAIL_TRANSPORT` | `backend/config/app.php` |
+| `SALE_SANDBOX_WEBHOOK_SECRET` | `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php` |
 | `SFTP_PORT` | `tools/python/operations/deployment/d11_ci_release.py` |
 
 Les secrets et valeurs propres à un environnement ne sont jamais inclus dans cette page.

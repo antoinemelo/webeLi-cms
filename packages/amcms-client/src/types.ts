@@ -12,6 +12,7 @@ import type {
   OpenApiPublicSaleCartLineMutationResponse,
   OpenApiPublicSaleCartResponse,
   OpenApiPublicSaleCheckoutResponse,
+  OpenApiPublicSalePaymentIntent,
   OpenApiPublicSearchResponse,
 } from './generated/openapi-types';
 
@@ -91,7 +92,9 @@ export interface SaleCheckoutPayload {
   shipping_address?: SaleAddress;
   shipping_same_as_billing?: boolean;
   shipping_method: { code: 'standard' | 'pickup' };
-  payment: { code: 'bank_transfer' | 'manual' };
+  payment: { code: 'bank_transfer' | 'manual' | 'sandbox_online' };
+  return_url?: string;
+  cancel_url?: string;
   terms_accepted: true;
   marketing_consent?: boolean;
 }
@@ -123,6 +126,36 @@ export interface PublicSaleCheckoutUpdateResponse {
 
 export interface PublicSaleCartAbandonResponse {
   data: { abandoned: boolean };
+  meta: PublicMeta;
+}
+
+export type PublicSalePaymentIntent = OpenApiPublicSalePaymentIntent;
+
+export interface PublicSalePaymentReturnResponse {
+  data: {
+    intent: PublicSalePaymentIntent;
+    provider_status: string;
+    local_status: string;
+    awaiting_webhook: boolean;
+    payment_proof: false;
+  };
+  meta: PublicMeta;
+}
+
+export interface SaleSandboxSimulationPayload {
+  sandbox_token: string;
+  outcome: 'success' | 'authorize' | 'decline' | 'abandon' | 'timeout';
+  amount_minor?: number;
+  deliver_webhook?: boolean;
+}
+
+export interface PublicSaleSandboxSimulationResponse {
+  data: {
+    provider_status: string;
+    webhook_delivered: boolean;
+    webhook?: Record<string, unknown> | null;
+    return_url: string;
+  };
   meta: PublicMeta;
 }
 

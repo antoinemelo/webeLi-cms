@@ -1,0 +1,22 @@
+{
+  "contract": "public.sale.payment.sandbox.simulate.v1",
+  "kind": "schema",
+  "summary": "Simuler une décision provider sandbox.",
+  "description": "Simule succès, autorisation, refus, abandon ou timeout. Le token opaque remplace toute donnée carte; deliver_webhook=false permet de tester le retour navigateur et la réconciliation.",
+  "method": "POST",
+  "path": "/api/v1/sale/payments/sandbox/{reference}/simulate",
+  "security": "Public endpoint protected by the one-time opaque sandbox token; no bearer token.",
+  "path_params": {"reference": {"type": "string", "required": true}},
+  "request_body": {"required": true, "schema": {"type": "object", "properties": {"data": {"type": "object", "required": ["sandbox_token", "outcome"], "properties": {
+    "sandbox_token": {"type": "string", "minLength": 32},
+    "outcome": {"type": "string", "enum": ["success", "authorize", "decline", "abandon", "timeout"]},
+    "amount_minor": {"type": "integer", "minimum": 1}, "deliver_webhook": {"type": "boolean", "default": true}
+  }, "additionalProperties": false}}}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {
+    "data": {"type": "object", "required": ["provider_status", "webhook_delivered", "return_url"], "properties": {
+      "provider_status": {"type": "string"}, "webhook_delivered": {"type": "boolean"},
+      "return_url": {"type": "string"}, "webhook": {"type": ["object", "null"], "additionalProperties": true}
+    }}, "meta": {"$ref": "#/components/schemas/PublicMeta"}
+  }}},
+  "errors": [{"code": "VALIDATION_FAILED", "status": 422, "description": "Token, résultat ou montant invalide."}]
+}

@@ -2,7 +2,7 @@
   "contract": "public.sale.checkout.v1",
   "kind": "schema",
   "summary": "Convertir un panier public en commande.",
-  "description": "Valide et place une commande invitée depuis un panier public actif. Identité, adresses, livraison, paiement non sensible et consentement CGV sont validés côté serveur. Les montants client sont ignorés.",
+  "description": "Valide une commande invitée depuis un panier public actif. Un paiement sandbox crée d'abord une commande pending_payment avec snapshots figés et réservations confirmées; seul un webhook signé ou une réconciliation fiable la confirme. Les montants client et toute donnée carte sont ignorés.",
   "method": "POST",
   "path": "/api/v1/sale/channels/{code}/checkout",
   "source": "sale_carts + sale_orders + sale_order_lines",
@@ -33,7 +33,9 @@
             "shipping_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
             "shipping_same_as_billing": {"type": "boolean"},
             "shipping_method": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^[a-z0-9_-]+$"}}, "additionalProperties": false},
-            "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual"]}}, "additionalProperties": false},
+            "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual", "sandbox_online"]}}, "additionalProperties": false},
+            "return_url": {"type": "string", "format": "uri"},
+            "cancel_url": {"type": "string", "format": "uri"},
             "terms_accepted": {"type": "boolean", "enum": [true]},
             "marketing_consent": {"type": "boolean"}
           },
@@ -54,7 +56,8 @@
           "required": ["order", "account_creation"],
           "properties": {
             "order": {"$ref": "#/components/schemas/PublicSaleOrder"},
-            "account_creation": {"type": "object", "required": ["token", "expires_at"], "properties": {"token": {"type": "string"}, "expires_at": {"type": "string"}}}
+            "account_creation": {"type": "object", "required": ["token", "expires_at"], "properties": {"token": {"type": "string"}, "expires_at": {"type": "string"}}},
+            "payment": {"$ref": "#/components/schemas/PublicSalePaymentIntent"}
           },
           "additionalProperties": true
         },

@@ -35,13 +35,18 @@ final class SaleOrderRepository extends SaleRepositoryBase
     }
 
     /** @param array<string,mixed> $cart @param list<array<string,mixed>> $lines @param list<array<string,mixed>> $adjustments @return array<string,mixed> */
-    public function createFromCart(array $cart, array $lines, string $source = 'admin', array $adjustments = [], ?string $correlationId = null): array
+    public function createFromCart(array $cart, array $lines, string $source = 'admin', array $adjustments = [], ?string $correlationId = null, string $initialStatus = 'placed'): array
     {
         $existing = $this->rawDatabase()->one('SELECT id FROM sale_orders WHERE source_cart_id = ? LIMIT 1', [(int) $cart['id']]);
         if ($existing !== null) {
             throw new SaleValidationException('sale.cart_already_converted');
         }
         $correlationId = \App\Modules\Sale\Services\SaleStateMachineService::correlationId($correlationId);
+        if (!in_array($initialStatus, ['pending_payment', 'placed'], true)) {
+            throw new SaleValidationException('sale.order_initial_status_invalid');
+        }
+        $paymentStatus = $initialStatus === 'pending_payment' ? 'pending' : 'unpaid';
+        $placedAt = $initialStatus === 'placed' ? gmdate('Y-m-d H:i:s') : null;
         $prefix = $source === 'pos' ? 'POS' : 'SALE';
         $orderNumber = $prefix . '-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3));
         $this->rawDatabase()->run(
@@ -52,12 +57,14 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json,
                 subtotal_minor, discount_total_minor,
                 tax_total_minor, shipping_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
-             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 (int) $cart['site_id'],
                 (int) $cart['channel_id'],
                 $orderNumber,
                 $source,
+                $initialStatus,
+                $paymentStatus,
                 (string) $cart['currency'],
                 (int) $cart['id'],
                 $correlationId,
@@ -77,6 +84,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
                 (int) $cart['tax_total_minor'],
                 (int) ($cart['shipping_total_minor'] ?? 0),
                 (int) $cart['grand_total_minor'],
+                $placedAt,
                 $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null,
                 $this->json(['source_cart_id' => (int) $cart['id'], 'correlation_id' => $correlationId]),
             ]
@@ -147,8 +155,8 @@ final class SaleOrderRepository extends SaleRepositoryBase
         }
         $this->rawDatabase()->run(
             'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason, correlation_id)
-             VALUES(?, NULL, \'placed\', ?, \'checkout\', ?)',
-            [$orderId, $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null, $correlationId]
+             VALUES(?, NULL, ?, ?, \'checkout\', ?)',
+            [$orderId, $initialStatus, $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null, $correlationId]
         );
         return $this->requireOrder($orderId);
     }

@@ -1,0 +1,23 @@
+{
+  "contract": "public.sale.payment.return.v1",
+  "kind": "schema",
+  "summary": "Lire l'état après retour navigateur.",
+  "description": "Lecture informative des états local et provider. Ce retour n'est jamais une preuve de paiement et ne déclenche aucune confirmation.",
+  "method": "GET",
+  "path": "/api/v1/sale/payments/return",
+  "security": "Public endpoint; opaque provider reference required.",
+  "query_params": {
+    "provider": {"type": "string", "required": true},
+    "reference": {"type": "string", "required": true},
+    "lang": {"type": "string", "required": false}
+  },
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {
+    "data": {"type": "object", "required": ["intent", "provider_status", "local_status", "awaiting_webhook", "payment_proof"], "properties": {
+      "intent": {"$ref": "#/components/schemas/PublicSalePaymentIntent"},
+      "provider_status": {"type": "string"}, "local_status": {"type": "string"},
+      "awaiting_webhook": {"type": "boolean"}, "payment_proof": {"type": "boolean", "enum": [false]}
+    }},
+    "meta": {"$ref": "#/components/schemas/PublicMeta"}
+  }}},
+  "errors": [{"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Intention inconnue."}]
+}

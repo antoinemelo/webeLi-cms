@@ -390,6 +390,7 @@ export interface OpenApiPublicSaleCheckoutResponse {
       token: string;
     };
     order: OpenApiPublicSaleOrder;
+    payment?: OpenApiPublicSalePaymentIntent;
     [key: string]: unknown;
   };
   meta: OpenApiPublicMeta;
@@ -425,6 +426,24 @@ export interface OpenApiPublicSaleOrder {
   subtotal_minor?: number;
   tax_total_minor?: number;
   [key: string]: unknown;
+}
+
+export interface OpenApiPublicSalePaymentIntent {
+  amount_minor: number;
+  authorized_minor?: number;
+  captured_minor?: number;
+  checkout_url?: null | string;
+  contract: "sale.payment_provider.v1";
+  currency: string;
+  expires_at?: null | string;
+  id: number;
+  order_id: number;
+  provider: string;
+  reference?: null | string;
+  refunded_minor?: number;
+  replayed?: boolean;
+  sandbox_token?: string;
+  status: "authorized" | "cancelled" | "captured" | "expired" | "failed" | "partially_captured" | "requires_action" | "requires_payment";
 }
 
 export interface OpenApiPublicSearchResponse {

@@ -23,6 +23,8 @@ import type {
   PublicSaleCartAbandonResponse,
   PublicSaleCheckoutUpdateResponse,
   PublicSaleCheckoutResponse,
+  PublicSalePaymentReturnResponse,
+  PublicSaleSandboxSimulationResponse,
   PublicSearchResponse,
   PublicTaxonomiesResponse,
   RouteOptions,
@@ -33,6 +35,7 @@ import type {
   SaleChannelOptions,
   SaleCheckoutPayload,
   SaleCheckoutUpdatePayload,
+  SaleSandboxSimulationPayload,
   SearchOptions,
 } from './types';
 
@@ -276,6 +279,26 @@ export class AmCmsClient {
   abandonSaleCart(code: string, token: string, options: SaleChannelOptions = {}): Promise<PublicSaleCartAbandonResponse> {
     return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}`, {
       method: 'DELETE', query: this.withCommonQuery({}, options), options,
+    });
+  }
+
+  getSalePaymentReturn(
+    provider: string,
+    reference: string,
+    options: SaleChannelOptions = {},
+  ): Promise<PublicSalePaymentReturnResponse> {
+    return this.request('/api/v1/sale/payments/return', {
+      query: this.withCommonQuery({ provider, reference }, options), options,
+    });
+  }
+
+  simulateSaleSandboxPayment(
+    reference: string,
+    payload: SaleSandboxSimulationPayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleSandboxSimulationResponse> {
+    return this.request(`/api/v1/sale/payments/sandbox/${encodeSegment(reference)}/simulate`, {
+      method: 'POST', query: this.withCommonQuery({}, options), body: payload, options,
     });
   }
 

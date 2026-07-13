@@ -32,6 +32,9 @@ export type {
   PublicSaleCartLineMutationResponse,
   PublicSaleCartResponse,
   PublicSaleCheckoutResponse,
+  PublicSalePaymentIntent,
+  PublicSalePaymentReturnResponse,
+  PublicSaleSandboxSimulationResponse,
   PublicSearchResponse,
   PublicSearchResult,
   PublicTaxonomiesResponse,
@@ -44,6 +47,7 @@ export type {
   SaleCartLineUpdatePayload,
   SaleChannelOptions,
   SaleCheckoutPayload,
+  SaleSandboxSimulationPayload,
   SearchOptions,
 } from './types';
 export type {
@@ -60,5 +64,6 @@ export type {
   OpenApiPublicSaleCartLineMutationResponse,
   OpenApiPublicSaleCartResponse,
   OpenApiPublicSaleCheckoutResponse,
+  OpenApiPublicSalePaymentIntent,
   OpenApiPublicSearchResponse,
 } from './generated/openapi-types';

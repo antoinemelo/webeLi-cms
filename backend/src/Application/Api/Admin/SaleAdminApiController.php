@@ -34,6 +34,7 @@ use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleInventoryReconciliationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
@@ -75,6 +76,7 @@ final class SaleAdminApiController
         private readonly ?SalesChannelResolverService $channelResolver = null,
         private readonly ?SalesChannelIntegrityService $channelIntegrity = null,
         private readonly ?SaleInventoryReconciliationService $inventoryReconciliation = null,
+        private readonly ?SaleOnlinePaymentService $onlinePayments = null,
     ) {}
 
     public function schema(): Response
@@ -541,6 +543,35 @@ final class SaleAdminApiController
             [(int) $site['id'], $this->limit(), $this->offset()]
         );
         return $this->ok(['payments' => $items], 'admin.sale.payments.index.v1', $site, $languageCode);
+    }
+
+    public function reconcilePayments(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $payload = $this->payload();
+            $result = ($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->reconcile(
+                (int) $site['id'], isset($payload['payment_intent_id']) ? $this->id((int) $payload['payment_intent_id']) : null, $this->actorId()
+            );
+            return $this->ok(['reconciliation' => $result], 'admin.sale.payments.reconcile.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function expirePayments(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $count = ($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->expireDue((int) $site['id']);
+            return $this->ok(['expired' => $count], 'admin.sale.payments.expire.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function paymentObservability(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.read');
+        try {
+            return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->observability((int) $site['id']), 'admin.sale.payments.observability.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function paymentMethods(): Response

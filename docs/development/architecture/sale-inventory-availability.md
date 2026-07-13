@@ -54,7 +54,7 @@ L'ajout ou la modification du panier réalise un contrôle souple et ne réserve
 
 La clé `cart:{cart}:sellable:{sellable}:location:{location}` rend la création rejouable. Les écritures utilisent une mise à jour conditionnelle sur la disponibilité : deux checkouts ne peuvent donc pas réserver le même dernier article. La consommation et la libération revendiquent d'abord l'état de réservation ; un retry ou une reprise après erreur ne décrémente jamais deux fois.
 
-Les réservations expirées, y compris confirmées mais non consommées, sont libérées par la tâche d'expiration existante.
+Pour un paiement en ligne, la commande `pending_payment` conserve la réservation confirmée jusqu'au webhook fiable. Une capture complète la consomme; refus, abandon ou timeout la libèrent. Les réservations expirées, y compris confirmées mais non consommées, sont libérées par la tâche d'expiration existante.
 
 ## Types de produits
 

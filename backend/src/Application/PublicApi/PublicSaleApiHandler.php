@@ -18,6 +18,7 @@ use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
+use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
@@ -43,6 +44,7 @@ final class PublicSaleApiHandler
         private readonly ?SaleCustomerAccountService $customerAccounts = null,
         private readonly ?SaleFulfillmentService $fulfillment = null,
         private readonly ?SalesChannelResolverService $channelResolver = null,
+        private readonly ?SaleOnlinePaymentService $onlinePayments = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -176,12 +178,26 @@ final class PublicSaleApiHandler
             if ((string) $cart['status'] === 'active') {
                 $this->guestCheckout->update((int) $cart['id'], $payload, true);
             }
+            $paymentCode = strtolower(trim((string) (($payload['payment']['code'] ?? $payload['payment_method']['code'] ?? ''))));
+            $online = $paymentCode === 'sandbox_online';
             $order = $this->checkout->placeOrder((int) $cart['id'], [
                 'idempotency_key' => $idempotencyKey,
                 'source' => 'ecommerce',
+                'defer_inventory_until_payment' => $online,
+                'payment_reservation_ttl_seconds' => 1800,
                 'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
             ]);
             $data = ['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))];
+            if ($online) {
+                if ($this->onlinePayments === null) {
+                    throw new SalePaymentException('sale.online_payment_unavailable');
+                }
+                $data['payment'] = $this->onlinePayments->createIntentForOrder((int) $order['id'], 'sandbox', [
+                    'idempotency_key' => $idempotencyKey,
+                    'return_url' => isset($payload['return_url']) ? (string) $payload['return_url'] : null,
+                    'cancel_url' => isset($payload['cancel_url']) ? (string) $payload['cancel_url'] : null,
+                ]);
+            }
             if ($this->customerAccounts !== null) {
                 $data['account_creation'] = $this->customerAccounts->issueClaimProof((int) $order['id']);
             }
@@ -220,6 +236,53 @@ final class PublicSaleApiHandler
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function paymentReturn(): Response
+    {
+        [$site, $languageCode] = $this->context();
+        try {
+            $service = $this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable');
+            $result = $service->browserReturn((string) ($this->request->query['provider'] ?? ''), (string) ($this->request->query['reference'] ?? ''));
+            return $this->json($result, 'public.sale.payment.return.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function sandbox(string $reference): Response
+    {
+        [$site, $languageCode] = $this->context();
+        return $this->json([
+            'provider' => 'sandbox', 'reference' => trim($reference),
+            'outcomes' => ['success','authorize','decline','abandon','timeout'],
+            'card_fields' => false,
+        ], 'public.sale.payment.sandbox.v1', $site, $languageCode);
+    }
+
+    public function simulateSandbox(string $reference): Response
+    {
+        [$site, $languageCode] = $this->context();
+        try {
+            $payload = $this->payload();
+            $service = $this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable');
+            $result = $service->simulateSandbox(
+                trim($reference), (string) ($payload['sandbox_token'] ?? ''), (string) ($payload['outcome'] ?? ''),
+                isset($payload['amount_minor']) ? (int) $payload['amount_minor'] : null,
+                ($payload['deliver_webhook'] ?? true) === true
+            );
+            return $this->json($result, 'public.sale.payment.sandbox.simulate.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function paymentWebhook(string $provider): Response
+    {
+        [$site, $languageCode] = $this->context();
+        try {
+            $service = $this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable');
+            $result = $service->processWebhook(strtolower(trim($provider)), $this->request->rawBody(), [
+                'x-sale-signature' => (string) ($this->request->header('X-Sale-Signature') ?? ''),
+            ]);
+            return $this->json($result, 'public.sale.payment.webhook.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     /** @return array{0:array<string,mixed>,1:string} */

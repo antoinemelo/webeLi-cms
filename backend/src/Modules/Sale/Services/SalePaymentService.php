@@ -167,6 +167,7 @@ final class SalePaymentService
         $providerResult = $provider->refund([
             'order_id' => (int) $tx['order_id'],
             'transaction_id' => (int) $tx['id'],
+            'intent_id' => isset($tx['payment_intent_id']) ? (int) $tx['payment_intent_id'] : 0,
             'amount_minor' => $amountMinor,
             'currency' => (string) $tx['currency'],
         ]);
@@ -190,6 +191,12 @@ final class SalePaymentService
         }
         $refundedTotal = (int) $tx['refunded_total_minor'] + $amountMinor;
         $order = $this->orders->updateRefundedTotal((int) $tx['order_id'], $refundedTotal);
+        if (isset($tx['payment_intent_id']) && (int) $tx['payment_intent_id'] > 0) {
+            $this->payments->rawDatabase()->run(
+                'UPDATE sale_payment_intents SET refunded_minor=MIN(captured_minor,refunded_minor+?),provider_synced_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?',
+                [$amountMinor, (int) $tx['payment_intent_id']]
+            );
+        }
         $this->events->emit((int) $tx['site_id'], 'sale.refund.created', 'order', (int) $tx['order_id'], [
             'site_id' => (int) $tx['site_id'],
             'order_id' => (int) $tx['order_id'],

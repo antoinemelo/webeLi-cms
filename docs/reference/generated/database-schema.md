@@ -283,9 +283,13 @@ generated: true
 | `sale_orders` | id, site_id, channel_id, order_number, source, status, payment_status, fulfillment_status, currency, customer_company_id, customer_contact_id, customer_snapshot_json, billing_address_json, shipping_address_json, shipping_method_snapshot_json, terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json, source_cart_id, correlation_id, subtotal_minor, discount_total_minor, tax_total_minor, shipping_total_minor, grand_total_minor, paid_total_minor, refunded_total_minor, placed_at, completed_at, cancelled_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, metadata_json, version |
 | `sale_outbox` | id, event_id, topic, payload_json, status, attempt_count, available_at, last_error, created_at, processed_at |
 | `sale_payment_allocations` | id, order_id, payment_transaction_id, amount_minor, currency, created_at |
-| `sale_payment_intents` | id, site_id, channel_id, order_id, provider_key, intent_reference, status, amount_minor, currency, idempotency_key, expires_at, created_at, updated_at, metadata_json, version |
+| `sale_payment_attempts` | id, payment_intent_id, attempt_number, status, provider_reference, error_code, error_message, started_at, finished_at, metadata_json |
+| `sale_payment_intents` | id, site_id, channel_id, order_id, provider_key, intent_reference, contract_version, status, amount_minor, currency, idempotency_key, checkout_url, return_url, cancel_url, authorized_minor, captured_minor, refunded_minor, last_provider_status, last_provider_event_at, provider_synced_at, expires_at, created_at, updated_at, metadata_json, version |
 | `sale_payment_methods` | id, site_id, channel_id, code, name, provider_key, method_type, status, config_json, created_at, updated_at, archived_at |
+| `sale_payment_observability` | id, site_id, metric_key, severity, payment_intent_id, dimensions_json, created_at |
+| `sale_payment_reconciliation_runs` | id, site_id, payment_intent_id, trigger_kind, status, provider_status, local_status, findings_json, created_by_iam_user_id, created_at |
 | `sale_payment_transactions` | id, payment_intent_id, order_id, transaction_type, status, amount_minor, currency, provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, created_by_iam_user_id, processed_at, created_at |
+| `sale_payment_webhook_events` | id, site_id, provider_key, provider_event_id, event_type, provider_reference, provider_occurred_at, signature_valid, processing_status, payload_json, error_code, received_at, processed_at |
 | `sale_pos_devices` | id, register_id, device_name, device_token_hash, status, last_seen_at, created_at, updated_at, revoked_at |
 | `sale_pos_registers` | id, site_id, channel_id, code, name, status, location_name, stock_location_id, created_at, updated_at, archived_at |
 | `sale_promotions` | id, site_id, channel_id, code, name, promotion_type, status, starts_at, ends_at, created_at, updated_at, archived_at |
@@ -293,6 +297,7 @@ generated: true
 | `sale_refunds` | id, order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, created_at, processed_at, updated_at, version |
 | `sale_return_lines` | id, return_id, order_line_id, quantity, reason, restock, created_at |
 | `sale_returns` | id, order_id, return_number, status, reason, idempotency_key, request_hash, created_by_iam_user_id, created_at, completed_at, updated_at, version |
+| `sale_sandbox_payment_states` | provider_reference, payment_intent_id, status, amount_minor, authorized_minor, captured_minor, refunded_minor, currency, sandbox_token_hash, updated_at |
 | `sale_settings` | id, site_id, setting_key, setting_value_json, updated_at |
 | `sale_state_transitions` | id, site_id, aggregate_type, aggregate_id, from_status, to_status, correlation_id, changed_by_iam_user_id, reason, metadata_json, created_at |
 | `sale_stock_locations` | id, site_id, code, name, location_type, status, created_at, updated_at, archived_at |

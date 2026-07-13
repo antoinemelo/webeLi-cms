@@ -59,6 +59,7 @@ SCHEMA_COMPONENTS_REQUIRED = [
     "PublicSaleAddress",
     "PublicSaleCart",
     "PublicSaleOrder",
+    "PublicSalePaymentIntent",
     "PublicSaleBootstrapResponse",
     "PublicSaleCartResponse",
     "PublicSaleCartLineMutationResponse",
@@ -437,6 +438,28 @@ def base_components() -> dict[str, Any]:
                 },
                 "additionalProperties": True,
             },
+            "PublicSalePaymentIntent": {
+                "type": "object",
+                "required": ["id", "order_id", "provider", "contract", "status", "amount_minor", "currency"],
+                "properties": {
+                    "id": {"type": "integer"},
+                    "order_id": {"type": "integer"},
+                    "provider": {"type": "string"},
+                    "contract": {"type": "string", "enum": ["sale.payment_provider.v1"]},
+                    "reference": {"type": ["string", "null"]},
+                    "status": {"type": "string", "enum": ["requires_payment", "requires_action", "authorized", "partially_captured", "captured", "cancelled", "failed", "expired"]},
+                    "amount_minor": {"type": "integer", "minimum": 0},
+                    "currency": {"type": "string"},
+                    "authorized_minor": {"type": "integer", "minimum": 0},
+                    "captured_minor": {"type": "integer", "minimum": 0},
+                    "refunded_minor": {"type": "integer", "minimum": 0},
+                    "checkout_url": {"type": ["string", "null"]},
+                    "expires_at": {"type": ["string", "null"]},
+                    "sandbox_token": {"type": "string", "description": "Jeton opaque retourné uniquement à la création sandbox."},
+                    "replayed": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
         },
     }
 
@@ -544,7 +567,7 @@ def build_openapi(contracts: list[tuple[Path, dict[str, Any]]]) -> dict[str, Any
             if isinstance(err, dict) and isinstance(err.get("status"), int):
                 responses[str(err["status"])] = error_response(int(err["status"]), str(err.get("description", "")))
         security_description = str(contract.get("security") or "").lower()
-        operation_security = [] if "no bearer" in security_description or "public endpoint" in security_description else [{"BearerAuth": []}]
+        operation_security = [] if "no bearer" in security_description or "public endpoint" in security_description or "signed webhook" in security_description else [{"BearerAuth": []}]
         operation_item: dict[str, Any] = {
             "operationId": operation_id(method, path, runtime_contract),
             "summary": str(contract.get("summary") or runtime_contract),

@@ -296,6 +296,17 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         return $stmt->rowCount();
     }
 
+    public function holdCartReservationsForOrder(int $cartId, int $orderId, string $expiresAt): int
+    {
+        $stmt = $this->rawDatabase()->pdo()->prepare(
+            "UPDATE sale_stock_reservations
+             SET status='confirmed',order_id=?,expires_at=?,confirmed_at=COALESCE(confirmed_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP
+             WHERE cart_id=? AND status IN ('active','confirmed')"
+        );
+        $stmt->execute([$orderId, $expiresAt, $cartId]);
+        return $stmt->rowCount();
+    }
+
     public function releaseCartReservations(int $cartId, ?string $reason = null): void
     {
         foreach ($this->rawDatabase()->all("SELECT * FROM sale_stock_reservations WHERE cart_id=? AND status IN ('active','confirmed')", [$cartId]) as $reservation) {

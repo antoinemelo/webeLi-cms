@@ -6483,7 +6483,7 @@
       "post": {
         "operationId": "post_public_sale_checkout_v1",
         "summary": "Convertir un panier public en commande.",
-        "description": "Valide et place une commande invitée depuis un panier public actif. Identité, adresses, livraison, paiement non sensible et consentement CGV sont validés côté serveur. Les montants client sont ignorés.",
+        "description": "Valide une commande invitée depuis un panier public actif. Un paiement sandbox crée d'abord une commande pending_payment avec snapshots figés et réservations confirmées; seul un webhook signé ou une réconciliation fiable la confirme. Les montants client et toute donnée carte sont ignorés.",
         "tags": [
           "Headless v1"
         ],
@@ -6701,11 +6701,20 @@
                             "type": "string",
                             "enum": [
                               "bank_transfer",
-                              "manual"
+                              "manual",
+                              "sandbox_online"
                             ]
                           }
                         },
                         "additionalProperties": false
+                      },
+                      "return_url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "cancel_url": {
+                        "type": "string",
+                        "format": "uri"
                       },
                       "terms_accepted": {
                         "type": "boolean",
@@ -6721,6 +6730,478 @@
                   }
                 },
                 "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/payments/return": {
+      "get": {
+        "operationId": "get_public_sale_payment_return_v1",
+        "summary": "Lire l'état après retour navigateur.",
+        "description": "Lecture informative des états local et provider. Ce retour n'est jamais une preuve de paiement et ne déclenche aucune confirmation.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reference",
+            "in": "query",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "intent",
+                        "provider_status",
+                        "local_status",
+                        "awaiting_webhook",
+                        "payment_proof"
+                      ],
+                      "properties": {
+                        "intent": {
+                          "$ref": "#/components/schemas/PublicSalePaymentIntent"
+                        },
+                        "provider_status": {
+                          "type": "string"
+                        },
+                        "local_status": {
+                          "type": "string"
+                        },
+                        "awaiting_webhook": {
+                          "type": "boolean"
+                        },
+                        "payment_proof": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Intention inconnue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Intention inconnue.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/payments/sandbox/{reference}": {
+      "get": {
+        "operationId": "get_public_sale_payment_sandbox_v1",
+        "summary": "Afficher les capacités du provider sandbox.",
+        "description": "Provider de démonstration sans formulaire ni stockage de carte.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "provider",
+                        "reference",
+                        "outcomes",
+                        "card_fields"
+                      ],
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "sandbox"
+                          ]
+                        },
+                        "reference": {
+                          "type": "string"
+                        },
+                        "outcomes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "card_fields": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/payments/sandbox/{reference}/simulate": {
+      "post": {
+        "operationId": "post_public_sale_payment_sandbox_simulate_v1",
+        "summary": "Simuler une décision provider sandbox.",
+        "description": "Simule succès, autorisation, refus, abandon ou timeout. Le token opaque remplace toute donnée carte; deliver_webhook=false permet de tester le retour navigateur et la réconciliation.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "provider_status",
+                        "webhook_delivered",
+                        "return_url"
+                      ],
+                      "properties": {
+                        "provider_status": {
+                          "type": "string"
+                        },
+                        "webhook_delivered": {
+                          "type": "boolean"
+                        },
+                        "return_url": {
+                          "type": "string"
+                        },
+                        "webhook": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Token, résultat ou montant invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Token, résultat ou montant invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "required": [
+                      "sandbox_token",
+                      "outcome"
+                    ],
+                    "properties": {
+                      "sandbox_token": {
+                        "type": "string",
+                        "minLength": 32
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "success",
+                          "authorize",
+                          "decline",
+                          "abandon",
+                          "timeout"
+                        ]
+                      },
+                      "amount_minor": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "deliver_webhook": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sale/payments/webhooks/{provider}": {
+      "post": {
+        "operationId": "post_public_sale_payment_webhook_v1",
+        "summary": "Recevoir un webhook de paiement provider.",
+        "description": "Endpoint serveur-à-serveur. Vérifie HMAC SHA-256, timestamp (tolérance 5 minutes), identifiant d'événement et ordre avant toute transition locale.",
+        "tags": [
+          "Headless v1"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Sale-Signature",
+            "in": "header",
+            "required": true,
+            "description": "t=<unix>,v1=<HMAC_SHA256(timestamp.raw_body)>",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Réponse normalisée de l'API publique headless v1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "processed"
+                      ],
+                      "properties": {
+                        "processed": {
+                          "type": "boolean"
+                        },
+                        "duplicate": {
+                          "type": "boolean"
+                        },
+                        "ignored_out_of_order": {
+                          "type": "boolean"
+                        },
+                        "event_id": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PublicMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Signature, timestamp, provider ou événement invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicApiError"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "error": {
+                        "code": "VALIDATION_FAILED",
+                        "message": "Signature, timestamp, provider ou événement invalide.",
+                        "details": {}
+                      },
+                      "meta": {
+                        "contract": "error.v1",
+                        "request_id": "20260604120000-abc"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "type",
+                  "provider_reference",
+                  "occurred_at"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "provider_reference": {
+                    "type": "string"
+                  },
+                  "provider_transaction_id": {
+                    "type": "string"
+                  },
+                  "occurred_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "amount_minor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "additionalProperties": false
               }
             }
           }
@@ -8129,6 +8610,93 @@
         },
         "additionalProperties": true
       },
+      "PublicSalePaymentIntent": {
+        "type": "object",
+        "required": [
+          "id",
+          "order_id",
+          "provider",
+          "contract",
+          "status",
+          "amount_minor",
+          "currency"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "order_id": {
+            "type": "integer"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "contract": {
+            "type": "string",
+            "enum": [
+              "sale.payment_provider.v1"
+            ]
+          },
+          "reference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requires_payment",
+              "requires_action",
+              "authorized",
+              "partially_captured",
+              "captured",
+              "cancelled",
+              "failed",
+              "expired"
+            ]
+          },
+          "amount_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string"
+          },
+          "authorized_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "captured_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "refunded_minor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "checkout_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sandbox_token": {
+            "type": "string",
+            "description": "Jeton opaque retourné uniquement à la création sandbox."
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "PublicContentIndexResponse": {
         "type": "object",
         "required": [
@@ -9321,6 +9889,9 @@
                     "type": "string"
                   }
                 }
+              },
+              "payment": {
+                "$ref": "#/components/schemas/PublicSalePaymentIntent"
               }
             },
             "additionalProperties": true
