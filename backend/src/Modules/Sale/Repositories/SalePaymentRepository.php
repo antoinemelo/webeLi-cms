@@ -149,8 +149,9 @@ final class SalePaymentRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'INSERT INTO sale_payment_transactions(
                 payment_intent_id, order_id, transaction_type, status, amount_minor, currency,
-                provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, created_by_iam_user_id, processed_at
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, operation_key,
+                attempt_count, max_attempts, available_at, last_error, created_by_iam_user_id, processed_at
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $options['payment_intent_id'] ?? null,
                 $orderId,
@@ -163,6 +164,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
                 $options['error_code'] ?? null,
                 $options['error_message'] ?? null,
                 $options['correlation_id'] ?? null,
+                $options['operation_key'] ?? null,
+                max(0, (int) ($options['attempt_count'] ?? 0)),
+                max(1, (int) ($options['max_attempts'] ?? 5)),
+                $options['available_at'] ?? gmdate('Y-m-d H:i:s'),
+                $options['last_error'] ?? null,
                 $options['created_by_iam_user_id'] ?? null,
                 in_array($status, ['succeeded', 'failed', 'cancelled'], true) ? gmdate('Y-m-d H:i:s') : null,
             ]
@@ -199,9 +205,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
     public function requireTransactionWithOrder(int $transactionId): array
     {
         $row = $this->rawDatabase()->one(
-            'SELECT t.*, o.site_id, o.channel_id, o.grand_total_minor, o.paid_total_minor, o.refunded_total_minor
+            'SELECT t.*, o.site_id, o.channel_id, o.grand_total_minor, o.paid_total_minor, o.refunded_total_minor,
+                    i.provider_key AS intent_provider_key,i.intent_reference,i.authorized_minor,i.captured_minor,i.refunded_minor AS intent_refunded_minor
              FROM sale_payment_transactions t
              INNER JOIN sale_orders o ON o.id = t.order_id
+             LEFT JOIN sale_payment_intents i ON i.id=t.payment_intent_id
              WHERE t.id = ? LIMIT 1',
             [$transactionId]
         );
@@ -223,11 +231,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
     }
 
     /** @return array<string,mixed> */
-    public function createRefund(int $orderId, int $transactionId, int $amountMinor, string $currency, ?string $reason, ?int $iamUserId, string $status = 'succeeded'): array
+    public function createRefund(int $orderId, int $transactionId, int $amountMinor, string $currency, ?string $reason, ?int $iamUserId, string $status = 'succeeded', array $options = []): array
     {
         $this->rawDatabase()->run(
-            'INSERT INTO sale_refunds(order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, processed_at)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO sale_refunds(order_id,payment_transaction_id,refund_number,status,amount_minor,currency,reason,reason_code,reason_note,return_id,idempotency_key,provider_reference,provider_status,attempt_count,max_attempts,available_at,created_by_iam_user_id,processed_at)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [
                 $orderId,
                 $transactionId,
@@ -236,10 +244,31 @@ final class SalePaymentRepository extends SaleRepositoryBase
                 $amountMinor,
                 strtoupper($currency),
                 $reason,
+                $options['reason_code'] ?? null,
+                $options['reason_note'] ?? $reason,
+                $options['return_id'] ?? null,
+                $options['idempotency_key'] ?? null,
+                $options['provider_reference'] ?? null,
+                $options['provider_status'] ?? null,
+                max(0,(int)($options['attempt_count']??0)),
+                max(1,(int)($options['max_attempts']??5)),
+                $options['available_at'] ?? gmdate('Y-m-d H:i:s'),
                 $iamUserId,
                 in_array($status, ['succeeded', 'failed', 'cancelled'], true) ? gmdate('Y-m-d H:i:s') : null,
             ]
         );
         return $this->rawDatabase()->one('SELECT * FROM sale_refunds WHERE id = ?', [(int) $this->rawDatabase()->lastInsertId()]) ?? [];
+    }
+
+    /** @return array<string,mixed>|null */
+    public function transactionByOperationKey(int $intentId, string $type, string $operationKey): ?array
+    {
+        return $this->rawDatabase()->one('SELECT * FROM sale_payment_transactions WHERE payment_intent_id=? AND transaction_type=? AND operation_key=?',[$intentId,$type,$operationKey]);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function refundByIdempotency(int $orderId, string $key): ?array
+    {
+        return $this->rawDatabase()->one('SELECT * FROM sale_refunds WHERE order_id=? AND idempotency_key=?',[$orderId,$key]);
     }
 }

@@ -231,7 +231,7 @@ final class SaleOnlinePaymentService
     }
 
     /** @return array<string,mixed> */
-    public function reconcile(int $siteId, ?int $intentId = null, ?int $actorId = null): array
+    public function reconcile(int $siteId, ?int $intentId = null, ?int $actorId = null, string $triggerKind = 'manual'): array
     {
         $intents = $intentId !== null
             ? [$this->payments->requireIntentWithOrder($intentId)]
@@ -243,11 +243,25 @@ final class SaleOnlinePaymentService
             }
             try {
                 $provider = $this->providers->contract((string) $intent['provider_key']);
+                if (!($provider->capabilities()['reconcile'] ?? false)) {
+                    continue;
+                }
                 $state = $provider->reconcile([
                     'intent_id' => (int) $intent['id'], 'provider_reference' => (string) $intent['intent_reference'],
                 ]);
                 $findings = [];
                 $status = 'consistent';
+                $priority = 'low';
+                $recommendedAction = null;
+                $requiresHuman = false;
+                if ((int) ($state['amount_minor'] ?? $intent['amount_minor']) !== (int) $intent['amount_minor']) {
+                    $findings[] = 'amount_mismatch'; $status = 'attention_required'; $priority = 'critical';
+                    $recommendedAction = 'verify_provider_amount_before_manual_repair'; $requiresHuman = true;
+                }
+                if (strtoupper((string) ($state['currency'] ?? $intent['currency'])) !== (string) $intent['currency']) {
+                    $findings[] = 'currency_mismatch'; $status = 'attention_required'; $priority = 'critical';
+                    $recommendedAction = 'block_financial_action_and_verify_currency'; $requiresHuman = true;
+                }
                 $providerCaptured = (int) ($state['captured_minor'] ?? 0);
                 $localCaptured = (int) $intent['captured_minor'];
                 if ($providerCaptured > $localCaptured) {
@@ -261,10 +275,13 @@ final class SaleOnlinePaymentService
                         'data' => ['status' => (string) $state['status'], 'captured_minor' => $providerCaptured],
                     ];
                     $this->db()->transaction(fn() => $this->applyProviderEvent($intent, $event));
-                    $status = 'repaired';
+                    if (!$requiresHuman) $status = 'repaired';
+                    $priority = $priority === 'critical' ? $priority : 'high';
+                    $recommendedAction ??= 'review_automatic_capture_repair';
                 } elseif ($localCaptured > $providerCaptured) {
                     $findings[] = 'local_capture_without_provider_confirmation';
                     $status = 'attention_required';
+                    $priority = 'critical'; $recommendedAction = 'verify_local_capture_with_provider'; $requiresHuman = true;
                     $this->metric($siteId, 'payment.reconciliation.divergence', 'critical', (int) $intent['id'], ['kind' => $findings[0]]);
                 } elseif (in_array((string) $state['status'], ['failed','cancelled','expired'], true)
                     && !in_array((string) $intent['status'], ['failed','cancelled','expired'], true)) {
@@ -277,12 +294,29 @@ final class SaleOnlinePaymentService
                         'data' => ['status' => (string) $state['status']],
                     ];
                     $this->db()->transaction(fn() => $this->applyProviderEvent($intent, $event));
-                    $status = 'repaired';
+                    if (!$requiresHuman) $status = 'repaired';
+                    $priority = $priority === 'critical' ? $priority : 'high';
+                    $recommendedAction ??= 'review_automatic_terminal_state_repair';
                 }
-                $this->recordReconciliation($siteId, (int) $intent['id'], $status, (string) $state['status'], (string) $intent['status'], $findings, $actorId);
+                $providerRefunded = (int) ($state['refunded_minor'] ?? 0);
+                $localRefunded = (int) ($intent['refunded_minor'] ?? 0);
+                if ($providerRefunded !== $localRefunded) {
+                    $findings[] = $providerRefunded > $localRefunded ? 'provider_refund_missing_locally' : 'local_refund_without_provider_confirmation';
+                    $status = 'attention_required'; $priority = 'critical'; $recommendedAction = 'verify_refund_ledger_with_provider'; $requiresHuman = true;
+                }
+                if ($findings !== [] && $intent['last_provider_event_at'] === null && ($providerCaptured > 0 || $providerRefunded > 0)) {
+                    $findings[] = 'provider_webhook_missing';
+                }
+                $this->recordReconciliation($siteId, (int) $intent['id'], $status, (string) $state['status'], (string) $intent['status'], $findings, $actorId, [
+                    'trigger_kind' => $triggerKind, 'priority' => $priority, 'amount_minor' => max(abs($providerCaptured - $localCaptured), abs($providerRefunded - $localRefunded)),
+                    'currency' => (string) $intent['currency'], 'recommended_action' => $recommendedAction, 'requires_human_action' => $requiresHuman,
+                ]);
                 $results[] = ['intent_id' => (int) $intent['id'], 'status' => $status, 'findings' => $findings];
             } catch (Throwable $e) {
-                $this->recordReconciliation($siteId, (int) $intent['id'], 'failed', null, (string) $intent['status'], [$this->safeError($e->getMessage())], $actorId);
+                $this->recordReconciliation($siteId, (int) $intent['id'], 'failed', null, (string) $intent['status'], ['provider_reconciliation_failed'], $actorId, [
+                    'trigger_kind' => $triggerKind, 'priority' => 'high', 'amount_minor' => (int) $intent['amount_minor'], 'currency' => (string) $intent['currency'],
+                    'recommended_action' => 'retry_provider_reconciliation', 'requires_human_action' => false, 'error' => $this->safeError($e->getMessage()),
+                ]);
                 $results[] = ['intent_id' => (int) $intent['id'], 'status' => 'failed'];
             }
         }
@@ -317,7 +351,67 @@ final class SaleOnlinePaymentService
                 CAST((julianday('now')-julianday(w.received_at))*86400 AS INTEGER) AS age_seconds,i.id AS payment_intent_id,o.order_number
                 FROM sale_payment_webhook_events w LEFT JOIN sale_payment_intents i ON i.provider_key=w.provider_key AND i.intent_reference=w.provider_reference
                 LEFT JOIN sale_orders o ON o.id=i.order_id WHERE w.site_id=? ORDER BY w.id DESC LIMIT 100",[$siteId]),
+            'exception_center' => $this->exceptionCenter($siteId),
         ];
+    }
+
+    /** @return array<string,mixed> */
+    public function exceptionCenter(int $siteId, bool $humanOnly = false): array
+    {
+        $humanSql = $humanOnly ? ' AND r.requires_human_action=1' : '';
+        $items = $this->db()->all(
+            "SELECT r.id,r.payment_intent_id,r.status,r.priority,r.amount_minor,r.currency,r.recommended_action,r.requires_human_action,
+                    r.findings_json,r.created_at,CAST((julianday('now')-julianday(r.created_at))*86400 AS INTEGER) AS age_seconds,
+                    i.provider_key,o.id AS order_id,o.order_number,o.customer_snapshot_json
+             FROM sale_payment_reconciliation_runs r LEFT JOIN sale_payment_intents i ON i.id=r.payment_intent_id
+             LEFT JOIN sale_orders o ON o.id=i.order_id WHERE r.site_id=? AND r.resolution_status='open'
+               AND r.status IN ('attention_required','failed')" . $humanSql . ' ORDER BY CASE r.priority WHEN \'critical\' THEN 1 WHEN \'high\' THEN 2 WHEN \'medium\' THEN 3 ELSE 4 END,r.id DESC LIMIT 200',
+            [$siteId]
+        );
+        foreach ($items as &$item) {
+            $item['findings'] = json_decode((string) $item['findings_json'], true) ?: [];
+            $customer = json_decode((string) ($item['customer_snapshot_json'] ?? '{}'), true);
+            $item['customer'] = is_array($customer) ? ['name' => trim((string) (($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''))), 'email' => $customer['email'] ?? null] : [];
+            unset($item['findings_json'], $item['customer_snapshot_json']);
+        }
+        unset($item);
+        $groups = [];
+        foreach ($items as $item) foreach ($item['findings'] as $finding) $groups[$finding] = ($groups[$finding] ?? 0) + 1;
+        $pending = $this->db()->one(
+            "SELECT (SELECT COUNT(*) FROM sale_payment_transactions t JOIN sale_payment_intents i ON i.id=t.payment_intent_id WHERE i.site_id=? AND t.status IN ('pending','dead_letter')) +
+                    (SELECT COUNT(*) FROM sale_refunds r JOIN sale_orders o ON o.id=r.order_id WHERE o.site_id=? AND r.status='pending') AS count",
+            [$siteId, $siteId]
+        );
+        return ['health' => $items === [] && (int) ($pending['count'] ?? 0) === 0 ? 'healthy' : 'attention', 'open_count' => count($items),
+            'pending_operations' => (int) ($pending['count'] ?? 0), 'groups' => $groups, 'items' => $items];
+    }
+
+    /** @param list<int> $runIds @return array<string,mixed> */
+    public function previewExceptionResolution(int $siteId, array $runIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $runIds), static fn(int $id): bool => $id > 0)));
+        if ($ids === []) throw new SalePaymentException('sale.payment_exception_selection_required');
+        $rows = $this->db()->all('SELECT * FROM sale_payment_reconciliation_runs WHERE site_id=? AND resolution_status=\'open\' AND id IN (' . implode(',', $ids) . ')', [$siteId]);
+        if (count($rows) !== count($ids)) throw new SalePaymentException('sale.payment_exception_selection_invalid');
+        $actions = array_values(array_unique(array_map(static fn(array $row): string => (string) ($row['recommended_action'] ?? ''), $rows)));
+        $human = array_filter($rows, static fn(array $row): bool => (int) $row['requires_human_action'] === 1);
+        return ['count' => count($rows), 'homogeneous' => count($actions) === 1, 'recommended_action' => count($actions) === 1 ? $actions[0] : null,
+            'safe_bulk_reconcile' => count($actions) === 1 && $human === [] && $actions[0] === 'retry_provider_reconciliation',
+            'amount_minor' => array_sum(array_map(static fn(array $row): int => (int) $row['amount_minor'], $rows)), 'currency' => count(array_unique(array_column($rows, 'currency'))) === 1 ? $rows[0]['currency'] : null];
+    }
+
+    /** @return array<string,mixed> */
+    public function resolveException(int $siteId, int $runId, string $note, int $actorId, string $resolution = 'resolved'): array
+    {
+        $note = trim($note);
+        if ($note === '' || !in_array($resolution, ['resolved', 'ignored'], true)) throw new SalePaymentException('sale.payment_exception_resolution_invalid');
+        $this->db()->run(
+            'UPDATE sale_payment_reconciliation_runs SET resolution_status=?,resolution_note=?,resolved_by_iam_user_id=?,resolved_at=CURRENT_TIMESTAMP WHERE site_id=? AND id=? AND resolution_status=\'open\'',
+            [$resolution, $note, $actorId, $siteId, $runId]
+        );
+        $row = $this->db()->one('SELECT * FROM sale_payment_reconciliation_runs WHERE site_id=? AND id=?', [$siteId, $runId]);
+        if ($row === null) throw new SalePaymentException('sale.payment_exception_not_found');
+        return $row;
     }
 
     /** @return array<string,mixed> */
@@ -351,8 +445,15 @@ final class SaleOnlinePaymentService
         foreach ($session['provider_events'] as $item) { $timeline[] = ['kind' => 'provider_event', 'status' => $item['processing_status'], 'at' => $item['provider_occurred_at'], 'detail' => $item['event_type']]; }
         foreach ($session['reconciliations'] as $item) { $timeline[] = ['kind' => 'reconciliation', 'status' => $item['status'], 'at' => $item['created_at']]; }
         usort($timeline, static fn(array $a, array $b): int => strcmp((string) $a['at'], (string) $b['at']));
+        $captures = array_values(array_filter($session['transactions'], static fn(array $item): bool => in_array((string) $item['transaction_type'], ['payment','capture'], true)));
+        foreach ($captures as &$capture) {
+            $refunded = array_sum(array_map(static fn(array $refund): int => (int) $refund['payment_transaction_id'] === (int) $capture['id'] && in_array((string) $refund['status'], ['pending','succeeded'], true) ? (int) $refund['amount_minor'] : 0, $session['refunds']));
+            $capture['refunded_minor'] = $refunded;
+            $capture['refundable_minor'] = (string) $capture['status'] === 'succeeded' ? max(0, (int) $capture['amount_minor'] - $refunded) : 0;
+        }
+        unset($capture);
         return $payload + [
-            'captures' => array_values(array_filter($session['transactions'], static fn(array $item): bool => in_array((string) $item['transaction_type'], ['payment','capture'], true))),
+            'captures' => $captures,
             'refunds' => $session['refunds'],
             'timeline' => $timeline,
             'technical' => [
@@ -470,12 +571,18 @@ final class SaleOnlinePaymentService
         $customer = json_decode((string) ($session['customer_snapshot_json'] ?? '{}'), true);
         $action = json_decode((string) ($session['public_action_json'] ?? '{}'), true);
         $action = is_array($action) ? $action : [];
+        $capabilities = $this->providers->contract((string) $session['provider_key'])->capabilities();
+        $authorized = (int) $session['authorized_minor'];
+        $captured = (int) $session['captured_minor'];
+        $refunded = (int) $session['refunded_minor'];
         return [
             'id' => (int) $session['id'], 'order_id' => (int) $session['order_id'], 'order_number' => (string) $session['order_number'],
             'amount_minor' => (int) $session['amount_minor'], 'currency' => (string) $session['currency'],
             'status' => (string) $session['status'], 'state' => $this->statePresentation((string) $session['status'], $language),
             'provider' => (string) $session['provider_key'], 'reference' => $session['intent_reference'],
             'authorized_minor' => (int) $session['authorized_minor'], 'captured_minor' => (int) $session['captured_minor'], 'refunded_minor' => (int) $session['refunded_minor'],
+            'capturable_minor' => max(0, $authorized - $captured), 'refundable_minor' => max(0, $captured - $refunded),
+            'balance_minor' => max(0, $captured - $refunded), 'capabilities' => $capabilities,
             'order_status' => (string) $session['order_status'], 'order_payment_status' => (string) $session['order_payment_status'],
             'customer' => is_array($customer) ? ['name' => trim((string) (($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''))), 'email' => $customer['email'] ?? null] : [],
             'created_at' => $session['created_at'], 'expires_at' => $session['expires_at'],
@@ -504,11 +611,14 @@ final class SaleOnlinePaymentService
     }
 
     /** @param list<string> $findings */
-    private function recordReconciliation(int $siteId, int $intentId, string $status, ?string $providerStatus, string $localStatus, array $findings, ?int $actorId): void
+    private function recordReconciliation(int $siteId, int $intentId, string $status, ?string $providerStatus, string $localStatus, array $findings, ?int $actorId, array $options = []): void
     {
         $this->db()->run(
-            'INSERT INTO sale_payment_reconciliation_runs(site_id,payment_intent_id,trigger_kind,status,provider_status,local_status,findings_json,created_by_iam_user_id) VALUES(?,?,\'manual\',?,?,?,?,?)',
-            [$siteId, $intentId, $status, $providerStatus, $localStatus, $this->json($findings), $actorId]
+            'INSERT INTO sale_payment_reconciliation_runs(site_id,payment_intent_id,trigger_kind,status,provider_status,local_status,findings_json,priority,amount_minor,currency,recommended_action,requires_human_action,created_by_iam_user_id)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [$siteId, $intentId, $options['trigger_kind'] ?? 'manual', $status, $providerStatus, $localStatus,
+                $this->json($findings), $options['priority'] ?? 'low', max(0, (int) ($options['amount_minor'] ?? 0)),
+                $options['currency'] ?? null, $options['recommended_action'] ?? null, ($options['requires_human_action'] ?? false) ? 1 : 0, $actorId]
         );
     }
 

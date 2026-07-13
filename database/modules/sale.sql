@@ -630,6 +630,18 @@ CREATE TABLE IF NOT EXISTS sale_test_payment_states (
     FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS sale_test_payment_operations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_key TEXT NOT NULL,
+    provider_reference TEXT NOT NULL,
+    operation_kind TEXT NOT NULL CHECK(operation_kind IN ('capture','refund','void')),
+    operation_key TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL DEFAULT 0 CHECK(amount_minor >= 0),
+    result_json TEXT NOT NULL CHECK(json_valid(result_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(provider_key,provider_reference,operation_kind,operation_key)
+);
+
 CREATE TABLE IF NOT EXISTS sale_payment_webhook_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -663,10 +675,20 @@ CREATE TABLE IF NOT EXISTS sale_payment_reconciliation_runs (
     provider_status TEXT,
     local_status TEXT,
     findings_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(findings_json)),
+    priority TEXT NOT NULL DEFAULT 'low' CHECK(priority IN ('low','medium','high','critical')),
+    amount_minor INTEGER NOT NULL DEFAULT 0 CHECK(amount_minor >= 0),
+    currency TEXT CHECK(currency IS NULL OR (length(currency)=3 AND currency=upper(currency))),
+    recommended_action TEXT,
+    requires_human_action INTEGER NOT NULL DEFAULT 0 CHECK(requires_human_action IN (0,1)),
+    resolution_status TEXT NOT NULL DEFAULT 'open' CHECK(resolution_status IN ('open','resolved','ignored')),
+    resolution_note TEXT,
+    resolved_by_iam_user_id INTEGER,
+    resolved_at TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CHECK(site_id > 0)
+    CHECK(site_id > 0),
+    CHECK(resolved_at IS NULL OR resolution_status IN ('resolved','ignored'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_payment_reconciliation_site
@@ -692,7 +714,7 @@ CREATE TABLE IF NOT EXISTS sale_payment_transactions (
     payment_intent_id INTEGER,
     order_id INTEGER NOT NULL,
     transaction_type TEXT NOT NULL CHECK(transaction_type IN ('authorization','capture','payment','refund','void')),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','succeeded','failed','cancelled')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','succeeded','failed','cancelled','dead_letter')),
     amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
     provider_transaction_id TEXT,
@@ -700,13 +722,21 @@ CREATE TABLE IF NOT EXISTS sale_payment_transactions (
     error_code TEXT,
     error_message TEXT,
     correlation_id TEXT,
+    operation_key TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+    max_attempts INTEGER NOT NULL DEFAULT 5 CHECK(max_attempts > 0),
+    available_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_error TEXT,
+    dead_lettered_at TEXT,
     created_by_iam_user_id INTEGER,
     processed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(provider_transaction_id IS NULL OR trim(provider_transaction_id) <> ''),
-    CHECK(error_code IS NULL OR trim(error_code) <> '')
+    CHECK(error_code IS NULL OR trim(error_code) <> ''),
+    CHECK(operation_key IS NULL OR trim(operation_key) <> ''),
+    CHECK(status <> 'dead_letter' OR dead_lettered_at IS NOT NULL)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_payment_transactions_order
@@ -716,6 +746,12 @@ CREATE INDEX IF NOT EXISTS idx_sale_payment_transactions_intent
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_payment_transactions_provider_unique
     ON sale_payment_transactions(provider_transaction_id)
     WHERE provider_transaction_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_payment_transactions_operation_unique
+    ON sale_payment_transactions(payment_intent_id, transaction_type, operation_key)
+    WHERE operation_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sale_payment_transactions_retry
+    ON sale_payment_transactions(status, available_at, attempt_count)
+    WHERE status='pending' AND operation_key IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS sale_payment_allocations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1080,6 +1116,17 @@ CREATE TABLE IF NOT EXISTS sale_refunds (
     amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
     reason TEXT,
+    reason_code TEXT,
+    reason_note TEXT,
+    return_id INTEGER,
+    idempotency_key TEXT,
+    provider_reference TEXT,
+    provider_status TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+    max_attempts INTEGER NOT NULL DEFAULT 5 CHECK(max_attempts > 0),
+    available_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_error TEXT,
+    dead_lettered_at TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     processed_at TEXT,
@@ -1088,15 +1135,23 @@ CREATE TABLE IF NOT EXISTS sale_refunds (
     UNIQUE(order_id, refund_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY(payment_transaction_id) REFERENCES sale_payment_transactions(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(return_id) REFERENCES sale_returns(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CHECK(trim(refund_number) <> ''),
     CHECK(created_by_iam_user_id IS NULL OR created_by_iam_user_id > 0),
-    CHECK(processed_at IS NULL OR status IN ('succeeded','failed','cancelled'))
+    CHECK(processed_at IS NULL OR status IN ('succeeded','failed','cancelled')),
+    CHECK(reason_code IS NULL OR (reason_code=lower(trim(reason_code)) AND reason_code GLOB '[a-z0-9_-]*')),
+    CHECK(idempotency_key IS NULL OR trim(idempotency_key) <> ''),
+    CHECK(dead_lettered_at IS NULL OR status IN ('pending','failed'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_refunds_order
     ON sale_refunds(order_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_refunds_payment_transaction
     ON sale_refunds(payment_transaction_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_refunds_idempotency
+    ON sale_refunds(order_id,idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sale_refunds_retry
+    ON sale_refunds(status,available_at,attempt_count) WHERE status='pending';
 
 CREATE TABLE IF NOT EXISTS sale_financial_corrections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1366,6 +1421,10 @@ CREATE TABLE IF NOT EXISTS sale_events (
         'sale.order.cancelled',
         'sale.payment.recorded',
         'sale.payment.confirmed',
+        'sale.payment.capture.requested',
+        'sale.payment.capture.completed',
+        'sale.payment.capture.retry_scheduled',
+        'sale.payment.capture.dead_lettered',
         'sale.payment.failed',
         'sale.fulfillment.completed',
         'sale.return.created',
@@ -1374,6 +1433,9 @@ CREATE TABLE IF NOT EXISTS sale_events (
         'sale.pos.order.completed',
         'sale.refund.created',
         'sale.refund.completed',
+        'sale.refund.requested',
+        'sale.refund.retry_scheduled',
+        'sale.refund.dead_lettered',
         'sale.gift_card.issued',
         'sale.gift_card.redeemed',
         'sale.invoice.sent',

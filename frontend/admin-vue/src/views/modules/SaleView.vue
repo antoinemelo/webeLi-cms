@@ -58,7 +58,12 @@ type PaymentSession = Row & {
   provider?: string;
   instructions?: Row | null;
   test_mode?: boolean;
+  capturable_minor?: number;
+  refundable_minor?: number;
+  capabilities?: Record<string, boolean>;
+  captures?: Row[];
 };
+type PaymentExceptionCenter = { health?: string; open_count?: number; pending_operations?: number; groups?: Record<string, number>; items?: Row[] };
 type OrderColumnKey = 'number' | 'date' | 'source' | 'total' | 'payment' | 'status';
 type SortDirection = 'asc' | 'desc';
 
@@ -77,6 +82,7 @@ const orderPayments = ref<Row[]>([]);
 const orderEvents = ref<Row[]>([]);
 const paymentSessions = ref<PaymentSession[]>([]);
 const paymentWebhookEvents = ref<Row[]>([]);
+const paymentExceptionCenter = ref<PaymentExceptionCenter>({});
 const selectedPayment = ref<PaymentSession | null>(null);
 const paymentSearch = ref('');
 const paymentFilter = ref({ status: '', provider: '' });
@@ -85,6 +91,11 @@ const confirmAmount = ref(0);
 const paymentReference = ref('');
 const paymentComment = ref('');
 const proofAssetId = ref<number | null>(null);
+const captureReasonCode = ref('order_ready');
+const refundTransactionId = ref(0);
+const refundAmount = ref(0);
+const refundReasonCode = ref('customer_request');
+const refundReasonNote = ref('');
 const manualProvider = ref('manual_card');
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
@@ -254,9 +265,10 @@ async function loadPayments(): Promise<void> {
     provider: paymentFilter.value.provider,
     sort: paymentSort.value,
     limit: 100
-  }), adminApi.get<{ webhook_events?: Row[] }>('/sale/payments/observability')]);
+  }), adminApi.get<{ webhook_events?: Row[]; exception_center?: PaymentExceptionCenter }>('/sale/payments/observability')]);
   paymentSessions.value = response.data.payment_sessions || [];
   paymentWebhookEvents.value = observability.data.webhook_events || [];
+  paymentExceptionCenter.value = observability.data.exception_center || {};
   if (selectedPayment.value && !paymentSessions.value.some((payment) => payment.id === selectedPayment.value?.id)) selectedPayment.value = null;
   if (!selectedPayment.value && paymentSessions.value[0]) await selectPayment(paymentSessions.value[0]);
 }
@@ -265,7 +277,10 @@ async function selectPayment(payment: PaymentSession): Promise<void> {
   try {
     const response = await adminApi.get<{ payment: PaymentSession }>(`/sale/payments/${payment.id}`);
     selectedPayment.value = response.data.payment;
-    confirmAmount.value = Math.max(0, Number(response.data.payment.amount_minor || 0) - Number(response.data.payment.captured_minor || 0));
+    confirmAmount.value = Math.max(0, Number(response.data.payment.capturable_minor ?? response.data.payment.amount_minor ?? 0) - (response.data.payment.capturable_minor === undefined ? Number(response.data.payment.captured_minor || 0) : 0));
+    const refundable = (response.data.payment.captures || []).find((capture) => Number(capture.refundable_minor || 0) > 0);
+    refundTransactionId.value = Number(refundable?.id || 0);
+    refundAmount.value = Number(refundable?.refundable_minor || 0);
   } catch (err) { error.value = apiErrorMessage(err); }
 }
 
@@ -277,11 +292,28 @@ async function confirmSelectedPayment(): Promise<void> {
   if (!selectedPayment.value?.id || confirmAmount.value < 1) return;
   saving.value = true; error.value = ''; notice.value = '';
   try {
-    await adminApi.post(`/sale/payment-intents/${selectedPayment.value.id}/confirm`, { amount_minor: Math.round(confirmAmount.value), operator_reference: paymentReference.value || null, comment: paymentComment.value || null, proof_asset_id: proofAssetId.value || null, idempotency_key: crypto.randomUUID() });
+    const delayedCapture = ['authorized','partially_captured'].includes(String(selectedPayment.value.status || '')) && selectedPayment.value.capabilities?.capture === true && Number(selectedPayment.value.capturable_minor || 0) > 0;
+    await adminApi.post(`/sale/payment-intents/${selectedPayment.value.id}/${delayedCapture ? 'capture' : 'confirm'}`, { amount_minor: Math.round(confirmAmount.value), operator_reference: paymentReference.value || null, comment: paymentComment.value || null, proof_asset_id: proofAssetId.value || null, reason_code: captureReasonCode.value, reason_note: paymentComment.value || null, idempotency_key: crypto.randomUUID() });
     notice.value = t('sale.payments.confirmed'); paymentReference.value = ''; paymentComment.value = ''; proofAssetId.value = null; await loadPayments();
   } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
 }
+async function refundSelectedPayment(): Promise<void> {
+  if (refundTransactionId.value < 1 || refundAmount.value < 1) return;
+  saving.value = true; error.value = ''; notice.value = '';
+  try {
+    await adminApi.post(`/sale/payments/${refundTransactionId.value}/refund`, { amount_minor: Math.round(refundAmount.value), reason_code: refundReasonCode.value, reason_note: refundReasonNote.value || null, idempotency_key: crypto.randomUUID() });
+    notice.value = t('sale.payments.refundRequested'); refundReasonNote.value = ''; await loadPayments();
+  } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
+}
+async function resolvePaymentException(item: Row): Promise<void> {
+  const note = window.prompt(t('sale.payments.resolutionNote'))?.trim();
+  if (!note) return;
+  saving.value = true; error.value = '';
+  try { await adminApi.post(`/sale/payment-exceptions/${item.id}/resolve`, { note, resolution: 'resolved' }); await loadPayments(); }
+  catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
+}
 function jsonText(value: unknown): string { return JSON.stringify(value || {}, null, 2); }
+function findingLabels(value: unknown): string { return Array.isArray(value) ? value.map((item) => statusLabel(String(item))).join(', ') : ''; }
 
 async function load(): Promise<void> {
   loading.value = true;
@@ -766,6 +798,17 @@ onMounted(load);
       <section class="sale-admin__section sale-orders-list">
         <BusinessPageHeader :eyebrow="t('sale.title')" :title="t('sale.payments.title')" />
         <div v-if="paymentSessions.some((payment) => payment.test_mode)" class="alert alert-warning"><b>MODE TEST</b> — {{ t('sale.payments.testWarning') }}</div>
+        <details class="sale-admin__technical" :open="Number(paymentExceptionCenter.open_count || 0) > 0">
+          <summary>{{ t('sale.payments.exceptionCenter') }} · {{ Number(paymentExceptionCenter.open_count || 0) }} · {{ t(`sale.payments.health.${paymentExceptionCenter.health || 'healthy'}`) }}</summary>
+          <p>{{ t('sale.payments.pendingOperations') }}: <b>{{ Number(paymentExceptionCenter.pending_operations || 0) }}</b></p>
+          <div v-for="(count, cause) in paymentExceptionCenter.groups || {}" :key="cause" class="sale-admin__line"><span>{{ statusLabel(String(cause)) }}</span><b>{{ count }}</b></div>
+          <div v-for="item in paymentExceptionCenter.items || []" :key="String(item.id)" class="sale-admin__list-row">
+            <span>{{ item.order_number || '—' }} <small>{{ item.provider_key }} · {{ item.priority }}</small></span>
+            <b>{{ money(item.amount_minor, item.currency) }}</b>
+            <small>{{ findingLabels(item.findings) }} · {{ statusLabel(String(item.recommended_action || '')) }}</small>
+            <button class="btn btn-sm btn-outline-primary" type="button" :disabled="saving" @click="resolvePaymentException(item)">{{ t('sale.payments.markResolved') }}</button>
+          </div>
+        </details>
         <button class="btn btn-outline-primary btn-sm" type="button" @click="showBankQueue">{{ t('sale.payments.bankQueue') }}</button>
         <form class="sale-toolbar" @submit.prevent="applyPaymentFilters">
           <input v-model="paymentSearch" class="form-control" type="search" :placeholder="t('sale.payments.searchPlaceholder')">
@@ -804,8 +847,32 @@ onMounted(load);
           <small>{{ t('sale.payments.remaining') }}: {{ money(Math.max(0, Number(selectedPayment.amount_minor || 0) - Number(selectedPayment.captured_minor || 0)), selectedPayment.currency) }}</small>
           <input v-model="paymentReference" class="form-control" type="text" :placeholder="t('sale.payments.referenceOptional')">
           <input v-model="paymentComment" class="form-control" type="text" :placeholder="t('sale.payments.commentOptional')">
+          <select v-if="selectedPayment.capabilities?.capture" v-model="captureReasonCode" class="select">
+            <option value="order_ready">{{ t('sale.payments.captureReason.orderReady') }}</option>
+            <option value="partial_fulfillment">{{ t('sale.payments.captureReason.partialFulfillment') }}</option>
+            <option value="service_delivered">{{ t('sale.payments.captureReason.serviceDelivered') }}</option>
+            <option value="manual_review">{{ t('sale.payments.captureReason.manualReview') }}</option>
+          </select>
           <input v-model.number="proofAssetId" class="form-control" type="number" min="1" :placeholder="t('sale.payments.proofOptional')">
           <button class="btn btn-primary" type="button" :disabled="saving || confirmAmount < 1" @click="confirmSelectedPayment">{{ t('sale.payments.confirmReceipt') }}</button>
+        </div>
+        <div v-if="Number(selectedPayment.refundable_minor || 0) > 0" class="sale-admin__actions-block">
+          <h3>{{ t('sale.payments.guidedRefund') }}</h3>
+          <select v-model.number="refundTransactionId" class="select" @change="refundAmount = Number((selectedPayment?.captures || []).find((capture) => Number(capture.id) === refundTransactionId)?.refundable_minor || 0)">
+            <option v-for="capture in (selectedPayment.captures || []).filter((item) => Number(item.refundable_minor || 0) > 0)" :key="String(capture.id)" :value="Number(capture.id)">#{{ capture.id }} · {{ money(capture.refundable_minor, selectedPayment.currency) }}</option>
+          </select>
+          <label>{{ t('sale.payments.refundAmount') }}<input v-model.number="refundAmount" class="form-control" type="number" min="1"></label>
+          <select v-model="refundReasonCode" class="select">
+            <option value="customer_request">{{ t('sale.payments.refundReason.customerRequest') }}</option>
+            <option value="return">{{ t('sale.payments.refundReason.return') }}</option>
+            <option value="duplicate">{{ t('sale.payments.refundReason.duplicate') }}</option>
+            <option value="fraud">{{ t('sale.payments.refundReason.fraud') }}</option>
+            <option value="service_failure">{{ t('sale.payments.refundReason.serviceFailure') }}</option>
+            <option value="commercial_gesture">{{ t('sale.payments.refundReason.commercialGesture') }}</option>
+            <option value="other">{{ t('sale.payments.refundReason.other') }}</option>
+          </select>
+          <input v-model="refundReasonNote" class="form-control" type="text" :placeholder="t('sale.payments.reasonNote')">
+          <button class="btn btn-outline-primary" type="button" :disabled="saving || refundAmount < 1 || refundTransactionId < 1" @click="refundSelectedPayment">{{ t('sale.payments.requestRefund') }}</button>
         </div>
         <h3>{{ t('sale.payments.timeline') }}</h3>
         <div v-for="(event, index) in selectedPayment.timeline || []" :key="`${event.kind}-${index}`" class="sale-admin__line">

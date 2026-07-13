@@ -7,7 +7,7 @@ namespace App\Modules\Sale\Payments;
 final class ManualPaymentProvider implements PaymentProvider
 {
     public function key(): string { return 'manual_card'; }
-    public function supports(string $operation): bool { return in_array($operation, ['create_intent','record_payment','capture','refund','void'], true); }
+    public function supports(string $operation): bool { return in_array($operation, ['create_intent','record_payment','capture','multiple_capture','refund','void'], true); }
 
     public function createIntent(array $payload): array
     {

@@ -594,11 +594,44 @@ final class SaleAdminApiController
         } catch (Throwable $e) { return $this->domainError($e); }
     }
 
+    public function previewPaymentExceptions(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $payload = $this->payload();
+            return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->previewExceptionResolution(
+                (int) $site['id'], is_array($payload['ids'] ?? null) ? $payload['ids'] : []
+            ), 'admin.sale.payment_exceptions.preview.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function resolvePaymentException(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            $payload = $this->payload();
+            return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->resolveException(
+                (int) $site['id'], $this->id($id), (string) ($payload['note'] ?? ''), $this->actorId(), (string) ($payload['resolution'] ?? 'resolved')
+            ), 'admin.sale.payment_exceptions.resolve.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
     public function retryPaymentWebhook(string|int $id): Response
     {
         [$site,$languageCode]=$this->authorize('sale.payments.manage');
         try{return $this->ok(($this->onlinePayments??throw new SalePaymentException('sale.online_payment_unavailable'))->retryWebhook((int)$site['id'],$this->id($id)),'admin.sale.payment_webhooks.retry.v1',$site,$languageCode);}
         catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function retryPaymentOperations(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        try {
+            return $this->ok(
+                $this->paymentService->processDueOperations((int) $site['id'], (int) ($this->payload()['limit'] ?? 50), $this->actorId()),
+                'admin.sale.payment_operations.retry.v1', $site, $languageCode
+            );
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function paymentMethods(): Response
@@ -662,9 +695,24 @@ final class SaleAdminApiController
             $result=$this->paymentService->confirmIntent($this->id($id),(int)($payload['amount_minor']??0),$this->actorId(),[
                 'idempotency_key'=>$this->idempotencyKey($payload),'operator_reference'=>$payload['operator_reference']??null,
                 'comment'=>$payload['comment']??null,'proof_asset_id'=>isset($payload['proof_asset_id'])?(int)$payload['proof_asset_id']:null,
+                'reason_code'=>$payload['reason_code']??null,'reason_note'=>$payload['reason_note']??null,
             ]);
             if ($this->receiptService !== null) $result['receipt']=$this->receiptService->issue((int)$intent['order_id'],$languageCode,$this->actorId());
             return $this->ok($result,'admin.sale.payment_intents.confirm.v1',$site,$languageCode,201);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function capturePaymentIntent(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.confirm');
+        try {
+            $intent = $this->payments->requireIntentWithOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $intent['order_site_id']);
+            $payload = $this->payload();
+            return $this->ok($this->paymentService->captureIntent($this->id($id), (int) ($payload['amount_minor'] ?? 0), $this->actorId(), [
+                'idempotency_key' => $this->idempotencyKey($payload), 'reason_code' => $payload['reason_code'] ?? 'order_ready',
+                'reason_note' => $payload['reason_note'] ?? null,
+            ]), 'admin.sale.payment_intents.capture.v1', $site, $languageCode, 202);
         } catch (Throwable $e) { return $this->domainError($e); }
     }
 
@@ -675,7 +723,11 @@ final class SaleAdminApiController
             $payload = $this->payload();
             $tx = $this->payments->requireTransactionWithOrder($this->id($transaction_id));
             $this->ensureSite((int) $site['id'], (int) $tx['site_id']);
-            return $this->ok($this->paymentService->refundPayment($this->id($transaction_id), (int) ($payload['amount_minor'] ?? $tx['amount_minor']), isset($payload['reason']) ? (string) $payload['reason'] : null, $this->actorId(), $this->idempotencyKey($payload)), 'admin.sale.payments.refund.v1', $site, $languageCode, 201);
+            return $this->ok($this->paymentService->refundPayment(
+                $this->id($transaction_id), (int) ($payload['amount_minor'] ?? $tx['amount_minor']), isset($payload['reason']) ? (string) $payload['reason'] : null,
+                $this->actorId(), $this->idempotencyKey($payload), ['reason_code' => $payload['reason_code'] ?? 'customer_request',
+                    'reason_note' => $payload['reason_note'] ?? $payload['reason'] ?? null, 'return_id' => isset($payload['return_id']) ? (int) $payload['return_id'] : null]
+            ), 'admin.sale.payments.refund.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }

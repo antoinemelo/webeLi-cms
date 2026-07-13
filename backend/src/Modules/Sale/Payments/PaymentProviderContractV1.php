@@ -29,6 +29,7 @@ final class PaymentProviderContractV1
             'update_payment_session' => $this->provider instanceof OnlinePaymentProvider && $this->provider->supports('read_state'),
             'authorize' => $this->provider->supports('record_payment'),
             'capture' => $this->provider->supports('capture'),
+            'multiple_capture' => $this->provider->supports('multiple_capture'),
             'cancel' => $this->provider->supports('void'),
             'refund' => $this->provider->supports('refund'),
             'webhook' => $this->provider instanceof OnlinePaymentProvider && $this->provider->supports('webhook'),

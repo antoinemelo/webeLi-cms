@@ -62,13 +62,23 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - secrets exclusivement hors base et aucune donnée de carte persistée.
 - TWINT proposé dans Stripe Checkout pour les commandes CHF, en mode dynamique ou explicite ; distinction documentée avec TWINT Express Checkout direct.
 
-# 2026-07-13 — Sale M5.4 : Revolut Checkout réel
+# 2026-07-13 — Sale M5.3 extension : Revolut Checkout réel
 
 - Hosted Checkout Revolut derrière le même contrat provider v1, activable seul ou avec Stripe ;
 - Merchant API `2026-04-20`, environnements sandbox/production et ordre à capture automatique ;
 - redirection Shop récupérable, lecture serveur de l'état et annulation ;
 - signatures HMAC Revolut vérifiées sur le corps brut avec tolérance et rotation de secret ;
 - moyen de paiement ajouté au schéma canonique reconstruit from scratch, sans migration.
+
+# 2026-07-13 — Sale M5.4 : captures, remboursements et réconciliation
+
+- captures immédiates, différées, partielles et multiples pilotées par les capacités du provider ;
+- journal durable idempotent avant tout appel externe, reprises exponentielles et dead-letter sans faux échec financier ;
+- remboursements partiels, multiples et asynchrones avec motif structuré et lien facultatif vers un retour ;
+- réconciliation manuelle ou planifiée des statuts, montants, devises, captures, remboursements et webhooks manquants ;
+- centre d'exceptions orienté métier, priorisé, prévisualisation de lot sûre et résolution humaine auditée ;
+- écran Paiements enrichi avec capture et remboursement guidés, santé et opérations en attente ;
+- scénarios de test couvrant rejeu, dépassements, capture multiple, crash ambigu et réparation contrôlée.
 
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
