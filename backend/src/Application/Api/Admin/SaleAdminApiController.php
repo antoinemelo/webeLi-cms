@@ -17,6 +17,7 @@ use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Repositories\SalePosRepository;
 use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCatalogExportService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
@@ -34,6 +35,7 @@ use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleInventoryReconciliationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
@@ -77,6 +79,7 @@ final class SaleAdminApiController
         private readonly ?SalesChannelIntegrityService $channelIntegrity = null,
         private readonly ?SaleInventoryReconciliationService $inventoryReconciliation = null,
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
+        private readonly ?SalePosService $posService = null,
     ) {}
 
     public function schema(): Response
@@ -95,18 +98,16 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.pos.use');
         $siteId = (int) $site['id'];
-        $registers = $this->db()->all('SELECT * FROM sale_pos_registers WHERE site_id = ? AND status = \'active\' ORDER BY code ASC', [$siteId]);
+        $registers = $this->pos()->repository()->registers($siteId, true);
         $channels = $this->db()->all('SELECT * FROM sale_channels WHERE site_id = ? AND channel_type = \'pos\' ORDER BY code ASC', [$siteId]);
-        $session = $this->db()->one(
-            'SELECT s.* FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id = s.register_id WHERE r.site_id = ? AND s.status IN (\'open\',\'closing\') ORDER BY s.id DESC LIMIT 1',
-            [$siteId]
-        );
+        $session = $this->pos()->repository()->activeSession($siteId);
         return $this->ok([
             'site_id' => $siteId,
             'channels' => $channels,
             'registers' => $registers,
             'active_session' => $session,
-            'payment_methods' => $this->payments->methods($siteId),
+            'payment_methods' => $session === null ? [] : $this->pos()->repository()->allowedPaymentMethods((int) $session['register_id']),
+            'offline_supported' => false,
         ], 'admin.sale.pos.bootstrap.v1', $site, $languageCode);
     }
 
@@ -115,6 +116,8 @@ final class SaleAdminApiController
         [$site, $languageCode] = $this->authorize('sale.pos.use');
         $result = $this->posSellables((int) $site['id'], [
             'q' => $this->request->query['q'] ?? '',
+            'session_id' => $this->request->query['session_id'] ?? null,
+            'register_id' => $this->request->query['register_id'] ?? null,
             'limit' => $this->limit(),
             'offset' => $this->offset(),
         ]);
@@ -204,6 +207,8 @@ final class SaleAdminApiController
             'barcode' => $this->request->query['barcode'] ?? '',
             'product_type' => $this->request->query['product_type'] ?? '',
             'q' => $this->request->query['q'] ?? '',
+            'session_id' => $this->request->query['session_id'] ?? null,
+            'register_id' => $this->request->query['register_id'] ?? null,
             'limit' => $this->limit(),
             'offset' => $this->offset(),
         ];
@@ -704,6 +709,24 @@ final class SaleAdminApiController
         }
     }
 
+    public function storePosReturn(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.pos.refunds.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            if ((string) $order['source'] !== 'pos') {
+                throw new SaleValidationException('sale.pos_order_required');
+            }
+            $payload = $this->payload();
+            return $this->ok([
+                'return' => $this->returnsService()->request((int) $order['id'], is_array($payload['lines'] ?? null) ? $payload['lines'] : [], $payload['reason'] ?? null, $this->actorId(), $this->idempotencyKey($payload)),
+            ], 'admin.sale.pos.orders.returns.store.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
     public function transitionReturn(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('sale.returns.manage');
@@ -723,31 +746,37 @@ final class SaleAdminApiController
     public function posRegisters(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.pos.use');
-        return $this->ok(['registers' => $this->db()->all('SELECT * FROM sale_pos_registers WHERE site_id = ? ORDER BY code ASC', [(int) $site['id']])], 'admin.sale.pos.registers.v1', $site, $languageCode);
+        return $this->ok(['registers' => $this->pos()->repository()->registers((int) $site['id'])], 'admin.sale.pos.registers.v1', $site, $languageCode);
+    }
+
+    public function configurePosRegister(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.pos.manage');
+        try {
+            $payload = $this->payload();
+            $methodIds = array_values(array_filter(array_map('intval', is_array($payload['payment_method_ids'] ?? null) ? $payload['payment_method_ids'] : []), static fn(int $id): bool => $id > 0));
+            return $this->ok([
+                'register' => $this->pos()->repository()->configureRegister($this->id($id), (int) $site['id'], $payload, $methodIds),
+            ], 'admin.sale.pos.registers.update.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
     }
 
     public function openCashSession(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.cash.manage');
+        [$site, $languageCode] = $this->authorize('sale.pos.sessions.open');
         try {
             $payload = $this->payload();
             $registerId = (int) ($payload['register_id'] ?? $this->defaultRegisterId((int) $site['id']));
-            $register = $this->db()->one('SELECT * FROM sale_pos_registers WHERE id = ? AND site_id = ? AND status = \'active\'', [$registerId, (int) $site['id']]);
-            if ($register === null) {
-                throw new SaleValidationException('sale.pos_register_not_found');
-            }
-            $this->db()->run(
-                'INSERT INTO sale_cash_sessions(register_id, opened_by_iam_user_id, opening_cash_minor, expected_cash_minor, currency)
-                 VALUES(?, ?, ?, ?, ?)',
-                [$registerId, $this->actorId(), max(0, (int) ($payload['opening_cash_minor'] ?? 0)), max(0, (int) ($payload['opening_cash_minor'] ?? 0)), (string) ($register['currency'] ?? 'CHF')]
+            $register = $this->pos()->repository()->requireRegister($registerId, (int) $site['id']);
+            $session = $this->pos()->repository()->openSession(
+                $register,
+                isset($payload['device_id']) ? $this->id($payload['device_id']) : null,
+                $this->actorId(),
+                max(0, (int) ($payload['opening_cash_minor'] ?? 0))
             );
-            $sessionId = (int) $this->db()->lastInsertId();
-            $this->db()->run(
-                'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, reason, created_by_iam_user_id)
-                 VALUES(?, \'opening\', ?, ?, \'session opening\', ?)',
-                [$sessionId, max(0, (int) ($payload['opening_cash_minor'] ?? 0)), (string) ($register['currency'] ?? 'CHF'), $this->actorId()]
-            );
-            $session = $this->cashSession($sessionId);
+            $sessionId = (int) $session['id'];
             $this->events->emit((int) $site['id'], 'sale.pos.session.opened', 'pos_session', $sessionId, [
                 'site_id' => (int) $site['id'],
                 'cash_session_id' => $sessionId,
@@ -764,29 +793,19 @@ final class SaleAdminApiController
 
     public function closeCashSession(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.cash.manage');
+        [$site, $languageCode] = $this->authorize('sale.pos.sessions.close');
         try {
             $payload = $this->payload();
-            $session = $this->cashSession($this->id($id));
-            $register = $this->db()->one('SELECT * FROM sale_pos_registers WHERE id = ? AND site_id = ?', [(int) $session['register_id'], (int) $site['id']]);
-            if ($register === null) {
-                throw new SaleValidationException('sale.pos_session_not_found');
-            }
+            $session = $this->pos()->repository()->requireSession($this->id($id), (int) $site['id']);
             $counted = max(0, (int) ($payload['counted_cash_minor'] ?? $session['expected_cash_minor']));
-            $difference = $counted - (int) $session['expected_cash_minor'];
-            $this->db()->run(
-                'UPDATE sale_cash_sessions
-                 SET status = \'closed\', closed_by_iam_user_id = ?, counted_cash_minor = ?,
-                     difference_minor = ?, closed_at = CURRENT_TIMESTAMP, notes = ?
-                 WHERE id = ?',
-                [$this->actorId(), $counted, $difference, $payload['notes'] ?? null, (int) $session['id']]
+            $closedSession = $this->pos()->repository()->closeSession(
+                (int) $session['id'],
+                (int) $site['id'],
+                $this->actorId(),
+                $counted,
+                $payload['difference_justification'] ?? $payload['justification'] ?? null,
+                $payload['notes'] ?? null
             );
-            $this->db()->run(
-                'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, reason, created_by_iam_user_id)
-                 VALUES(?, \'closing\', ?, ?, \'session closing\', ?)',
-                [(int) $session['id'], $counted, (string) $session['currency'], $this->actorId()]
-            );
-            $closedSession = $this->cashSession((int) $session['id']);
             $this->events->emit((int) $site['id'], 'sale.pos.session.closed', 'pos_session', (int) $closedSession['id'], [
                 'site_id' => (int) $site['id'],
                 'cash_session_id' => (int) $closedSession['id'],
@@ -804,14 +823,39 @@ final class SaleAdminApiController
         }
     }
 
+    public function storeCashMovement(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.pos.cash.correct');
+        try {
+            $payload = $this->payload();
+            $session = $this->pos()->repository()->applyCashDelta(
+                $this->id($id),
+                (int) $site['id'],
+                (string) ($payload['movement_type'] ?? ''),
+                (int) ($payload['amount_minor'] ?? 0),
+                (string) ($payload['reason'] ?? ''),
+                $this->actorId()
+            );
+            return $this->ok(['session' => $session], 'admin.sale.pos.sessions.movements.store.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
     public function posStoreCart(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.pos.use');
         try {
             $payload = $this->payload();
-            $channelId = (int) ($payload['channel_id'] ?? $this->defaultPosChannelId((int) $site['id']));
-            $activeSession = $this->db()->one("SELECT s.id FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id=s.register_id WHERE r.site_id=? AND s.status IN ('open','closing') ORDER BY s.id DESC LIMIT 1", [(int) $site['id']]);
-            $cart = $this->cartService->createCart((int) $site['id'], $channelId, $payload + ['iam_user_id' => $this->actorId(),'cart_kind'=>'pos','register_session_id'=>$payload['cash_session_id']??$payload['register_session_id']??$activeSession['id']??null]);
+            $sessionId = (int) ($payload['cash_session_id'] ?? $payload['register_session_id'] ?? $this->pos()->repository()->activeSession((int) $site['id'])['id'] ?? 0);
+            $context = $this->pos()->context($sessionId, (int) $site['id'], $this->actorId());
+            $cart = $this->cartService->createCart((int) $site['id'], (int) $context['channel_id'], $payload + [
+                'iam_user_id' => $this->actorId(),
+                'cart_kind' => 'pos',
+                'register_session_id' => $sessionId,
+                'currency' => (string) $context['currency'],
+                'locale' => (string) $context['locale'],
+            ]);
             return $this->ok(['cart' => $cart], 'admin.sale.pos.carts.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -864,7 +908,7 @@ final class SaleAdminApiController
 
     public function posSetCartAdjustment(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.pos.use');
+        [$site, $languageCode] = $this->authorize('sale.pos.discounts.manage');
         try {
             $cart = $this->carts->requireCart($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
@@ -888,14 +932,9 @@ final class SaleAdminApiController
             $data = $this->idempotency->run((int) $site['id'], 'pos.complete_sale', $this->idempotencyKey($payload), $request, function () use ($site, $payload, $languageCode): array {
                 $sessionId = (int) ($payload['cash_session_id'] ?? $payload['session_id'] ?? 0);
                 $paymentMethod = (string) ($payload['payment_method'] ?? 'cash');
-                $session = $this->cashSession($sessionId);
-                if ((string) $session['status'] !== 'open') {
-                    throw new SaleValidationException('sale.cash_session_required');
-                }
-                $register = $this->db()->one('SELECT * FROM sale_pos_registers WHERE id = ? AND site_id = ?', [(int) $session['register_id'], (int) $site['id']]);
-                if ($register === null || (int) ($register['stock_location_id'] ?? 0) < 1) {
-                    throw new SaleValidationException('sale.pos_stock_location_required');
-                }
+                $context = $this->pos()->context($sessionId, (int) $site['id'], $this->actorId());
+                $session = $this->pos()->repository()->requireSession($sessionId, (int) $site['id']);
+                $method = $this->pos()->requireAllowedPaymentMethod($session, $paymentMethod);
                 $cart = $this->carts->requireCart((int) ($payload['cart_id'] ?? 0));
                 $this->ensureSite((int) $site['id'], (int) $cart['site_id']);
                 if (!empty($cart['register_session_id']) && (int) $cart['register_session_id'] !== $sessionId) {
@@ -907,6 +946,7 @@ final class SaleAdminApiController
                     'source' => 'pos',
                     'iam_user_id' => $this->actorId(),
                 ]);
+                $this->pos()->repository()->attachOrderContext((int) $order['id'], $session, $this->actorId());
                 $freshOrder = $this->orders->requireOrder((int) $order['id']);
                 $dueMinor = max(0, (int) $freshOrder['grand_total_minor'] - (int) $freshOrder['paid_total_minor']);
                 $requestedPaymentMinor = array_key_exists('amount_minor', $payload) ? max(0, (int) $payload['amount_minor']) : $dueMinor;
@@ -914,24 +954,21 @@ final class SaleAdminApiController
                 $paid = $paymentMinor > 0
                     ? $this->paymentService->recordManualPayment((int) $order['id'], $paymentMinor, $this->actorId(), [
                         'idempotency_key' => $this->idempotencyKey($payload),
-                        'payment_method' => $paymentMethod,
+                        'payment_method' => (string) ($method['provider_key'] ?: $method['method_type']),
                         'source' => 'pos',
                     ])
                     : ['order' => $freshOrder, 'transaction' => null];
-                if ($paymentMethod === 'cash') {
+                if ((string) $method['method_type'] === 'cash') {
                     if ($paymentMinor > 0) {
                         $this->db()->run(
                             'UPDATE sale_cash_sessions SET expected_cash_minor = expected_cash_minor + ? WHERE id = ?',
                             [$paymentMinor, $sessionId]
                         );
-                        $this->db()->run(
-                            'INSERT INTO sale_cash_movements(cash_session_id, movement_type, amount_minor, currency, order_id, reason, created_by_iam_user_id)
-                             VALUES(?, \'cash_sale\', ?, ?, ?, \'POS checkout\', ?)',
-                            [$sessionId, $paymentMinor, (string) $order['currency'], (int) $order['id'], $this->actorId()]
-                        );
+                        $this->pos()->repository()->recordMovement($sessionId, 'cash_sale', $paymentMinor, (string) $order['currency'], 'POS checkout', $this->actorId(), (int) $order['id']);
                     }
                 }
-                return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receipt()->issue((int) $order['id'], $languageCode, $this->actorId())];
+                $paid['order'] = $this->orders->requireOrder((int) $order['id']);
+                return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receipt()->issue((int) $order['id'], (string) $context['locale'], $this->actorId()), 'pos_context' => $context];
             });
             return $this->ok($data, 'admin.sale.pos.checkout.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
@@ -946,6 +983,28 @@ final class SaleAdminApiController
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
             return $this->ok(['receipt' => $this->receipt()->issue($this->id($id), $languageCode, $this->actorId())], 'admin.sale.pos.receipt.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function reprintPosOrderReceipt(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.pos.receipts.reprint');
+        try {
+            $payload = $this->payload();
+            $reason = trim((string) ($payload['reason'] ?? ''));
+            if ($reason === '') {
+                throw new SaleValidationException('sale.receipt_reprint_reason_required');
+            }
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            if ((string) $order['source'] !== 'pos' || (int) ($order['pos_session_id'] ?? 0) < 1) {
+                throw new SaleValidationException('sale.pos_order_required');
+            }
+            $receipt = $this->receipt()->issue((int) $order['id'], $languageCode, $this->actorId());
+            $this->pos()->repository()->logReceiptAction((int) $receipt['id'], 'reprint', (int) $order['pos_session_id'], $this->actorId(), $reason);
+            return $this->ok(['receipt' => $receipt], 'admin.sale.pos.receipt.reprint.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -1134,7 +1193,13 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.reports.read');
         return $this->ok(['sessions' => $this->db()->all(
-            'SELECT s.* FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id = s.register_id WHERE r.site_id = ? ORDER BY s.id DESC',
+            "SELECT s.*,r.code AS register_code,r.name AS register_name,
+                    (SELECT COUNT(*) FROM sale_orders o WHERE o.pos_session_id=s.id) AS orders_count,
+                    (SELECT COALESCE(SUM(o.grand_total_minor),0) FROM sale_orders o WHERE o.pos_session_id=s.id AND o.status<>'cancelled') AS sales_minor,
+                    (SELECT COALESCE(SUM(CASE WHEN m.movement_type='cash_in' THEN m.amount_minor WHEN m.movement_type='cash_out' THEN m.amount_minor ELSE 0 END),0) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS manual_cash_delta_minor,
+                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS movements_count
+             FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id=s.register_id
+             WHERE r.site_id=? ORDER BY s.id DESC",
             [(int) $site['id']]
         )], 'admin.sale.reports.pos_sessions.v1', $site, $languageCode);
     }
@@ -1487,8 +1552,22 @@ final class SaleAdminApiController
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
     private function posSellables(int $siteId, array $filters): array
     {
-        $location=$this->db()->one("SELECT r.stock_location_id FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id=s.register_id WHERE r.site_id=? AND s.status IN ('open','closing') ORDER BY s.id DESC LIMIT 1",[$siteId]);
-        return $this->catalogSnapshots->searchSellableVariants($siteId, $filters + ['channel' => 'pos','stock_location_id'=>$location['stock_location_id']??null]);
+        $locationId = null;
+        if ((int) ($filters['session_id'] ?? 0) > 0) {
+            $context = $this->pos()->context((int) $filters['session_id'], $siteId, $this->actorId());
+            $locationId = (int) $context['location_id'];
+        } elseif ((int) ($filters['register_id'] ?? 0) > 0) {
+            $locationId = (int) $this->pos()->repository()->requireRegister((int) $filters['register_id'], $siteId)['stock_location_id'];
+        } else {
+            $location = $this->db()->one(
+                "SELECT s.stock_location_id FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id=s.register_id
+                 WHERE r.site_id=? AND s.opened_by_iam_user_id=? AND s.status='open' ORDER BY s.id DESC LIMIT 1",
+                [$siteId, $this->actorId()]
+            );
+            $locationId = isset($location['stock_location_id']) ? (int) $location['stock_location_id'] : null;
+        }
+        unset($filters['session_id'], $filters['register_id']);
+        return $this->catalogSnapshots->searchSellableVariants($siteId, $filters + ['channel' => 'pos', 'stock_location_id' => $locationId]);
     }
 
     private function defaultPosChannelId(int $siteId): int
@@ -1510,6 +1589,16 @@ final class SaleAdminApiController
         $location = $this->db()->one("SELECT stock_location_id FROM sale_inventory_channel_configs WHERE channel_id=? AND status='active'", [$channelId]);
         if ($location === null) {
             $location = $this->db()->one("SELECT id AS stock_location_id FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY location_type='main' DESC,id ASC LIMIT 1", [$siteId]);
+        }
+        foreach ([
+            ['cash', 'Espèces', 'cash', 'cash'],
+            ['manual-payment', 'Paiement manuel', 'manual_card', 'manual_card'],
+            ['external-terminal', 'Terminal externe', 'external_terminal', 'external_terminal'],
+        ] as [$code, $name, $provider, $type]) {
+            $this->db()->run(
+                'INSERT OR IGNORE INTO sale_payment_methods(site_id,channel_id,code,name,provider_key,method_type,status) VALUES(?,?,?,?,?,?,\'active\')',
+                [$siteId, $channelId, $code, $name, $provider, $type]
+            );
         }
         $this->db()->run(
             'INSERT INTO sale_pos_registers(site_id, channel_id, code, name, status, location_name, stock_location_id)
@@ -1550,6 +1639,11 @@ final class SaleAdminApiController
     private function receipt(): SaleReceiptService
     {
         return $this->receiptService ?? new SaleReceiptService($this->orders, $this->payments, new SaleReceiptRepository($this->sale));
+    }
+
+    private function pos(): SalePosService
+    {
+        return $this->posService ?? new SalePosService($this->cartService, $this->checkout, new SalePosRepository($this->sale));
     }
 
     private function returnsService(): SaleReturnService

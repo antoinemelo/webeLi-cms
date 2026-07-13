@@ -39,7 +39,8 @@ type PosVariantOption = { option_code?: string; option_name?: string; value_code
 type PosCartLine = Record<string, unknown> & { id: number; quantity: number; product_name?: string; sku?: string; line_total_minor?: number };
 type PosAdjustment = Record<string, unknown> & { id?: number; adjustment_type?: string; amount_minor?: number };
 type PosCart = Record<string, unknown> & { id: number; version?: number; subtotal_minor?: number; discount_total_minor?: number; grand_total_minor?: number; currency?: string; lines?: PosCartLine[]; adjustments?: PosAdjustment[] };
-type PosSession = Record<string, unknown> & { id: number; status?: string; expected_cash_minor?: number; currency?: string };
+type PosSession = Record<string, unknown> & { id: number; register_id?: number; status?: string; expected_cash_minor?: number; currency?: string };
+type PosPaymentMethod = Record<string, unknown> & { id: number; code: string; name: string; method_type: string };
 type PosReceipt = Record<string, unknown> & { order_id?: number | string; order_number?: string | null; printable_text?: string };
 
 defineProps<{ embedded?: boolean }>();
@@ -59,12 +60,20 @@ const session = ref<PosSession | null>(null);
 const receipt = ref<PosReceipt | null>(null);
 const bootstrap = reactive<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>> }>({ registers: [], channels: [] });
 const openingCash = ref(0);
+const selectedRegisterId = ref(0);
+const countedCash = ref(0);
+const closingJustification = ref('');
+const cashMovementType = ref<'cash_in' | 'cash_out' | 'correction'>('cash_in');
+const cashMovementAmount = ref(0);
+const cashMovementReason = ref('');
 const paidAmount = ref(0);
 const adjustmentMode = ref<'amount' | 'percent'>('amount');
 const adjustmentValue = ref(0);
-const paymentMethod = ref<'cash' | 'manual_card' | 'external_terminal'>('cash');
+const paymentMethod = ref('cash');
+const paymentMethods = ref<PosPaymentMethod[]>([]);
 const receiptEmail = ref('');
 const receiptSending = ref(false);
+const reprintReason = ref('');
 
 const cartLines = computed(() => cart.value?.lines || []);
 const catalogVariants = computed(() => variants.value.filter((variant) => !isBundle(variant)));
@@ -79,7 +88,7 @@ const cartDiscountMinor = computed(() => Number(cart.value?.discount_total_minor
 const cartOfferDiscountMinor = computed(() => Math.max(0, cartDiscountMinor.value - cartManualDiscountMinor.value));
 const openingCashMinor = computed(() => amountToMinor(openingCash.value));
 const paidAmountMinor = computed(() => amountToMinor(paidAmount.value));
-const paymentTotalMinor = computed(() => openingCashMinor.value + paidAmountMinor.value);
+const paymentTotalMinor = computed(() => paidAmountMinor.value);
 const remainingDueMinor = computed(() => Number(cart.value?.grand_total_minor || 0) - paymentTotalMinor.value);
 const isOverpaid = computed(() => remainingDueMinor.value < 0);
 const canCheckout = computed(() => !!cart.value?.id && cartLines.value.length > 0 && (paymentMethod.value !== 'cash' || !!session.value?.id));
@@ -107,10 +116,15 @@ async function loadBootstrap(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const response = await adminApi.get<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>>; active_session?: PosSession | null }>('/sale/pos/bootstrap');
+    const response = await adminApi.get<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>>; active_session?: PosSession | null; payment_methods?: PosPaymentMethod[] }>('/sale/pos/bootstrap');
     bootstrap.registers = response.data.registers || [];
     bootstrap.channels = response.data.channels || [];
     session.value = response.data.active_session || null;
+    paymentMethods.value = response.data.payment_methods || [];
+    selectedRegisterId.value = Number(session.value?.register_id || selectedRegisterId.value || bootstrap.registers[0]?.id || 0);
+    if (paymentMethods.value.length && !paymentMethods.value.some((method) => method.code === paymentMethod.value || method.method_type === paymentMethod.value)) {
+      paymentMethod.value = paymentMethods.value[0].code;
+    }
     await search();
   } catch (err) {
     error.value = apiErrorMessage(err);
@@ -124,8 +138,8 @@ async function search(): Promise<void> {
   error.value = '';
   try {
     const params = barcode.value.trim()
-      ? { barcode: barcode.value.trim(), limit: 100 }
-      : { q: query.value.trim(), limit: 100 };
+      ? { barcode: barcode.value.trim(), limit: 100, session_id: session.value?.id, register_id: selectedRegisterId.value || undefined }
+      : { q: query.value.trim(), limit: 100, session_id: session.value?.id, register_id: selectedRegisterId.value || undefined };
     const response = await adminApi.get<{ variants: PosVariant[] }>('/sale/pos/variants', params);
     variants.value = response.data.variants || [];
     await loadBundles();
@@ -138,8 +152,8 @@ async function search(): Promise<void> {
 
 async function loadBundles(): Promise<void> {
   const params = barcode.value.trim()
-    ? { barcode: barcode.value.trim(), product_type: 'bundle', limit: 24 }
-    : { q: query.value.trim(), product_type: 'bundle', limit: 24 };
+    ? { barcode: barcode.value.trim(), product_type: 'bundle', limit: 24, session_id: session.value?.id, register_id: selectedRegisterId.value || undefined }
+    : { q: query.value.trim(), product_type: 'bundle', limit: 24, session_id: session.value?.id, register_id: selectedRegisterId.value || undefined };
   const response = await adminApi.get<{ variants: PosVariant[] }>('/sale/pos/variants', params);
   bundles.value = response.data.variants || [];
 }
@@ -148,7 +162,7 @@ async function openSession(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const response = await adminApi.post<{ session: PosSession }>('/sale/pos/sessions/open', { opening_cash_minor: amountToMinor(openingCash.value) });
+    const response = await adminApi.post<{ session: PosSession }>('/sale/pos/sessions/open', { register_id: selectedRegisterId.value, opening_cash_minor: amountToMinor(openingCash.value) });
     session.value = response.data.session;
     notice.value = t('sale.pos.sessionOpened');
   } catch (err) {
@@ -163,9 +177,34 @@ async function closeSession(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const response = await adminApi.post<{ session: PosSession }>(`/sale/pos/sessions/${session.value.id}/close`, { counted_cash_minor: Number(session.value.expected_cash_minor || 0) });
+    const countedMinor = countedCash.value > 0 ? amountToMinor(countedCash.value) : Number(session.value.expected_cash_minor || 0);
+    const response = await adminApi.post<{ session: PosSession }>(`/sale/pos/sessions/${session.value.id}/close`, {
+      counted_cash_minor: countedMinor,
+      difference_justification: closingJustification.value.trim() || undefined
+    });
     session.value = response.data.session;
     notice.value = t('sale.pos.sessionClosedNotice');
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function recordCashMovement(): Promise<void> {
+  if (!session.value?.id) return;
+  saving.value = true;
+  error.value = '';
+  try {
+    const response = await adminApi.post<{ session: PosSession }>(`/sale/pos/sessions/${session.value.id}/movements`, {
+      movement_type: cashMovementType.value,
+      amount_minor: amountToMinor(Math.abs(cashMovementAmount.value)),
+      reason: cashMovementReason.value.trim()
+    });
+    session.value = response.data.session;
+    cashMovementAmount.value = 0;
+    cashMovementReason.value = '';
+    notice.value = t('sale.pos.cashMovementRecorded');
   } catch (err) {
     error.value = apiErrorMessage(err);
   } finally {
@@ -306,6 +345,25 @@ function printReceipt(): void {
     printWindow.focus();
     printWindow.print();
   }, 100);
+}
+
+async function reprintReceipt(): Promise<void> {
+  if (!receiptOrderId.value || !reprintReason.value.trim()) {
+    error.value = t('sale.pos.reprintReasonRequired');
+    return;
+  }
+  saving.value = true;
+  error.value = '';
+  try {
+    const response = await adminApi.post<{ receipt: PosReceipt }>(`/sale/pos/orders/${receiptOrderId.value}/receipt/reprint`, { reason: reprintReason.value.trim() });
+    receipt.value = response.data.receipt;
+    printReceipt();
+    notice.value = t('sale.pos.receiptReprinted');
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function emailReceipt(): Promise<void> {
@@ -456,10 +514,29 @@ onMounted(loadBootstrap);
         <span class="badge" :class="session?.status === 'open' ? 'text-bg-success' : 'text-bg-secondary'">
           {{ session?.status === 'open' ? t('sale.pos.sessionOpen') : t('sale.pos.sessionClosed') }}
         </span>
+        <select v-if="!session || session.status !== 'open'" v-model.number="selectedRegisterId" class="form-select form-select-sm" :aria-label="t('sale.pos.register')">
+          <option v-for="register in bootstrap.registers" :key="Number(register.id)" :value="Number(register.id)">{{ register.name }}</option>
+        </select>
+        <input v-if="!session || session.status !== 'open'" v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('sale.pos.openingCash')">
         <button v-if="!session || session.status !== 'open'" class="btn btn-primary btn-sm" :disabled="saving" @click="openSession">{{ t('sale.pos.open') }}</button>
-        <button v-else class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">{{ t('sale.pos.close') }}</button>
+        <template v-else>
+          <input v-model.number="countedCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('sale.pos.countedCash')">
+          <input v-model="closingJustification" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.differenceJustification')">
+          <button class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">{{ t('sale.pos.close') }}</button>
+        </template>
       </div>
     </header>
+
+    <div v-if="session?.status === 'open'" class="sale-pos__cash-movement mb-3">
+      <select v-model="cashMovementType" class="form-select form-select-sm">
+        <option value="cash_in">{{ t('sale.pos.cashIn') }}</option>
+        <option value="cash_out">{{ t('sale.pos.cashOut') }}</option>
+        <option value="correction">{{ t('sale.pos.cashCorrection') }}</option>
+      </select>
+      <input v-model.number="cashMovementAmount" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('common.amount')">
+      <input v-model="cashMovementReason" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.cashReason')">
+      <button class="btn btn-outline-primary btn-sm" :disabled="saving || cashMovementAmount <= 0 || !cashMovementReason.trim()" @click="recordCashMovement">{{ t('common.add') }}</button>
+    </div>
 
     <div v-if="notice" class="alert alert-success py-2">{{ notice }}</div>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -568,13 +645,10 @@ onMounted(loadBootstrap);
 
         <label class="form-label mt-3">{{ t('sale.pos.payment') }}</label>
         <select v-model="paymentMethod" class="form-select">
-          <option value="cash">{{ t('sale.pos.payment.cash') }}</option>
-          <option value="manual_card">{{ t('sale.pos.payment.manual_card') }}</option>
-          <option value="external_terminal">{{ t('sale.pos.payment.external_terminal') }}</option>
+          <option v-for="method in paymentMethods" :key="method.id" :value="method.code">{{ method.name }}</option>
         </select>
 
         <div class="sale-pos__cash">
-          <label>{{ t('sale.pos.advance') }}<input v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
           <label>{{ t('sale.pos.paidAmount') }}<input v-model.number="paidAmount" class="form-control form-control-sm" type="number" min="0" step="0.01"></label>
         </div>
 
@@ -585,6 +659,8 @@ onMounted(loadBootstrap);
           <pre>{{ receiptText }}</pre>
           <div class="sale-pos__receipt-actions">
             <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">{{ t('common.print') }}</button>
+            <input v-model="reprintReason" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.reprintReason')">
+            <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="saving || !receiptOrderId" @click="reprintReceipt">{{ t('sale.pos.reprint') }}</button>
             <input v-model="receiptEmail" class="form-control form-control-sm" type="email" :placeholder="t('sale.pos.emailPlaceholder')">
             <button class="btn btn-outline-primary btn-sm" type="button" :disabled="receiptSending || !receiptOrderId" @click="emailReceipt">{{ receiptSending ? t('common.sending') : t('common.send') }}</button>
           </div>
@@ -610,6 +686,12 @@ onMounted(loadBootstrap);
   display: flex;
   gap: .75rem;
   align-items: center;
+}
+.sale-pos__cash-movement {
+  align-items: center;
+  display: grid;
+  gap: .5rem;
+  grid-template-columns: minmax(120px, .7fr) minmax(100px, .5fr) minmax(180px, 1fr) auto;
 }
 .sale-pos__head {
   justify-content: space-between;

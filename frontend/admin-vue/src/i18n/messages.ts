@@ -698,6 +698,19 @@ const fr = {
   'sale.pos.receiptQueued': 'Ticket préparé dans le journal d’envoi pour {email}.',
   'sale.pos.receiptSent': 'Ticket envoyé à {email}.',
   'sale.pos.saleCompleted': 'Vente {order} terminée.',
+  'sale.pos.register': 'Caisse',
+  'sale.pos.openingCash': 'Fond de caisse',
+  'sale.pos.countedCash': 'Cash compté',
+  'sale.pos.differenceJustification': 'Justification si écart',
+  'sale.pos.cashIn': 'Entrée de cash',
+  'sale.pos.cashOut': 'Sortie de cash',
+  'sale.pos.cashCorrection': 'Correction de cash',
+  'sale.pos.cashReason': 'Motif obligatoire',
+  'sale.pos.cashMovementRecorded': 'Mouvement de caisse enregistré.',
+  'sale.pos.reprintReason': 'Motif de réimpression',
+  'sale.pos.reprintReasonRequired': 'Indiquer le motif de la réimpression.',
+  'sale.pos.reprint': 'Réimprimer',
+  'sale.pos.receiptReprinted': 'Réimpression auditée.',
   'support.i18n.fallback': 'Traduction manquante: {key}'
 } as const;
 
@@ -1393,6 +1406,19 @@ const en: Record<keyof typeof fr, string> = {
   'sale.pos.receiptQueued': 'Receipt prepared in the delivery log for {email}.',
   'sale.pos.receiptSent': 'Receipt sent to {email}.',
   'sale.pos.saleCompleted': 'Sale {order} completed.',
+  'sale.pos.register': 'Register',
+  'sale.pos.openingCash': 'Opening float',
+  'sale.pos.countedCash': 'Counted cash',
+  'sale.pos.differenceJustification': 'Reason if different',
+  'sale.pos.cashIn': 'Cash in',
+  'sale.pos.cashOut': 'Cash out',
+  'sale.pos.cashCorrection': 'Cash correction',
+  'sale.pos.cashReason': 'Required reason',
+  'sale.pos.cashMovementRecorded': 'Cash movement recorded.',
+  'sale.pos.reprintReason': 'Reprint reason',
+  'sale.pos.reprintReasonRequired': 'Enter the reprint reason.',
+  'sale.pos.reprint': 'Reprint',
+  'sale.pos.receiptReprinted': 'Audited reprint completed.',
   'support.i18n.fallback': 'Missing translation: {key}'
 };
 

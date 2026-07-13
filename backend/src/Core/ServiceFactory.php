@@ -179,6 +179,7 @@ use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Repositories\SalePosRepository;
 use App\Modules\Sale\Repositories\SaleReceiptRepository;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
@@ -719,6 +720,11 @@ final class ServiceFactory
         return $this->once('sale_receipts_repository', fn() => new SaleReceiptRepository($this->saleDatabaseConnection()));
     }
 
+    public function salePosRepository(): SalePosRepository
+    {
+        return $this->once('sale_pos_repository', fn() => new SalePosRepository($this->saleDatabaseConnection()));
+    }
+
     public function saleInventoryRepository(): SaleInventoryRepository
     {
         return $this->once('sale_inventory_repository', fn() => new SaleInventoryRepository($this->saleDatabaseConnection()));
@@ -874,7 +880,7 @@ final class ServiceFactory
 
     public function salePosService(): SalePosService
     {
-        return $this->once('sale_pos_service', fn() => new SalePosService($this->saleCartService(), $this->saleCheckout()));
+        return $this->once('sale_pos_service', fn() => new SalePosService($this->saleCartService(), $this->saleCheckout(), $this->salePosRepository()));
     }
 
     public function businessCompanies(): BusinessCompanyRepository

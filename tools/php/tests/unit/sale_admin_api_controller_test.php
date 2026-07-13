@@ -66,6 +66,8 @@ try {
         'sale.read', 'sale.manage', 'sale.orders.read', 'sale.orders.manage',
         'sale.payments.read', 'sale.payments.manage', 'sale.refunds.manage',
         'sale.pos.use', 'sale.pos.manage', 'sale.cash.manage',
+        'sale.pos.sessions.open', 'sale.pos.sessions.close', 'sale.pos.discounts.manage',
+        'sale.pos.refunds.manage', 'sale.pos.cash.correct', 'sale.pos.receipts.reprint',
         'sale.stock.read', 'sale.stock.manage', 'sale.reports.read', 'sale.settings.manage',
     ];
     foreach ($permissions as $index => $permission) {
@@ -150,8 +152,10 @@ try {
         ['POST', '/admin/api/sale/import/stock/preview'],
         ['POST', '/admin/api/sale/import/stock/apply'],
         ['GET', '/admin/api/sale/pos/variants'],
+        ['PATCH', '/admin/api/sale/pos/registers/1'],
         ['POST', '/admin/api/sale/pos/sessions/open'],
         ['POST', '/admin/api/sale/pos/sessions/1/close'],
+        ['POST', '/admin/api/sale/pos/sessions/1/movements'],
         ['POST', '/admin/api/sale/pos/carts'],
         ['POST', '/admin/api/sale/pos/carts/1/lines'],
         ['PATCH', '/admin/api/sale/pos/carts/1/lines/1'],
@@ -159,7 +163,9 @@ try {
         ['POST', '/admin/api/sale/pos/carts/1/adjustments'],
         ['POST', '/admin/api/sale/pos/checkout'],
         ['GET', '/admin/api/sale/pos/orders/1/receipt'],
+        ['POST', '/admin/api/sale/pos/orders/1/receipt/reprint'],
         ['POST', '/admin/api/sale/pos/orders/1/receipt/email'],
+        ['POST', '/admin/api/sale/pos/orders/1/returns'],
         ['GET', '/admin/api/sale/ai/schema'],
         ['GET', '/admin/api/sale/ai/orders/1/summary-context'],
         ['GET', '/admin/api/sale/ai/pos/day-summary-context'],
@@ -294,7 +300,28 @@ try {
     $sessionPayload = json_decode($sessionResponse->body(), true);
     $cashSessionId = (int) ($sessionPayload['data']['session']['id'] ?? 0);
     $h->assertTrue($cashSessionId > 0, 'sale POS open session returns session id');
+    $h->assertTrue((int) ($sessionPayload['data']['session']['channel_id'] ?? 0) > 0, 'sale POS session freezes its channel');
+    $h->assertTrue((int) ($sessionPayload['data']['session']['stock_location_id'] ?? 0) > 0, 'sale POS session freezes its stock location');
+    $h->assertSame(1, (int) ($sessionPayload['data']['session']['opened_by_iam_user_id'] ?? 0), 'sale POS session records its operator');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.pos.session.opened"')['count'] ?? 0), 'sale POS session opening is queued in outbox');
+
+    $sessionRegisterId = (int) ($sessionPayload['data']['session']['register_id'] ?? 0);
+    $cashMethodId = (int) ($saleDb->one("SELECT id FROM sale_payment_methods WHERE channel_id=? AND method_type='cash'", [(int) $sessionPayload['data']['session']['channel_id']])['id'] ?? 0);
+    $registerConfigResponse = $controllerFor(1, 'PATCH', '/admin/api/sale/pos/registers/' . $sessionRegisterId, [], ['currency' => 'CHF', 'locale' => 'en', 'payment_method_ids' => [$cashMethodId]])->configurePosRegister($sessionRegisterId);
+    $h->assertSame(200, $registerConfigResponse->status(), 'sale POS register configures currency, locale and allowed methods');
+    $registerConfigPayload = json_decode($registerConfigResponse->body(), true);
+    $h->assertSame('cash', $registerConfigPayload['data']['register']['payment_methods'][0]['method_type'] ?? null, 'sale POS register exposes only its allowed payment method');
+
+    $cashInResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/' . $cashSessionId . '/movements', [], ['movement_type' => 'cash_in', 'amount_minor' => 200, 'reason' => 'appoint'])->storeCashMovement($cashSessionId);
+    $h->assertSame(201, $cashInResponse->status(), 'sale POS records an audited cash-in');
+    $cashOutResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/' . $cashSessionId . '/movements', [], ['movement_type' => 'cash_out', 'amount_minor' => 200, 'reason' => 'retrait appoint'])->storeCashMovement($cashSessionId);
+    $h->assertSame(201, $cashOutResponse->status(), 'sale POS records an audited cash-out');
+    $h->assertSame(1000, (int) ($saleDb->one('SELECT expected_cash_minor FROM sale_cash_sessions WHERE id=?', [$cashSessionId])['expected_cash_minor'] ?? 0), 'cash-in and cash-out reconcile expected cash');
+    $h->expectException(
+        fn() => $saleDb->run('UPDATE sale_cash_movements SET reason=? WHERE cash_session_id=?', ['tamper', $cashSessionId]),
+        \PDOException::class,
+        'sale POS cash movements are immutable'
+    );
 
     $posCartResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/carts')->posStoreCart();
     $h->assertSame(201, $posCartResponse->status(), 'sale POS can create a cart');
@@ -319,6 +346,10 @@ try {
     $posOrderId = (int) ($posCheckoutBody['data']['order']['id'] ?? 0);
     $h->assertTrue(str_starts_with((string) ($posCheckoutBody['data']['order']['order_number'] ?? ''), 'POS-'), 'sale POS checkout uses POS order number prefix');
     $h->assertSame('paid', $posCheckoutBody['data']['order']['payment_status'] ?? null, 'sale POS checkout records payment');
+    $posOrderContext = $saleDb->one('SELECT channel_id,stock_location_id,pos_register_id,pos_session_id,pos_operator_iam_user_id FROM sale_orders WHERE id=?', [$posOrderId]);
+    $h->assertSame($cashSessionId, (int) ($posOrderContext['pos_session_id'] ?? 0), 'shared order traces the POS session');
+    $h->assertSame(1, (int) ($posOrderContext['pos_operator_iam_user_id'] ?? 0), 'shared order traces the POS operator');
+    $h->assertTrue((int) ($posOrderContext['pos_register_id'] ?? 0) > 0 && (int) ($posOrderContext['stock_location_id'] ?? 0) > 0, 'shared order traces register and location');
     $posStockLocation = $saleDb->one('SELECT i.stock_location_id,r.stock_location_id AS register_location_id FROM sale_stock_reservations sr INNER JOIN sale_inventory_items i ON i.id=sr.inventory_item_id INNER JOIN sale_carts c ON c.id=sr.cart_id INNER JOIN sale_cash_sessions s ON s.id=c.register_session_id INNER JOIN sale_pos_registers r ON r.id=s.register_id WHERE sr.cart_id=?', [$posCartId]);
     $h->assertSame((int) ($posStockLocation['register_location_id'] ?? 0), (int) ($posStockLocation['stock_location_id'] ?? -1), 'POS checkout consumes stock from its register location');
     $h->assertTrue(isset($posCheckoutBody['data']['receipt']['printable_text']), 'sale POS checkout returns printable receipt payload');
@@ -335,6 +366,19 @@ try {
     $h->assertSame(200, $orderReceiptResponse->status(), 'sale orders can print the same receipt payload');
     $h->assertTrue(str_contains((string) ($orderReceiptPayload['data']['receipt']['printable_text'] ?? ''), 'Ticket de caisse'), 'sale order receipt uses ticket formatter');
 
+    $reprintResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/orders/' . $posOrderId . '/receipt/reprint', [], ['reason' => 'copie client'])->reprintPosOrderReceipt($posOrderId);
+    $h->assertSame(200, $reprintResponse->status(), 'sale POS can reprint a receipt with a reason');
+    $h->assertSame(1, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_receipt_actions WHERE action_type='reprint' AND operator_iam_user_id=1")['count'] ?? 0), 'sale POS receipt reprint is audited');
+
+    $posOrderLine = $saleDb->one('SELECT id FROM sale_order_lines WHERE order_id=? ORDER BY id LIMIT 1', [$posOrderId]);
+    $posReturnResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/orders/' . $posOrderId . '/returns', [], [
+        'lines' => [['order_line_id' => (int) ($posOrderLine['id'] ?? 0), 'quantity' => 1]],
+        'reason' => 'retour comptoir',
+        'idempotency_key' => 'pos-return-1',
+    ])->storePosReturn($posOrderId);
+    $h->assertSame(201, $posReturnResponse->status(), 'sale POS return stays linked to the original shared order');
+    $h->assertSame($posOrderId, (int) ($saleDb->one('SELECT order_id FROM sale_returns ORDER BY id DESC LIMIT 1')['order_id'] ?? 0), 'sale POS return references original order');
+
     $emailReceiptResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/orders/' . $posOrderId . '/receipt/email', [], ['email' => 'client@example.test'])->posEmailReceipt($posOrderId);
     $h->assertSame(200, $emailReceiptResponse->status(), 'sale POS can email an order receipt');
     $h->assertSame('client@example.test', $mailer->messages[0]['to'] ?? null, 'sale POS receipt email uses requested recipient');
@@ -344,11 +388,14 @@ try {
     $expectedCash = (int) ($sessionAfterSale['expected_cash_minor'] ?? 0);
     $h->assertSame(6800, $expectedCash, 'sale POS cash session expected amount includes cash sale');
 
-    $closeSessionResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/' . $cashSessionId . '/close', [], ['counted_cash_minor' => $expectedCash])->closeCashSession($cashSessionId);
+    $unjustifiedCloseResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/' . $cashSessionId . '/close', [], ['counted_cash_minor' => $expectedCash + 1])->closeCashSession($cashSessionId);
+    $h->assertSame(422, $unjustifiedCloseResponse->status(), 'sale POS refuses an unexplained closing difference');
+    $closeSessionResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/' . $cashSessionId . '/close', [], ['counted_cash_minor' => $expectedCash + 1, 'difference_justification' => 'un centime surnuméraire'])->closeCashSession($cashSessionId);
     $h->assertSame(200, $closeSessionResponse->status(), 'sale POS can close cash session');
     $closeSessionPayload = json_decode($closeSessionResponse->body(), true);
     $h->assertSame('closed', $closeSessionPayload['data']['session']['status'] ?? null, 'sale POS closed session is marked closed');
-    $h->assertSame(0, (int) ($closeSessionPayload['data']['session']['difference_minor'] ?? -1), 'sale POS closed session computes cash difference');
+    $h->assertSame(1, (int) ($closeSessionPayload['data']['session']['difference_minor'] ?? 0), 'sale POS closed session computes cash difference');
+    $h->assertSame('un centime surnuméraire', $closeSessionPayload['data']['session']['difference_justification'] ?? null, 'sale POS closed session keeps difference justification');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.pos.session.closed"')['count'] ?? 0), 'sale POS session closing is queued in outbox');
 
     $aiPosContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/pos/day-summary-context', ['date' => gmdate('Y-m-d')])->aiPosDaySummaryContext();

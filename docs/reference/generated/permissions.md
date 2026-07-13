@@ -125,7 +125,9 @@ generated: true
 | `sale.orders.read` |
 | `sale.payments.manage` |
 | `sale.payments.read` |
+| `sale.pos.discounts.manage` |
 | `sale.pos.manage` |
+| `sale.pos.refunds.manage` |
 | `sale.read` |
 | `sale.refunds.manage` |
 | `sale.reports.read` |

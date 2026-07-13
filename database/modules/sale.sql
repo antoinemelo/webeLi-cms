@@ -185,6 +185,11 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     marketing_consent_at TEXT,
     payment_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payment_method_snapshot_json)),
     source_cart_id INTEGER,
+    stock_location_id INTEGER,
+    pos_register_id INTEGER,
+    pos_device_id INTEGER,
+    pos_session_id INTEGER,
+    pos_operator_iam_user_id INTEGER,
     correlation_id TEXT,
     subtotal_minor INTEGER NOT NULL DEFAULT 0 CHECK(subtotal_minor >= 0),
     discount_total_minor INTEGER NOT NULL DEFAULT 0 CHECK(discount_total_minor >= 0),
@@ -204,10 +209,16 @@ CREATE TABLE IF NOT EXISTS sale_orders (
     version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(site_id, order_number),
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(pos_register_id) REFERENCES sale_pos_registers(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(pos_device_id) REFERENCES sale_pos_devices(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(pos_session_id) REFERENCES sale_cash_sessions(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(trim(order_number) <> ''),
     CHECK(customer_company_id IS NULL OR customer_company_id > 0),
     CHECK(customer_contact_id IS NULL OR customer_contact_id > 0),
+    CHECK(pos_operator_iam_user_id IS NULL OR pos_operator_iam_user_id > 0),
+    CHECK(source = 'pos' OR (pos_register_id IS NULL AND pos_device_id IS NULL AND pos_session_id IS NULL AND pos_operator_iam_user_id IS NULL)),
     CHECK(refunded_total_minor <= paid_total_minor),
     CHECK(cancelled_at IS NULL OR status = 'cancelled'),
     CHECK(completed_at IS NULL OR status = 'completed')
@@ -221,6 +232,9 @@ CREATE INDEX IF NOT EXISTS idx_sale_orders_site_created
     ON sale_orders(site_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_orders_channel
     ON sale_orders(channel_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sale_orders_pos_context
+    ON sale_orders(pos_session_id, pos_register_id, pos_operator_iam_user_id)
+    WHERE source = 'pos';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_orders_source_cart
     ON sale_orders(source_cart_id)
     WHERE source_cart_id IS NOT NULL;
@@ -696,6 +710,8 @@ CREATE TABLE IF NOT EXISTS sale_pos_registers (
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','archived')),
     location_name TEXT,
     stock_location_id INTEGER,
+    currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
+    locale TEXT NOT NULL DEFAULT 'fr' CHECK(locale IN ('fr','en')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     archived_at TEXT,
@@ -712,6 +728,15 @@ CREATE INDEX IF NOT EXISTS idx_sale_pos_registers_site_status
     ON sale_pos_registers(site_id, status);
 CREATE INDEX IF NOT EXISTS idx_sale_pos_registers_channel
     ON sale_pos_registers(channel_id, status);
+
+CREATE TABLE IF NOT EXISTS sale_pos_register_payment_methods (
+    register_id INTEGER NOT NULL,
+    payment_method_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(register_id, payment_method_id),
+    FOREIGN KEY(register_id) REFERENCES sale_pos_registers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(payment_method_id) REFERENCES sale_payment_methods(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS sale_pos_devices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -736,6 +761,9 @@ CREATE INDEX IF NOT EXISTS idx_sale_pos_devices_register
 CREATE TABLE IF NOT EXISTS sale_cash_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     register_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL,
+    stock_location_id INTEGER NOT NULL,
+    device_id INTEGER,
     opened_by_iam_user_id INTEGER NOT NULL,
     closed_by_iam_user_id INTEGER,
     status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','closing','closed','cancelled')),
@@ -744,12 +772,18 @@ CREATE TABLE IF NOT EXISTS sale_cash_sessions (
     counted_cash_minor INTEGER CHECK(counted_cash_minor IS NULL OR counted_cash_minor >= 0),
     difference_minor INTEGER NOT NULL DEFAULT 0,
     currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
+    locale TEXT NOT NULL DEFAULT 'fr' CHECK(locale IN ('fr','en')),
     opened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at TEXT,
     notes TEXT,
+    difference_justification TEXT,
     FOREIGN KEY(register_id) REFERENCES sale_pos_registers(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(device_id) REFERENCES sale_pos_devices(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CHECK(opened_by_iam_user_id > 0),
     CHECK(closed_by_iam_user_id IS NULL OR closed_by_iam_user_id > 0),
+    CHECK(status <> 'closed' OR difference_minor = 0 OR trim(COALESCE(difference_justification, '')) <> ''),
     CHECK((status IN ('closed','cancelled') AND closed_at IS NOT NULL)
        OR (status IN ('open','closing') AND closed_at IS NULL))
 );
@@ -781,6 +815,10 @@ CREATE INDEX IF NOT EXISTS idx_sale_cash_movements_session
     ON sale_cash_movements(cash_session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_cash_movements_order
     ON sale_cash_movements(order_id);
+CREATE TRIGGER IF NOT EXISTS trg_sale_cash_movements_immutable_update
+BEFORE UPDATE ON sale_cash_movements BEGIN SELECT RAISE(ABORT,'sale.cash_movement_immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_cash_movements_immutable_delete
+BEFORE DELETE ON sale_cash_movements BEGIN SELECT RAISE(ABORT,'sale.cash_movement_immutable'); END;
 
 CREATE TABLE IF NOT EXISTS sale_stock_locations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -940,6 +978,23 @@ CREATE TABLE IF NOT EXISTS sale_receipts (
 
 CREATE INDEX IF NOT EXISTS idx_sale_receipts_order
     ON sale_receipts(order_id, status);
+
+CREATE TABLE IF NOT EXISTS sale_receipt_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    receipt_id INTEGER NOT NULL,
+    action_type TEXT NOT NULL CHECK(action_type IN ('print','reprint','email')),
+    pos_session_id INTEGER,
+    operator_iam_user_id INTEGER NOT NULL,
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(receipt_id) REFERENCES sale_receipts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(pos_session_id) REFERENCES sale_cash_sessions(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CHECK(operator_iam_user_id > 0),
+    CHECK(action_type <> 'reprint' OR trim(COALESCE(reason, '')) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_receipt_actions_receipt
+    ON sale_receipt_actions(receipt_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS sale_returns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -136,11 +136,16 @@ final class SaleImportExportReportService
     {
         $rows = [[
             'id', 'register_id', 'register_code', 'register_name', 'status', 'opening_cash_minor',
-            'expected_cash_minor', 'counted_cash_minor', 'difference_minor', 'currency', 'opened_at', 'closed_at',
+            'expected_cash_minor', 'counted_cash_minor', 'difference_minor', 'difference_justification',
+            'channel_id', 'stock_location_id', 'device_id', 'operator_id', 'currency', 'locale',
+            'orders_count', 'sales_minor', 'movements_count', 'opened_at', 'closed_at',
         ]];
         [$where, $params] = $this->posSessionWhere($siteId, $filters);
         foreach ($this->db()->all(
-            'SELECT s.*, r.code AS register_code, r.name AS register_name
+            'SELECT s.*, r.code AS register_code, r.name AS register_name,
+                    (SELECT COUNT(*) FROM sale_orders o WHERE o.pos_session_id=s.id) AS orders_count,
+                    (SELECT COALESCE(SUM(o.grand_total_minor),0) FROM sale_orders o WHERE o.pos_session_id=s.id AND o.status<>\'cancelled\') AS sales_minor,
+                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS movements_count
              FROM sale_cash_sessions s
              INNER JOIN sale_pos_registers r ON r.id = s.register_id
              ' . $where . '
@@ -157,7 +162,16 @@ final class SaleImportExportReportService
                 $session['expected_cash_minor'] ?? 0,
                 $session['counted_cash_minor'] ?? '',
                 $session['difference_minor'] ?? 0,
+                $session['difference_justification'] ?? '',
+                $session['channel_id'] ?? '',
+                $session['stock_location_id'] ?? '',
+                $session['device_id'] ?? '',
+                $session['opened_by_iam_user_id'] ?? '',
                 $session['currency'] ?? '',
+                $session['locale'] ?? '',
+                $session['orders_count'] ?? 0,
+                $session['sales_minor'] ?? 0,
+                $session['movements_count'] ?? 0,
                 $session['opened_at'] ?? '',
                 $session['closed_at'] ?? '',
             ];

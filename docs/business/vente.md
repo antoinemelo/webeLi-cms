@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-13
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/views/modules/SaleView.vue
@@ -31,7 +31,8 @@ Les permissions principales sont :
 - `sale.read` pour consulter le tableau de bord ;
 - `sale.orders.read` et `sale.orders.manage` pour lire ou gerer commandes et paniers ;
 - `sale.pos.use` pour utiliser la caisse ;
-- `sale.cash.manage` pour ouvrir et fermer une session de caisse ;
+- `sale.pos.sessions.open` et `sale.pos.sessions.close` pour ouvrir et fermer une session de caisse ;
+- `sale.pos.cash.correct`, `sale.pos.discounts.manage`, `sale.pos.refunds.manage` et `sale.pos.receipts.reprint` pour les actions POS sensibles ;
 - `sale.payments.read` et `sale.payments.manage` pour consulter ou enregistrer des paiements ;
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
@@ -68,7 +69,7 @@ Au moment du checkout, Vente copie le SKU, le nom produit, le nom variante, les 
 
 Les paiements v1 sont locaux : cash, carte manuelle, terminal externe, virement ou provider de test. Ils ne declenchent pas encore de paiement online complet. Un paiement ne peut pas depasser le total restant de la commande.
 
-Pour le POS cash, une session de caisse ouverte est requise. La cloture calcule le cash attendu, le montant compte et l'ecart.
+Pour le POS, une session de caisse ouverte par l'opérateur est requise. La clôture calcule le cash attendu, le montant compté et l'écart, avec justification obligatoire si l'écart est non nul.
 
 ## Recus
 
