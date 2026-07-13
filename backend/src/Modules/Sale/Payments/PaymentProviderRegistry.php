@@ -55,12 +55,23 @@ final class PaymentProviderRegistry
     /** @return array<string,mixed> */
     public function realProviderStatus(): array
     {
+        $selected = $this->selectedProviders($this->paymentConfig);
         $stripe=is_array($this->paymentConfig['stripe']??null)?$this->paymentConfig['stripe']:[];
-        $selected=($this->paymentConfig['real_provider']??'')==='stripe_checkout';
-        return ['provider'=>'stripe_checkout','selected'=>$selected,'environment'=>(string)($stripe['environment']??'test'),
-            'connected'=>in_array('stripe_checkout',$this->keys(),true),'sdk_available'=>class_exists(\Stripe\StripeClient::class),
-            'secret_configured'=>trim((string)($stripe['secret_key']??''))!=='','webhook_secret_configured'=>($stripe['webhook_secrets']??[])!==[],
-            'twint_mode'=>(string)($stripe['twint_mode']??'dynamic'),'last_verified_at'=>null,'webhook_url'=>rtrim((string)($this->paymentConfig['public_base_url']??''),'/').'/api/v1/sale/payments/webhooks/stripe_checkout'];
+        $revolut=is_array($this->paymentConfig['revolut']??null)?$this->paymentConfig['revolut']:[];
+        $base=rtrim((string)($this->paymentConfig['public_base_url']??''),'/');
+        $statuses = [
+            ['provider'=>'stripe_checkout','label'=>'Stripe Checkout','selected'=>in_array('stripe_checkout',$selected,true),'environment'=>(string)($stripe['environment']??'test'),
+                'connected'=>in_array('stripe_checkout',$this->keys(),true),'sdk_available'=>class_exists(\Stripe\StripeClient::class),
+                'secret_configured'=>trim((string)($stripe['secret_key']??''))!=='','webhook_secret_configured'=>($stripe['webhook_secrets']??[])!==[],
+                'twint_mode'=>(string)($stripe['twint_mode']??'dynamic'),'last_verified_at'=>null,'webhook_url'=>$base.'/api/v1/sale/payments/webhooks/stripe_checkout'],
+            ['provider'=>'revolut_checkout','label'=>'Revolut Checkout','selected'=>in_array('revolut_checkout',$selected,true),'environment'=>(string)($revolut['environment']??'sandbox'),
+                'connected'=>in_array('revolut_checkout',$this->keys(),true),'sdk_available'=>function_exists('curl_init'),
+                'secret_configured'=>trim((string)($revolut['secret_key']??''))!=='','webhook_secret_configured'=>($revolut['webhook_secrets']??[])!==[],
+                'last_verified_at'=>null,'webhook_url'=>$base.'/api/v1/sale/payments/webhooks/revolut_checkout'],
+        ];
+        $primary = null;
+        foreach ($statuses as $status) if ($status['selected']) { $primary=$status; break; }
+        return ($primary ?? $statuses[0]) + ['providers'=>$statuses];
     }
 
     public function normalize(string $key): string
@@ -89,8 +100,9 @@ final class PaymentProviderRegistry
             $providers[] = new SandboxPaymentProvider($database, $secret);
             $providers[] = new DeterministicTestPaymentProvider($database, hash('sha256', $secret . '|deterministic-test'));
         }
+        $selected = $this->selectedProviders($paymentConfig);
         $stripe = is_array($paymentConfig['stripe'] ?? null) ? $paymentConfig['stripe'] : [];
-        if (($paymentConfig['real_provider'] ?? '') === 'stripe_checkout' && ($stripe['enabled'] ?? false) === true
+        if (in_array('stripe_checkout',$selected,true) && ($stripe['enabled'] ?? false) === true
             && trim((string)($stripe['secret_key'] ?? '')) !== '' && ($stripe['webhook_secrets'] ?? []) !== []
             && trim((string)($paymentConfig['public_base_url']??'')) !== ''
             && class_exists(\Stripe\StripeClient::class)) {
@@ -101,6 +113,29 @@ final class PaymentProviderRegistry
                 in_array((string)($stripe['twint_mode']??'dynamic'),['dynamic','explicit','off'],true)?(string)($stripe['twint_mode']??'dynamic'):'dynamic'
             );
         }
+        $revolut = is_array($paymentConfig['revolut'] ?? null) ? $paymentConfig['revolut'] : [];
+        if (in_array('revolut_checkout',$selected,true) && ($revolut['enabled'] ?? false) === true
+            && trim((string)($revolut['secret_key'] ?? '')) !== '' && ($revolut['webhook_secrets'] ?? []) !== []
+            && trim((string)($paymentConfig['public_base_url']??'')) !== '' && function_exists('curl_init')) {
+            $revolutEnvironment = in_array((string)($revolut['environment']??'sandbox'),['sandbox','production'],true)
+                ? (string)($revolut['environment']??'sandbox') : 'sandbox';
+            $providers[] = new RevolutCheckoutPaymentProvider(
+                new OfficialRevolutGateway((string)$revolut['secret_key'], $revolutEnvironment,
+                    (string)($revolut['api_version']??'2026-04-20'), max(1,(int)($revolut['timeout']??15))),
+                array_values(array_map('strval',$revolut['webhook_secrets'])), (string)($paymentConfig['public_base_url']??''),
+                $revolutEnvironment, max(1,(int)($revolut['signature_tolerance']??300))
+            );
+        }
         return $providers;
+    }
+
+    /** @param array<string,mixed> $paymentConfig @return list<string> */
+    private function selectedProviders(array $paymentConfig): array
+    {
+        $selected = is_array($paymentConfig['real_providers'] ?? null) ? $paymentConfig['real_providers'] : [];
+        if ($selected === []) {
+            $selected = preg_split('/[,\s]+/', strtolower((string)($paymentConfig['real_provider']??''))) ?: [];
+        }
+        return array_values(array_unique(array_filter(array_map(static fn(mixed $provider): string => strtolower(trim((string)$provider)), $selected))));
     }
 }

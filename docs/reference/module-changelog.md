@@ -62,6 +62,14 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - secrets exclusivement hors base et aucune donnée de carte persistée.
 - TWINT proposé dans Stripe Checkout pour les commandes CHF, en mode dynamique ou explicite ; distinction documentée avec TWINT Express Checkout direct.
 
+# 2026-07-13 — Sale M5.4 : Revolut Checkout réel
+
+- Hosted Checkout Revolut derrière le même contrat provider v1, activable seul ou avec Stripe ;
+- Merchant API `2026-04-20`, environnements sandbox/production et ordre à capture automatique ;
+- redirection Shop récupérable, lecture serveur de l'état et annulation ;
+- signatures HMAC Revolut vérifiées sur le corps brut avec tolérance et rotation de secret ;
+- moyen de paiement ajouté au schéma canonique reconstruit from scratch, sans migration.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;

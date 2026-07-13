@@ -1480,6 +1480,9 @@ CROSS JOIN (
     UNION ALL SELECT 'stripe_checkout','Stripe','Carte ou TWINT','Card or TWINT',
            'Stripe affiche les moyens disponibles, dont TWINT pour les paiements CHF activés.','Stripe displays available methods, including TWINT for enabled CHF payments.',
            'stripe_checkout','online_provider',40,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"create_session":true,"defer_order_until_payment":true,"display_name":"Carte ou TWINT","logo":"stripe"}'
+    UNION ALL SELECT 'revolut_checkout','Revolut Checkout','Revolut Checkout','Revolut Checkout',
+           'Paiement sécurisé sur la page hébergée Revolut.','Secure payment on the Revolut-hosted checkout page.',
+           'revolut_checkout','online_provider',50,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"create_session":true,"defer_order_until_payment":true,"display_name":"Revolut Checkout","logo":"revolut"}'
 ) m
 WHERE c.channel_kind='storefront' AND c.status='active';
 

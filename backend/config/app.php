@@ -81,7 +81,7 @@ return [
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
-            '#^/api/v1/sale/payments/webhooks/stripe_checkout$#',
+            '#^/api/v1/sale/payments/webhooks/(?:stripe_checkout|revolut_checkout)$#',
             '#^/api/v1/sale/payments/return$#',
             '#^/api/v1/customer(?:/|$)#',
             '#^/api/v1/media$#',
@@ -117,10 +117,10 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
-            '#^/api/v1/sale/payments/webhooks/stripe_checkout$#' => [
+            '#^/api/v1/sale/payments/webhooks/(?:stripe_checkout|revolut_checkout)$#' => [
                 'limit' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_MAX', 180),
                 'window' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_WINDOW', 60),
-                'group' => '/api/v1/sale/payments/webhooks/stripe_checkout',
+                'group' => '/api/v1/sale/payments/webhooks/real-provider',
             ],
             '#^/api/v1/customer/(?:login|accounts/register)$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX', 10),
@@ -152,6 +152,10 @@ return [
 
     'payments' => [
         'real_provider' => strtolower((string) env('PAYMENT_REAL_PROVIDER', '')),
+        'real_providers' => array_values(array_filter(array_map(
+            static fn(string $provider): string => strtolower(trim($provider)),
+            preg_split('/[,\s]+/', (string) env('PAYMENT_REAL_PROVIDERS', (string) env('PAYMENT_REAL_PROVIDER', ''))) ?: []
+        ))),
         'public_base_url' => (string) env('APP_PUBLIC_BASE_URL', ''),
         'stripe' => [
             'enabled' => $boolEnv('PAYMENT_STRIPE_ENABLED', false),
@@ -164,6 +168,18 @@ return [
             'signature_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
             'api_version' => (string) env('STRIPE_API_VERSION', ''),
             'twint_mode' => strtolower((string) env('PAYMENT_STRIPE_TWINT_MODE', 'dynamic')),
+        ],
+        'revolut' => [
+            'enabled' => $boolEnv('PAYMENT_REVOLUT_ENABLED', false),
+            'environment' => strtolower((string) env('PAYMENT_REVOLUT_ENV', 'sandbox')),
+            'secret_key' => (string) env('REVOLUT_MERCHANT_SECRET_KEY', ''),
+            'webhook_secrets' => array_values(array_filter([
+                (string) env('REVOLUT_WEBHOOK_SECRET', ''),
+                (string) env('REVOLUT_WEBHOOK_SECRET_PREVIOUS', ''),
+            ])),
+            'signature_tolerance' => (int) env('REVOLUT_WEBHOOK_TOLERANCE_SECONDS', 300),
+            'api_version' => (string) env('REVOLUT_API_VERSION', '2026-04-20'),
+            'timeout' => (int) env('REVOLUT_API_TIMEOUT_SECONDS', 15),
         ],
     ],
 

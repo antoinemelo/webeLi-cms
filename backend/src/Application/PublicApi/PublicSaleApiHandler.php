@@ -333,6 +333,8 @@ final class PublicSaleApiHandler
             $result = $service->processWebhook(strtolower(trim($provider)), $this->request->rawBody(), [
                 'x-sale-signature' => (string) ($this->request->header('X-Sale-Signature') ?? ''),
                 'stripe-signature' => (string) ($this->request->header('Stripe-Signature') ?? ''),
+                'revolut-signature' => (string) ($this->request->header('Revolut-Signature') ?? ''),
+                'revolut-request-timestamp' => (string) ($this->request->header('Revolut-Request-Timestamp') ?? ''),
             ]);
             return $this->json($result, 'public.sale.payment.webhook.v1', $site, $languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }

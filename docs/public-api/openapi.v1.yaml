@@ -5048,7 +5048,7 @@ paths:
     post:
       operationId: "post_public_sale_payment_webhook_v1"
       summary: "Recevoir un webhook de paiement provider."
-      description: "Endpoint serveur-à-serveur. Le provider Stripe vérifie Stripe-Signature sur le corps brut avec le SDK officiel et une tolérance de 5 minutes avant toute transition locale."
+      description: "Endpoint serveur-à-serveur. Stripe et Revolut vérifient leur signature officielle sur le corps brut avec une tolérance de 5 minutes avant toute transition locale."
       tags:
         - "Headless v1"
       security: []
@@ -5058,6 +5058,20 @@ paths:
           in: "header"
           required: false
           description: "Signature Stripe officielle t=<unix>,v1=<signature>. Obligatoire pour stripe_checkout."
+          schema:
+            type: "string"
+        -
+          name: "Revolut-Signature"
+          in: "header"
+          required: false
+          description: "Signature HMAC officielle v1=<signature>. Obligatoire pour revolut_checkout."
+          schema:
+            type: "string"
+        -
+          name: "Revolut-Request-Timestamp"
+          in: "header"
+          required: false
+          description: "Horodatage signé Revolut en millisecondes. Obligatoire pour revolut_checkout."
           schema:
             type: "string"
         -

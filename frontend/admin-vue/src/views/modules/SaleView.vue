@@ -33,6 +33,16 @@ type Order = Row & {
 };
 type Channel = Row & { id: number; code?: string; name?: string; channel_type?: string; status?: string; is_public?: number; currency?: string; price_tax_included?: number };
 type PaymentTimelineEvent = { kind: string; status: string; at?: string; amount_minor?: number; detail?: string };
+type ProviderStatus = Row & {
+  provider?: string;
+  label?: string;
+  environment?: string;
+  connected?: boolean;
+  webhook_url?: string;
+  twint_mode?: string;
+  last_verified_at?: string | null;
+  providers?: ProviderStatus[];
+};
 type PaymentSession = Row & {
   id: number;
   order_number?: string;
@@ -78,7 +88,8 @@ const proofAssetId = ref<number | null>(null);
 const manualProvider = ref('manual_card');
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
-const providerStatus = ref<Row | null>(null);
+const providerStatus = ref<ProviderStatus | null>(null);
+const providerStatuses = computed<ProviderStatus[]>(() => providerStatus.value?.providers ?? (providerStatus.value ? [providerStatus.value] : []));
 const fulfillmentMethods = ref<Row[]>([]);
 const sessions = ref<Row[]>([]);
 const paymentAmount = ref(0);
@@ -225,7 +236,7 @@ async function loadOrders(): Promise<void> {
 async function loadSettings(): Promise<void> {
   const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse] = await Promise.all([
     adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
-    adminApi.get<{ payment_methods: Row[]; provider_status?: Row }>('/sale/payment-methods'),
+    adminApi.get<{ payment_methods: Row[]; provider_status?: ProviderStatus }>('/sale/payment-methods'),
     adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions'),
     adminApi.get<{ methods: Row[] }>('/sale/fulfillment')
   ]);
@@ -821,12 +832,12 @@ onMounted(load);
         </section>
         <section class="sale-admin__section">
           <h2>{{ t('sale.settings.paymentMethods') }}</h2>
-          <div v-if="providerStatus" class="alert" :class="providerStatus.connected ? 'alert-success' : 'alert-warning'">
-            <b>Stripe Checkout · {{ String(providerStatus.environment).toUpperCase() }}</b>
-            <p>{{ providerStatus.connected ? t('sale.payments.providerConnected') : t('sale.payments.providerNotConnected') }}</p>
-            <small>{{ t('sale.payments.webhookUrl') }}: <code>{{ providerStatus.webhook_url }}</code></small>
-            <p><small>TWINT: {{ providerStatus.twint_mode || 'dynamic' }}</small></p>
-            <p><small>{{ t('sale.payments.secretMasked') }} · {{ t('sale.payments.lastVerification') }}: {{ providerStatus.last_verified_at || '—' }}</small></p>
+          <div v-for="status in providerStatuses" :key="String(status.provider)" class="alert" :class="status.connected ? 'alert-success' : 'alert-warning'">
+            <b>{{ status.label || status.provider }} · {{ String(status.environment).toUpperCase() }}</b>
+            <p>{{ status.connected ? t('sale.payments.providerConnected') : t('sale.payments.providerNotConnected') }}</p>
+            <small>{{ t('sale.payments.webhookUrl') }}: <code>{{ status.webhook_url }}</code></small>
+            <p v-if="status.provider === 'stripe_checkout'"><small>TWINT: {{ status.twint_mode || 'dynamic' }}</small></p>
+            <p><small>{{ t('sale.payments.secretMasked') }} · {{ t('sale.payments.lastVerification') }}: {{ status.last_verified_at || '—' }}</small></p>
           </div>
           <div v-for="method in paymentMethods" :key="String(method.id)" class="sale-admin__list-row">
             <span>{{ method.name }}</span>

@@ -94,7 +94,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
                 'currency' => 'CHF',
                 'default_language' => 'fr',
                 'public_ecommerce_enabled' => false,
-                'payment_providers' => ['cash', 'manual_card', 'external_terminal', 'bank_transfer', 'test (hors production uniquement)'],
+                'payment_providers' => ['cash', 'manual_card', 'external_terminal', 'bank_transfer', 'stripe_checkout', 'revolut_checkout', 'test (hors production uniquement)'],
             ],
         ];
     }
