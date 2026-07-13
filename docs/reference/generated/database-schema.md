@@ -97,6 +97,9 @@ generated: true
 | `crm_message_outbox` | id, site_id, provider_id, template_id, mailing_id, contact_id, channel, recipient_value, subject, body_text, body_html, payload_json, status, attempts, max_attempts, next_attempt_at, locked_at, sent_at, failed_at, last_error, created_by_iam_user_id, created_at, updated_at |
 | `crm_message_templates` | id, site_id, template_key, channel, name, subject, body_text, body_html, provider_template_ref, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_messaging_providers` | id, site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `crm_sale_activities` | id, dto_version, site_id, activity_type, occurred_at, channel, related_company_id, related_contact_id, source_event_id, source_outbox_id, source_event_type, source_aggregate_type, source_aggregate_id, source_reference, summary, status, resolution_strategy, metadata_json, linked_by_iam_user_id, linked_at, created_at, updated_at |
+| `crm_sale_activity_link_audit` | id, activity_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, linked_by_iam_user_id, created_at |
+| `crm_sale_activity_reconciliation_runs` | id, site_id, supported_events, projected_events, missing_events, duplicate_events, repaired_events, report_json, run_by_iam_user_id, created_at |
 | `schema_migrations` | id, migration, migrated_at |
 
 ## `cookies.sqlite`
