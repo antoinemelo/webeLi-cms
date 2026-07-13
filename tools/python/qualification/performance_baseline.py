@@ -51,6 +51,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--repeat", type=int, default=int(os.getenv("AMCMS_M0_PERF_REPEAT", "3")))
     parser.add_argument("--critical-ms", type=float, default=float(os.getenv("AMCMS_M0_PERF_CRITICAL_MS", "2000")))
     parser.add_argument("--base-url", default=os.getenv("AMCMS_M0_PERF_BASE_URL", "").strip(), help="URL externe à mesurer au lieu de créer une instance isolée.")
+    parser.add_argument("--variant-id", type=int, default=int(os.getenv("AMCMS_M0_PERF_VARIANT_ID", "0")), help="Identifiant du vendable requis avec --base-url.")
     parser.add_argument("--use-built-assets", action="store_true", help="Exige les assets admin-app déjà compilés dans l'instance isolée.")
     return parser.parse_args(argv)
 
@@ -123,7 +124,7 @@ def _measure(name: str, critical_ms: float, repeat: int, action: Callable[[], tu
         statuses.append(status)
         timings.append(duration_ms)
     p95 = _percentile_95(timings)
-    failed = any(status >= 500 or status == 0 for status in statuses) or p95 > critical_ms
+    failed = any(status >= 400 or status == 0 for status in statuses) or p95 > critical_ms
     return {
         "name": name,
         "status": "failed" if failed else "passed",
@@ -168,7 +169,7 @@ def _stock_probe(instance: Path, cart_token: str) -> tuple[int, float, str]:
 
 
 def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | None, repeat: int, critical_ms: float) -> list[dict[str, object]]:
-    created_cart: dict[str, str | int] = {"token": "", "line_id": 0}
+    created_cart: dict[str, str | int] = {"token": "", "last_checkout_token": "", "line_id": 0}
 
     def storefront() -> tuple[int, float, str]:
         status, body, duration = _request(base_url, "GET", "/")
@@ -201,7 +202,7 @@ def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | No
             base_url,
             "POST",
             f"/api/v1/sale/channels/web-main/cart/{urllib.parse.quote(token)}/lines",
-            body={"business_variant_id": int(variant_id or 0), "quantity": 1},
+            body={"sellable_id": int(variant_id or 0), "quantity": 1},
             headers={"Idempotency-Key": "perf-line-" + os.urandom(6).hex()},
         )
         payload = _decode_json(body)
@@ -242,6 +243,7 @@ def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | No
             headers={"Idempotency-Key": "perf-checkout-" + os.urandom(6).hex()},
         )
         order_id = _decode_json(body).get("data", {}).get("order", {}).get("id", 0)
+        created_cart["last_checkout_token"] = token
         created_cart["token"] = ""
         created_cart["line_id"] = 0
         return status, duration, f"order_id={order_id}"
@@ -257,13 +259,14 @@ def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | No
     ]
     if instance is not None:
         def stock() -> tuple[int, float, str]:
-            token = str(created_cart.get("token") or "")
+            status, checkout_duration, detail = checkout()
+            if status >= 400:
+                return status, checkout_duration, detail
+            token = str(created_cart.get("last_checkout_token") or "")
             if not token:
-                status, _duration, _detail = cart_add_line()
-                if status >= 400:
-                    return status, _duration, "cart line failed"
-                token = str(created_cart.get("token") or "")
-            return _stock_probe(instance, token)
+                return 500, checkout_duration, "checkout cart token missing"
+            probe_status, probe_duration, probe_detail = _stock_probe(instance, token)
+            return probe_status, checkout_duration + probe_duration, probe_detail
 
         scenarios.append(("stock_reservation", stock))
 
@@ -276,9 +279,12 @@ def _report_path(value: str) -> Path:
 
 
 def _run_external(args: argparse.Namespace) -> tuple[list[dict[str, object]], dict[str, object]]:
-    return _run_scenarios(args.base_url, None, variant_id=None, repeat=args.repeat, critical_ms=args.critical_ms), {
+    if args.variant_id < 1:
+        raise RuntimeError("--variant-id ou AMCMS_M0_PERF_VARIANT_ID est requis avec --base-url")
+    return _run_scenarios(args.base_url, None, variant_id=args.variant_id, repeat=args.repeat, critical_ms=args.critical_ms), {
         "mode": "external",
         "base_url": args.base_url,
+        "variant_id": args.variant_id,
     }
 
 

@@ -92,6 +92,14 @@ AMCMS_M0_PERF_CRITICAL_MS=2500 AMCMS_M0_PERF_REPEAT=5 \
   python3 tools/cms.py qualify --profile release
 ```
 
+Pour mesurer une instance externe, le vendable à utiliser doit être explicite afin que le panier, le checkout et le stock restent de vraies preuves transactionnelles :
+
+```bash
+AMCMS_M0_PERF_BASE_URL=https://instance.example \
+AMCMS_M0_PERF_VARIANT_ID=123 \
+  python3 tools/python/qualification/performance_baseline.py
+```
+
 Le rapport détaillé est écrit dans `storage/qualification/performance/latest.json`. Cette baseline qualifie la machine courante et doit être lue avec son contexte matériel ; elle ne remplace pas un test de charge réseau externe.
 
 ## Gate omnicanale storefront/POS

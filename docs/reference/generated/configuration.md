@@ -21,6 +21,7 @@ generated: true
 | `AMCMS_M0_PERF_BASE_URL` | `tools/python/qualification/performance_baseline.py` |
 | `AMCMS_M0_PERF_CRITICAL_MS` | `tools/python/qualification/performance_baseline.py` |
 | `AMCMS_M0_PERF_REPEAT` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_VARIANT_ID` | `tools/python/qualification/performance_baseline.py` |
 | `APP_BASE_PATH` | `backend/config/app.php`, `backend/src/Shared/Support/helpers.php`, `tools/python/operations/database/b2_cleanup_noindex_search_documents.py` |
 | `APP_DEPENDENCIES_HTTP_TIMEOUT` | `backend/config/updates.php` |
 | `APP_DEPENDENCIES_LATEST_BUDGET` | `backend/config/updates.php` |

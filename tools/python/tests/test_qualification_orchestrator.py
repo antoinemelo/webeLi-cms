@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from tools.python.commands import qualify
+from tools.python.qualification.performance_baseline import _measure
 from tools.python.qualification.run_all import (
     E2E_INPUTS,
     FRONTEND_BUILD_INPUTS,
@@ -18,6 +19,10 @@ from tools.python.qualification.run_all import (
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
+    def test_performance_baseline_rejects_client_errors(self):
+        result = _measure("invalid-contract", 2000.0, 1, lambda: (422, 1.0, "validation failed"))
+        self.assertEqual("failed", result["status"])
+
     def test_profiles_have_expected_depth_without_database_rebuild(self):
         registry = steps()
         profiles = ("quick", "complete", "release")
