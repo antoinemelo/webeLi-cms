@@ -43,21 +43,22 @@ test.describe('blueprint designer safe activation', () => {
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
-    const designResponse = page.waitForResponse((response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/[^/]+\/design/.test(response.url()), { timeout: 3000 }).catch(() => null);
+    const modelResponse = page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/model(?:\?|$)/.test(response.url()),
+      { timeout: 30_000 }
+    );
+    const designResponse = page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/[^/]+\/design/.test(response.url()),
+      { timeout: 30_000 }
+    );
     await page.goto(cmsPath('/admin/app/blueprints'));
     await expect(page.getByRole('heading', { name: 'Structures de contenu' })).toBeVisible();
+    expect((await modelResponse).ok()).toBeTruthy();
     const response = await designResponse;
-    if (response) {
-      expect(response.ok()).toBeTruthy();
-      const payload = await response.json();
-      await expect(page.getByLabel('Nom affiché', { exact: true }).first()).toHaveValue(payload.data.blueprint.label);
-    } else {
-      await expect(page.getByLabel('Nom affiché', { exact: true }).first()).toBeEnabled();
-      const activeModel = page.locator('.blueprint-column--models .list-group-item-action.active').first();
-      if (await activeModel.count()) {
-        await expect(activeModel).toBeVisible();
-      }
-    }
+    expect(response.ok()).toBeTruthy();
+    const payload = await response.json();
+    await expect(page.getByLabel('Nom affiché', { exact: true }).first()).toHaveValue(payload.data.blueprint.label);
+    await expect(page.locator('.blueprint-column--models .list-group-item-action').first()).toBeVisible();
   });
 
   test('routes through the configured CMS prefix', async ({ page }) => {
@@ -67,7 +68,7 @@ test.describe('blueprint designer safe activation', () => {
 
   test('tracks local changes and warns before selecting another blueprint', async ({ page }) => {
     const models = page.locator('.blueprint-column--models .list-group-item-action');
-    test.skip(await models.count() < 2, 'At least two blueprint fixtures are required');
+    expect(await models.count(), 'At least two blueprint fixtures are required').toBeGreaterThanOrEqual(2);
 
     let initialIndex = 0;
     for (let index = 0; index < await models.count(); index += 1) {
@@ -103,7 +104,7 @@ test.describe('blueprint designer safe activation', () => {
       if (['PUT', 'POST'].includes(request.method()) && /\/admin\/api\/(?:blueprints|fieldsets)/.test(request.url())) implicitWrites += 1;
     });
     const fields = page.locator('.blueprint-tree__field-main');
-    test.skip(await fields.count() === 0, 'At least one editable blueprint field is required');
+    expect(await fields.count(), 'At least one editable blueprint field is required').toBeGreaterThan(0);
 
     await fields.first().click();
     const modal = page.getByRole('dialog', { name: 'Modifier le champ' });
@@ -137,13 +138,9 @@ test.describe('blueprint designer safe activation', () => {
     const label = page.getByLabel('Nom affiché', { exact: true }).first();
     const changed = `${await label.inputValue()} — échec E2E`;
     await label.fill(changed);
-    await expect(page.getByText('Modifications locales non enregistrées').first()).toBeVisible({ timeout: 3000 }).catch(() => {
-      test.skip(true, 'An editable dirty blueprint fixture is required');
-    });
+    await expect(page.getByText('Modifications locales non enregistrées').first()).toBeVisible({ timeout: 3000 });
     const saveDraft = page.getByRole('button', { name: /Enregistrer le brouillon|Enregistrement/ });
-    await expect(saveDraft).toBeEnabled({ timeout: 3000 }).catch(() => {
-      test.skip(true, 'An enabled draft save action is required');
-    });
+    await expect(saveDraft).toBeEnabled({ timeout: 3000 });
     page.once('dialog', (dialog) => {
       expect(dialog.message()).toContain(changed.replace(' — échec E2E', ''));
       expect(dialog.message()).toContain('La version active ne sera pas modifiée.');
@@ -188,35 +185,41 @@ test.describe('blueprint designer safe activation', () => {
     const buttons = page.locator('.blueprint-column--models .list-group-item-action');
     const keys = await buttons.locator('.font-monospace').allTextContents();
     const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-    test.skip(!duplicate, 'A global/local fixture sharing one key is required');
+    expect(duplicate, 'A global/local fixture sharing one key is required').toBeTruthy();
+    if (!duplicate) throw new Error('Missing global/local Blueprint fixture');
 
-    const twins = buttons.filter({ hasText: duplicate! });
+    const twins = buttons.filter({ hasText: duplicate });
     const global = twins.filter({ hasText: 'Globale' });
     const local = twins.filter({ hasText: 'Propre à' });
     if ((await global.getAttribute('class'))?.includes('active')) {
-      const initialLocalRequest = page.waitForRequest((request) => request.url().includes('/design') && request.url().includes('scope=site'));
+      const initialLocalResponse = page.waitForResponse((response) => response.url().includes('/design') && response.url().includes('scope=site'));
       await local.click();
-      await initialLocalRequest;
+      expect((await initialLocalResponse).ok()).toBeTruthy();
+      await expect(local).toHaveClass(/active/);
     }
-    const globalRequest = page.waitForRequest((request) => request.url().includes('/design') && request.url().includes('scope=global'));
-    await global.click(); await globalRequest;
-    const localRequest = page.waitForRequest((request) => request.url().includes('/design') && request.url().includes('scope=site'));
+    const globalResponse = page.waitForResponse((response) => response.url().includes('/design') && response.url().includes('scope=global'));
+    await global.click();
+    expect((await globalResponse).ok()).toBeTruthy();
+    await expect(global).toHaveClass(/active/);
+    const localResponse = page.waitForResponse((response) => response.url().includes('/design') && response.url().includes('scope=site'));
     await local.click();
-    await localRequest;
+    expect((await localResponse).ok()).toBeTruthy();
+    await expect(local).toHaveClass(/active/);
   });
 
   test('warns before changing site with local changes', async ({ page }) => {
     const site = page.getByLabel('Changer de site administré');
-    test.skip(await site.count() === 0 || (await site.locator('option').count()) < 2, 'At least two authorized sites are required');
+    await expect(site, 'At least two authorized sites are required').toBeVisible();
+    expect(await site.locator('option').count(), 'At least two authorized sites are required').toBeGreaterThanOrEqual(2);
     const initial = await site.inputValue();
     const target = await site.locator('option').evaluateAll((options, current) => (options as HTMLOptionElement[]).find((option) => option.value !== current)?.value, initial);
+    expect(target, 'A secondary authorized site is required').toBeTruthy();
+    if (!target) throw new Error('Missing secondary authorized site');
     const initialUrl = page.url();
     await page.getByLabel('Nom affiché', { exact: true }).first().fill('Modification locale multisite E2E');
-    await expect(page.getByText('Modifications locales non enregistrées').first()).toBeVisible({ timeout: 3000 }).catch(() => {
-      test.skip(true, 'A dirty blueprint fixture is required to test site-change warning');
-    });
+    await expect(page.getByText('Modifications locales non enregistrées').first()).toBeVisible({ timeout: 3000 });
     page.once('dialog', (dialog) => dialog.dismiss());
-    await site.selectOption(target!);
+    await site.selectOption(target);
     await expect(page).toHaveURL(initialUrl);
   });
 
@@ -244,7 +247,7 @@ test.describe('blueprint designer safe activation', () => {
       const candidate = sections.nth(index).locator('.blueprint-tree__field');
       if (await candidate.count() >= 2) { fields = candidate; break; }
     }
-    test.skip(await fields.count() < 2, 'At least two fields in one section are required');
+    expect(await fields.count(), 'At least two fields in one section are required').toBeGreaterThanOrEqual(2);
     const firstHandle = await fields.nth(0).locator('code').textContent();
     const second = fields.nth(1);
     const secondHandle = await second.locator('code').textContent();
@@ -256,7 +259,7 @@ test.describe('blueprint designer safe activation', () => {
 
   test('focuses dialogs, closes them with Escape and restores focus', async ({ page }) => {
     const trigger = page.locator('.blueprint-tree__field-main').first();
-    test.skip(await trigger.count() === 0, 'At least one editable field is required');
+    expect(await trigger.count(), 'At least one editable field is required').toBeGreaterThan(0);
     await trigger.focus();
     await trigger.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Modifier le champ' });
@@ -290,13 +293,13 @@ test.describe('blueprint designer safe activation', () => {
 
   test('blocks invalid expert JSON and preserves unknown option keys locally', async ({ page }) => {
     const trigger = page.locator('.blueprint-tree__field-main').first();
-    test.skip(await trigger.count() === 0, 'At least one blueprint field is required');
+    expect(await trigger.count(), 'At least one blueprint field is required').toBeGreaterThan(0);
     await trigger.click();
     const dialog = page.getByRole('dialog', { name: 'Modifier le champ' });
     await dialog.getByText('Options expertes').click();
     const optionsJson = dialog.getByLabel('Options JSON');
     await optionsJson.fill('{ invalid');
-    await expect(dialog.getByText('JSON invalide dans options.')).toBeVisible();
+    await expect(dialog.getByText('JSON invalide pour options.')).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Appliquer localement' })).toBeDisabled();
     await dialog.getByRole('button', { name: 'Annuler', exact: true }).click();
 
@@ -315,8 +318,8 @@ test.describe('blueprint designer safe activation', () => {
 
   test('edits choice options through guided controls and the shared JSON model', async ({ page }) => {
     const choiceField = await findFieldFixture(page, /select|multiselect|radio|checkboxes|button_group/);
-    test.skip(!choiceField, 'A choice field fixture is required');
-    if (!choiceField) return;
+    expect(choiceField, 'A choice field fixture is required').not.toBeNull();
+    if (!choiceField) throw new Error('Missing choice field fixture');
     await choiceField.locator('.blueprint-tree__field-main').click();
     const dialog = page.getByRole('dialog', { name: 'Modifier le champ' });
     await expect(dialog.getByRole('heading', { name: 'Configuration guidée' })).toBeVisible();
@@ -335,8 +338,8 @@ test.describe('blueprint designer safe activation', () => {
 
   test('edits supported media validation without touching unknown expert keys', async ({ page }) => {
     const mediaField = await findFieldFixture(page, /media|assets/);
-    test.skip(!mediaField, 'A media/assets field fixture is required');
-    if (!mediaField) return;
+    expect(mediaField, 'A media/assets field fixture is required').not.toBeNull();
+    if (!mediaField) throw new Error('Missing media/assets field fixture');
     await mediaField.locator('.blueprint-tree__field-main').click();
     const dialog = page.getByRole('dialog', { name: 'Modifier le champ' });
     await dialog.getByLabel('Politique alt').selectOption('decorative_allowed');

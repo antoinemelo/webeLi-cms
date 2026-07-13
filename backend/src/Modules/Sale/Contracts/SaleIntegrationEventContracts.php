@@ -9,12 +9,19 @@ final class SaleIntegrationEventContracts
     public const CART_CREATED = 'sale.cart.created';
     public const CART_LINE_ADDED = 'sale.cart.line_added';
     public const ORDER_PLACED = 'sale.order.placed';
+    public const ORDER_CONFIRMED = 'sale.order.confirmed';
     public const ORDER_CANCELLED = 'sale.order.cancelled';
     public const PAYMENT_RECORDED = 'sale.payment.recorded';
     public const PAYMENT_FAILED = 'sale.payment.failed';
+    public const FULFILLMENT_COMPLETED = 'sale.fulfillment.completed';
+    public const RETURN_CREATED = 'sale.return.created';
     public const POS_SESSION_OPENED = 'sale.pos.session.opened';
     public const POS_SESSION_CLOSED = 'sale.pos.session.closed';
+    public const POS_ORDER_COMPLETED = 'sale.pos.order.completed';
     public const REFUND_CREATED = 'sale.refund.created';
+    public const REFUND_COMPLETED = 'sale.refund.completed';
+    public const GIFT_CARD_ISSUED = 'sale.gift_card.issued';
+    public const GIFT_CARD_REDEEMED = 'sale.gift_card.redeemed';
     public const STOCK_RESERVED = 'sale.stock.reserved';
     public const STOCK_CONSUMED = 'sale.stock.consumed';
     public const STOCK_RELEASED = 'sale.stock.released';
@@ -37,7 +44,10 @@ final class SaleIntegrationEventContracts
             self::ORDER_PLACED => [
                 'entity' => 'order',
                 'required' => ['site_id', 'order_id', 'order_number', 'grand_total_minor', 'currency'],
-                'optional' => ['cart_id', 'customer_ref_id', 'payment_status', 'source', 'iam_user_id'],
+                'optional' => ['cart_id', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id'],
+            ],
+            self::ORDER_CONFIRMED => [
+                'entity' => 'order', 'required' => ['site_id', 'order_id'], 'optional' => ['order_number', 'source', 'iam_user_id'],
             ],
             self::ORDER_CANCELLED => [
                 'entity' => 'order',
@@ -54,6 +64,12 @@ final class SaleIntegrationEventContracts
                 'required' => ['site_id', 'order_id', 'transaction_id', 'amount_minor', 'currency', 'provider_key'],
                 'optional' => ['error_code', 'error_message', 'iam_user_id'],
             ],
+            self::FULFILLMENT_COMPLETED => [
+                'entity' => 'fulfillment', 'required' => ['site_id', 'order_id', 'fulfillment_id'], 'optional' => ['order_number', 'iam_user_id'],
+            ],
+            self::RETURN_CREATED => [
+                'entity' => 'return', 'required' => ['site_id', 'order_id', 'return_id'], 'optional' => ['return_number', 'reason', 'iam_user_id'],
+            ],
             self::POS_SESSION_OPENED => [
                 'entity' => 'pos_session',
                 'required' => ['site_id', 'cash_session_id', 'register_id', 'opening_cash_minor', 'currency'],
@@ -64,10 +80,22 @@ final class SaleIntegrationEventContracts
                 'required' => ['site_id', 'cash_session_id', 'register_id', 'counted_cash_minor', 'expected_cash_minor', 'difference_minor', 'currency'],
                 'optional' => ['closed_by_iam_user_id', 'notes'],
             ],
+            self::POS_ORDER_COMPLETED => [
+                'entity' => 'order', 'required' => ['site_id', 'order_id', 'order_number', 'grand_total_minor', 'currency'], 'optional' => ['payment_status', 'iam_user_id'],
+            ],
             self::REFUND_CREATED => [
                 'entity' => 'refund',
                 'required' => ['site_id', 'order_id', 'refund_id', 'transaction_id', 'amount_minor', 'currency', 'provider_key'],
                 'optional' => ['payment_transaction_id', 'reason', 'iam_user_id'],
+            ],
+            self::REFUND_COMPLETED => [
+                'entity' => 'refund', 'required' => ['site_id', 'order_id', 'refund_id', 'amount_minor', 'currency'], 'optional' => ['transaction_id', 'reason', 'iam_user_id'],
+            ],
+            self::GIFT_CARD_ISSUED => [
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+            ],
+            self::GIFT_CARD_REDEEMED => [
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
             ],
             self::STOCK_RESERVED => [
                 'entity' => 'stock',

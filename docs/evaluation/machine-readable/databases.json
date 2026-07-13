@@ -6,7 +6,7 @@
     ],
     "id": "database-source-database-iam-sql-b86b5bd58a",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -17,6 +17,9 @@
     "tables": [
       "api_tokens",
       "iam_audit_logs",
+      "iam_customer_email_changes",
+      "iam_customer_sessions",
+      "iam_customer_site_accounts",
       "iam_email_2fa_challenges",
       "iam_permissions",
       "iam_rate_limits",
@@ -37,7 +40,7 @@
     ],
     "id": "database-source-database-migrations-ai-0001-baseline-sql-f7c8199391",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -55,7 +58,7 @@
     ],
     "id": "database-source-database-migrations-business-0001-init-sql-8980c69b4d",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -92,7 +95,7 @@
     ],
     "id": "database-source-database-migrations-business-0002-catalog-pricing-sql-387290f419",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -115,7 +118,7 @@
     ],
     "id": "database-source-database-migrations-business-0003-catalog-schema-sql-27ab578bb3",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -163,7 +166,7 @@
     ],
     "id": "database-source-database-migrations-business-0004-catalog-demo-seed-sql-72bfb65862",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -181,7 +184,7 @@
     ],
     "id": "database-source-database-migrations-business-0005-activity-log-sql-62cdd4421d",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -201,7 +204,7 @@
     ],
     "id": "database-source-database-migrations-business-0005-variant-sales-note-sql-3576fb7c5c",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -219,7 +222,7 @@
     ],
     "id": "database-source-database-migrations-business-0006-bundle-product-type-check-sql-5f04cc348e",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -233,11 +236,149 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/business/0006_customer_account_site_links.sql"
+    ],
+    "id": "database-source-database-migrations-business-0006-customer-account-site-links-sql-d8bf10ed47",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0006_customer_account_site_links.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0007_pricing_offers_bundles.sql"
+    ],
+    "id": "database-source-database-migrations-business-0007-pricing-offers-bundles-sql-421f975dff",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0007_pricing_offers_bundles.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_gift_card_policies",
+      "business_price_list_items",
+      "business_price_lists"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0008_pim_quality_import_channels.sql"
+    ],
+    "id": "database-source-database-migrations-business-0008-pim-quality-import-channels-sql-b62b05ae60",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0008_pim_quality_import_channels.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_catalog_import_runs",
+      "business_product_channel_visibility"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0009_pim_channel_visibility_site_guard.sql"
+    ],
+    "id": "database-source-database-migrations-business-0009-pim-channel-visibility-site-guard-sql-320abbfe82",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0009_pim_channel_visibility_site_guard.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0010_sales_channel_configs.sql"
+    ],
+    "id": "database-source-database-migrations-business-0010-sales-channel-configs-sql-95db2c7bad",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0010_sales_channel_configs.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_sales_channel_configs"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0011_sellables_storefront_invalidation.sql"
+    ],
+    "id": "database-source-database-migrations-business-0011-sellables-storefront-invalidation-sql-fd9979ea21",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0011_sellables_storefront_invalidation.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_sellables",
+      "business_storefront_projection_invalidations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/business/0012_sellable_lifecycle_triggers.sql"
+    ],
+    "id": "database-source-database-migrations-business-0012-sellable-lifecycle-triggers-sql-390d79f204",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0012_sellable_lifecycle_triggers.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/cookies/0001_baseline.sql"
     ],
     "id": "database-source-database-migrations-cookies-0001-baseline-sql-66184d89c4",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -255,7 +396,7 @@
     ],
     "id": "database-source-database-migrations-core-070-module-resource-blueprints-sql-ab642eecfc",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -275,7 +416,7 @@
     ],
     "id": "database-source-database-migrations-core-071-backfill-forms-module-blueprint-storage-sql-96ccc2065e",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -293,7 +434,7 @@
     ],
     "id": "database-source-database-migrations-core-072-action-runs-sql-f45b5c373f",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -313,7 +454,7 @@
     ],
     "id": "database-source-database-migrations-core-073-backfill-ai-module-blueprint-storage-sql-966f78fc6f",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -331,7 +472,7 @@
     ],
     "id": "database-source-database-migrations-core-075-cross-database-operations-sql-7016ca1b54",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -347,11 +488,94 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/core/076_business_product_content_links.sql"
+    ],
+    "id": "database-source-database-migrations-core-076-business-product-content-links-sql-ff97eb8e16",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/076_business_product_content_links.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "business_product_content_links",
+      "business_product_public_projections"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/077_outbox_reliability.sql"
+    ],
+    "id": "database-source-database-migrations-core-077-outbox-reliability-sql-1780aa33f6",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/077_outbox_reliability.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "outbox_consumptions",
+      "outbox_events_v2"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/078_sales_channel_storefronts.sql"
+    ],
+    "id": "database-source-database-migrations-core-078-sales-channel-storefronts-sql-3290b3c0dd",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/078_sales_channel_storefronts.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "cms_sales_channel_storefronts"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/core/079_storefront_projections.sql"
+    ],
+    "id": "database-source-database-migrations-core-079-storefront-projections-sql-7f01d29469",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/079_storefront_projections.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "storefront_collection_projections",
+      "storefront_product_projections"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/forms/0001_baseline.sql"
     ],
     "id": "database-source-database-migrations-forms-0001-baseline-sql-5d5340a785",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -369,7 +593,7 @@
     ],
     "id": "database-source-database-migrations-iam-0001-init-sql-2a55f8eeb8",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -399,7 +623,7 @@
     ],
     "id": "database-source-database-migrations-iam-0002-admin-security-hardening-sql-96850c837f",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -419,7 +643,7 @@
     ],
     "id": "database-source-database-migrations-iam-0003-api-tokens-sql-d4567f625f",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -439,7 +663,7 @@
     ],
     "id": "database-source-database-migrations-iam-0004-totp-2fa-sql-35d0fa1acc",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -459,7 +683,7 @@
     ],
     "id": "database-source-database-migrations-iam-0005-ai-assistant-permissions-sql-ac8d04d5f7",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -477,7 +701,7 @@
     ],
     "id": "database-source-database-migrations-iam-0006-imports-exports-permissions-sql-d0e54d7c5b",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -495,7 +719,7 @@
     ],
     "id": "database-source-database-migrations-iam-0007-login-mode-sql-fdadbd091d",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -513,7 +737,7 @@
     ],
     "id": "database-source-database-migrations-iam-0008-business-permissions-sql-758fe4046f",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -527,11 +751,51 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/iam/0009_customer_accounts.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0009-customer-accounts-sql-da3213c6a1",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0009_customer_accounts.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "iam_customer_email_changes",
+      "iam_customer_sessions",
+      "iam_customer_site_accounts"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/iam/0010_sales_channel_permission.sql"
+    ],
+    "id": "database-source-database-migrations-iam-0010-sales-channel-permission-sql-75ac26bb09",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/iam/0010_sales_channel_permission.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/sale/0001_bundle_product_type_check.sql"
     ],
     "id": "database-source-database-migrations-sale-0001-bundle-product-type-check-sql-1fc7c44e37",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -549,7 +813,7 @@
     ],
     "id": "database-source-database-migrations-sale-0002-cart-surcharge-adjustment-check-sql-c0c48e4c36",
     "kind": "migration",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -563,11 +827,174 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/sale/0003_state_machines_snapshots.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0003-state-machines-snapshots-sql-7d3fa9a6e4",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0003_state_machines_snapshots.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_fulfillment_lines",
+      "sale_fulfillments",
+      "sale_state_transitions"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0004_internal_sales_timeline.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0004-internal-sales-timeline-sql-325358af81",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0004_internal_sales_timeline.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_financial_corrections",
+      "sale_order_customer_reconciliations"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0005_guest_public_checkout.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0005-guest-public-checkout-sql-f572090249",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0005_guest_public_checkout.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0006_customer_accounts_links.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0006-customer-accounts-links-sql-ee83e18ad8",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0006_customer_accounts_links.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_customer_account_links",
+      "sale_customer_addresses",
+      "sale_customer_merge_audit",
+      "sale_customer_order_links",
+      "sale_order_claim_proofs"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0007_fulfillment_tax_v1.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0007-fulfillment-tax-v1-sql-77b074cf94",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0007_fulfillment_tax_v1.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_fulfillment_methods",
+      "sale_fulfillment_zones"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0008_sales_channel_contract.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0008-sales-channel-contract-sql-636fc8c957",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0008_sales_channel_contract.sql"
+    ],
+    "status": "supported",
+    "tables": [
+      "sale_channel_checkout_configs",
+      "sale_inventory_channel_configs"
+    ],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0009_sellable_references.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0009-sellable-references-sql-c7e232079a",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0009_sellable_references.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "database/migrations/sale/0010_cart_aggregate_contract.sql"
+    ],
+    "id": "database-source-database-migrations-sale-0010-cart-aggregate-contract-sql-1f1a5c4ec9",
+    "kind": "migration",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/sale/0010_cart_aggregate_contract.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/modules/ai.sql"
     ],
     "id": "database-source-database-modules-ai-sql-15a1c1b1c5",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -599,7 +1026,7 @@
     ],
     "id": "database-source-database-modules-analytics-sql-1ece801623",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -620,7 +1047,7 @@
     ],
     "id": "database-source-database-modules-business-sql-3aaf207011",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -637,12 +1064,17 @@
       "business_attributes",
       "business_bundle_components",
       "business_catalog_discounts",
+      "business_catalog_import_runs",
       "business_catalog_offers",
       "business_catalog_products",
       "business_catalog_variant_price_adjustments",
       "business_catalog_variants",
       "business_companies",
       "business_contacts",
+      "business_gift_card_policies",
+      "business_inventory_availability_projections",
+      "business_price_list_items",
+      "business_price_lists",
       "business_product_assets",
       "business_product_attribute_group_links",
       "business_product_attribute_values",
@@ -650,6 +1082,7 @@
       "business_product_brands",
       "business_product_bundles",
       "business_product_categories",
+      "business_product_channel_visibility",
       "business_product_completeness_rules",
       "business_product_completeness_scores",
       "business_product_option_links",
@@ -662,7 +1095,10 @@
       "business_product_variant_price_adjustments",
       "business_product_variants",
       "business_products",
+      "business_sales_channel_configs",
+      "business_sellables",
       "business_stock_movements",
+      "business_storefront_projection_invalidations",
       "business_tag_links",
       "business_tags",
       "business_tax_classes",
@@ -679,7 +1115,10 @@
       "crm_message_delivery_events",
       "crm_message_outbox",
       "crm_message_templates",
-      "crm_messaging_providers"
+      "crm_messaging_providers",
+      "crm_sale_activities",
+      "crm_sale_activity_link_audit",
+      "crm_sale_activity_reconciliation_runs"
     ],
     "views": []
   },
@@ -690,7 +1129,7 @@
     ],
     "id": "database-source-database-modules-consent-sql-cf6c2c35c6",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -708,7 +1147,7 @@
     ],
     "id": "database-source-database-modules-cookies-sql-fe73d922e6",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -736,7 +1175,7 @@
     ],
     "id": "database-source-database-modules-forms-sql-7a3ef3d182",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -763,7 +1202,7 @@
     ],
     "id": "database-source-database-modules-sale-sql-086ec9a918",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -779,30 +1218,52 @@
       "sale_cash_sessions",
       "sale_catalog_variant_refs",
       "sale_channel_catalog_scopes",
+      "sale_channel_checkout_configs",
       "sale_channels",
       "sale_coupons",
+      "sale_customer_account_links",
+      "sale_customer_addresses",
+      "sale_customer_merge_audit",
+      "sale_customer_order_links",
       "sale_customer_refs",
       "sale_events",
+      "sale_financial_corrections",
+      "sale_fulfillment_lines",
+      "sale_fulfillment_methods",
+      "sale_fulfillment_zones",
+      "sale_fulfillments",
       "sale_idempotency_keys",
+      "sale_inventory_channel_configs",
       "sale_inventory_items",
+      "sale_inventory_reconciliation_runs",
       "sale_order_adjustments",
+      "sale_order_claim_proofs",
+      "sale_order_customer_reconciliations",
       "sale_order_lines",
       "sale_order_status_history",
       "sale_order_tax_lines",
       "sale_orders",
       "sale_outbox",
       "sale_payment_allocations",
+      "sale_payment_attempts",
       "sale_payment_intents",
       "sale_payment_methods",
+      "sale_payment_observability",
+      "sale_payment_reconciliation_runs",
       "sale_payment_transactions",
+      "sale_payment_webhook_events",
       "sale_pos_devices",
+      "sale_pos_register_payment_methods",
       "sale_pos_registers",
       "sale_promotions",
+      "sale_receipt_actions",
       "sale_receipts",
       "sale_refunds",
       "sale_return_lines",
       "sale_returns",
+      "sale_sandbox_payment_states",
       "sale_settings",
+      "sale_state_transitions",
       "sale_stock_locations",
       "sale_stock_movements",
       "sale_stock_reservations"
@@ -816,7 +1277,7 @@
     ],
     "id": "database-source-database-schema-core-sql-0024fcad5d",
     "kind": "schema",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -834,6 +1295,9 @@
       "blueprint_usage",
       "blueprint_versions",
       "blueprints",
+      "business_product_content_links",
+      "business_product_public_projections",
+      "cms_sales_channel_storefronts",
       "configuration_revisions",
       "content_entries",
       "content_entry_field_values",
@@ -878,6 +1342,7 @@
       "module_permissions",
       "module_routes",
       "modules",
+      "outbox_consumptions",
       "outbox_events",
       "public_content_snapshots",
       "redirects",
@@ -897,6 +1362,8 @@
       "site_preferences",
       "site_settings",
       "sites",
+      "storefront_collection_projections",
+      "storefront_product_projections",
       "system_jobs",
       "taxonomies",
       "taxonomy_term_localizations",
@@ -915,7 +1382,7 @@
     ],
     "id": "database-source-database-seeds-cookies-seed-sql-8d7550728a",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -933,7 +1400,7 @@
     ],
     "id": "database-source-database-seeds-core-seed-sql-24db885191",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -951,7 +1418,7 @@
     ],
     "id": "database-source-database-seeds-default-ai-default-seed-sql-64733f6f49",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -969,7 +1436,7 @@
     ],
     "id": "database-source-database-seeds-default-cookies-default-seed-sql-425f8b8552",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -987,7 +1454,7 @@
     ],
     "id": "database-source-database-seeds-default-core-default-seed-sql-d236012f79",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1005,7 +1472,7 @@
     ],
     "id": "database-source-database-seeds-default-core-multisite-contract-seed-sql-fd75d07343",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1023,7 +1490,7 @@
     ],
     "id": "database-source-database-seeds-default-forms-default-seed-sql-0ed71270c6",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1041,7 +1508,7 @@
     ],
     "id": "database-source-database-seeds-default-iam-default-seed-sql-426da4a694",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1059,7 +1526,7 @@
     ],
     "id": "database-source-database-seeds-default-iam-multisite-contract-seed-sql-995838a47d",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1077,7 +1544,7 @@
     ],
     "id": "database-source-database-seeds-demo-content-seed-sql-f101f9fd7b",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1095,7 +1562,7 @@
     ],
     "id": "database-source-database-seeds-iam-seed-sql-83538d4856",
     "kind": "seed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1113,7 +1580,7 @@
     ],
     "id": "database-source-database-views-search-views-sql-4fd624b7eb",
     "kind": "view",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],
@@ -1133,7 +1600,7 @@
     ],
     "id": "database-source-database-views-seo-views-sql-21c9da7d67",
     "kind": "view",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "This describes the schema source, not the contents of a deployed database."
     ],

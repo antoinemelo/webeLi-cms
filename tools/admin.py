@@ -24,7 +24,6 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
@@ -302,7 +301,7 @@ def print_git_status() -> None:
         print(result.stdout.rstrip())
 
 
-def maybe_commit_after_ftp() -> None:
+def maybe_push_after_ftp() -> None:
     if not is_git_repository():
         print()
         print("Git non détecté dans ce répertoire : commit/push ignorés.")
@@ -314,28 +313,11 @@ def maybe_commit_after_ftp() -> None:
     print_git_status()
 
     if git_has_changes():
-        if confirm_optional("Créer un commit Git avec les changements actuels"):
-            default_message = f"Mise à jour après déploiement FTP {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            try:
-                message = input(f"Message de commit [{default_message}] : ").strip()
-            except (EOFError, KeyboardInterrupt):
-                print()
-                message = ""
-            message = message or default_message
-
-            add_result = git_command("add", "-A", capture=False)
-            if add_result.returncode != 0:
-                print("Commit annulé : impossible d'ajouter les fichiers à l'index Git.")
-                return
-
-            commit_result = git_command("commit", "-m", message, capture=False)
-            if commit_result.returncode != 0:
-                print("Commit non créé. Vérifiez l'état Git avant de pousser.")
-                return
-        else:
-            print("Commit Git ignoré.")
-    else:
-        print("Aucun changement local à commiter.")
+        print(
+            "Changements locaux détectés : push automatique désactivé. "
+            "admin.py ne crée aucun commit ; créez un commit ciblé après revue du diff."
+        )
+        return
 
     upstream = git_upstream()
     if upstream is None:
@@ -566,7 +548,7 @@ def run_action(action: Action) -> int:
     if result.returncode == 0:
         print(f"\nOK — {action.title}")
         if action.key == "6":
-            maybe_commit_after_ftp()
+            maybe_push_after_ftp()
     elif result.returncode == 2:
         print(
             "\nINCOMPLET — certains contrôles n'ont pas pu être exécutés. "
@@ -593,6 +575,7 @@ def main() -> int:
     print_intro()
 
     actions_by_key = {action.key: action for action in ACTIONS}
+    last_returncode = 0
 
     while True:
         print_menu()
@@ -604,24 +587,24 @@ def main() -> int:
 
         if choice == "0":
             print("Fin de l'administration DEC CMS.")
-            return 0
+            return last_returncode
 
         if choice == "9":
-            run_instance_clone()
+            last_returncode = run_instance_clone()
             if not pause_before_menu():
-                return 0
+                return last_returncode
             continue
 
         if choice == "10":
-            run_existing_database_update()
+            last_returncode = run_existing_database_update()
             if not pause_before_menu():
-                return 0
+                return last_returncode
             continue
 
         if choice == "11":
-            run_instance_update()
+            last_returncode = run_instance_update()
             if not pause_before_menu():
-                return 0
+                return last_returncode
             continue
 
         if choice == "2":
@@ -636,10 +619,10 @@ def main() -> int:
             print("\nChoix invalide.\n")
             continue
 
-        run_action(action)
+        last_returncode = run_action(action)
 
         if not pause_before_menu():
-            return 0
+            return last_returncode
 
 
 if __name__ == "__main__":

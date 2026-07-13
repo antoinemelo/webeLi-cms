@@ -23,9 +23,14 @@ generated: true
 | `DB_SCHEMA` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.schema` |
 | `DB_INVENTORY` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.inventory` |
 | `PROJECTION_DEFINITIONS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.projections` |
+| `PRODUCT_CONTENT_LINKS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.product_content_links` |
+| `PRICING_OFFERS_BUNDLES` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.pricing_offers_bundles` |
+| `PIM_QUALITY_IMPORT_CHANNELS` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.pim_quality_import_channels` |
+| `SALE_STATE_INTEGRITY` | `database` | `fast`, `full`, `slow` | `tools.python.validation.database.sale_state_integrity` |
 | `BLUEPRINT_SCHEMA` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.blueprints` |
 | `CONTENT_CONTRACTS` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.contracts` |
 | `MULTISITE_LOCALE_MODEL` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.site_locale` |
+| `I18N_COVERAGE` | `content` | `fast`, `full`, `slow` | `tools.python.validation.content.i18n` |
 | `PERMISSION_MODEL` | `permissions` | `fast`, `full`, `slow` | `tools.python.validation.permissions.model` |
 | `API_SPEC` | `api` | `fast`, `full`, `slow` | `tools.python.validation.api.specification` |
 | `SECURITY_BASELINE` | `security` | `fast`, `full`, `slow` | `tools.python.validation.security.baseline` |
@@ -36,6 +41,7 @@ generated: true
 | `MIGRATION_SAFETY` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.migration_safety` |
 | `RELEASE_STRUCTURE` | `operations` | `fast`, `full`, `slow` | `tools.python.validation.operations.release_structure` |
 | `DOCUMENTATION_CONTRACTS` | `documentation` | `fast`, `full`, `slow` | `tools.python.validation.documentation.contracts` |
+| `CAPABILITY_REGISTRY` | `shared` | `fast`, `full`, `slow` | `tools.python.validation.shared.capabilities` |
 | `DEPENDENCY_BOUNDARIES` | `shared` | `fast`, `full`, `slow` | `tools.python.validation.shared.dependency_boundaries` |
 | `RUNTIME_INTEGRITY` | `qualification` | `full`, `slow` | `tools.python.validation.qualification.runtime_integrity` |
 | `STATIC_EXPORT_DRY_RUN` | `qualification` | `slow` | `tools.python.validation.qualification.static_export_dry_run` |

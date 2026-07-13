@@ -44,21 +44,27 @@ generated: true
 | `business_attribute_options` | id, attribute_id, code, label, value, color_hex, sort_order, created_at, updated_at, archived_at |
 | `business_attributes` | id, site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_bundle_components` | id, bundle_id, component_product_id, component_variant_id, quantity, is_required, sort_order, metadata_json, created_at, updated_at, archived_at |
-| `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_discounts` | id, site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, customer_segment, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_catalog_import_runs` | id, site_id, idempotency_key, format_version, checksum, status, rows_total, changed_rows, summary_json, created_by_iam_user_id, created_at |
 | `business_catalog_offers` | id, site_id, name, offer_type, offer_value, scope_type, product_id, variant_id, category_id, brand_id, channel, starts_at, ends_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_products` | id, site_id, name, slug, product_type, status, currency, base_purchase_price, base_sale_price, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_catalog_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, created_at, updated_at |
 | `business_catalog_variants` | id, product_id, sku, barcode, status, stock_quantity, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_companies` | id, site_id, name, normalized_name, company_kind, status, email, phone, website_url, address_json, notes, is_system, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_contacts` | id, site_id, company_id, iam_user_id, first_name, last_name, display_name, normalized_name, status, preferred_language, email, phone, mobile, job_title, notes, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_gift_card_policies` | id, site_id, product_id, currency, value_mode, minimum_amount, maximum_amount, expires_after_days, is_active, created_at, updated_at |
+| `business_inventory_availability_projections` | sellable_id, site_id, tracked, on_hand_quantity, reserved_quantity, available_quantity, availability_status, source_version, projected_at |
+| `business_price_list_items` | id, price_list_id, product_id, variant_id, adjustment_type, adjustment_value, compare_at_amount, priority, starts_at, ends_at, created_at, updated_at, archived_at |
+| `business_price_lists` | id, site_id, name, currency, channel, customer_segment, priority, status, starts_at, ends_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_assets` | id, site_id, product_id, variant_id, media_id, role, title, alt_text, caption, sort_order, is_public, channel_scope, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_attribute_group_links` | product_id, group_id, sort_order, created_at |
 | `business_product_attribute_values` | id, product_id, attribute_id, language, value_text, value_number, value_json, updated_by_iam_user_id, updated_at |
 | `business_product_base_prices` | id, product_id, price_kind, currency, amount, tax_included, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `business_product_brands` | id, site_id, name, slug, company_id, description, website_url, logo_media_id, is_public, status, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_product_bundles` | id, site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_product_bundles` | id, site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, composition_type, unavailable_strategy, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_product_categories` | id, site_id, parent_id, name, slug, description, is_public, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_product_completeness_rules` | id, site_id, code, name, scope, required_field, required_attribute_id, channel, weight, is_active, created_at, updated_at |
+| `business_product_channel_visibility` | id, site_id, product_id, channel, status, starts_at, ends_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `business_product_completeness_rules` | id, site_id, code, name, scope, required_field, required_attribute_id, product_type, severity, required_language, channel, weight, is_active, created_at, updated_at |
 | `business_product_completeness_scores` | id, product_id, variant_id, channel, score, is_sellable, missing_json, calculated_at |
 | `business_product_option_links` | product_id, option_id, is_required, sort_order, created_at |
 | `business_product_option_values` | id, option_id, code, label, value, color_hex, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
@@ -69,8 +75,11 @@ generated: true
 | `business_product_variant_option_values` | variant_id, option_id, option_value_id, created_at |
 | `business_product_variant_price_adjustments` | id, variant_id, price_kind, adjustment_type, adjustment_value, currency, valid_from, valid_until, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `business_product_variants` | id, product_id, status, sku, barcode, name, sales_note, track_stock, stock_quantity, stock_reserved, allow_backorder, backorder_delivery_days, weight_grams, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
-| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_products` | id, site_id, brand_id, category_id, type, status, visibility, external_id, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `business_sales_channel_configs` | id, channel_id, site_id, catalog_channel, price_list_code, visibility_policy, default_currency, status, created_at, updated_at |
+| `business_sellables` | sellable_id, site_id, product_id, variant_id, kind, is_default, status, created_at, updated_at |
 | `business_stock_movements` | id, variant_id, movement_type, quantity, reason, reference_type, reference_id, created_by_iam_user_id, created_at |
+| `business_storefront_projection_invalidations` | id, site_id, product_id, reason, created_at, processed_at |
 | `business_tag_links` | id, tag_id, target_type, company_id, contact_id, created_by_iam_user_id, created_at |
 | `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_tax_classes` | id, site_id, code, name, rate, country, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
@@ -88,6 +97,9 @@ generated: true
 | `crm_message_outbox` | id, site_id, provider_id, template_id, mailing_id, contact_id, channel, recipient_value, subject, body_text, body_html, payload_json, status, attempts, max_attempts, next_attempt_at, locked_at, sent_at, failed_at, last_error, created_by_iam_user_id, created_at, updated_at |
 | `crm_message_templates` | id, site_id, template_key, channel, name, subject, body_text, body_html, provider_template_ref, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_messaging_providers` | id, site_id, provider_key, name, channel, provider_type, config_json, secret_ref, is_enabled, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `crm_sale_activities` | id, dto_version, site_id, activity_type, occurred_at, channel, related_company_id, related_contact_id, source_event_id, source_outbox_id, source_event_type, source_aggregate_type, source_aggregate_id, source_reference, summary, status, resolution_strategy, metadata_json, linked_by_iam_user_id, linked_at, created_at, updated_at |
+| `crm_sale_activity_link_audit` | id, activity_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, linked_by_iam_user_id, created_at |
+| `crm_sale_activity_reconciliation_runs` | id, site_id, supported_events, projected_events, missing_events, duplicate_events, repaired_events, report_json, run_by_iam_user_id, created_at |
 | `schema_migrations` | id, migration, migrated_at |
 
 ## `cookies.sqlite`
@@ -118,6 +130,9 @@ generated: true
 | `blueprint_usage` | id, blueprint_id, blueprint_version_id, usage_type, resource_type, resource_id, site_id, language_code, created_at |
 | `blueprint_versions` | id, blueprint_id, version, version_label, status, schema_json, ui_schema_json, validation_json, seo_policy_json, routing_policy_json, workflow_policy_json, translation_policy_json, permissions_policy_json, checksum_sha256, is_active, created_by_iam_user_id, created_at, activated_at, archived_at |
 | `blueprints` | id, blueprint_key, resource_type, site_id, legacy_content_type_id, label, description, is_active, active_version_id, created_at, updated_at |
+| `business_product_content_links` | id, site_id, product_id, content_entry_id, relation_type, locale, is_canonical, status, seo_config_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `business_product_public_projections` | id, link_id, site_id, product_id, content_entry_id, relation_type, locale, is_canonical, is_active, product_json, structured_data_json, source_product_updated_at, projected_at |
+| `cms_sales_channel_storefronts` | id, channel_id, site_id, domain_id, route_prefix, is_default, status, created_at, updated_at |
 | `configuration_revisions` | id, site_id, group_key, value_json, updated_by_iam_user_id, created_at |
 | `content_entries` | id, site_id, content_type_id, entry_key, parent_entry_id, author_iam_user_id, owner_iam_user_id, created_by_iam_user_id, updated_by_iam_user_id, published_by_iam_user_id, status, workflow_state, is_active, publish_at, unpublish_at, sort_order, created_at, updated_at, published_at |
 | `content_entry_field_values` | id, entry_id, localization_id, content_type_id, field_id, field_key, language_code, projection_scope, source_revision_id, source_revision_checksum_sha256, value_text, value_number, value_boolean, value_date, value_datetime, value_json, value_media_id, value_relation_entry_id, sort_order, projected_at |
@@ -163,7 +178,8 @@ generated: true
 | `module_permissions` | id, module_key, permission_key, created_at |
 | `module_routes` | id, module_key, route_key, scope, method, path, handler, is_published, created_at, updated_at |
 | `modules` | id, module_key, name, version, provider_class, is_system, is_installed, is_enabled, config_json, installed_at, updated_at |
-| `outbox_events` | id, topic, payload_json, status, attempts, last_error, created_at, available_at, claimed_at, processed_at |
+| `outbox_consumptions` | id, event_id, consumer_key, processed_at, result_json |
+| `outbox_events` | id, event_id, event_type, schema_version, occurred_at, site_id, correlation_id, causation_id, aggregate_type, aggregate_id, topic, payload_json, metadata_json, status, attempts, max_attempts, last_error, error_type, created_at, available_at, locked_until, lock_token, claimed_at, processed_at, dead_lettered_at, archived_at, updated_at |
 | `public_content_snapshots` | id, site_id, language_code, resource_type, resource_id, route_path, title, slug, blocks_json, block_count, document_json, seo_json, source_published_revision_id, source_revision_checksum_sha256, published_at, projected_at |
 | `redirects` | id, site_id, language_code, old_path, new_path, http_code, redirect_reason, resource_type, resource_id, is_active, created_at, updated_at |
 | `revision_comments` | id, revision_id, language_code, anchor_path, comment_text, status, created_by_iam_user_id, created_at |
@@ -187,7 +203,9 @@ generated: true
 | `site_preferences` | id, site_id, preference_key, value_json, updated_by_iam_user_id, created_at, updated_at |
 | `site_settings` | id, site_id, namespace, setting_key, value_json, is_public, updated_by_iam_user_id, created_at, updated_at |
 | `sites` | id, site_key, name, default_language_code, is_active, created_at, updated_at |
-| `system_jobs` | id, job_key, last_run_at, last_status, last_message, updated_at |
+| `storefront_collection_projections` | id, site_id, channel_id, locale, collection_id, slug, dto_version, dto_json, source_hash, projected_at |
+| `storefront_product_projections` | id, site_id, channel_id, locale, product_id, slug, collection_id, dto_version, is_indexable, dto_json, source_hash, projected_at |
+| `system_jobs` | id, job_key, last_run_at, last_heartbeat_at, last_status, last_message, locked_until, updated_at |
 | `taxonomies` | id, site_id, taxonomy_key, name, description, is_hierarchical, is_localized, seo_enabled, archive_enabled, sort_order |
 | `taxonomy_term_localizations` | id, site_id, taxonomy_id, term_id, language_code, name, slug, full_path, description, meta_title, meta_description, canonical_url, json_ld |
 | `taxonomy_terms` | id, taxonomy_id, parent_id, term_key, is_active, sort_order |
@@ -216,6 +234,9 @@ generated: true
 |---|---|
 | `api_tokens` | id, name, token_hash, site_id, scopes, is_active, expires_at, last_used_at, created_at, updated_at |
 | `iam_audit_logs` | id, actor_user_id, action_key, resource_type, resource_id, context_json, ip_address, user_agent, created_at |
+| `iam_customer_email_changes` | id, user_id, previous_email_normalized, new_email_normalized, verification_method, changed_at |
+| `iam_customer_sessions` | id, user_id, site_id, token_hash, expires_at, last_seen_at, revoked_at, created_at |
+| `iam_customer_site_accounts` | id, user_id, site_id, status, merged_into_user_id, created_at, updated_at |
 | `iam_email_2fa_challenges` | id, user_id, code_hash, ip_address, user_agent, attempt_count, expires_at, consumed_at, created_at |
 | `iam_permissions` | id, permission_key, name, description |
 | `iam_rate_limits` | id, rate_key, created_at |
@@ -224,7 +245,7 @@ generated: true
 | `iam_sessions` | id, user_id, session_token_hash, ip_address, user_agent, last_seen_at, expires_at, created_at |
 | `iam_user_roles` | id, user_id, role_id |
 | `iam_user_site_roles` | id, user_id, site_id, role_id, created_at |
-| `iam_users` | id, email, email_normalized, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, login_mode, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at |
+| `iam_users` | id, email, email_normalized, email_verified_at, password_hash, first_name, last_name, locale, is_active, disabled_at, disabled_reason, last_login_at, password_reset_selector, password_reset_token_hash, password_reset_expires_at, password_reset_requested_at, password_reset_sent_at, last_password_change_at, login_mode, totp_enabled, totp_required, totp_secret_protected, totp_recovery_codes_json, totp_enabled_at, created_at, updated_at |
 | `schema_migrations` | id, migration, migrated_at |
 
 ## `sale.sqlite`
@@ -232,38 +253,60 @@ generated: true
 | Table | Colonnes |
 |---|---|
 | `sale_cart_adjustments` | id, cart_id, cart_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
-| `sale_cart_lines` | id, cart_id, line_key, business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type, quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, metadata_json, created_at, updated_at |
-| `sale_carts` | id, site_id, channel_id, cart_token_hash, status, currency, customer_company_id, customer_contact_id, customer_snapshot_json, billing_address_json, shipping_address_json, subtotal_minor, discount_total_minor, tax_total_minor, grand_total_minor, expires_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, converted_order_id |
+| `sale_cart_lines` | id, cart_id, line_key, business_product_id, business_variant_id, sellable_id, sku, barcode, product_name, variant_name, product_type, quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, metadata_json, options_json, personalization_json, fulfillment_class, availability_state, calculation_version, previous_unit_price_minor, price_changed_at, created_at, updated_at |
+| `sale_carts` | id, site_id, channel_id, cart_kind, locale, customer_ref_id, public_token_hash, register_session_id, cart_token_hash, status, currency, customer_company_id, customer_contact_id, customer_snapshot_json, billing_address_json, shipping_address_json, shipping_method_snapshot_json, checkout_step, terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json, checkout_validated_at, abandoned_at, subtotal_minor, discount_total_minor, tax_total_minor, shipping_total_minor, grand_total_minor, expires_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, converted_order_id, version, calculation_version |
 | `sale_cash_movements` | id, cash_session_id, movement_type, amount_minor, currency, reason, order_id, created_by_iam_user_id, created_at |
-| `sale_cash_sessions` | id, register_id, opened_by_iam_user_id, closed_by_iam_user_id, status, opening_cash_minor, expected_cash_minor, counted_cash_minor, difference_minor, currency, opened_at, closed_at, notes |
-| `sale_catalog_variant_refs` | id, site_id, business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type, track_stock, tax_class_id, last_snapshot_json, synced_at, archived_at |
+| `sale_cash_sessions` | id, register_id, channel_id, stock_location_id, device_id, opened_by_iam_user_id, closed_by_iam_user_id, status, opening_cash_minor, expected_cash_minor, counted_cash_minor, difference_minor, currency, locale, opened_at, closed_at, notes, difference_justification |
+| `sale_catalog_variant_refs` | id, site_id, business_product_id, business_variant_id, sellable_id, sku, barcode, product_name, variant_name, product_type, track_stock, tax_class_id, last_snapshot_json, synced_at, archived_at |
 | `sale_channel_catalog_scopes` | id, channel_id, scope_type, scope_id, created_at |
-| `sale_channels` | id, site_id, code, name, channel_type, status, currency, default_language, tax_mode, price_tax_included, is_public, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `sale_channel_checkout_configs` | channel_id, site_id, cart_enabled, checkout_enabled, guest_checkout_enabled, status, updated_at |
+| `sale_channels` | id, site_id, code, name, channel_type, channel_kind, status, currency, default_language, tax_mode, price_tax_included, is_public, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `sale_coupons` | id, promotion_id, coupon_code_hash, status, usage_limit, used_count, starts_at, ends_at, created_at |
+| `sale_customer_account_links` | id, site_id, iam_user_id, crm_company_id, crm_contact_id, status, linked_by, merged_into_iam_user_id, created_at, updated_at |
+| `sale_customer_addresses` | id, site_id, iam_user_id, label, address_type, address_json, is_default, created_at, updated_at, archived_at |
+| `sale_customer_merge_audit` | id, site_id, source_iam_user_id, target_iam_user_id, status, reason, before_json, after_json, actor_iam_user_id, created_at, reversed_at |
+| `sale_customer_order_links` | id, site_id, order_id, iam_user_id, claim_proof_id, link_source, status, linked_by_iam_user_id, linked_at, revoked_at |
 | `sale_customer_refs` | id, site_id, company_id, contact_id, display_name, email, phone, billing_address_json, shipping_address_json, created_at, updated_at |
-| `sale_events` | id, site_id, event_type, aggregate_type, aggregate_id, payload_json, created_by_iam_user_id, created_at |
+| `sale_events` | id, site_id, event_type, aggregate_type, aggregate_id, payload_json, correlation_id, created_by_iam_user_id, created_at |
+| `sale_financial_corrections` | id, order_id, payment_transaction_id, amount_delta_minor, currency, reason, idempotency_key, correlation_id, created_by_iam_user_id, created_at |
+| `sale_fulfillment_lines` | id, fulfillment_id, order_line_id, quantity, created_at |
+| `sale_fulfillment_methods` | id, site_id, zone_id, code, label_fr, label_en, fulfillment_type, flat_rate_minor, free_above_minor, requires_shipping_address, allow_non_physical, status, active_from, active_until, sort_order, created_at, updated_at |
+| `sale_fulfillment_zones` | id, site_id, code, name, country_codes_json, postal_prefixes_json, status, active_from, active_until, created_at, updated_at |
+| `sale_fulfillments` | id, order_id, fulfillment_number, status, shipping_address_snapshot_json, shipping_method_snapshot_json, tracking_reference, correlation_id, version, created_by_iam_user_id, created_at, updated_at, shipped_at, delivered_at, cancelled_at |
 | `sale_idempotency_keys` | id, site_id, key_hash, scope, request_hash, response_json, status, locked_until, created_at, updated_at |
-| `sale_inventory_items` | id, site_id, business_variant_id, stock_location_id, sku, tracked, on_hand_quantity, reserved_quantity, available_quantity, updated_at |
+| `sale_inventory_channel_configs` | channel_id, site_id, stock_location_id, availability_policy, status, updated_at |
+| `sale_inventory_items` | id, site_id, business_variant_id, sellable_id, stock_location_id, sku, tracked, allow_negative, on_hand_quantity, reserved_quantity, available_quantity, version, updated_at |
+| `sale_inventory_reconciliation_runs` | id, site_id, status, items_checked, differences_count, repaired_count, report_json, started_at, completed_at, created_by_iam_user_id |
 | `sale_order_adjustments` | id, order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
-| `sale_order_lines` | id, order_id, line_number, business_product_id, business_variant_id, sku, barcode, product_name, variant_name, product_type, quantity, fulfilled_quantity, returned_quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, snapshot_json, created_at |
-| `sale_order_status_history` | id, order_id, from_status, to_status, changed_by_iam_user_id, reason, created_at |
+| `sale_order_claim_proofs` | id, site_id, order_id, token_hash, email_hash, status, expires_at, consumed_by_iam_user_id, consumed_at, created_at |
+| `sale_order_customer_reconciliations` | id, order_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, correlation_id, linked_by_iam_user_id, created_at |
+| `sale_order_lines` | id, order_id, line_number, business_product_id, business_variant_id, sellable_id, sku, barcode, product_name, variant_name, product_type, quantity, fulfilled_quantity, returned_quantity, unit_price_minor, regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code, tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor, line_tax_minor, line_total_minor, snapshot_json, created_at |
+| `sale_order_status_history` | id, order_id, from_status, to_status, changed_by_iam_user_id, reason, correlation_id, created_at |
 | `sale_order_tax_lines` | id, order_id, order_line_id, tax_class_code, tax_rate_basis_points, taxable_amount_minor, tax_amount_minor, currency, created_at |
-| `sale_orders` | id, site_id, channel_id, order_number, source, status, payment_status, fulfillment_status, currency, customer_company_id, customer_contact_id, customer_snapshot_json, billing_address_json, shipping_address_json, subtotal_minor, discount_total_minor, tax_total_minor, shipping_total_minor, grand_total_minor, paid_total_minor, refunded_total_minor, placed_at, completed_at, cancelled_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, metadata_json |
+| `sale_orders` | id, site_id, channel_id, order_number, source, status, payment_status, fulfillment_status, currency, customer_company_id, customer_contact_id, customer_snapshot_json, billing_address_json, shipping_address_json, shipping_method_snapshot_json, terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json, source_cart_id, stock_location_id, pos_register_id, pos_device_id, pos_session_id, pos_operator_iam_user_id, correlation_id, subtotal_minor, discount_total_minor, tax_total_minor, shipping_total_minor, grand_total_minor, paid_total_minor, refunded_total_minor, placed_at, completed_at, cancelled_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, metadata_json, version |
 | `sale_outbox` | id, event_id, topic, payload_json, status, attempt_count, available_at, last_error, created_at, processed_at |
 | `sale_payment_allocations` | id, order_id, payment_transaction_id, amount_minor, currency, created_at |
-| `sale_payment_intents` | id, site_id, channel_id, order_id, provider_key, intent_reference, status, amount_minor, currency, idempotency_key, expires_at, created_at, updated_at, metadata_json |
+| `sale_payment_attempts` | id, payment_intent_id, attempt_number, status, provider_reference, error_code, error_message, started_at, finished_at, metadata_json |
+| `sale_payment_intents` | id, site_id, channel_id, order_id, provider_key, intent_reference, contract_version, status, amount_minor, currency, idempotency_key, checkout_url, return_url, cancel_url, authorized_minor, captured_minor, refunded_minor, last_provider_status, last_provider_event_at, provider_synced_at, expires_at, created_at, updated_at, metadata_json, version |
 | `sale_payment_methods` | id, site_id, channel_id, code, name, provider_key, method_type, status, config_json, created_at, updated_at, archived_at |
-| `sale_payment_transactions` | id, payment_intent_id, order_id, transaction_type, status, amount_minor, currency, provider_transaction_id, provider_payload_json, error_code, error_message, processed_at, created_at |
+| `sale_payment_observability` | id, site_id, metric_key, severity, payment_intent_id, dimensions_json, created_at |
+| `sale_payment_reconciliation_runs` | id, site_id, payment_intent_id, trigger_kind, status, provider_status, local_status, findings_json, created_by_iam_user_id, created_at |
+| `sale_payment_transactions` | id, payment_intent_id, order_id, transaction_type, status, amount_minor, currency, provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, created_by_iam_user_id, processed_at, created_at |
+| `sale_payment_webhook_events` | id, site_id, provider_key, provider_event_id, event_type, provider_reference, provider_occurred_at, signature_valid, processing_status, payload_json, error_code, received_at, processed_at |
 | `sale_pos_devices` | id, register_id, device_name, device_token_hash, status, last_seen_at, created_at, updated_at, revoked_at |
-| `sale_pos_registers` | id, site_id, channel_id, code, name, status, location_name, created_at, updated_at, archived_at |
+| `sale_pos_register_payment_methods` | register_id, payment_method_id, created_at |
+| `sale_pos_registers` | id, site_id, channel_id, code, name, status, location_name, stock_location_id, currency, locale, created_at, updated_at, archived_at |
 | `sale_promotions` | id, site_id, channel_id, code, name, promotion_type, status, starts_at, ends_at, created_at, updated_at, archived_at |
-| `sale_receipts` | id, order_id, receipt_number, receipt_type, status, html_snapshot, text_snapshot, pdf_media_id, issued_at, created_at |
-| `sale_refunds` | id, order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, created_at, processed_at |
+| `sale_receipt_actions` | id, receipt_id, action_type, pos_session_id, operator_iam_user_id, reason, created_at |
+| `sale_receipts` | id, order_id, receipt_number, receipt_type, status, html_snapshot, text_snapshot, pdf_media_id, language, operator_iam_user_id, snapshot_json, issued_at, created_at |
+| `sale_refunds` | id, order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, created_at, processed_at, updated_at, version |
 | `sale_return_lines` | id, return_id, order_line_id, quantity, reason, restock, created_at |
-| `sale_returns` | id, order_id, return_number, status, reason, created_by_iam_user_id, created_at, completed_at |
+| `sale_returns` | id, order_id, return_number, status, reason, idempotency_key, request_hash, created_by_iam_user_id, created_at, completed_at, updated_at, version |
+| `sale_sandbox_payment_states` | provider_reference, payment_intent_id, status, amount_minor, authorized_minor, captured_minor, refunded_minor, currency, sandbox_token_hash, updated_at |
 | `sale_settings` | id, site_id, setting_key, setting_value_json, updated_at |
+| `sale_state_transitions` | id, site_id, aggregate_type, aggregate_id, from_status, to_status, correlation_id, changed_by_iam_user_id, reason, metadata_json, created_at |
 | `sale_stock_locations` | id, site_id, code, name, location_type, status, created_at, updated_at, archived_at |
-| `sale_stock_movements` | id, inventory_item_id, movement_type, quantity, reference_type, reference_id, reason, created_by_iam_user_id, created_at |
-| `sale_stock_reservations` | id, inventory_item_id, cart_id, order_id, reservation_key, quantity, status, expires_at, created_at, released_at, consumed_at |
+| `sale_stock_movements` | id, inventory_item_id, movement_type, quantity, idempotency_key, transfer_key, reference_type, reference_id, reason, created_by_iam_user_id, created_at |
+| `sale_stock_reservations` | id, inventory_item_id, cart_id, order_id, reservation_key, quantity, status, expires_at, created_at, updated_at, confirmed_at, released_at, consumed_at |
 | `schema_migrations` | id, migration, migrated_at |
 

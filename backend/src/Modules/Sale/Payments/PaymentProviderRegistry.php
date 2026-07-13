@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Sale\Payments;
 
+use App\Core\Database;
 use App\Modules\Sale\Exceptions\SalePaymentException;
 
 final class PaymentProviderRegistry
@@ -12,9 +13,9 @@ final class PaymentProviderRegistry
     private array $providers = [];
 
     /** @param list<PaymentProvider>|null $providers */
-    public function __construct(?array $providers = null)
+    public function __construct(?array $providers = null, ?Database $database = null, ?string $sandboxSecret = null)
     {
-        foreach ($providers ?? $this->defaultProviders() as $provider) {
+        foreach ($providers ?? $this->defaultProviders($database, $sandboxSecret) as $provider) {
             $this->providers[$provider->key()] = $provider;
         }
     }
@@ -46,14 +47,19 @@ final class PaymentProviderRegistry
     }
 
     /** @return list<PaymentProvider> */
-    private function defaultProviders(): array
+    private function defaultProviders(?Database $database, ?string $sandboxSecret): array
     {
-        return [
+        $providers = [
             new LocalPaymentProvider('cash'),
             new LocalPaymentProvider('manual_card'),
             new LocalPaymentProvider('external_terminal'),
             new LocalPaymentProvider('bank_transfer'),
             new LocalPaymentProvider('test'),
         ];
+        if ($database !== null) {
+            $secret = trim((string) ($sandboxSecret ?? getenv('SALE_SANDBOX_WEBHOOK_SECRET') ?: 'sandbox-development-secret-change-me'));
+            $providers[] = new SandboxPaymentProvider($database, $secret);
+        }
+        return $providers;
     }
 }

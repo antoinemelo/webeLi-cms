@@ -23,6 +23,7 @@ use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -50,6 +51,7 @@ final class BusinessCrmApiController
         private readonly BusinessCsvService $csv,
         private readonly BusinessRelationSummaryService $relationSummary,
         private readonly IamAdminRepository $iam,
+        private readonly ?SaleCrmActivityProjectionService $saleActivities = null,
     ) {}
 
     public function schema(): Response
@@ -68,7 +70,7 @@ final class BusinessCrmApiController
                 'company' => ['fields' => ['id', 'name', 'status', 'website', 'tags', 'created_at', 'updated_at']],
                 'contact' => ['fields' => ['id', 'company_id', 'display_name', 'status', 'email', 'phone', 'mobile', 'tags', 'created_at', 'updated_at']],
                 'memo' => ['fields' => ['id', 'company_id', 'contact_id', 'title', 'body', 'visibility', 'created_at', 'updated_at']],
-                'activity' => ['fields' => ['id', 'kind', 'entity_type', 'entity_id', 'action', 'summary', 'created_at']],
+                'activity' => ['fields' => ['id', 'kind', 'entity_type', 'entity_id', 'action', 'summary', 'channel', 'status', 'source_reference', 'created_at']],
                 'message' => ['fields' => ['id', 'contact_id', 'channel', 'subject', 'status', 'created_at', 'sent_at']],
                 'product' => ['fields' => ['id', 'site_id', 'sku_base', 'name', 'slug', 'type', 'status', 'brand_id', 'category_id', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'updated_at']],
                 'variant' => ['fields' => ['id', 'product_id', 'sku', 'barcode', 'name', 'status', 'stock_quantity', 'stock_reserved', 'track_stock', 'updated_at']],
@@ -95,6 +97,9 @@ final class BusinessCrmApiController
                 ['key' => 'relations.index', 'method' => 'GET', 'path' => '/admin/api/business/relations', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.show', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.activity', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/activity', 'permission' => 'business.crm.read'],
+                ['key' => 'sale_activities.unlinked', 'method' => 'GET', 'path' => '/admin/api/business/sale-activities/unlinked', 'permission' => 'business.crm.read'],
+                ['key' => 'sale_activities.link', 'method' => 'POST', 'path' => '/admin/api/business/sale-activities/{id}/link', 'permission' => 'business.crm.manage'],
+                ['key' => 'sale_activities.reconcile', 'method' => 'POST', 'path' => '/admin/api/business/sale-activities/reconcile', 'permission' => 'business.crm.manage'],
                 ['key' => 'relations.memos', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/memos', 'permission' => 'business.memo.read'],
                 ['key' => 'relations.summary', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/summary', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.restore', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/restore', 'permission' => 'business.crm.manage'],
@@ -213,10 +218,55 @@ final class BusinessCrmApiController
     {
         [$site, $languageCode] = $this->authorize('business.crm.read');
         try {
+            $this->saleActivities?->consume((int) $site['id']);
             $result = $this->activity->relationActivity((int) $site['id'], $type, $this->id($id), $this->limit(), $this->offset());
             return Response::success(['activity' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.relations.activity.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $e->getMessage() === 'business.relation_not_found' ? $this->notFound('Relation introuvable.', $id) : $this->validation($e);
+        }
+    }
+
+    public function unlinkedSaleActivities(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.crm.read');
+        try {
+            $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
+            $projection->consume((int) $site['id']);
+            $result = $projection->unlinked((int) $site['id'], $this->limit(), $this->offset());
+            return Response::success(['activities' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.sale_activities.unlinked.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function linkSaleActivity(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        try {
+            $payload = $this->payload();
+            $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
+            $activity = $projection->link(
+                (int) $site['id'], $this->id($id),
+                isset($payload['contact_id']) ? (int) $payload['contact_id'] : null,
+                isset($payload['company_id']) ? (int) $payload['company_id'] : null,
+                $this->actorId(), (string) ($payload['reason'] ?? '')
+            );
+            return Response::success(['activity' => $activity], 'admin.business.sale_activities.link.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function reconcileSaleActivities(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        try {
+            $payload = $this->payload();
+            $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
+            $report = $projection->reconcile((int) $site['id'], $this->actorId(), ($payload['repair'] ?? true) !== false);
+            return Response::success(['reconciliation' => $report], 'admin.business.sale_activities.reconcile.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
         }
     }
 

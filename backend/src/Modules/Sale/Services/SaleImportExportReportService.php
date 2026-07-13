@@ -136,11 +136,16 @@ final class SaleImportExportReportService
     {
         $rows = [[
             'id', 'register_id', 'register_code', 'register_name', 'status', 'opening_cash_minor',
-            'expected_cash_minor', 'counted_cash_minor', 'difference_minor', 'currency', 'opened_at', 'closed_at',
+            'expected_cash_minor', 'counted_cash_minor', 'difference_minor', 'difference_justification',
+            'channel_id', 'stock_location_id', 'device_id', 'operator_id', 'currency', 'locale',
+            'orders_count', 'sales_minor', 'movements_count', 'opened_at', 'closed_at',
         ]];
         [$where, $params] = $this->posSessionWhere($siteId, $filters);
         foreach ($this->db()->all(
-            'SELECT s.*, r.code AS register_code, r.name AS register_name
+            'SELECT s.*, r.code AS register_code, r.name AS register_name,
+                    (SELECT COUNT(*) FROM sale_orders o WHERE o.pos_session_id=s.id) AS orders_count,
+                    (SELECT COALESCE(SUM(o.grand_total_minor),0) FROM sale_orders o WHERE o.pos_session_id=s.id AND o.status<>\'cancelled\') AS sales_minor,
+                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS movements_count
              FROM sale_cash_sessions s
              INNER JOIN sale_pos_registers r ON r.id = s.register_id
              ' . $where . '
@@ -157,7 +162,16 @@ final class SaleImportExportReportService
                 $session['expected_cash_minor'] ?? 0,
                 $session['counted_cash_minor'] ?? '',
                 $session['difference_minor'] ?? 0,
+                $session['difference_justification'] ?? '',
+                $session['channel_id'] ?? '',
+                $session['stock_location_id'] ?? '',
+                $session['device_id'] ?? '',
+                $session['opened_by_iam_user_id'] ?? '',
                 $session['currency'] ?? '',
+                $session['locale'] ?? '',
+                $session['orders_count'] ?? 0,
+                $session['sales_minor'] ?? 0,
+                $session['movements_count'] ?? 0,
                 $session['opened_at'] ?? '',
                 $session['closed_at'] ?? '',
             ];
@@ -303,9 +317,25 @@ final class SaleImportExportReportService
             'sales_minor' => (int) ($row['sales_minor'] ?? 0),
             'paid_minor' => (int) ($row['paid_minor'] ?? 0),
             'refunded_minor' => (int) ($row['refunded_minor'] ?? 0),
+            'tax_minor' => (int) ($this->db()->one("SELECT COALESCE(SUM(tax_total_minor),0) AS total FROM sale_orders WHERE site_id=? AND date(COALESCE(placed_at,created_at))=? AND status<>'cancelled'",[$siteId,$date])['total']??0),
+            'shipping_minor' => (int) ($this->db()->one("SELECT COALESCE(SUM(shipping_total_minor),0) AS total FROM sale_orders WHERE site_id=? AND date(COALESCE(placed_at,created_at))=? AND status<>'cancelled'",[$siteId,$date])['total']??0),
             'by_channel' => $this->salesByChannel($siteId, ['date' => $date]),
             'by_payment_method' => $this->salesByPaymentMethod($siteId, ['date' => $date]),
         ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function taxesReport(int $siteId, array $filters=[]): array
+    {
+        [$where,$params]=$this->orderWhere($siteId,$filters,'o');
+        return $this->db()->all('SELECT t.tax_class_code,t.tax_rate_basis_points,t.currency,COUNT(DISTINCT t.order_id) AS orders_count,SUM(t.taxable_amount_minor) AS taxable_amount_minor,SUM(t.tax_amount_minor) AS tax_amount_minor FROM sale_order_tax_lines t JOIN sale_orders o ON o.id=t.order_id '.$where.' GROUP BY t.tax_class_code,t.tax_rate_basis_points,t.currency ORDER BY t.tax_class_code',$params);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function fulfillmentReport(int $siteId, array $filters=[]): array
+    {
+        [$where,$params]=$this->orderWhere($siteId,$filters,'o');
+        return $this->db()->all("SELECT COALESCE(json_extract(o.shipping_method_snapshot_json,'$.code'),'none') AS method_code,COALESCE(json_extract(o.shipping_method_snapshot_json,'$.type'),'none') AS fulfillment_type,COUNT(*) AS orders_count,SUM(o.shipping_total_minor) AS shipping_minor,o.currency FROM sale_orders o ".$where." GROUP BY method_code,fulfillment_type,o.currency ORDER BY orders_count DESC",$params);
     }
 
     /** @param array<string,mixed> $filters @return list<array<string,mixed>> */

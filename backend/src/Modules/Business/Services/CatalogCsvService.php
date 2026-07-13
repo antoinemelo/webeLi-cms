@@ -16,10 +16,11 @@ use Throwable;
 
 final class CatalogCsvService
 {
+    private const FORMAT_VERSION = 'pim.catalog.v1';
     private const EXPORT_DELIMITER = ';';
     private const MAX_IMPORT_BYTES = 1048576;
     private const HEADERS = [
-        'product_id', 'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
+        'format_version', 'site_id', 'external_id', 'product_id', 'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
         'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'base_purchase_price',
         'base_sale_price', 'currency', 'tax_class', 'options', 'variant_id', 'variant_sku',
         'variant_barcode', 'variant_name', 'variant_options', 'purchase_adjustment_type',
@@ -73,6 +74,9 @@ final class CatalogCsvService
                 }
             }
             $rows[] = [
+                self::FORMAT_VERSION,
+                $siteId,
+                $record['external_id'] ?? '',
                 $record['id'] ?? '',
                 $record['name'] ?? '',
                 $record['slug'] ?? '',
@@ -125,6 +129,26 @@ final class CatalogCsvService
         $createCategories = filter_var($options['create_categories'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $createOptions = filter_var($options['create_options'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $overwriteExisting = filter_var($options['overwrite_existing'] ?? $options['confirm_overwrite'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $checksum = hash('sha256', $csv);
+        $idempotencyKey = trim((string) ($options['idempotency_key'] ?? $checksum));
+        if ($idempotencyKey === '' || strlen($idempotencyKey) > 120 || preg_match('/^[A-Za-z0-9._:-]+$/', $idempotencyKey) !== 1) {
+            throw new InvalidArgumentException('business.catalog.import_idempotency_key_invalid');
+        }
+        if (!$dryRun) {
+            $previous = $this->db->one('SELECT * FROM business_catalog_import_runs WHERE site_id = ? AND idempotency_key = ? LIMIT 1', [$siteId, $idempotencyKey]);
+            if ($previous !== null) {
+                if (!hash_equals((string) $previous['checksum'], $checksum)) {
+                    throw new InvalidArgumentException('business.catalog.import_idempotency_conflict');
+                }
+                $summary = json_decode((string) $previous['summary_json'], true);
+                $summary = is_array($summary) ? $summary : [];
+                $summary['replayed'] = true;
+                $summary['writes_performed'] = false;
+                $summary['unchanged_rows'] = (int) ($previous['rows_total'] ?? 0);
+                $summary['journal'] = ['run_id' => (int) $previous['id'], 'idempotency_key' => $idempotencyKey, 'status' => (string) $previous['status']];
+                return $summary;
+            }
+        }
 
         $delimiter = $this->detectDelimiter($csv);
         [$headers, $rows] = $this->parseCsv($csv, $delimiter);
@@ -139,6 +163,7 @@ final class CatalogCsvService
             'updated_products' => 0,
             'created_variants' => 0,
             'updated_variants' => 0,
+            'unchanged_rows' => 0,
             'skipped' => 0,
             'errors' => [],
             'rows' => [],
@@ -155,6 +180,7 @@ final class CatalogCsvService
                 $rowReport['action'] = $plan['product_action'] . '_' . $plan['variant_action'];
                 $rowReport['product_slug'] = $plan['product']['slug'];
                 $rowReport['variant_sku'] = $plan['variant']['sku'];
+                $rowReport['diff'] = $plan['diff'];
                 $plans[] = $plan + ['line' => $line];
                 $report['valid_rows']++;
             } catch (InvalidArgumentException $e) {
@@ -170,14 +196,32 @@ final class CatalogCsvService
             return $report;
         }
 
-        return $this->db->transaction(function () use ($siteId, $actorId, $plans, $report): array {
+        return $this->db->transaction(function () use ($siteId, $actorId, $plans, $report, $idempotencyKey, $checksum): array {
             $result = $report;
             foreach ($plans as $plan) {
                 $write = $this->applyPlan($siteId, $plan, $actorId);
-                $result[$write['product_action'] === 'created' ? 'created_products' : 'updated_products']++;
-                $result[$write['variant_action'] === 'created' ? 'created_variants' : 'updated_variants']++;
-                $result['writes_performed'] = true;
+                if ($write['product_action'] !== 'unchanged') {
+                    $result[$write['product_action'] === 'created' ? 'created_products' : 'updated_products']++;
+                }
+                if ($write['variant_action'] !== 'unchanged') {
+                    $result[$write['variant_action'] === 'created' ? 'created_variants' : 'updated_variants']++;
+                }
+                if ($write['product_action'] === 'unchanged' && $write['variant_action'] === 'unchanged') {
+                    $result['unchanged_rows']++;
+                } else {
+                    $result['writes_performed'] = true;
+                }
             }
+            $changedRows = count($plans) - (int) $result['unchanged_rows'];
+            $summary = $result;
+            unset($summary['rows']);
+            $this->db->run(
+                'INSERT INTO business_catalog_import_runs(site_id, idempotency_key, format_version, checksum, status, rows_total, changed_rows, summary_json, created_by_iam_user_id)
+                 VALUES(?, ?, ?, ?, \'applied\', ?, ?, ?, ?)',
+                [$siteId, $idempotencyKey, self::FORMAT_VERSION, $checksum, count($plans), $changedRows, json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $actorId]
+            );
+            $result['journal'] = ['run_id' => (int) $this->db->lastInsertId(), 'idempotency_key' => $idempotencyKey, 'status' => 'applied'];
+            $result['replayed'] = false;
             return $result;
         });
     }
@@ -198,6 +242,21 @@ final class CatalogCsvService
                 default => throw new InvalidArgumentException('business.catalog.export_channel_invalid'),
             };
             $clauses[] = 'p.' . $field . ' = 1';
+            $clauses[] = 'NOT EXISTS (
+                SELECT 1 FROM business_product_channel_visibility cv
+                WHERE cv.product_id = p.id AND cv.site_id = p.site_id AND cv.channel = ?
+                  AND (cv.status <> \'active\' OR (cv.starts_at IS NOT NULL AND cv.starts_at > CURRENT_TIMESTAMP) OR (cv.ends_at IS NOT NULL AND cv.ends_at <= CURRENT_TIMESTAMP))
+            )';
+            $params[] = $channel === 'public' ? 'ecommerce' : $channel;
+        }
+
+        $status = trim((string) ($filters['status'] ?? ''));
+        if ($status !== '') {
+            if (!in_array($status, ['draft', 'active', 'archived'], true)) {
+                throw new InvalidArgumentException('business.catalog.export_status_invalid');
+            }
+            $clauses[] = 'p.status = ?';
+            $params[] = $status;
         }
 
         $quality = trim((string) ($filters['quality'] ?? ''));
@@ -294,16 +353,23 @@ final class CatalogCsvService
         if ($sku === '') {
             throw new InvalidArgumentException('business.catalog.sku_invalid');
         }
+        $formatVersion = trim($row['format_version'] ?? '');
+        if ($formatVersion !== '' && $formatVersion !== self::FORMAT_VERSION) {
+            throw new InvalidArgumentException('business.catalog.import_format_version_unsupported');
+        }
+        $declaredSiteId = (int) ($row['site_id'] ?? 0);
+        if ($declaredSiteId > 0 && $declaredSiteId !== $siteId) {
+            throw new InvalidArgumentException('business.catalog.import_product_site_mismatch');
+        }
+        $externalId = trim($row['external_id'] ?? '');
         $productId = (int) ($row['product_id'] ?? 0);
         $variantId = (int) ($row['variant_id'] ?? 0);
-        $existingProduct = $productId > 0 ? $this->products->find($siteId, $productId, true) : $this->findProductBySlug($siteId, $slug);
-        if ($existingProduct !== null && !$overwriteExisting) {
-            throw new InvalidArgumentException('business.catalog.import_product_exists');
+        $externalProduct = $externalId === '' ? null : $this->findProductByExternalId($siteId, $externalId);
+        if ($externalProduct !== null && (int) $externalProduct['site_id'] !== $siteId) {
+            throw new InvalidArgumentException('business.catalog.import_product_site_mismatch');
         }
+        $existingProduct = $externalProduct ?? ($productId > 0 ? $this->products->find($siteId, $productId, true) : $this->findProductBySlug($siteId, $slug));
         $existingVariant = $variantId > 0 ? $this->variants->findById($variantId, true) : $this->findVariantBySku($sku);
-        if ($existingVariant !== null && !$overwriteExisting) {
-            throw new InvalidArgumentException('business.catalog.import_variant_exists');
-        }
         if ($existingVariant !== null && (int) $existingVariant['site_id'] !== $siteId) {
             throw new InvalidArgumentException('business.catalog.import_variant_site_mismatch');
         }
@@ -323,7 +389,7 @@ final class CatalogCsvService
             $this->assertNonNegativeNumber($row[$field] ?? '', $field);
         }
 
-        return [
+        $plan = [
             'product_action' => $existingProduct === null ? 'create' : 'update',
             'variant_action' => $existingVariant === null ? 'create' : 'update',
             'existing_product_id' => $existingProduct['id'] ?? null,
@@ -332,6 +398,7 @@ final class CatalogCsvService
             'category' => $category,
             'option_plans' => $optionPlans,
             'product' => [
+                'external_id' => $externalId === '' ? null : $externalId,
                 'name' => $name,
                 'slug' => $slug,
                 'type' => $this->choice($row['type'] ?? 'physical', ['physical', 'service', 'gift_card', 'bundle'], 'type'),
@@ -359,11 +426,26 @@ final class CatalogCsvService
                 'option_values' => $variantOptions,
             ],
         ];
+        $diff = $this->planDiff($plan);
+        $plan['diff'] = $diff;
+        if ($existingProduct !== null && $diff['product'] === []) {
+            $plan['product_action'] = 'noop';
+        }
+        if ($existingVariant !== null && $diff['variant'] === []) {
+            $plan['variant_action'] = 'noop';
+        }
+        if (!$overwriteExisting && ($plan['product_action'] === 'update' || $plan['variant_action'] === 'update')) {
+            throw new InvalidArgumentException($plan['product_action'] === 'update' ? 'business.catalog.import_product_exists' : 'business.catalog.import_variant_exists');
+        }
+        return $plan;
     }
 
     /** @param array<string,mixed> $plan @return array{product_action:string,variant_action:string} */
     private function applyPlan(int $siteId, array $plan, ?int $actorId): array
     {
+        if ($plan['product_action'] === 'noop' && $plan['variant_action'] === 'noop') {
+            return ['product_action' => 'unchanged', 'variant_action' => 'unchanged'];
+        }
         $brandId = $this->ensureNamedEntityId($siteId, 'brand', $plan['brand'], $actorId);
         $categoryId = $this->ensureNamedEntityId($siteId, 'category', $plan['category'], $actorId);
         $optionIds = $this->ensureOptions($siteId, $plan['option_plans'], $actorId);
@@ -380,12 +462,19 @@ final class CatalogCsvService
 
         if ($plan['product_action'] === 'create') {
             $product = $this->products->create($siteId, $productPayload + ['status' => $productPayload['status']], $actorId);
+            if (($productPayload['external_id'] ?? null) !== null) {
+                $this->db->run('UPDATE business_products SET external_id = ? WHERE id = ?', [$productPayload['external_id'], (int) $product['id']]);
+                $product = $this->products->find($siteId, (int) $product['id'], true) ?? $product;
+            }
             $productAction = 'created';
-        } else {
+        } elseif ($plan['product_action'] === 'update') {
             $productId = (int) $plan['existing_product_id'];
             $this->updateProductCore($siteId, $productId, $productPayload, $actorId);
             $product = $this->products->find($siteId, $productId, true) ?? [];
             $productAction = 'updated';
+        } else {
+            $product = $this->products->find($siteId, (int) $plan['existing_product_id'], true) ?? [];
+            $productAction = 'unchanged';
         }
 
         $productId = (int) $product['id'];
@@ -396,12 +485,14 @@ final class CatalogCsvService
         if ($plan['variant_action'] === 'create') {
             $this->variants->create($siteId, $productId, $variantPayload, $actorId);
             $variantAction = 'created';
-        } else {
+        } elseif ($plan['variant_action'] === 'update') {
             $variantId = (int) $plan['existing_variant_id'];
             $this->variants->update($siteId, $variantId, $variantPayload, $actorId);
             $this->variants->setAdjustment($variantId, 'purchase', (string) $variantPayload['purchase_adjustment_type'], $variantPayload['purchase_adjustment_value'], $actorId);
             $this->variants->setAdjustment($variantId, 'sale', (string) $variantPayload['sale_adjustment_type'], $variantPayload['sale_adjustment_value'], $actorId);
             $variantAction = 'updated';
+        } else {
+            $variantAction = 'unchanged';
         }
 
         return ['product_action' => $productAction, 'variant_action' => $variantAction];
@@ -412,7 +503,7 @@ final class CatalogCsvService
     {
         $this->db->run(
             'UPDATE business_products
-             SET brand_id = :brand_id, category_id = :category_id, type = :type, status = :status, visibility = :visibility,
+             SET brand_id = :brand_id, category_id = :category_id, type = :type, status = :status, visibility = :visibility, external_id = :external_id,
                  sku_base = :sku_base, name = :name, slug = :slug, tax_class_id = :tax_class_id,
                  is_public = :is_public, is_ecommerce_enabled = :is_ecommerce_enabled, is_pos_enabled = :is_pos_enabled, is_catalogue_enabled = :is_catalogue_enabled,
                  updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
@@ -425,6 +516,7 @@ final class CatalogCsvService
                 'type' => $payload['type'],
                 'status' => $payload['status'],
                 'visibility' => !empty($payload['is_public']) ? 'public' : 'internal',
+                'external_id' => $payload['external_id'] ?? null,
                 'sku_base' => trim((string) ($payload['sku_base'] ?? '')) ?: null,
                 'name' => $payload['name'],
                 'slug' => $payload['slug'],
@@ -556,6 +648,76 @@ final class CatalogCsvService
     {
         $rows = $this->variants->optionValues($variantId);
         return implode('|', array_map(static fn(array $row): string => (string) $row['option_code'] . ':' . (string) $row['value_code'], $rows));
+    }
+
+    /** @param array<string,mixed> $plan @return array{product:array<string,array{before:mixed,after:mixed}>,variant:array<string,array{before:mixed,after:mixed}>} */
+    private function planDiff(array $plan): array
+    {
+        $productAfter = $plan['product'] + [
+            'brand_id' => $plan['brand']['id'] ?? null,
+            'category_id' => $plan['category']['id'] ?? null,
+        ];
+        $variantAfter = $plan['variant'];
+        if ($plan['existing_product_id'] === null) {
+            return [
+                'product' => $this->changedFields([], $productAfter),
+                'variant' => $this->changedFields([], $variantAfter),
+            ];
+        }
+        $productBefore = $this->db->one(
+            'SELECT p.external_id, p.name, p.slug, p.type, p.status, p.sku_base, p.tax_class_id, p.brand_id, p.category_id,
+                    p.is_public, p.is_ecommerce_enabled, p.is_pos_enabled, p.is_catalogue_enabled,
+                    sale.amount AS base_sale_price, COALESCE(sale.currency, purchase.currency, \'CHF\') AS currency,
+                    purchase.amount AS base_purchase_price
+             FROM business_products p
+             LEFT JOIN business_product_base_prices sale ON sale.product_id=p.id AND sale.price_kind=\'sale\' AND sale.valid_from IS NULL
+             LEFT JOIN business_product_base_prices purchase ON purchase.product_id=p.id AND purchase.price_kind=\'purchase\' AND purchase.valid_from IS NULL
+             WHERE p.id=? LIMIT 1',
+            [(int) $plan['existing_product_id']]
+        ) ?? [];
+        $productFields = ['external_id','name','slug','type','status','sku_base','tax_class_id','brand_id','category_id','is_public','is_ecommerce_enabled','is_pos_enabled','is_catalogue_enabled','base_purchase_price','base_sale_price','currency'];
+        $productDiff = $this->changedFields(array_intersect_key($productBefore, array_flip($productFields)), array_intersect_key($productAfter, array_flip($productFields)));
+
+        if ($plan['existing_variant_id'] === null) {
+            return ['product' => $productDiff, 'variant' => $this->changedFields([], $variantAfter)];
+        }
+        $variantBefore = $this->db->one(
+            'SELECT v.sku, v.barcode, v.name, v.status, v.stock_quantity,
+                    purchase.adjustment_type AS purchase_adjustment_type, purchase.adjustment_value AS purchase_adjustment_value,
+                    sale.adjustment_type AS sale_adjustment_type, sale.adjustment_value AS sale_adjustment_value
+             FROM business_product_variants v
+             LEFT JOIN business_product_variant_price_adjustments purchase ON purchase.variant_id=v.id AND purchase.price_kind=\'purchase\' AND purchase.valid_from IS NULL
+             LEFT JOIN business_product_variant_price_adjustments sale ON sale.variant_id=v.id AND sale.price_kind=\'sale\' AND sale.valid_from IS NULL
+             WHERE v.id=? LIMIT 1',
+            [(int) $plan['existing_variant_id']]
+        ) ?? [];
+        $variantBefore['purchase_adjustment_type'] ??= 'none';
+        $variantBefore['sale_adjustment_type'] ??= 'none';
+        return ['product' => $productDiff, 'variant' => $this->changedFields($variantBefore, array_intersect_key($variantAfter, $variantBefore))];
+    }
+
+    /** @param array<string,mixed> $before @param array<string,mixed> $after @return array<string,array{before:mixed,after:mixed}> */
+    private function changedFields(array $before, array $after): array
+    {
+        $diff = [];
+        foreach ($after as $field => $value) {
+            $old = $before[$field] ?? null;
+            $normalizedOld = is_array($old) ? json_encode($old) : (is_bool($old) ? (string) (int) $old : (is_numeric($old) && $old !== '' ? (string) (float) $old : (string) ($old ?? '')));
+            $normalizedNew = is_array($value) ? json_encode($value) : (is_bool($value) ? (string) (int) $value : (is_numeric($value) && $value !== '' ? (string) (float) $value : (string) ($value ?? '')));
+            if ($normalizedOld !== $normalizedNew) {
+                $diff[$field] = ['before' => $old, 'after' => $value];
+            }
+        }
+        return $diff;
+    }
+
+    /** @return array<string,mixed>|null */
+    private function findProductByExternalId(int $siteId, string $externalId): ?array
+    {
+        return $this->db->one(
+            'SELECT * FROM business_products WHERE external_id = ? AND archived_at IS NULL ORDER BY CASE WHEN site_id = ? THEN 0 ELSE 1 END, id ASC LIMIT 1',
+            [$externalId, $siteId]
+        );
     }
 
     private function findProductBySlug(int $siteId, string $slug): ?array

@@ -7,6 +7,12 @@ import type {
   OpenApiPublicMenuResponse,
   OpenApiPublicMeta,
   OpenApiPublicRouteResponse,
+  OpenApiPublicSaleBootstrapResponse,
+  OpenApiPublicSaleCartLineDeleteResponse,
+  OpenApiPublicSaleCartLineMutationResponse,
+  OpenApiPublicSaleCartResponse,
+  OpenApiPublicSaleCheckoutResponse,
+  OpenApiPublicSalePaymentIntent,
   OpenApiPublicSearchResponse,
 } from './generated/openapi-types';
 
@@ -56,6 +62,101 @@ export interface SearchOptions extends PaginationOptions {
   type?: string;
   taxonomy?: string;
   term?: string;
+}
+
+export interface MutationOptions extends CommonQueryOptions {
+  idempotencyKey?: string;
+}
+
+export interface SaleChannelOptions extends CommonQueryOptions {}
+
+export interface SaleCartCreateOptions extends CommonQueryOptions {}
+
+export interface SaleCartLinePayload {
+  business_variant_id?: number;
+  variant_id?: number;
+  quantity: number;
+  idempotency_key?: string;
+}
+
+export interface SaleCartLineUpdatePayload {
+  quantity: number;
+}
+
+export interface SaleCheckoutPayload {
+  cart_token?: string;
+  token?: string;
+  idempotency_key?: string;
+  identity: SaleGuestIdentity;
+  billing_address: SaleAddress;
+  shipping_address?: SaleAddress;
+  shipping_same_as_billing?: boolean;
+  shipping_method: { code: 'standard' | 'pickup' };
+  payment: { code: 'bank_transfer' | 'manual' | 'sandbox_online' };
+  return_url?: string;
+  cancel_url?: string;
+  terms_accepted: true;
+  marketing_consent?: boolean;
+}
+
+export interface SaleGuestIdentity {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}
+
+export interface SaleAddress {
+  line1: string;
+  line2?: string;
+  postal_code: string;
+  city: string;
+  region?: string;
+  country_code: string;
+}
+
+export interface SaleCheckoutUpdatePayload extends Partial<Omit<SaleCheckoutPayload, 'cart_token' | 'token' | 'idempotency_key'>> {
+  step: 'identity' | 'addresses' | 'delivery' | 'review';
+}
+
+export interface PublicSaleCheckoutUpdateResponse {
+  data: { cart: PublicSaleCartResponse['data']['cart']; price_changed: boolean };
+  meta: PublicMeta;
+}
+
+export interface PublicSaleCartAbandonResponse {
+  data: { abandoned: boolean };
+  meta: PublicMeta;
+}
+
+export type PublicSalePaymentIntent = OpenApiPublicSalePaymentIntent;
+
+export interface PublicSalePaymentReturnResponse {
+  data: {
+    intent: PublicSalePaymentIntent;
+    provider_status: string;
+    local_status: string;
+    awaiting_webhook: boolean;
+    payment_proof: false;
+  };
+  meta: PublicMeta;
+}
+
+export interface SaleSandboxSimulationPayload {
+  sandbox_token: string;
+  outcome: 'success' | 'authorize' | 'decline' | 'abandon' | 'timeout';
+  amount_minor?: number;
+  deliver_webhook?: boolean;
+}
+
+export interface PublicSaleSandboxSimulationResponse {
+  data: {
+    provider_status: string;
+    webhook_delivered: boolean;
+    webhook?: Record<string, unknown> | null;
+    return_url: string;
+  };
+  meta: PublicMeta;
 }
 
 // Types de base générés depuis docs/public-api/openapi.v1.json.
@@ -249,3 +350,8 @@ export interface PublicTaxonomiesResponse {
 
 export type PublicMediaResponse = OpenApiPublicMediaResponse;
 export type PublicSearchResponse = OpenApiPublicSearchResponse;
+export type PublicSaleBootstrapResponse = OpenApiPublicSaleBootstrapResponse;
+export type PublicSaleCartResponse = OpenApiPublicSaleCartResponse;
+export type PublicSaleCartLineMutationResponse = OpenApiPublicSaleCartLineMutationResponse;
+export type PublicSaleCartLineDeleteResponse = OpenApiPublicSaleCartLineDeleteResponse;
+export type PublicSaleCheckoutResponse = OpenApiPublicSaleCheckoutResponse;

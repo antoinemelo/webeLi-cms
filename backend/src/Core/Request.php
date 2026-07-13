@@ -7,6 +7,7 @@ namespace App\Core;
 final class Request
 {
     private ?array $jsonPayload = null;
+    private ?string $rawPayload = null;
 
     public function __construct(
         public readonly string $method,
@@ -71,7 +72,7 @@ final class Request
             return $this->jsonPayload = [];
         }
 
-        $raw = file_get_contents('php://input');
+        $raw = $this->rawBody();
         if (!is_string($raw) || trim($raw) === '') {
             return $this->jsonPayload = [];
         }
@@ -83,6 +84,15 @@ final class Request
             ]);
         }
         return $this->jsonPayload = $decoded;
+    }
+
+    public function rawBody(): string
+    {
+        if ($this->rawPayload !== null) {
+            return $this->rawPayload;
+        }
+        $raw = file_get_contents('php://input');
+        return $this->rawPayload = is_string($raw) ? $raw : '';
     }
 
     public function header(string $name, ?string $default = null): ?string

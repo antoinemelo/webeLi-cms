@@ -3,8 +3,8 @@
 
 Ce script n'est pas dans le chemin critique d'une publication.
 Depuis la stratégie SEO-first atomique, une publication unitaire est valide
-uniquement si PHP écrit routes + seo_metadata + search_documents dans la même
-transaction que content_entry_publications.
+uniquement si PHP écrit routes + seo_metadata + snapshots et, pour les contenus
+indexables, search_documents dans la même transaction que content_entry_publications.
 
 Ce script reste utile pour une maintenance explicite : reconstruction globale,
 réindexation locale, audit SEO. Il délègue à la console PHP officielle, qui passe par PublishedProjectionPipeline.
@@ -70,7 +70,7 @@ def main() -> int:
     if proc.stderr:
         print(proc.stderr, end="", file=sys.stderr)
     if proc.returncode == 0:
-        print("Contrat: search_documents conserve une ligne par publication; les pages noindex sont filtrées à la lecture.")
+        print("Contrat: search_documents ne contient que les publications indexables; les pages noindex restent hors index interne.")
     return proc.returncode
 
 

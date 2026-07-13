@@ -46,8 +46,8 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
         $this->assertScopeExists($this->requireSiteId($siteId), $scopeType, $scopeId);
         $this->assertDateRange($payload['starts_at'] ?? null, $payload['ends_at'] ?? null);
         $this->database()->run(
-            'INSERT INTO business_catalog_discounts(site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id)
-             VALUES(:site_id, :name, :status, :discount_type, :discount_value, :currency, :scope_type, :scope_id, :channel, :starts_at, :ends_at, :priority, :actor, :actor)',
+            'INSERT INTO business_catalog_discounts(site_id, name, status, discount_type, discount_value, currency, scope_type, scope_id, channel, customer_segment, starts_at, ends_at, priority, created_by_iam_user_id, updated_by_iam_user_id)
+             VALUES(:site_id, :name, :status, :discount_type, :discount_value, :currency, :scope_type, :scope_id, :channel, :customer_segment, :starts_at, :ends_at, :priority, :actor, :actor)',
             [
                 'site_id' => $this->requireSiteId($siteId),
                 'name' => $this->text($payload['name'] ?? null, 'name', 180),
@@ -58,6 +58,7 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
                 'scope_type' => $scopeType,
                 'scope_id' => $scopeId,
                 'channel' => $this->choice($payload['channel'] ?? 'all', ['all', 'ecommerce', 'pos', 'catalogue', 'admin'], 'discount_channel'),
+                'customer_segment' => $this->segment($payload['customer_segment'] ?? null),
                 'starts_at' => $payload['starts_at'] ?? null,
                 'ends_at' => $payload['ends_at'] ?? null,
                 'priority' => (int) ($payload['priority'] ?? 100),
@@ -101,7 +102,7 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
         $this->database()->run(
             'UPDATE business_catalog_discounts
              SET name = :name, status = :status, discount_type = :discount_type, discount_value = :discount_value, currency = :currency,
-                 scope_type = :scope_type, scope_id = :scope_id, channel = :channel, starts_at = :starts_at, ends_at = :ends_at,
+                 scope_type = :scope_type, scope_id = :scope_id, channel = :channel, customer_segment = :customer_segment, starts_at = :starts_at, ends_at = :ends_at,
                  priority = :priority, updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
              WHERE site_id = :site_id AND id = :id',
             [
@@ -115,6 +116,7 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
                 'scope_type' => $scopeType,
                 'scope_id' => $scopeId,
                 'channel' => $this->choice($payload['channel'] ?? $current['channel'], ['all', 'ecommerce', 'pos', 'catalogue', 'admin'], 'discount_channel'),
+                'customer_segment' => $this->segment($payload['customer_segment'] ?? $current['customer_segment'] ?? null),
                 'starts_at' => $payload['starts_at'] ?? $current['starts_at'] ?? null,
                 'ends_at' => $payload['ends_at'] ?? $current['ends_at'] ?? null,
                 'priority' => (int) ($payload['priority'] ?? $current['priority'] ?? 100),
@@ -125,7 +127,7 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
     }
 
     /** @return list<array<string,mixed>> */
-    public function activeForVariant(int $siteId, int $productId, int $variantId, ?string $channel = null, ?DateTimeImmutable $at = null): array
+    public function activeForVariant(int $siteId, int $productId, int $variantId, ?string $channel = null, ?DateTimeImmutable $at = null, ?string $currency = 'CHF', ?string $customerSegment = null): array
     {
         $product = $this->database()->one('SELECT brand_id, category_id FROM business_products WHERE site_id = ? AND id = ? AND archived_at IS NULL LIMIT 1', [$this->requireSiteId($siteId), $productId]);
         if ($product === null) {
@@ -138,6 +140,8 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
                AND status = \'active\'
                AND archived_at IS NULL
                AND (channel = \'all\' OR channel = ?)
+               AND (currency IS NULL OR currency = ?)
+               AND (customer_segment IS NULL OR customer_segment = ?)
                AND (starts_at IS NULL OR starts_at <= ?)
                AND (ends_at IS NULL OR ends_at >= ?)
                AND (
@@ -146,8 +150,11 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
                  OR (scope_type = \'category\' AND scope_id = ?)
                  OR (scope_type = \'brand\' AND scope_id = ?)
                )
-             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
-            [$this->requireSiteId($siteId), $channel ?? 'all', $now, $now, $variantId, $productId, (int) ($product['category_id'] ?? 0), (int) ($product['brand_id'] ?? 0)]
+             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC,
+                      CASE WHEN customer_segment IS NULL THEN 1 ELSE 0 END,
+                      CASE WHEN channel = \'all\' THEN 1 ELSE 0 END,
+                      priority ASC, id ASC',
+            [$this->requireSiteId($siteId), $channel ?? 'all', strtoupper((string) ($currency ?? 'CHF')), $this->segment($customerSegment), $now, $now, $variantId, $productId, (int) ($product['category_id'] ?? 0), (int) ($product['brand_id'] ?? 0)]
         ));
     }
 
@@ -197,5 +204,17 @@ final class CatalogDiscountRepository extends BusinessRepositoryBase
         if ($start !== '' && $end !== '' && strtotime($end) <= strtotime($start)) {
             throw new \InvalidArgumentException('business.catalog.discount_date_range_invalid');
         }
+    }
+
+    private function segment(mixed $value): ?string
+    {
+        $segment = strtolower(trim((string) ($value ?? '')));
+        if ($segment === '') {
+            return null;
+        }
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/', $segment)) {
+            throw new \InvalidArgumentException('business.catalog.customer_segment_invalid');
+        }
+        return $segment;
     }
 }

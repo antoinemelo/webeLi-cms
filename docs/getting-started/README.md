@@ -19,6 +19,8 @@ generated: false
 
 Commencez par [choisir votre parcours documentaire](choose-your-path.md) si vous ouvrez les docs depuis le back-office et ne savez pas quel espace lire. Les profils sont des filtres de lecture, pas des permissions.
 
+Pour un accès direct par métier, utilisez [Guides par rôle](role-guides.md). Pour vérifier les parcours démontrés par le dépôt, utilisez [Scénarios vérifiables](verified-scenarios.md).
+
 ## Utiliser une release existante
 
 1. Vérifiez les [prérequis](../installation/requirements.md).
@@ -56,6 +58,8 @@ La reconstruction supprime et recrée les bases SQLite natives, applique les see
 ## Lire ensuite
 
 - [Choisir son parcours documentaire](choose-your-path.md)
+- [Guides par rôle](role-guides.md)
+- [Scénarios vérifiables](verified-scenarios.md)
 - [Guide utilisateur](../user-guide/README.md)
 - [Administration](../administration/README.md)
 - [Architecture et développement](../development/README.md)

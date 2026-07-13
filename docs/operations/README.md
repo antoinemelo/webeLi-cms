@@ -6,7 +6,7 @@ audience:
   - superadministrator
   - developer
 status: stable
-last_verified: 2026-06-20
+last_verified: 2026-07-11
 source_of_truth: manual
 owners:
   - core
@@ -22,12 +22,15 @@ Les procédures de cette section concernent une instance installée ou une relea
 - [Runbook de maintenance](runbook.md)
 - [Checklist de production](production-checklist.md)
 - [Déploiement et qualification](deployment.md)
+- [Gate de sortie M0](m0-release-gate.md)
 - [Déploiement Hostpoint Git ou FTP](hostpoint-git-ftp.md)
 - [Clonage local d’instance](instance-clone.md)
 - [Sauvegarde, restauration et rollback](backup-restore.md)
 - [Mettre à jour une base existante](existing-database-update.md)
 - [Mettre à jour une instance client](client-instance-update.md)
+- [Dépôt source et release packagée](source-vs-release.md)
 - [Migrations SQLite des modules](module-migrations.md)
+- [Outbox transactionnelle](outbox.md)
 - [Export statique](static-export.md)
 - [Contrôles de santé natifs](health-checks.md)
 - [Dépannage](troubleshooting.md)

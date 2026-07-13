@@ -5,7 +5,7 @@ import { adminApi } from '@/api/client';
 import { canShow, dashboardLinks, mainNavigation, moduleSearchActions, moduleWorkbenchLinks, studioLinks, type SectionLink } from '@/router/navigation';
 import { useAdminContextStore } from '@/stores/adminContext';
 import { useContentTypesStore } from '@/stores/contentTypes';
-import { useI18n } from '@/i18n';
+import { hasTranslation, useI18n } from '@/i18n';
 import type { ContentTypeSummary, EntryListItem } from '@/api/contracts';
 
 type SearchItem = {
@@ -96,33 +96,36 @@ function buildSearchActions(types: ContentTypeSummary[]): SearchAction[] {
   };
 
   const addLink = (link: SectionLink, section: string, prefix = '') => {
+    const label = linkLabel(link);
+    const hint = linkHint(link);
+    const displayLabel = prefix ? `${prefix} ${label}` : label;
     add({
       key: `${section}:${link.route}`,
-      label: prefix ? `${prefix} ${link.label}` : link.label,
+      label: displayLabel,
       route: link.route,
       section,
       permission: link.permission,
-      keywords: [link.label, link.hint ?? '', section, prefix]
+      keywords: [label, link.label, hint, link.hint ?? '', section, prefix]
     });
   };
 
   mainNavigation.forEach((link) => add({
     key: `nav:${link.key}`,
-    label: link.label,
+    label: linkLabel(link),
     route: link.route,
-    section: 'Navigation',
+    section: t('search.section.navigation'),
     permission: link.permission,
-    keywords: [link.label, link.key]
+    keywords: [linkLabel(link), link.label, link.key]
   }));
 
-  studioLinks.forEach((link) => addLink(link, 'Studio', 'Liste'));
-  dashboardLinks.forEach((link) => addLink(link, 'Pilotage'));
-  moduleWorkbenchLinks.forEach((link) => addLink(link, 'Modules'));
+  studioLinks.forEach((link) => addLink(link, t('search.section.studio'), t('search.prefix.list')));
+  dashboardLinks.forEach((link) => addLink(link, t('search.section.dashboard')));
+  moduleWorkbenchLinks.forEach((link) => addLink(link, t('search.section.modules')));
   moduleSearchActions(context.moduleNavigation).forEach((action) => add({
     key: action.key,
     label: action.label,
     route: action.route,
-    section: action.section,
+    section: action.section === 'Modules' ? t('search.section.modules') : action.section,
     permission: action.permission,
     keywords: action.keywords
   }));
@@ -136,23 +139,31 @@ function buildSearchActions(types: ContentTypeSummary[]): SearchAction[] {
     const listPermission = isArchiveType ? 'content.archive' : 'content.read';
     add({
       key: `create:${type.type_key}`,
-      label: `Créer ${withArticle(singular)}`,
+      label: t('search.createContent', { label: withArticle(singular) }),
       route: `/contents/${routeSegment}/new`,
-      section: 'Créer',
+      section: t('search.section.create'),
       permission: createPermission,
-      keywords: ['créer', 'creer', 'ajouter', 'nouveau', 'nouvelle', singular, plural, type.type_key]
+      keywords: [t('search.keyword.create'), singular, plural, type.type_key]
     });
     add({
       key: `list:${type.type_key}`,
-      label: `Liste ${withArticle(plural)}`,
+      label: t('search.listContent', { label: withArticle(plural) }),
       route: `/contents/${routeSegment}`,
-      section: 'Contenus',
+      section: t('search.section.contents'),
       permission: listPermission,
-      keywords: ['liste', 'voir', 'rechercher', 'contenu', singular, plural, type.type_key]
+      keywords: [t('search.keyword.list'), singular, plural, type.type_key]
     });
   });
 
   return Array.from(byRoute.values());
+}
+
+function linkLabel(link: SectionLink): string {
+  return link.labelKey ? t(link.labelKey) : link.label;
+}
+
+function linkHint(link: SectionLink): string {
+  return link.hintKey ? t(link.hintKey) : (link.hint ?? '');
 }
 
 function labelFor(type: ContentTypeSummary, mode: 'singular' | 'plural'): string {
@@ -234,8 +245,8 @@ function contentMeta(row: EntryListItem): string {
 }
 
 function statusLabel(status: string): string {
-  const labels: Record<string, string> = { draft: 'Brouillon', review: 'Relecture', published: 'Publié', archived: 'Archivé' };
-  return labels[status] ?? status;
+  const key = `core.status.${status}`;
+  return hasTranslation(key, context.uiLanguageCode) ? t(key) : status;
 }
 
 function submitSearch() {

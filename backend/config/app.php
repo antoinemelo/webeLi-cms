@@ -55,8 +55,8 @@ return [
         'enabled' => $boolEnv('APP_PUBLIC_API_CORS_ENABLED', true),
         'allow_current_site_origin' => $boolEnv('APP_PUBLIC_API_CORS_ALLOW_CURRENT_SITE', true),
         'default_allowed_origins' => env('APP_PUBLIC_API_CORS_DEFAULT_ORIGINS', '[]'),
-        'allowed_methods' => ['GET', 'POST', 'OPTIONS'],
-        'allowed_headers' => ['Authorization', 'Content-Type', 'X-Requested-With'],
+        'allowed_methods' => ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        'allowed_headers' => ['Authorization', 'Content-Type', 'X-Requested-With', 'Idempotency-Key'],
         'max_age' => (int) env('APP_PUBLIC_API_CORS_MAX_AGE', 600),
     ],
 
@@ -81,6 +81,7 @@ return [
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
+            '#^/api/v1/customer(?:/|$)#',
             '#^/api/v1/media$#',
         ],
         'protected_paths' => [
@@ -114,6 +115,16 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
+            '#^/api/v1/customer/(?:login|accounts/register)$#' => [
+                'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX', 10),
+                'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW', 900),
+                'group' => '/api/v1/customer/auth',
+            ],
+            '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:checkout|cart/[A-Za-z0-9_-]+/checkout)$#' => [
+                'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX', 20),
+                'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW', 60),
+                'group' => '/api/v1/sale/checkout',
+            ],
             '#^/api/v1/search$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SEARCH_MAX', 60),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SEARCH_WINDOW', 60),

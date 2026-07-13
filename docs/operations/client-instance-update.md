@@ -12,6 +12,7 @@ source_paths:
   - tools/python/operations/deployment/d8_deploy_web_update.py
   - tools/python/operations/backup/d6_backup_sqlite.py
   - tools/python/operations/database/d9_migrate_sqlite.py
+  - backend/src/Application/Maintenance/DependencyInventoryService.php
   - backend/src/Application/Maintenance/VersionInventoryService.php
   - frontend/admin-vue/src/views/tools/MaintenanceView.vue
 owners:
@@ -50,6 +51,8 @@ Dans le back-office, l'écran **Maintenance** affiche :
 - les bases SQLite et leurs migrations appliquées ;
 - la version attendue par le canal `dev` ;
 - la version attendue par le canal `stable`.
+- les versions de PHP, Composer, Node, npm et des dépendances suivies ;
+- les chemins réellement détectés pour les vendors, Twig, les lockfiles et les assets admin.
 
 Les canaux ont le rôle suivant :
 
@@ -80,6 +83,8 @@ Avant d'intervenir sur une instance client, vérifiez :
 
 - que la release cible correspond au canal choisi ;
 - que les notes de livraison ou le manifeste indiquent les migrations attendues ;
+- que les chemins de vendors affichés dans Maintenance correspondent au mode de livraison attendu ;
+- que les contraintes PHP/Node et les dépendances critiques ne signalent pas une divergence incompatible ;
 - que l'instance cible dispose d'un backup récent ou qu'un backup sera créé par la procédure ;
 - que les modules clients locaux sont déclarés dans `ops/modules.local.json` si leurs bases doivent être suivies.
 

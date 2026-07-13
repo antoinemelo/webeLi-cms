@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
+use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorefrontProjectionService;
 use App\Core\ErrorCode;
 use App\Core\Request;
 use App\Core\Response;
@@ -12,6 +14,8 @@ use App\Modules\Business\Services\BusinessCatalogSellableReadService;
 use App\Modules\Business\Services\BusinessPimAdminService;
 use App\Modules\Business\Services\BusinessProductAssetService;
 use App\Modules\Business\Services\BusinessProductBundleService;
+use App\Modules\Business\Services\CatalogCommercialRelationService;
+use App\Modules\Business\Services\CatalogPriceListService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -28,7 +32,144 @@ final class BusinessPimApiController
         private readonly BusinessProductAssetService $assets,
         private readonly BusinessProductBundleService $bundles,
         private readonly BusinessCatalogSellableReadService $sellables,
+        private readonly ProductContentLinkService $contentLinks,
+        private readonly ?CatalogPriceListService $priceLists = null,
+        private readonly ?CatalogCommercialRelationService $commercialRelations = null,
+        private readonly ?StorefrontProjectionService $storefrontProjections = null,
     ) {}
+
+    public function rebuildStorefrontProjections(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        try {
+            if ($this->storefrontProjections===null) throw new InvalidArgumentException('storefront.projection_service_unavailable');
+            $payload=$this->payload();
+            $result=$this->storefrontProjections->rebuild((int)$site['id'],isset($payload['channel_id'])?(int)$payload['channel_id']:null,(string)($payload['locale']??$languageCode));
+            return Response::success(['projection'=>$result],'admin.business.pim.storefront_projections.rebuild.v1',$this->meta($site,$languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
+
+    public function priceLists(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'price_lists' => $this->priceListService()->lists((int) $site['id']),
+        ], 'admin.business.pim.price_lists.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function storePriceList(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.discounts.write');
+        try {
+            return Response::success([
+                'price_list' => $this->priceListService()->createList((int) $site['id'], $this->payload(), $this->actorId()),
+            ], 'admin.business.pim.price_lists.store.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function storePriceListItem(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.discounts.write');
+        try {
+            return Response::success([
+                'item' => $this->priceListService()->addItem((int) $site['id'], $this->id($id), $this->payload()),
+            ], 'admin.business.pim.price_list_items.store.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function productRelations(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'relations' => $this->relationService()->relations((int) $site['id'], $this->id($id), $this->request->query['type'] ?? null),
+        ], 'admin.business.pim.product_relations.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function storeProductRelation(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        $payload = $this->payload();
+        try {
+            return Response::success([
+                'relation' => $this->relationService()->link(
+                    (int) $site['id'],
+                    $this->id($id),
+                    $this->id($payload['target_product_id'] ?? 0),
+                    (string) ($payload['relation_type'] ?? ''),
+                    (int) ($payload['sort_order'] ?? 0),
+                ),
+            ], 'admin.business.pim.product_relations.store.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function putGiftCardPolicy(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'policy' => $this->relationService()->configureGiftCard((int) $site['id'], $this->id($id), $this->payload()),
+            ], 'admin.business.pim.gift_card_policy.update.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function productContentLinks(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'links' => $this->contentLinks->listForProduct((int) $site['id'], $this->id($id)),
+        ], 'admin.business.pim.product_content_links.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function contentCandidates(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        return Response::success([
+            'contents' => $this->contentLinks->contentCandidates((int) $site['id'], (string) ($this->request->query['q'] ?? '')),
+        ], 'admin.business.pim.content_candidates.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function storeProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'link' => $this->contentLinks->create((int) $site['id'], $this->id($id), $this->payload(), $this->actorId()),
+                'message' => 'Contenu éditorial lié au produit.',
+            ], 'admin.business.pim.product_content_links.show.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function updateProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        try {
+            return Response::success([
+                'link' => $this->contentLinks->update((int) $site['id'], $this->id($id), $this->payload(), $this->actorId()),
+                'message' => 'Liaison éditoriale mise à jour.',
+            ], 'admin.business.pim.product_content_links.show.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function deleteProductContentLink(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.write');
+        return Response::success([
+            'deleted' => $this->contentLinks->delete((int) $site['id'], $this->id($id)),
+            'id' => $this->id($id),
+        ], 'admin.business.pim.product_content_links.delete.v1', $this->meta($site, $languageCode));
+    }
 
     public function productAssets(string|int $id): Response
     {
@@ -498,6 +639,22 @@ final class BusinessPimApiController
         return max(0, (int) $id);
     }
 
+    private function priceListService(): CatalogPriceListService
+    {
+        if ($this->priceLists === null) {
+            throw new InvalidArgumentException('business.pricing.service_unavailable');
+        }
+        return $this->priceLists;
+    }
+
+    private function relationService(): CatalogCommercialRelationService
+    {
+        if ($this->commercialRelations === null) {
+            throw new InvalidArgumentException('business.catalog.relation_service_unavailable');
+        }
+        return $this->commercialRelations;
+    }
+
     /** @return array<string,mixed> */
     private function assetFilters(): array
     {
@@ -516,6 +673,7 @@ final class BusinessPimApiController
         return [
             'channel' => (string) ($this->request->query['channel'] ?? 'admin'),
             'currency' => (string) ($this->request->query['currency'] ?? 'CHF'),
+            'customer_segment' => $this->request->query['customer_segment'] ?? null,
             'include_purchase_price' => $this->auth->hasPermission('business.catalog.purchase_prices.read', $siteId),
             'include_internal_fields' => true,
         ];

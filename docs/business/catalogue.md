@@ -21,6 +21,8 @@ generated: false
 
 Le catalogue Opérations permet de préparer un petit catalogue produits, services ou bons cadeaux depuis le back-office. Il couvre les marques, catégories, produits, variantes, prix, réductions simples, stock et import/export CSV.
 
+La résolution des listes de prix, offres, bundles, kits et bons cadeaux est décrite dans [Pricing, offres et compositions Business](../development/architecture/business-pricing-offers-bundles.md).
+
 Pour un parcours utilisateur court, commencez par :
 
 - [Guide utilisateur Catalogue+](catalogue-plus-guide-utilisateur.md) ;
@@ -143,6 +145,8 @@ T-shirt demo;t-shirt-demo;physical;active;NOUVELLE MARQUE;Marchandises;1;1;1;12.
 ```
 
 Avant d'appliquer un import, lancez toujours la prévisualisation. Elle retourne un rapport ligne par ligne et refuse les prix invalides ou négatifs. L'import ne crée marques, catégories ou options absentes que si les options correspondantes sont activées.
+
+Le format courant `pim.catalog.v1` inclut le site et l'identifiant externe facultatif. La prévisualisation affiche le diff avant toute écriture, l'application est atomique et les réimports identiques sont idempotents. Les exports filtrés par canal excluent les produits hors période de visibilité.
 
 ## Limites v1
 

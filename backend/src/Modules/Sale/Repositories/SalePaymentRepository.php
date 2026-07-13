@@ -66,6 +66,26 @@ final class SalePaymentRepository extends SaleRepositoryBase
         );
     }
 
+    public function setIntentReference(int $intentId, ?string $reference): void
+    {
+        if ($reference !== null && trim($reference) !== '') {
+            $this->rawDatabase()->run('UPDATE sale_payment_intents SET intent_reference = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$reference, $intentId]);
+        }
+    }
+
+    /** @return array<string,mixed> */
+    public function requireIntentWithOrder(int $intentId): array
+    {
+        $row = $this->rawDatabase()->one(
+            'SELECT i.*,o.site_id AS order_site_id,o.currency AS order_currency FROM sale_payment_intents i INNER JOIN sale_orders o ON o.id=i.order_id WHERE i.id=?',
+            [$intentId]
+        );
+        if ($row === null) {
+            throw new SalePaymentException('sale.payment_intent_not_found');
+        }
+        return $row;
+    }
+
     /** @param array<string,mixed> $options @return array<string,mixed> */
     public function recordTransaction(int $orderId, int $amountMinor, string $currency, string $type = 'payment', array $options = []): array
     {
@@ -74,8 +94,8 @@ final class SalePaymentRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'INSERT INTO sale_payment_transactions(
                 payment_intent_id, order_id, transaction_type, status, amount_minor, currency,
-                provider_transaction_id, provider_payload_json, error_code, error_message, processed_at
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, created_by_iam_user_id, processed_at
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $options['payment_intent_id'] ?? null,
                 $orderId,
@@ -87,6 +107,8 @@ final class SalePaymentRepository extends SaleRepositoryBase
                 $this->json($providerPayload),
                 $options['error_code'] ?? null,
                 $options['error_message'] ?? null,
+                $options['correlation_id'] ?? null,
+                $options['created_by_iam_user_id'] ?? null,
                 in_array($status, ['succeeded', 'failed', 'cancelled'], true) ? gmdate('Y-m-d H:i:s') : null,
             ]
         );
@@ -104,8 +126,10 @@ final class SalePaymentRepository extends SaleRepositoryBase
     public function allocatedTotal(int $orderId): int
     {
         $row = $this->rawDatabase()->one(
-            'SELECT COALESCE(SUM(amount_minor), 0) AS total FROM sale_payment_allocations WHERE order_id = ?',
-            [$orderId]
+            'SELECT
+                COALESCE((SELECT SUM(amount_minor) FROM sale_payment_allocations WHERE order_id = ?), 0)
+                + COALESCE((SELECT SUM(amount_delta_minor) FROM sale_financial_corrections WHERE order_id = ?), 0) AS total',
+            [$orderId, $orderId]
         );
         return (int) ($row['total'] ?? 0);
     }

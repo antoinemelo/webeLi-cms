@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
@@ -131,7 +132,7 @@ async function loadMultisite(): Promise<void> {
     }
   } catch (err) {
     multisite.value = null;
-    multisiteError.value = apiErrorMessage(err, 'Configuration multisite indisponible depuis ce site.');
+    multisiteError.value = apiErrorMessage(err, t('configuration.multisiteUnavailable'));
   } finally {
     multisiteLoading.value = false;
   }
@@ -171,16 +172,16 @@ async function createSubsite(): Promise<void> {
     resetNewSite();
     subsiteModalOpen.value = false;
     await context.load(context.siteId, context.contentLanguageCode);
-    success.value = 'Site ajouté. Il apparaît maintenant dans la liste et dans le sélecteur de site.';
+    success.value = t('configuration.siteAdded');
   } catch (err) {
-    multisiteError.value = apiErrorMessage(err, 'Impossible d’ajouter le site.');
+    multisiteError.value = apiErrorMessage(err, t('configuration.siteAddError'));
   } finally {
     multisiteSaving.value = false;
   }
 }
 
 async function removeSubsite(siteId: number, siteName: string): Promise<void> {
-  if (!window.confirm(`Retirer définitivement le sous-site « ${siteName} » ? Ses contenus, routes, médias et réglages liés seront supprimés par cascade.`)) {
+  if (!window.confirm(t('configuration.siteRemoveConfirm', { name: siteName }))) {
     return;
   }
   multisiteDeleting.value = siteId;
@@ -191,9 +192,9 @@ async function removeSubsite(siteId: number, siteName: string): Promise<void> {
     const response = await adminApi.delete<{ result: unknown; multisite: MultisitePayload }>(`/multisite/sites/${siteId}`);
     multisite.value = response.data.multisite;
     await context.load(context.siteId, context.contentLanguageCode);
-    success.value = 'Site retiré proprement.';
+    success.value = t('configuration.siteRemoved');
   } catch (err) {
-    multisiteError.value = apiErrorMessage(err, 'Impossible de retirer le sous-site.');
+    multisiteError.value = apiErrorMessage(err, t('configuration.siteRemoveError'));
   } finally {
     multisiteDeleting.value = null;
   }
@@ -447,7 +448,7 @@ async function uploadSiteAsset(groupKey: string, field: ConfigurationField, even
       site_asset_kind: field.validation?.asset_kind || field.key,
       localizations: {
         [context.contentLanguageCode || 'fr']: {
-          alt_text: field.validation?.asset_kind === 'logo' ? 'Logo du site' : 'Favicon',
+          alt_text: field.validation?.asset_kind === 'logo' ? t('configuration.asset.logoAlt') : t('configuration.asset.faviconAlt'),
           title: field.label,
           is_alt_verified: true
         }
@@ -457,10 +458,10 @@ async function uploadSiteAsset(groupKey: string, field: ConfigurationField, even
     drafts[groupKey][field.key] = response.data.media_id;
     await loadAssetPreview(groupKey, field.key);
     success.value = field.validation?.asset_kind === 'favicon'
-      ? 'Favicon téléversé. Enregistrez les paramètres médias pour l’activer.'
-      : 'Logo téléversé. Enregistrez les paramètres médias pour l’activer.';
+      ? t('configuration.faviconUploaded')
+      : t('configuration.logoUploaded');
   } catch (err) {
-    error.value = apiErrorMessage(err, 'Impossible de téléverser le fichier.');
+    error.value = apiErrorMessage(err, t('configuration.uploadError'));
   } finally {
     uploadingAsset.value = '';
     input.value = '';
@@ -639,7 +640,7 @@ async function checkHealth(kind: 'live' | 'ready'): Promise<void> {
     target.status = null;
     target.ok = false;
     target.payload = null;
-    target.error = err instanceof Error ? err.message : 'Contrôle indisponible.';
+    target.error = err instanceof Error ? err.message : t('configuration.health.error');
   } finally {
     target.duration_ms = Math.round(performance.now() - started);
   }
@@ -659,7 +660,7 @@ function healthBadgeClass(kind: 'live' | 'ready'): string {
 
 function healthLabel(kind: 'live' | 'ready'): string {
   const state = healthResults[kind].ok;
-  return state === true ? 'Opérationnel' : state === false ? 'Indisponible' : 'Non testé';
+  return state === true ? t('configuration.health.ok') : state === false ? t('configuration.health.unavailable') : t('configuration.health.untested');
 }
 
 onMounted(loadConfiguration);
@@ -675,6 +676,7 @@ watch(() => route.query.tab, (tab) => {
 
 <template>
   <PageHeader :title="t('configuration.title')" :intro="t('configuration.intro')" />
+  <ContextualHelpLink id="settings.configuration" class="mb-3" />
   <ApiFeedback :error="error" :message="success" />
 
   <section v-if="loading" class="card p-4 text-center text-muted">{{ t('configuration.loading') }}</section>
@@ -697,11 +699,11 @@ watch(() => route.query.tab, (tab) => {
       <section v-if="activeTabKey === 'system'" class="schema-section config-card">
         <header class="config-card__header">
           <div>
-            <h2>Système</h2>
-            <p class="muted mb-0">Vue en lecture seule des contrôles de santé natifs. Les paramètres restent gérés par les variables d’environnement et <code>backend/config/health.php</code>.</p>
+            <h2>{{ t('configuration.system.title') }}</h2>
+            <p class="muted mb-0">{{ t('configuration.system.intro') }}</p>
           </div>
           <button class="btn primary" type="button" :disabled="healthLoading" @click="checkAllHealth">
-            {{ healthLoading ? 'Contrôle…' : 'Tester maintenant' }}
+            {{ healthLoading ? t('configuration.system.testing') : t('configuration.system.testNow') }}
           </button>
         </header>
 
@@ -711,21 +713,21 @@ watch(() => route.query.tab, (tab) => {
               <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
                 <div>
                   <h3 class="h5 mb-1">/health/{{ kind }}</h3>
-                  <small class="text-muted">{{ kind === 'live' ? 'Disponibilité du frontal et de PHP, sans base de données.' : 'Capacité réelle à servir le trafic public.' }}</small>
+                  <small class="text-muted">{{ kind === 'live' ? t('configuration.system.liveHelp') : t('configuration.system.readyHelp') }}</small>
                 </div>
                 <span class="badge" :class="healthBadgeClass(kind)">{{ healthLabel(kind) }}</span>
               </div>
               <dl class="row mb-0">
                 <dt class="col-5">URL</dt><dd class="col-7"><a :href="healthUrl(kind)" target="_blank" rel="noopener">{{ healthUrl(kind) }}</a></dd>
                 <dt class="col-5">HTTP</dt><dd class="col-7">{{ healthResults[kind].status ?? '—' }}</dd>
-                <dt class="col-5">Durée navigateur</dt><dd class="col-7">{{ healthResults[kind].duration_ms !== null ? `${healthResults[kind].duration_ms} ms` : '—' }}</dd>
+                <dt class="col-5">{{ t('configuration.system.browserDuration') }}</dt><dd class="col-7">{{ healthResults[kind].duration_ms !== null ? `${healthResults[kind].duration_ms} ms` : '—' }}</dd>
               </dl>
               <p v-if="healthResults[kind].error" class="text-danger mt-3 mb-0">{{ healthResults[kind].error }}</p>
               <pre v-if="healthResults[kind].payload" class="mt-3 mb-0 small overflow-auto">{{ JSON.stringify(healthResults[kind].payload, null, 2) }}</pre>
             </div>
           </article>
         </div>
-        <p class="muted mt-3 mb-0">Dernier contrôle : {{ healthCheckedAt || 'aucun' }}. Cette page ne modifie aucune donnée et n’écrit pas dans SQLite.</p>
+        <p class="muted mt-3 mb-0">{{ t('configuration.system.lastCheck', { date: healthCheckedAt || t('configuration.system.never') }) }}</p>
       </section>
 
       <section v-if="activeTabUsesUnifiedSave" class="schema-section config-card config-card--tab-actions">
@@ -735,7 +737,7 @@ watch(() => route.query.tab, (tab) => {
           </div>
           <div class="d-flex gap-2 flex-wrap">
             <button class="btn ghost" type="button" :disabled="activeTabSaving" @click="resetDrafts">
-              Réinitialiser
+              {{ t('common.reset') }}
             </button>
             <button class="btn primary" type="button" :disabled="activeTabSaving" @click="saveActiveTabGroups">
               {{ activeTabSaving ? t('common.saving') : t('common.save') }}
@@ -753,7 +755,7 @@ watch(() => route.query.tab, (tab) => {
           <h2>{{ groupLabel(group) }}</h2>
           <div class="d-flex gap-2 flex-wrap">
             <button v-if="!activeTabUsesUnifiedSave" class="btn ghost" type="button" :disabled="isGroupSaving(group)" @click="resetDrafts">
-              Réinitialiser
+              {{ t('common.reset') }}
             </button>
             <button v-if="!activeTabUsesUnifiedSave" class="btn primary" type="button" :disabled="isGroupSaving(group)" @click="saveGroup(group)">
               {{ isGroupSaving(group) ? t('common.saving') : t('common.save') }}
@@ -782,14 +784,14 @@ watch(() => route.query.tab, (tab) => {
                 />
                 <div>
                   <strong>#{{ assetId(group.key, field.key) }}</strong>
-                  <small>{{ assetPreviewByField[assetFieldPreviewKey(group.key, field.key)]?.original_filename || 'Média sélectionné' }}</small>
+                  <small>{{ assetPreviewByField[assetFieldPreviewKey(group.key, field.key)]?.original_filename || t('configuration.asset.selected') }}</small>
                 </div>
               </div>
-              <p v-else class="muted mb-2">Aucun fichier actif.</p>
+              <p v-else class="muted mb-2">{{ t('configuration.asset.noActiveFile') }}</p>
 
               <div class="d-flex gap-2 flex-wrap">
                 <label class="btn ghost mb-0" :for="fieldId(group.key, field.key)">
-                  {{ uploadingAsset === assetFieldPreviewKey(group.key, field.key) ? 'Téléversement…' : 'Remplacer' }}
+                  {{ uploadingAsset === assetFieldPreviewKey(group.key, field.key) ? t('configuration.asset.uploading') : t('common.replace') }}
                 </label>
                 <input
                   :id="fieldId(group.key, field.key)"
@@ -806,10 +808,10 @@ watch(() => route.query.tab, (tab) => {
                   :disabled="uploadingAsset === assetFieldPreviewKey(group.key, field.key)"
                   @click="clearSiteAsset(group.key, field.key)"
                 >
-                  Retirer
+                  {{ t('common.remove') }}
                 </button>
               </div>
-              <p class="muted mt-2 mb-0">La modification remplace l’élément précédent après enregistrement du groupe Médias.</p>
+              <p class="muted mt-2 mb-0">{{ t('configuration.asset.saveNotice') }}</p>
             </div>
 
 
@@ -928,7 +930,7 @@ watch(() => route.query.tab, (tab) => {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Aperçu du template sélectionné
+                {{ t('configuration.preview.selectedTemplate') }}
               </a>
             </div>
 
@@ -954,17 +956,17 @@ watch(() => route.query.tab, (tab) => {
           </div>
         </div>
 
-        <section v-if="group.key === 'public_ui'" class="appearance-preview" :style="appearancePreviewStyle" aria-label="Aperçu de l’apparence">
+        <section v-if="group.key === 'public_ui'" class="appearance-preview" :style="appearancePreviewStyle" :aria-label="t('configuration.preview.appearance')">
           <div class="appearance-preview__frame">
             <div class="appearance-preview__nav">
               <strong>webeLi</strong>
               <span>Menu</span>
             </div>
             <div class="appearance-preview__content">
-              <p class="appearance-preview__eyebrow">Aperçu instantané</p>
-              <h3>Un titre lisible sur desktop et mobile</h3>
-              <p>Ce texte montre la police principale, la couleur du texte et la couleur secondaire. Les changements sont visibles ici immédiatement, mais ne sont appliqués au site qu’après enregistrement.</p>
-              <button type="button">Action principale</button>
+              <p class="appearance-preview__eyebrow">{{ t('configuration.preview.instant') }}</p>
+              <h3>{{ t('configuration.preview.title') }}</h3>
+              <p>{{ t('configuration.preview.text') }}</p>
+              <button type="button">{{ t('configuration.preview.primaryAction') }}</button>
             </div>
           </div>
         </section>
@@ -982,8 +984,8 @@ watch(() => route.query.tab, (tab) => {
               <path fill="currentColor" fill-rule="evenodd" d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
             </svg>
             <span>
-              <strong>Réglages SEO par défaut</strong>
-              <small>Suffixe de titre, description et image OpenGraph utilisées en fallback.</small>
+              <strong>{{ t('configuration.localizationSeo.title') }}</strong>
+              <small>{{ t('configuration.localizationSeo.help') }}</small>
             </span>
           </button>
 
@@ -1003,7 +1005,7 @@ watch(() => route.query.tab, (tab) => {
                 v-if="inputMode(field) === 'media'"
                 accept-type="image"
                 :label="field.label"
-                help="Sélection visuelle depuis la médiathèque. La variante OpenGraph 1200×630 est privilégiée si elle existe."
+                :help="t('configuration.mediaPicker.ogHelp')"
                 preferred-set="open_graph"
                 :media-id="Number(drafts[group.key][field.key] || 0)"
                 compact
@@ -1037,34 +1039,34 @@ watch(() => route.query.tab, (tab) => {
         <header class="config-card__header">
           <div>
             <h2 class="d-inline-flex align-items-center gap-1">
-              Sites rattachés
-              <InfoHint text="Gestion centrale depuis le site principal. Le retrait supprime les données liées au site par les contraintes natives de la base." />
+              {{ t('configuration.multisite.attachedSites') }}
+              <InfoHint :text="t('configuration.multisite.info')" />
             </h2>
           </div>
           <div class="d-flex gap-2 flex-wrap">
             <button class="btn ghost" type="button" :disabled="multisiteLoading" @click="loadMultisite">
-              Actualiser
+              {{ t('configuration.multisite.refresh') }}
             </button>
             <button class="btn primary" type="button" :disabled="multisiteLoading" @click="openCreateSubsiteModal">
-              Ajouter un site
+              {{ t('configuration.multisite.addSite') }}
             </button>
           </div>
         </header>
 
         <p v-if="multisiteError && !subsiteModalOpen" class="alert error">{{ multisiteError }}</p>
-        <div v-if="multisiteLoading" class="muted">Chargement des sites…</div>
+        <div v-if="multisiteLoading" class="muted">{{ t('configuration.multisite.loading') }}</div>
 
         <div v-if="multisite" class="subsite-list">
-          <div v-if="multisite.subsites.length === 0" class="muted">Aucun site rattaché configuré.</div>
+          <div v-if="multisite.subsites.length === 0" class="muted">{{ t('configuration.multisite.empty') }}</div>
           <article v-for="site in multisite.subsites" :key="site.id" class="subsite-item">
             <div class="subsite-item__main">
               <strong>{{ site.name }}</strong>
-              <small>{{ site.site_key }} · {{ site.host }}{{ site.base_path || '/' }} · {{ site.language_count }} langue(s) · {{ site.content_count }} contenu(s)</small>
+              <small>{{ site.site_key }} · {{ site.host }}{{ site.base_path || '/' }} · {{ t('configuration.multisite.languagesCount', { count: site.language_count }) }} · {{ t('configuration.multisite.contentsCount', { count: site.content_count }) }}</small>
             </div>
             <div class="subsite-item__actions">
-              <a class="btn ghost" :href="site.admin_path">Administrer</a>
+              <a class="btn ghost" :href="site.admin_path">{{ t('configuration.multisite.administer') }}</a>
               <button class="btn danger" type="button" :disabled="multisiteDeleting === site.id" @click="removeSubsite(site.id, site.name)">
-                {{ multisiteDeleting === site.id ? 'Retrait…' : 'Retirer' }}
+                {{ multisiteDeleting === site.id ? t('configuration.multisite.removing') : t('common.remove') }}
               </button>
             </div>
           </article>
@@ -1076,10 +1078,10 @@ watch(() => route.query.tab, (tab) => {
       <form class="modal-card subsite-modal" role="dialog" aria-modal="true" aria-labelledby="new-site-title" @submit.prevent="createSubsite">
         <header class="modal-card__header">
           <div>
-            <h2 id="new-site-title">Ajouter un site</h2>
-            <p class="muted mb-0">Crée un site rattaché au site principal, avec sa langue, son domaine, ses réglages, ses dossiers médias et ses menus de base.</p>
+            <h2 id="new-site-title">{{ t('configuration.multisite.addSite') }}</h2>
+            <p class="muted mb-0">{{ t('configuration.multisite.modalIntro') }}</p>
           </div>
-          <button class="btn ghost" type="button" :disabled="multisiteSaving" aria-label="Fermer" @click="closeCreateSubsiteModal">×</button>
+          <button class="btn ghost" type="button" :disabled="multisiteSaving" :aria-label="t('common.close')" @click="closeCreateSubsiteModal">×</button>
         </header>
 
         <div class="modal-card__body">
@@ -1087,59 +1089,59 @@ watch(() => route.query.tab, (tab) => {
 
           <div class="row g-3 subsite-form-grid">
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-key">Clé technique</label>
+              <label class="form-label fw-bold" for="new-site-key">{{ t('configuration.multisite.technicalKey') }}</label>
               <input id="new-site-key" v-model="newSite.site_key" class="form-control" type="text" placeholder="site_c" required />
-              <p class="form-text">Identifiant stable en base et dans les scripts. Lettres minuscules, chiffres et underscores, par exemple <code>site_c</code>.</p>
+              <p class="form-text">{{ t('configuration.multisite.technicalKeyHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-name">Nom affiché</label>
+              <label class="form-label fw-bold" for="new-site-name">{{ t('configuration.multisite.displayName') }}</label>
               <input id="new-site-name" v-model="newSite.name" class="form-control" type="text" placeholder="Site C" required />
-              <p class="form-text">Libellé lisible dans le backoffice, les listes de sites et certains fallbacks éditoriaux.</p>
+              <p class="form-text">{{ t('configuration.multisite.displayNameHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-host">Domaine</label>
+              <label class="form-label fw-bold" for="new-site-host">{{ t('configuration.multisite.domain') }}</label>
               <input id="new-site-host" v-model="newSite.primary_domain_host" class="form-control" type="text" placeholder="webe.li" required />
-              <p class="form-text">Nom d’hôte sans protocole ni chemin. Exemple : <code>webe.li</code> ou <code>demo.example.ch</code>.</p>
+              <p class="form-text">{{ t('configuration.multisite.domainHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-path">Chemin public</label>
+              <label class="form-label fw-bold" for="new-site-path">{{ t('configuration.multisite.publicPath') }}</label>
               <input id="new-site-path" v-model="newSite.base_path" class="form-control" type="text" placeholder="/site-c" />
-              <p class="form-text">Sous-dossier public du site. Laisser vide pour un site à la racine du domaine.</p>
+              <p class="form-text">{{ t('configuration.multisite.publicPathHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-language">Langue par défaut</label>
+              <label class="form-label fw-bold" for="new-site-language">{{ t('configuration.multisite.defaultLanguage') }}</label>
               <input id="new-site-language" v-model="newSite.default_language_code" class="form-control" type="text" placeholder="fr" required />
-              <p class="form-text">Code langue initial du site, par exemple <code>fr</code>, <code>en</code> ou <code>de</code>.</p>
+              <p class="form-text">{{ t('configuration.multisite.defaultLanguageHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field">
-              <label class="form-label fw-bold" for="new-site-scheme">Schéma d’URL</label>
+              <label class="form-label fw-bold" for="new-site-scheme">{{ t('configuration.multisite.scheme') }}</label>
               <select id="new-site-scheme" v-model="newSite.scheme" class="form-select">
                 <option value="https">https</option>
                 <option value="http">http</option>
               </select>
-              <p class="form-text">Protocole utilisé pour générer les URLs publiques, canonical, sitemap et liens d’administration.</p>
+              <p class="form-text">{{ t('configuration.multisite.schemeHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field subsite-field--switch">
               <div class="form-check form-switch config-switch mb-2">
                 <input id="new-site-active" v-model="newSite.is_active" class="form-check-input" type="checkbox" role="switch" />
-                <label class="form-check-label" for="new-site-active">Site actif</label>
+                <label class="form-check-label" for="new-site-active">{{ t('configuration.multisite.activeSite') }}</label>
               </div>
-              <p class="form-text">Désactiver le site empêche sa résolution publique sans supprimer ses contenus.</p>
+              <p class="form-text">{{ t('configuration.multisite.activeSiteHelp') }}</p>
             </div>
             <div class="col-12 col-lg-6 subsite-field subsite-field--switch">
               <div class="form-check form-switch config-switch mb-2">
                 <input id="new-site-enforce-https" v-model="newSite.enforce_https" class="form-check-input" type="checkbox" role="switch" />
-                <label class="form-check-label" for="new-site-enforce-https">Forcer HTTPS</label>
+                <label class="form-check-label" for="new-site-enforce-https">{{ t('configuration.multisite.enforceHttps') }}</label>
               </div>
-              <p class="form-text">À garder actif en production pour cohérence SEO et sécurité. À désactiver seulement pour un environnement local HTTP.</p>
+              <p class="form-text">{{ t('configuration.multisite.enforceHttpsHelp') }}</p>
             </div>
           </div>
         </div>
 
         <footer class="modal-card__footer">
-          <button class="btn ghost" type="button" :disabled="multisiteSaving" @click="closeCreateSubsiteModal">Annuler</button>
+          <button class="btn ghost" type="button" :disabled="multisiteSaving" @click="closeCreateSubsiteModal">{{ t('common.cancel') }}</button>
           <button class="btn primary" type="submit" :disabled="multisiteSaving">
-            {{ multisiteSaving ? 'Ajout…' : 'Ajouter un site' }}
+            {{ multisiteSaving ? t('configuration.multisite.addingSite') : t('configuration.multisite.addSite') }}
           </button>
         </footer>
       </form>

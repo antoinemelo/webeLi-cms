@@ -25,6 +25,8 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $db->pdo()->exec($catalogSchema);
+$db->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0007_pricing_offers_bundles.sql'));
+$db->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0008_pim_quality_import_channels.sql'));
 
 try {
     $brands = new CatalogBrandRepository($db);

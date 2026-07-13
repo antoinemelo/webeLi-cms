@@ -1,0 +1,71 @@
+{
+  "contract": "public.sale.cart.lines.update.v1",
+  "kind": "schema",
+  "summary": "Modifier la quantité d'une ligne de panier public.",
+  "description": "Met à jour la quantité d'une ligne de panier public actif et recalcule les totaux côté serveur.",
+  "method": "PATCH",
+  "path": "/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}",
+  "source": "sale_cart_lines",
+  "security": "Public endpoint: no bearer token is required; the opaque cart token is required.",
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$"},
+    "token": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+    "line_id": {"type": "integer", "required": true, "minimum": 1}
+  },
+  "request_body": {
+    "required": true,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["quantity"],
+          "properties": {
+            "quantity": {"type": "integer", "minimum": 1},
+            "expected_version": {"type": "integer", "minimum": 0, "description": "Version observée du panier pour la concurrence optimiste."}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["cart", "line"],
+          "properties": {
+            "cart": {"$ref": "#/components/schemas/PublicSaleCart"},
+            "line": {"$ref": "#/components/schemas/PublicSaleCartLine"}
+          },
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal, panier ou ligne introuvable."},
+    {"code": "REVISION_CONFLICT", "status": 409, "description": "La version du panier n'est plus courante."},
+    {"code": "VALIDATION_FAILED", "status": 422, "description": "Quantité ou stock invalide."}
+  ],
+  "examples": {
+    "request": {"data": {"quantity": 2, "expected_version": 2}},
+    "response": {
+      "data": {
+        "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 5800, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 5800, "lines": []},
+        "line": {"id": 20, "business_variant_id": 3, "quantity": 2, "unit_price_minor": 2900, "currency": "CHF", "line_total_minor": 5800}
+      },
+      "meta": {"contract": "public.sale.cart.lines.update.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

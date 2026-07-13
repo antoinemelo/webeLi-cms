@@ -2,17 +2,21 @@ export type PermissionKey = string;
 
 export type SectionLink = {
   label: string;
+  labelKey?: string;
   route: string;
   permission?: PermissionKey;
   anyPermission?: PermissionKey[];
   hint?: string;
+  hintKey?: string;
   disabled?: boolean;
   navLabel?: string;
+  navLabelKey?: string;
 };
 
 export type MainNavigationItem = {
   key: 'dashboard' | 'studio' | 'modules' | 'assets';
   label: string;
+  labelKey?: string;
   route: string;
   permission?: PermissionKey;
   anyPermission?: PermissionKey[];
@@ -20,19 +24,19 @@ export type MainNavigationItem = {
 };
 
 export const contentLinks: SectionLink[] = [
-  { label: 'Pages', route: '/contents/pages', permission: 'content.read', hint: 'Arborescence, URL, brouillons, preview et publication.' },
-  { label: 'Articles', route: '/contents/articles', permission: 'content.read', hint: 'Actualités, billets, statuts et SEO éditorial.' },
-  { label: 'I/E des contenus', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.' },
-  { label: 'Archives de pages', route: '/contents/page_archives', permission: 'content.archive', hint: 'Pages spécialisées qui listent ou redirigent des contenus de type page.' },
-  { label: 'Archives d’articles', route: '/contents/article_archives', permission: 'content.archive', hint: 'Pages spécialisées pour listes, archives et agrégations d’articles.' }
+  { label: 'Pages', labelKey: 'core.nav.pages', route: '/contents/pages', permission: 'content.read', hint: 'Arborescence, URL, brouillons, preview et publication.', hintKey: 'core.nav.pages.hint' },
+  { label: 'Articles', labelKey: 'core.nav.articles', route: '/contents/articles', permission: 'content.read', hint: 'Actualités, billets, statuts et SEO éditorial.', hintKey: 'core.nav.articles.hint' },
+  { label: 'I/E des contenus', labelKey: 'core.nav.importsExports', route: '/imports-exports', anyPermission: ['imports_exports.read', 'imports_exports.write', 'imports_exports.manage'], hint: 'Exporter des contenus publiés et préparer les futurs imports éditoriaux.', hintKey: 'core.nav.importsExports.hint' },
+  { label: 'Archives de pages', labelKey: 'core.nav.pageArchives', route: '/contents/page_archives', permission: 'content.archive', hint: 'Pages spécialisées qui listent ou redirigent des contenus de type page.', hintKey: 'core.nav.pageArchives.hint' },
+  { label: 'Archives d’articles', labelKey: 'core.nav.articleArchives', route: '/contents/article_archives', permission: 'content.archive', hint: 'Pages spécialisées pour listes, archives et agrégations d’articles.', hintKey: 'core.nav.articleArchives.hint' }
 ];
 
 export const structureLinks: SectionLink[] = [
-  { label: 'Menus', route: '/menus', permission: 'menu.read', hint: 'Navigation publique et emplacements.' },
-  { label: 'Taxonomies', route: '/taxonomies', permission: 'taxonomy.read', hint: 'Catégories, tags et vocabulaires.' },
-  { label: 'Structures de contenu', route: '/blueprints', permission: 'blueprints.read', hint: 'Structures éditoriales, champs, onglets et groupes réutilisables.' },
-  { label: 'Structures des modules', navLabel: 'Structures des modules', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et structures déclarées par les modules.' },
-  { label: 'Cookies', route: '/cookies', permission: 'cookies.read', hint: 'Consentements, services tiers, bannière et scripts conditionnels.' }
+  { label: 'Menus', labelKey: 'core.nav.menus', route: '/menus', permission: 'menu.read', hint: 'Navigation publique et emplacements.', hintKey: 'core.nav.menus.hint' },
+  { label: 'Taxonomies', labelKey: 'core.nav.taxonomies', route: '/taxonomies', permission: 'taxonomy.read', hint: 'Catégories, tags et vocabulaires.', hintKey: 'core.nav.taxonomies.hint' },
+  { label: 'Structures de contenu', labelKey: 'core.nav.blueprints', route: '/blueprints', permission: 'blueprints.read', hint: 'Structures éditoriales, champs, onglets et groupes réutilisables.', hintKey: 'core.nav.blueprints.hint' },
+  { label: 'Structures des modules', labelKey: 'core.nav.moduleBlueprints', navLabel: 'Structures des modules', navLabelKey: 'core.nav.moduleBlueprints', route: '/blueprints?group=modules', permission: 'blueprints.read', hint: 'Ressources métier, schémas headless et structures déclarées par les modules.', hintKey: 'core.nav.moduleBlueprints.hint' },
+  { label: 'Cookies', labelKey: 'core.nav.cookies', route: '/cookies', permission: 'cookies.read', hint: 'Consentements, services tiers, bannière et scripts conditionnels.', hintKey: 'core.nav.cookies.hint' }
 ];
 
 export const studioLinks: SectionLink[] = [
@@ -42,35 +46,35 @@ export const studioLinks: SectionLink[] = [
 
 
 export const moduleWorkbenchLinks: SectionLink[] = [
-  { label: 'Vente', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read'], hint: 'Commandes, POS, paiements et stock transactionnel.' }
+  { label: 'Vente', labelKey: 'business.nav.sale', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read'], hint: 'Commandes, POS, paiements et stock transactionnel.', hintKey: 'business.nav.sale.hint' }
 ];
 
 export const iamLinks: SectionLink[] = [
-  { label: 'Utilisateurs', route: '/iam/users', permission: 'users.read', hint: 'Comptes, statuts, accès par site et réinitialisation de mot de passe.' },
-  { label: 'Rôles et permissions', route: '/iam/roles', permission: 'roles.read', hint: 'RBAC natif : rôles, permissions et matrice de droits.' },
-  { label: 'Sessions', route: '/iam/sessions', permission: 'sessions.read', hint: 'Sessions actives, expiration et révocation.' },
-  { label: 'Journal d’audit', route: '/iam/audit', permission: 'audit.read', hint: 'Actions sensibles journalisées.' }
+  { label: 'Utilisateurs', labelKey: 'core.nav.users', route: '/iam/users', permission: 'users.read', hint: 'Comptes, statuts, accès par site et réinitialisation de mot de passe.', hintKey: 'core.nav.users.hint' },
+  { label: 'Rôles et permissions', labelKey: 'core.nav.roles', route: '/iam/roles', permission: 'roles.read', hint: 'RBAC natif : rôles, permissions et matrice de droits.', hintKey: 'core.nav.roles.hint' },
+  { label: 'Sessions', labelKey: 'core.nav.sessions', route: '/iam/sessions', permission: 'sessions.read', hint: 'Sessions actives, expiration et révocation.', hintKey: 'core.nav.sessions.hint' },
+  { label: 'Journal d’audit', labelKey: 'core.nav.auditLog', route: '/iam/audit', permission: 'audit.read', hint: 'Actions sensibles journalisées.', hintKey: 'core.nav.auditLog.hint' }
 ];
 
 export const dashboardStructureLinks: SectionLink[] = structureLinks.filter((link) => ['/taxonomies', '/blueprints', '/cookies'].includes(link.route));
 
 export const dashboardLinks: SectionLink[] = [
-  { label: 'Audit SEO', navLabel: 'Audit', route: '/seo/audit', permission: 'content.read', hint: 'Identifier les problèmes visibles avant publication.' },
+  { label: 'Audit SEO', labelKey: 'core.nav.seoAudit', navLabel: 'Audit', navLabelKey: 'core.nav.seoAudit.short', route: '/seo/audit', permission: 'content.read', hint: 'Identifier les problèmes visibles avant publication.', hintKey: 'core.nav.seoAudit.hint' },
   ...dashboardStructureLinks,
-  { label: 'Configuration', route: '/settings', permission: 'settings.read', hint: 'Ajuster les paramètres du site et du backoffice.' },
-  { label: 'Maintenance', route: '/maintenance', permission: 'maintenance.manage', hint: 'Cache, recherche, logs et audits.' }
+  { label: 'Configuration', labelKey: 'core.nav.configuration', route: '/settings', permission: 'settings.read', hint: 'Ajuster les paramètres du site et du backoffice.', hintKey: 'core.nav.configuration.hint' },
+  { label: 'Maintenance', labelKey: 'core.nav.maintenance', route: '/maintenance', permission: 'maintenance.manage', hint: 'Cache, recherche, logs et audits.', hintKey: 'core.nav.maintenance.hint' }
 ];
 
 export const assetLinks: SectionLink[] = [
-  { label: 'Médias', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.' },
-  { label: 'Docs', route: '/docs', hint: 'Toute la documentation du CMS.' }
+  { label: 'Médias', labelKey: 'core.nav.media', route: '/media', permission: 'media.read', hint: 'Images, documents, fichiers et métadonnées média.', hintKey: 'core.nav.media.hint' },
+  { label: 'Docs', labelKey: 'core.nav.docs', route: '/docs', hint: 'Toute la documentation du CMS.', hintKey: 'core.nav.docs.hint' }
 ];
 
 export const mainNavigation: MainNavigationItem[] = [
-  { key: 'dashboard', label: 'Cockpit', route: '/', children: dashboardLinks },
-  { key: 'studio', label: 'Studio', route: '/studio', permission: 'content.read', children: studioLinks },
-  { key: 'modules', label: 'Modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use'], children: moduleWorkbenchLinks },
-  { key: 'assets', label: 'Actifs', route: '/media', children: assetLinks }
+  { key: 'dashboard', label: 'Cockpit', labelKey: 'core.nav.dashboard', route: '/', children: dashboardLinks },
+  { key: 'studio', label: 'Studio', labelKey: 'core.nav.studio', route: '/studio', permission: 'content.read', children: studioLinks },
+  { key: 'modules', label: 'Modules', labelKey: 'core.nav.modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use'], children: moduleWorkbenchLinks },
+  { key: 'assets', label: 'Actifs', labelKey: 'core.nav.assets', route: '/media', children: assetLinks }
 ];
 
 export type AdminSearchAction = SectionLink & {

@@ -132,8 +132,8 @@ final class CatalogProductRepository extends BusinessRepositoryBase
         $channels = $payload['channels'] ?? [];
         $defaultCatalogueEnabled = in_array('catalogue', $channels, true) || !in_array('internal', $channels, true);
         $this->database()->run(
-            'INSERT INTO business_products(site_id, brand_id, category_id, type, status, visibility, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id)
-             VALUES(:site_id, :brand_id, :category_id, :type, :status, :visibility, :sku_base, :name, :slug, :short_description, :description, :unit, :tax_class_id, :track_stock, :allow_backorder, :backorder_delivery_days, :is_public, :is_ecommerce_enabled, :is_pos_enabled, :is_catalogue_enabled, :actor, :actor)',
+            'INSERT INTO business_products(site_id, brand_id, category_id, type, status, visibility, external_id, sku_base, name, slug, short_description, description, unit, tax_class_id, track_stock, allow_backorder, backorder_delivery_days, is_public, is_ecommerce_enabled, is_pos_enabled, is_catalogue_enabled, created_by_iam_user_id, updated_by_iam_user_id)
+             VALUES(:site_id, :brand_id, :category_id, :type, :status, :visibility, :external_id, :sku_base, :name, :slug, :short_description, :description, :unit, :tax_class_id, :track_stock, :allow_backorder, :backorder_delivery_days, :is_public, :is_ecommerce_enabled, :is_pos_enabled, :is_catalogue_enabled, :actor, :actor)',
             [
                 'site_id' => $this->requireSiteId($siteId),
                 'brand_id' => $payload['brand_id'] ?? null,
@@ -141,6 +141,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                 'type' => $this->choice($payload['type'] ?? 'physical', ['physical', 'service', 'gift_card', 'bundle'], 'type'),
                 'status' => $this->choice($payload['status'] ?? 'draft', ['draft', 'active', 'archived'], 'status'),
                 'visibility' => $payload['visibility'] ?? (in_array('public', $channels, true) ? 'public' : 'internal'),
+                'external_id' => trim((string) ($payload['external_id'] ?? '')) ?: null,
                 'sku_base' => $this->skuBase($payload['sku_base'] ?? null),
                 'name' => $name,
                 'slug' => $slug,

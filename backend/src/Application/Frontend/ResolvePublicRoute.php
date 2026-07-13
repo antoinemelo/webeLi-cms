@@ -10,6 +10,8 @@ use App\Application\Content\Read\PublicContentReadRepository;
 use App\Application\Media\Storage\MediaUrlGenerator;
 use App\Application\Search\PublicSearchReadRepository;
 use App\Core\Database;
+use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorefrontProjectionRepository;
 
 final class ResolvePublicRoute
 {
@@ -24,12 +26,17 @@ final class ResolvePublicRoute
         private readonly Database $db,
         private readonly ?CookieConsentRepository $cookies = null,
         private readonly ?BlockDocumentNormalizer $blocks = null,
+        private readonly ?ProductContentLinkService $productContentLinks = null,
+        private readonly ?StorefrontProjectionRepository $storefront = null,
     ) {
         $this->mediaUrls = new MediaUrlGenerator($db);
     }
 
     public function execute(array $site, string $languageCode, string $path, array $query = []): array
     {
+        if ($storefront = $this->storefrontPayload($site,$languageCode,$path,$query)) {
+            return ['type'=>'payload','status'=>200,'payload'=>$storefront];
+        }
         if ($redirect = $this->routes->findRedirect((int) $site['id'], $path, $languageCode)) {
             return ['type' => 'redirect', 'to' => (string) $redirect['new_path'], 'status' => (int) $redirect['http_code']];
         }
@@ -53,6 +60,27 @@ final class ResolvePublicRoute
         }
 
         return ['type' => 'payload', 'status' => 200, 'payload' => $payload];
+    }
+
+    /** @return array<string,mixed>|null */
+    private function storefrontPayload(array $site,string $locale,string $path,array $query): ?array
+    {
+        if ($this->storefront===null || !($path==='/shop' || str_starts_with($path,'/shop/products/') || str_starts_with($path,'/shop/collections/'))) return null;
+        $siteId=(int)$site['id']; $channel=$this->storefront->defaultChannelId($siteId); if ($channel<1) return null;
+        if (preg_match('#^/shop/products/([a-z0-9_-]+)$#',$path,$m)) {
+            $product=$this->storefront->product($siteId,$channel,$locale,$m[1]); if (!$product) return null;
+            $base=$this->basePayload($site,$locale,$path,(string)$product['name']);
+            return $base+['template'=>'storefront-product','storefront_product'=>$product,'entry_title'=>$product['name'],'meta_title'=>$product['name'],'meta_description'=>$product['summary'],'meta_robots'=>$product['seo']['robots'],'canonical'=>localized_absolute_url($product['seo']['canonical'],$locale,(string)$site['base_url']),'json_ld'=>json_encode($product['seo']['json_ld'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),'resource'=>$product];
+        }
+        if (preg_match('#^/shop/collections/([a-z0-9_-]+)$#',$path,$m)) {
+            $collection=$this->storefront->collection($siteId,$channel,$locale,$m[1]); if (!$collection) return null;
+            $page=$this->storefront->products($siteId,$channel,$locale,['collection_id'=>$collection['collection_id'],'limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]);
+            $base=$this->basePayload($site,$locale,$path,(string)$collection['name']);
+            return $base+['template'=>'storefront-collection','storefront_collection'=>$collection,'storefront_products'=>$page['items'],'pagination'=>$page['pagination'],'entry_title'=>$collection['name'],'meta_title'=>$collection['name'],'meta_description'=>$collection['description'],'meta_robots'=>$collection['seo']['robots'],'canonical'=>localized_absolute_url($collection['seo']['canonical'],$locale,(string)$site['base_url']),'resource'=>['collection'=>$collection,'products'=>$page]];
+        }
+        $filters=['q'=>$query['q']??'','sort'=>$query['sort']??'name','limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))];
+        $page=$this->storefront->products($siteId,$channel,$locale,$filters); $base=$this->basePayload($site,$locale,$path,'Boutique');
+        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$this->storefront->collections($siteId,$channel,$locale),'pagination'=>$page['pagination'],'entry_title'=>'Boutique','meta_title'=>'Boutique','meta_description'=>'Catalogue de la boutique','meta_robots'=>'index,follow','canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page]];
     }
 
     public function entryPayload(array $site, string $languageCode, array $aggregate, bool $isPreview, array $query = []): array
@@ -81,6 +109,7 @@ final class ResolvePublicRoute
         }
 
         $blocks = $this->entryBlocks($aggregate, $site, $languageCode, $query);
+        $blocks = $this->productContentLinks?->hydrateStorefrontBlocks($blocks, (int)($site['id']??0), $languageCode) ?? $blocks;
         if ($isPreview) {
             $blocks = $this->annotatePreviewBlockStatuses($blocks, $aggregate);
         }
@@ -99,6 +128,12 @@ final class ResolvePublicRoute
         $ogImage = $this->absolutePublicUrl($ogImagePath, $baseUrl);
         $twitterImagePath = $this->seoMediaUrl(is_numeric($aggregate['seo']['twitter_image_media_id'] ?? null) ? (int) $aggregate['seo']['twitter_image_media_id'] : 0, 'open_graph') ?: $ogImage;
         $twitterImage = $this->absolutePublicUrl($twitterImagePath, $baseUrl);
+        $commerceProducts = $this->productContentLinks?->publicProductsForContent(
+            (int) ($site['id'] ?? 0),
+            (int) ($entry['id'] ?? 0),
+            $languageCode
+        ) ?? [];
+        $pageJsonLd = $this->jsonLd((string) ($aggregate['seo']['json_ld'] ?? ''), $site, $languageCode, $path, $title, $summary, (string) ($entry['type_key'] ?? 'page'), $entryPublishedAt, $entryUpdatedAt, $payload['breadcrumbs'] ?? [], $blocks, !empty($articleDisplay['include_author_in_schema']) ? $entryAuthorName : '');
         return $payload + [
             'title' => $title,
             'entry_key' => (string) ($entry['entry_key'] ?? ''),
@@ -126,12 +161,39 @@ final class ResolvePublicRoute
             'og_description' => (string) ($aggregate['seo']['og_description'] ?? $aggregate['seo']['meta_description'] ?? $summary),
             'twitter_title' => (string) ($aggregate['seo']['twitter_title'] ?? $aggregate['seo']['meta_title'] ?? $title),
             'twitter_description' => (string) ($aggregate['seo']['twitter_description'] ?? $aggregate['seo']['meta_description'] ?? $summary),
-            'json_ld' => $this->jsonLd((string) ($aggregate['seo']['json_ld'] ?? ''), $site, $languageCode, $path, $title, $summary, (string) ($entry['type_key'] ?? 'page'), $entryPublishedAt, $entryUpdatedAt, $payload['breadcrumbs'] ?? [], $blocks, !empty($articleDisplay['include_author_in_schema']) ? $entryAuthorName : ''),
+            'json_ld' => $this->mergeCommerceJsonLd($pageJsonLd, $commerceProducts),
+            'commerce_products' => $commerceProducts,
             'geo_summary' => $this->geoSummary($title, $summary),
             'ai_summary' => $this->geoSummary($title, $summary),
             'resource' => $aggregate,
             'template' => $template,
         ];
+    }
+
+    /** @param list<array<string,mixed>> $products */
+    private function mergeCommerceJsonLd(string $pageJsonLd, array $products): string
+    {
+        if ($products === []) {
+            return $pageJsonLd;
+        }
+        $graph = [];
+        $page = json_decode($pageJsonLd, true);
+        if (is_array($page)) {
+            if (is_array($page['@graph'] ?? null)) {
+                $graph = array_values($page['@graph']);
+            } else {
+                unset($page['@context']);
+                $graph[] = $page;
+            }
+        }
+        foreach ($products as $product) {
+            if (is_array($product['structured_data'] ?? null)) {
+                $structuredData = $product['structured_data'];
+                unset($structuredData['@context']);
+                $graph[] = $structuredData;
+            }
+        }
+        return (string) json_encode(['@context' => 'https://schema.org', '@graph' => $graph], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
 

@@ -6,6 +6,9 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Application\Frontend\PublicApiDocsController;
 use App\Core\Request;
+use App\Core\Database;
+use App\Core\Response;
+use App\Security\PublicApiCorsGuard;
 use App\Core\Router;
 
 $h = new TestHarness();
@@ -49,6 +52,21 @@ foreach ($publicCookieOperations as [$path, $method]) {
 }
 $h->assertSame([['BearerAuth' => []]], $jsonPayload['paths']['/api/v1/content']['get']['security'] ?? null, 'canonical OpenAPI keeps protected content endpoint behind Bearer auth');
 $h->assertSame([], $jsonPayload['paths']['/api/v1/media']['get']['security'] ?? null, 'canonical OpenAPI keeps public media index endpoint anonymous');
+$saleLinePost = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines']['post'] ?? null;
+$h->assertTrue(is_array($saleLinePost), 'canonical OpenAPI exposes public Sale add-line operation');
+$h->assertTrue(array_key_exists('requestBody', $saleLinePost), 'canonical OpenAPI documents public Sale add-line body');
+$saleLineHeaders = array_values(array_filter($saleLinePost['parameters'] ?? [], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'header' && ($parameter['name'] ?? null) === 'Idempotency-Key'));
+$h->assertTrue($saleLineHeaders !== [], 'canonical OpenAPI documents Idempotency-Key for public Sale add-line');
+$saleLinePatch = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}']['patch'] ?? null;
+$saleLineDelete = $jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}']['delete'] ?? null;
+$h->assertTrue(is_array($saleLinePatch), 'canonical OpenAPI exposes public Sale PATCH line operation');
+$h->assertTrue(is_array($saleLineDelete), 'canonical OpenAPI exposes public Sale DELETE line operation');
+$saleCheckout = $jsonPayload['paths']['/api/v1/sale/channels/{code}/checkout']['post'] ?? null;
+$h->assertTrue(is_array($saleCheckout) && array_key_exists('201', $saleCheckout['responses'] ?? []), 'canonical OpenAPI documents public Sale checkout as 201');
+$checkoutHeaders = array_values(array_filter($saleCheckout['parameters'] ?? [], static fn(array $parameter): bool => ($parameter['in'] ?? null) === 'header' && ($parameter['name'] ?? null) === 'Idempotency-Key'));
+$h->assertSame(true, $checkoutHeaders[0]['required'] ?? false, 'canonical OpenAPI requires Idempotency-Key for checkout placement');
+$h->assertTrue(isset($jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}/checkout']['patch']), 'canonical OpenAPI documents progressive guest checkout');
+$h->assertTrue(isset($jsonPayload['paths']['/api/v1/sale/channels/{code}/cart/{token}']['delete']), 'canonical OpenAPI documents cart abandonment');
 
 $referenceOpenApi = json_decode((string) file_get_contents(base_path('docs/reference/contracts/public-api/openapi.v1.json')), true);
 foreach ($publicCookieOperations as [$path, $method]) {
@@ -83,9 +101,30 @@ $h->assertTrue(in_array('taxonomies:read', $endpointScopes, true), 'taxonomies e
 $h->assertTrue(in_array('catalog:read', $endpointScopes, true), 'catalog endpoints keep a catalog:read scope');
 $h->assertTrue(in_array('pos.catalog.read', $endpointScopes, true), 'POS catalog endpoints keep a dedicated pos.catalog.read scope');
 $h->assertTrue(!in_array('pos.catalog.read', $scopeAliases['headless:read'] ?? [], true), 'POS catalog scope is not granted by the public headless alias');
+$cors = $config['public_api_cors'] ?? [];
+$h->assertTrue(in_array('PATCH', $cors['allowed_methods'] ?? [], true), 'public API CORS allows PATCH preflights');
+$h->assertTrue(in_array('DELETE', $cors['allowed_methods'] ?? [], true), 'public API CORS allows DELETE preflights');
+$h->assertTrue(in_array('Idempotency-Key', $cors['allowed_headers'] ?? [], true), 'public API CORS allows Idempotency-Key header');
 $rateLimitRules = $config['public_api_rate_limit']['endpoints'] ?? [];
 $saleRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/cart') === 1);
 $h->assertTrue($saleRateLimited !== [], 'optional sale ecommerce endpoints have a dedicated public rate-limit group');
+$checkoutRateLimited = array_filter(array_keys($rateLimitRules), static fn(string $pattern): bool => preg_match($pattern, '/api/v1/sale/channels/web-main/checkout') === 1);
+$h->assertTrue($checkoutRateLimited !== [], 'guest checkout has a stricter public rate-limit rule');
+$corsDbDir = sys_get_temp_dir() . '/amcms-cors-' . bin2hex(random_bytes(4));
+mkdir($corsDbDir, 0775, true);
+$corsDb = new Database($corsDbDir . '/core.sqlite');
+$sameOriginRequest = new Request('POST', '/api/v1/sale/channels/web-main/checkout', [], [], ['HTTP_HOST' => '127.0.0.1:8080', 'HTTP_ORIGIN' => 'http://127.0.0.1:8080'], [], []);
+$sameOriginGuard = new PublicApiCorsGuard($sameOriginRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => []]]]);
+$h->assertSame(null, $sameOriginGuard->enforce(), 'same-origin storefront mutations are accepted without explicit CORS configuration');
+$customerRequest = new Request('GET', '/api/v1/customer/orders', [], [], ['HTTP_HOST' => 'api.example.test', 'HTTP_ORIGIN' => 'https://shop.example.test'], [], []);
+$customerGuard = new PublicApiCorsGuard($customerRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => ['https://shop.example.test']]]]);
+$h->assertSame(null, $customerGuard->enforce(), 'explicit customer storefront origin is accepted');
+$customerHeaders = $customerGuard->withCorsHeaders(Response::json([]))->headers();
+$h->assertSame('true', $customerHeaders['Access-Control-Allow-Credentials'] ?? null, 'customer CORS response explicitly allows session credentials');
+$wildcardGuard = new PublicApiCorsGuard($customerRequest, $corsDb, ['app' => ['public_api_cors' => ['enabled' => true, 'default_allowed_origins' => ['*']]]]);
+$h->assertSame(403, $wildcardGuard->enforce()?->status(), 'wildcard CORS cannot authorize customer session credentials');
+$corsDb = null;
+test_remove_tree($corsDbDir);
 
 $htaccess = (string) file_get_contents(base_path('.htaccess'));
 $openApiException = strpos($htaccess, 'api/v1/openapi\\.(json|yaml)');

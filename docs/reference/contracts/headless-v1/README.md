@@ -42,6 +42,8 @@ Si `site` et `site_id` sont absents, le site est résolu comme le front public, 
 | Endpoint réel | Contrat documentaire | Contrat runtime | Rôle |
 |---|---|---|---|
 | `GET /api/v1/health` | `public.health.v1` | `public.health.v1` | Vérifier que l’API publique répond. |
+| `GET /api/v1/openapi.json` | `public.openapi.json.v1` | OpenAPI JSON | Servir le contrat OpenAPI public JSON. |
+| `GET /api/v1/openapi.yaml` | `public.openapi.yaml.v1` | OpenAPI YAML | Servir le contrat OpenAPI public YAML. |
 | `GET /api/v1/route?path=/...` | `public.route.show.v1` | `public.route.show.v1` ou redirect | Résoudre une route publique en payload headless complet. |
 | `GET /api/v1/content` | `public.content.index.v1` | `public.content.index.v1` | Lister les contenus publiés, avec type optionnel en query. |
 | `GET /api/v1/content/{type}` | `public.content.index.v1` | `public.content.index.v1` | Lister les contenus publiés d’un type actif. |
@@ -69,6 +71,13 @@ Si `site` et `site_id` sont absents, le site est résolu comme le front public, 
 | `GET /api/v1/pos/catalog/categories` | `pos.catalog.categories.index.v1` | `pos.catalog.categories.index.v1` | Lister les catégories utilisées par le catalogue POS. |
 | `GET /api/v1/modules/{module}/{resource}/schema` | `public.module_resource_schema.v1` | `public.module_resource_schema.v1` | Découvrir le schéma headless d’une ressource métier déclarée par un module actif. |
 | `GET /api/v1/content-by-path?path=/...` | `public.content.by_path.v1` | `public.content.by_path.v1` | Alias de compatibilité servi par `PublicHeadlessController::contentByPath`. |
+| `GET /api/v1/sale/channels/{code}/bootstrap` | `public.sale.channels.bootstrap.v1` | `public.sale.channels.bootstrap.v1` | Initialiser un canal e-commerce public actif. |
+| `POST /api/v1/sale/channels/{code}/cart` | `public.sale.cart.store.v1` | `public.sale.cart.show.v1` | Créer un panier public et retourner son token opaque. |
+| `GET /api/v1/sale/channels/{code}/cart/{token}` | `public.sale.cart.show.v1` | `public.sale.cart.show.v1` | Lire un panier public actif par token opaque. |
+| `POST /api/v1/sale/channels/{code}/cart/{token}/lines` | `public.sale.cart.lines.store.v1` | `public.sale.cart.lines.store.v1` | Ajouter une ligne à un panier public. |
+| `PATCH /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.update.v1` | `public.sale.cart.lines.update.v1` | Modifier la quantité d’une ligne de panier public. |
+| `DELETE /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.delete.v1` | `public.sale.cart.lines.delete.v1` | Supprimer une ligne d’un panier public. |
+| `POST /api/v1/sale/channels/{code}/checkout` | `public.sale.checkout.v1` | `public.sale.checkout.v1` | Convertir un panier public en commande e-commerce. |
 
 ## Structure minimale exigée
 
@@ -101,6 +110,8 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 - Les erreurs ne doivent pas exposer de trace technique.
 - Les endpoints de lecture peuvent être protégés par Bearer token selon la configuration de sécurité existante.
 - Les endpoints publics de formulaires (`/api/v1/forms/{key}` et `/api/v1/forms/{key}/submit`) restent anonymes afin que le frontend public n’expose aucun secret applicatif.
+- Les endpoints publics Sale e-commerce restent anonymes, mais exigent un canal actif/public et un token panier opaque pour les opérations panier.
+- Les mutations Sale critiques acceptent `Idempotency-Key` en en-tête ou `data.idempotency_key` dans le payload lorsqu'il est explicitement documenté.
 - Les scopes attendus restent : `routes:read`, `content:read`, `media:read`, `search:read`, `menus:read`, `taxonomies:read`, `catalog:read` ou l’alias de compatibilité `headless:read`. Le catalogue POS est séparé et exige `pos.catalog.read`.
 
 ## Génération OpenAPI v1
@@ -108,28 +119,22 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 Depuis la racine du projet `mod/`, le fichier public OpenAPI est généré à partir des contrats JSON de ce dossier :
 
 ```bash
-python3 tools/cms.py validate --category api --category security
+python3 tools/cms.py docs generate
 ```
 
-Le générateur crée `docs/public-api/openapi.v1.json`, en OpenAPI 3.1, sans dépendance Python externe. La génération reste volontairement légère : elle ne documente que les chemins `/api/v1/*`, déclare `BearerAuth`, reprend les paramètres contractuels, normalise les erreurs avec `PublicApiError` et expose les schémas réutilisables principaux (`PublicMeta`, `Pagination`, `PublicRouteResponse`, `PublicContentIndexResponse`, `PublicContentShowResponse`, `PublicMenuResponse`, `PublicMediaResponse`, `PublicSearchResponse`).
+Le générateur crée `docs/public-api/openapi.v1.json` et `docs/public-api/openapi.v1.yaml`, puis synchronise `docs/reference/contracts/public-api/openapi.v1.json` et `docs/reference/contracts/public-api/openapi.v1.yaml`. La génération reste sans dépendance Python externe : elle documente les chemins `/api/v1/*`, déclare `BearerAuth`, reprend les paramètres, headers et corps contractuels, normalise les erreurs avec `PublicApiError` et expose les schémas réutilisables principaux, y compris les schémas Sale publics.
 
 ## Validation locale
 
 Depuis la racine du projet `mod/` :
 
 ```bash
-python3 tools/cms.py validate --category api --category security
-python3 tools/cms.py validate --category api --category security
+python3 tools/cms.py docs generate
 python3 tools/cms.py validate --validator API_SPEC
-python3 tools/cms.py validate --category api --category security
-python3 tools/cms.py validate --category api --category security
-python3 tools/cms.py validate --category api --category security
-python3 tools/cms.py validate --category api --category security
-python3 tools/cms.py validate --plan-only
-python3 tools/cms.py validate
+python3 tools/cms.py docs check
 ```
 
-La suite consolidée `API_SPEC` est le contrôle statique et non destructif des contrats headless : elle vérifie les routes, les handlers et la présence de la documentation contractuelle. Elle s’exécute avec `python3 tools/cms.py validate --validator API_SPEC`.
+La suite consolidée `API_SPEC` est le contrôle statique et non destructif des contrats headless : elle vérifie les routes, les handlers, l’alignement routes publiques/OpenAPI, la synchronisation de l’OpenAPI de référence et la présence des types SDK générés pour Sale.
 
 
 ## Documentation publique développeur

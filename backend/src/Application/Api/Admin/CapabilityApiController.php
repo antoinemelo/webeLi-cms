@@ -41,6 +41,8 @@ final class CapabilityApiController
         return Response::success([
             'capabilities' => $items,
             'count' => count($items),
+            'known_capabilities' => $this->registry->knownCapabilities(),
+            'diagnostics' => $this->registry->diagnostics(),
         ], 'admin.capabilities.index.v1', AdminApiContract::meta($site, AdminApiContract::language($this->request, $this->sites, $site)));
     }
 
@@ -71,7 +73,7 @@ final class CapabilityApiController
             'forbidden' => 403,
             'not_found' => 404,
             'validation_failed' => 422,
-            'confirmation_required' => 409,
+            'confirmation_required', 'inactive', 'incompatible_contract', 'validator_apply_forbidden' => 409,
             default => 400,
         };
 

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Normalise les projections post-seed sans casser le contrat atomique.
+"""Normalise les projections post-seed.
 
-Ce script supprimait historiquement les lignes `search_documents` associées à des
-pages `noindex`. Depuis le pipeline public atomique, ce serait une erreur:
-`search_documents` est une projection critique et doit conserver une ligne par
-publication. Les résultats publics restent filtrés à la lecture via
-`seo_metadata.meta_robots`.
+`search_documents` est l'index interne de recherche publique. Les contenus
+marqués `noindex` restent publiés dans routes, SEO et snapshots, mais ne doivent
+pas être projetés dans cet index.
 
 Le script effectue aussi un balayage idempotent des snapshots publics pour
 supprimer les chemins médias absolus issus d'anciens seeds SQL. Après b0/b1/b2,
@@ -36,6 +34,20 @@ JOIN seo_metadata sm
  AND sm.language_code = sd.language_code
 WHERE LOWER(COALESCE(sm.meta_robots, 'index,follow')) LIKE '%noindex%'
 ORDER BY sd.id
+"""
+
+DELETE_NOINDEX_SQL = """
+DELETE FROM search_documents
+WHERE id IN (
+    SELECT sd.id
+    FROM search_documents sd
+    JOIN seo_metadata sm
+      ON sm.site_id = sd.site_id
+     AND sm.resource_type = sd.resource_type
+     AND sm.resource_id = sd.resource_id
+     AND sm.language_code = sd.language_code
+    WHERE LOWER(COALESCE(sm.meta_robots, 'index,follow')) LIKE '%noindex%'
+)
 """
 
 URL_KEYS = {"src", "image_src", "poster", "og_image_src", "twitter_image_src", "url"}
@@ -154,6 +166,18 @@ def sanitize_public_snapshots(con: sqlite3.Connection, app_base_path: str, dry_r
     return fixed
 
 
+def cleanup_noindex_search_documents(con: sqlite3.Connection, dry_run: bool) -> list[sqlite3.Row]:
+    rows = con.execute(SELECT_NOINDEX_SQL).fetchall()
+    if rows and not dry_run:
+        con.execute(DELETE_NOINDEX_SQL)
+        try:
+            con.execute("INSERT INTO search_documents_fts(search_documents_fts) VALUES('rebuild')")
+        except sqlite3.Error:
+            pass
+        con.commit()
+    return rows
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Normalise les projections publiques post-seed.")
     parser.add_argument("--dry-run", action="store_true", help="Affiche ce qui serait corrigé sans modifier la base.")
@@ -171,24 +195,23 @@ def main() -> int:
     con.row_factory = sqlite3.Row
     try:
         fixed = sanitize_public_snapshots(con, expected_app_base_path(args.app_base_path), args.dry_run)
-        rows = con.execute(SELECT_NOINDEX_SQL).fetchall()
+        rows = cleanup_noindex_search_documents(con, args.dry_run)
         if fixed:
             action = "seraient normalisés" if args.dry_run else "normalisés"
             print(f"OK: {fixed} snapshot(s) public(s) avec URL média {action}.")
         else:
             print("OK: aucune URL média publiée absolue à normaliser dans les snapshots.")
-        print(
-            "OK: contrat atomique respecté; search_documents conserve les pages noindex "
-            "et le runtime public les filtre via seo_metadata.meta_robots."
-        )
         if rows:
-            print(f"Documents noindex conservés dans search_documents: {len(rows)}")
+            action = "seraient supprimés de" if args.dry_run else "supprimés de"
+            print(f"Documents noindex {action} search_documents: {len(rows)}")
             for row in rows:
                 print(
                     f"- search_documents.{row['id']}: "
                     f"{row['resource_type']}#{row['resource_id']} "
                     f"{row['language_code']} {row['path']} ({row['meta_robots']})"
                 )
+        else:
+            print("OK: aucun document noindex dans search_documents.")
         return 0
     except sqlite3.Error as exc:
         print(f"ERREUR: diagnostic impossible: {exc}", file=sys.stderr)

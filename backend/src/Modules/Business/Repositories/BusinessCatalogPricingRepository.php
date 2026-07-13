@@ -112,8 +112,8 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
         $db = $this->database();
         $db->run(
             'INSERT INTO business_catalog_discounts
-                (site_id, name, discount_type, discount_value, currency, scope_type, scope_id, channel, starts_at, ends_at, status, priority)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                (site_id, name, discount_type, discount_value, currency, scope_type, scope_id, channel, customer_segment, starts_at, ends_at, status, priority)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $this->requireSiteId($siteId),
                 $payload['name'],
@@ -123,6 +123,7 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                 $payload['scope'] ?? $payload['scope_type'] ?? 'product',
                 $payload['scope_id'] ?? $payload['variant_id'] ?? $payload['product_id'] ?? $payload['category_id'] ?? $payload['brand_id'] ?? null,
                 $payload['channel'] ?? 'all',
+                isset($payload['customer_segment']) && trim((string) $payload['customer_segment']) !== '' ? strtolower(trim((string) $payload['customer_segment'])) : null,
                 $payload['starts_at'] ?? null,
                 $payload['ends_at'] ?? null,
                 $payload['status'] ?? 'active',
@@ -133,9 +134,15 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
     }
 
     /** @return array<string,mixed> */
-    public function pricingSnapshot(int $variantId, ?string $channel = null, ?DateTimeImmutable $at = null): array
+    /** @param array<string,mixed> $context @return array<string,mixed> */
+    public function pricingSnapshot(int $variantId, ?string $channel = null, ?DateTimeImmutable $at = null, array $context = []): array
     {
         $db = $this->database();
+        $at ??= new DateTimeImmutable();
+        $now = $at->format('Y-m-d H:i:s');
+        $currency = strtoupper(trim((string) ($context['currency'] ?? 'CHF')));
+        $segment = strtolower(trim((string) ($context['customer_segment'] ?? '')));
+        $segment = $segment === '' ? null : $segment;
         $row = $db->one(
             'SELECT
                 v.id AS variant_id,
@@ -156,16 +163,20 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                 sale.amount AS base_sale_price
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
-             LEFT JOIN business_product_base_prices purchase
-                ON purchase.product_id = p.id AND purchase.price_kind = \'purchase\'
-                   AND purchase.valid_from IS NULL
-                   AND purchase.valid_until IS NULL
-             LEFT JOIN business_product_base_prices sale
-                ON sale.product_id = p.id AND sale.price_kind = \'sale\'
-                   AND sale.valid_from IS NULL
-                   AND sale.valid_until IS NULL
+             LEFT JOIN business_product_base_prices purchase ON purchase.id = (
+                SELECT bp.id FROM business_product_base_prices bp
+                WHERE bp.product_id=p.id AND bp.price_kind=\'purchase\' AND bp.currency=?
+                  AND (bp.valid_from IS NULL OR bp.valid_from<=?) AND (bp.valid_until IS NULL OR bp.valid_until>=?)
+                ORDER BY CASE WHEN bp.valid_from IS NULL THEN 1 ELSE 0 END, bp.valid_from DESC, bp.id DESC LIMIT 1
+             )
+             LEFT JOIN business_product_base_prices sale ON sale.id = (
+                SELECT bp.id FROM business_product_base_prices bp
+                WHERE bp.product_id=p.id AND bp.price_kind=\'sale\' AND bp.currency=?
+                  AND (bp.valid_from IS NULL OR bp.valid_from<=?) AND (bp.valid_until IS NULL OR bp.valid_until>=?)
+                ORDER BY CASE WHEN bp.valid_from IS NULL THEN 1 ELSE 0 END, bp.valid_from DESC, bp.id DESC LIMIT 1
+             )
              WHERE v.id = ? AND v.archived_at IS NULL AND p.archived_at IS NULL',
-            [$variantId]
+            [$currency, $now, $now, $currency, $now, $now, $variantId]
         );
         if ($row === null) {
             throw new InvalidArgumentException('business.catalog.variant_not_found');
@@ -185,7 +196,9 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
         return [
             'variant' => $this->castPricingRow($row),
             'adjustments' => $adjustments,
-            'offers' => $this->activeOffers((int) $row['site_id'], (int) $row['product_id'], $variantId, isset($row['brand_id']) ? (int) $row['brand_id'] : null, isset($row['category_id']) ? (int) $row['category_id'] : null, $channel, $at ?? new DateTimeImmutable()),
+            'context' => ['currency' => $currency, 'channel' => $channel ?? 'all', 'customer_segment' => $segment, 'at' => $now],
+            'price_rules' => $this->activePriceRules((int) $row['site_id'], (int) $row['product_id'], $variantId, $currency, $channel, $segment, $at),
+            'offers' => $this->activeOffers((int) $row['site_id'], (int) $row['product_id'], $variantId, isset($row['brand_id']) ? (int) $row['brand_id'] : null, isset($row['category_id']) ? (int) $row['category_id'] : null, $channel, $currency, $segment, $at),
         ];
     }
 
@@ -230,7 +243,7 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
     }
 
     /** @return list<array<string,mixed>> */
-    private function activeOffers(int $siteId, int $productId, int $variantId, ?int $brandId, ?int $categoryId, ?string $channel, DateTimeImmutable $at): array
+    private function activeOffers(int $siteId, int $productId, int $variantId, ?int $brandId, ?int $categoryId, ?string $channel, string $currency, ?string $segment, DateTimeImmutable $at): array
     {
         $now = $at->format('Y-m-d H:i:s');
         $rows = $this->database()->all(
@@ -240,6 +253,8 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                AND status = \'active\'
                AND archived_at IS NULL
                AND (channel = \'all\' OR channel = ?)
+               AND (currency IS NULL OR currency = ?)
+               AND (customer_segment IS NULL OR customer_segment = ?)
                AND (starts_at IS NULL OR starts_at <= ?)
                AND (ends_at IS NULL OR ends_at >= ?)
                AND (
@@ -248,10 +263,36 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
                  OR (scope_type = \'category\' AND scope_id = ?)
                  OR (scope_type = \'brand\' AND scope_id = ?)
                )
-             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC, priority ASC, id ASC',
-            [$siteId, $channel ?? 'all', $now, $now, $productId, $variantId, $categoryId ?? 0, $brandId ?? 0]
+             ORDER BY CASE scope_type WHEN \'variant\' THEN 0 WHEN \'product\' THEN 1 WHEN \'category\' THEN 2 ELSE 3 END ASC,
+                      CASE WHEN customer_segment IS NULL THEN 1 ELSE 0 END,
+                      CASE WHEN channel = \'all\' THEN 1 ELSE 0 END,
+                      priority ASC, id ASC',
+            [$siteId, $channel ?? 'all', $currency, $segment, $now, $now, $productId, $variantId, $categoryId ?? 0, $brandId ?? 0]
         );
         return array_map(fn(array $row): array => $this->castPricingRow($row), $rows);
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function activePriceRules(int $siteId, int $productId, int $variantId, string $currency, ?string $channel, ?string $segment, DateTimeImmutable $at): array
+    {
+        $now = $at->format('Y-m-d H:i:s');
+        return array_map(fn(array $row): array => $this->castPricingRow($row), $this->database()->all(
+            'SELECT pli.*, pl.name AS price_list_name, pl.currency, pl.channel, pl.customer_segment,
+                    pl.priority AS list_priority,
+                    CASE WHEN pli.variant_id IS NOT NULL THEN 0 ELSE 1 END AS target_rank,
+                    CASE WHEN pl.customer_segment IS NOT NULL THEN 0 ELSE 1 END AS segment_rank,
+                    CASE WHEN pl.channel <> \'all\' THEN 0 ELSE 1 END AS channel_rank
+             FROM business_price_list_items pli
+             INNER JOIN business_price_lists pl ON pl.id=pli.price_list_id
+             WHERE pl.site_id=? AND pl.currency=? AND pl.status=\'active\' AND pl.archived_at IS NULL
+               AND pli.archived_at IS NULL AND pli.product_id=? AND (pli.variant_id IS NULL OR pli.variant_id=?)
+               AND (pl.channel=\'all\' OR pl.channel=?)
+               AND (pl.customer_segment IS NULL OR pl.customer_segment=?)
+               AND (pl.starts_at IS NULL OR pl.starts_at<=?) AND (pl.ends_at IS NULL OR pl.ends_at>=?)
+               AND (pli.starts_at IS NULL OR pli.starts_at<=?) AND (pli.ends_at IS NULL OR pli.ends_at>=?)
+             ORDER BY target_rank, segment_rank, channel_rank, pl.priority, pli.priority, pl.id, pli.id',
+            [$siteId, $currency, $productId, $variantId, $channel ?? 'all', $segment, $now, $now, $now, $now]
+        ));
     }
 
     private function setBasePrice(int $productId, string $priceKind, mixed $amount, string $currency, bool $taxIncluded): void
@@ -273,12 +314,12 @@ class BusinessCatalogPricingRepository extends BusinessRepositoryBase
     /** @param array<string,mixed> $row @return array<string,mixed> */
     private function castPricingRow(array $row): array
     {
-        foreach (['id', 'site_id', 'product_id', 'variant_id', 'stock_quantity'] as $key) {
+        foreach (['id', 'site_id', 'product_id', 'variant_id', 'stock_quantity', 'price_list_id', 'priority', 'list_priority', 'target_rank', 'segment_rank', 'channel_rank'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (int) $row[$key];
             }
         }
-        foreach (['base_purchase_price', 'base_sale_price', 'adjustment_value', 'offer_value', 'discount_value'] as $key) {
+        foreach (['base_purchase_price', 'base_sale_price', 'adjustment_value', 'offer_value', 'discount_value', 'compare_at_amount'] as $key) {
             if (array_key_exists($key, $row) && $row[$key] !== null) {
                 $row[$key] = (float) $row[$key];
             }

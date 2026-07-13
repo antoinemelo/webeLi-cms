@@ -1,0 +1,45 @@
+{
+  "contract": "public.sale.cart.show.v1",
+  "kind": "schema",
+  "summary": "Lire un panier e-commerce public.",
+  "description": "Recharge un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé.",
+  "method": "GET",
+  "path": "/api/v1/sale/channels/{code}/cart/{token}",
+  "source": "sale_carts + sale_cart_lines",
+  "security": "Public endpoint: no bearer token is required; the opaque cart token is required.",
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$", "description": "Code du canal e-commerce public."},
+    "token": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9_-]{32,128}$", "description": "Token opaque du panier."}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["cart"],
+          "properties": {"cart": {"$ref": "#/components/schemas/PublicSaleCart"}},
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal ou panier public introuvable."}
+  ],
+  "examples": {
+    "response": {
+      "data": {
+        "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []}
+      },
+      "meta": {"contract": "public.sale.cart.show.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

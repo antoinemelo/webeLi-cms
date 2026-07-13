@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-13
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/views/modules/SaleView.vue
@@ -31,7 +31,8 @@ Les permissions principales sont :
 - `sale.read` pour consulter le tableau de bord ;
 - `sale.orders.read` et `sale.orders.manage` pour lire ou gerer commandes et paniers ;
 - `sale.pos.use` pour utiliser la caisse ;
-- `sale.cash.manage` pour ouvrir et fermer une session de caisse ;
+- `sale.pos.sessions.open` et `sale.pos.sessions.close` pour ouvrir et fermer une session de caisse ;
+- `sale.pos.cash.correct`, `sale.pos.discounts.manage`, `sale.pos.refunds.manage` et `sale.pos.receipts.reprint` pour les actions POS sensibles ;
 - `sale.payments.read` et `sale.payments.manage` pour consulter ou enregistrer des paiements ;
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
@@ -46,7 +47,7 @@ Un canal definit le contexte de vente :
 - `pos` : vente en caisse ;
 - `ecommerce` : API publique optionnelle, inactive tant qu'un canal n'est pas actif et public.
 
-Les canaux portent la devise, le mode de taxe et l'etat public. Le seed installe `admin-manual`, `pos-main` et `web-main`, mais `web-main` reste en brouillon et non public par defaut.
+Les canaux portent la devise, le mode de taxe et l'etat public. Le seed de développement installe `admin-manual`, `pos-main` et un canal `web-main` actif/public afin de permettre les tests e-commerce. En production, les routes API publiques des modules restent désactivées tant que `APP_PUBLIC_API_MODULE_ROUTES=1` n'est pas configuré explicitement.
 
 ## Tableau de bord
 
@@ -68,7 +69,7 @@ Au moment du checkout, Vente copie le SKU, le nom produit, le nom variante, les 
 
 Les paiements v1 sont locaux : cash, carte manuelle, terminal externe, virement ou provider de test. Ils ne declenchent pas encore de paiement online complet. Un paiement ne peut pas depasser le total restant de la commande.
 
-Pour le POS cash, une session de caisse ouverte est requise. La cloture calcule le cash attendu, le montant compte et l'ecart.
+Pour le POS, une session de caisse ouverte par l'opérateur est requise. La clôture calcule le cash attendu, le montant compté et l'écart, avec justification obligatoire si l'écart est non nul.
 
 ## Recus
 
@@ -77,6 +78,8 @@ Une vente POS retourne un recu lisible par l'interface. Le recu utilise les snap
 ## Annuler et rembourser
 
 Annuler une commande change le statut de commande et tente de liberer les reservations non consommees. Un remboursement est separe du paiement original : il cree une transaction de type `refund`, met a jour le montant rembourse et conserve la trace du paiement source.
+
+Les statuts de panier, commande, paiement, fulfillment, retour et remboursement suivent des machines distinctes. Chaque transition est historisée avec un identifiant de corrélation. Après validation, les snapshots produit, client, adresses et méthode de livraison sont immuables ; une modification ultérieure du PIM ou du CRM ne réécrit jamais la commande.
 
 ## Rapports, imports et exports
 

@@ -665,7 +665,7 @@ final class BusinessCatalogApiController
     private function exportFilters(): array
     {
         $filters = [];
-        foreach (['channel', 'quality'] as $key) {
+        foreach (['channel', 'status', 'quality'] as $key) {
             if (array_key_exists($key, $this->request->query)) {
                 $filters[$key] = $this->request->query[$key];
             }

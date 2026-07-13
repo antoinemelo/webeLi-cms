@@ -16,6 +16,11 @@ SELECT s.id, 'de', 'de-CH', '/de', 'de-CH', 'fr', 0, 1, 3 FROM sites s WHERE s.s
 INSERT INTO site_domains(site_id, host, base_path, scheme, is_primary, is_active, enforce_https)
 SELECT id, 'webe.li', '', 'https', 1, 1, 1 FROM sites WHERE site_key='main';
 
+INSERT INTO cms_sales_channel_storefronts(channel_id,site_id,domain_id,route_prefix,is_default,status)
+SELECT 3,s.id,d.id,'/',1,'active'
+FROM sites s JOIN site_domains d ON d.site_id=s.id AND d.is_primary=1
+WHERE s.site_key='main';
+
 INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json) VALUES
 ('default', 'Default Theme', '2.0.0', 1, 1, '{"path":"frontend/theme-default","supports":{"custom_blocks":true,"seo_meta_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"system","color_background":"#fbfcfe","color_surface":"#ffffff","color_text":"#102033","color_muted":"#627086","color_primary":"#1b5fc1","color_accent":"#ffb21e","main_heading_font_family":"heading","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),
 ('aurora', 'Aurora Fullscreen', '1.0.0', 0, 1, '{"path":"frontend/theme-aurora","supports":{"custom_blocks":true,"seo_meta_preview":true,"fullscreen_hero":true,"theme_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"serif","color_background":"#fbf7ef","color_surface":"#fffaf2","color_text":"#162026","color_muted":"#66747d","color_primary":"#13242b","color_accent":"#ef8f4e","main_heading_font_family":"arial","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),
@@ -46,6 +51,14 @@ INSERT INTO editor_block_types(block_type, label, category, schema_json, sort_or
 ('form', 'Formulaire', 'module', '{"fields":["form_key","title","intro","layout"],"required":["form_key"],"search":["title","intro","form_key"]}', 110),
 ('plan', 'Plan', 'navigation', '{"fields":["title","source","taxonomy_key","limit","show_pagination","page_param"],"sources":["pages","articles","taxonomies"],"search":["title"]}', 120),
 ('articles', 'Articles', 'content', '{"fields":["title","limit","category","tag","show_more_button","more_label"],"search":["title","more_label"]}', 130);
+
+INSERT OR IGNORE INTO editor_block_types(block_type,label,category,schema_json,sort_order) VALUES
+('featured_product','Produit vedette','commerce','{"fields":["product_id","layout","show_price","show_availability","cta_label"],"required":["product_id"]}',200),
+('product_card','Carte produit','commerce','{"fields":["product_id","show_price","show_availability","cta_label"],"required":["product_id"]}',201),
+('product_grid','Grille produits','commerce','{"fields":["product_ids","collection_id","columns","limit","sort"],"required_any":[["product_ids","collection_id"]]}',202),
+('collection_grid','Grille collections','commerce','{"fields":["collection_ids","columns","limit"]}',203),
+('product_detail','Détail produit','commerce','{"fields":["product_id","show_media","show_variants","show_description"],"required":["product_id"]}',204),
+('add_to_cart','Ajout au panier','commerce','{"fields":["sellable_id","quantity","label"],"required":["sellable_id"]}',205);
 
 INSERT INTO content_types(module_id, type_key, name, singular_label, plural_label, has_layout, has_taxonomies, frontend_template)
 SELECT id, 'page', 'Page', 'Page', 'Pages', 1, 1, 'page.twig' FROM modules WHERE module_key='pages';
@@ -264,3 +277,13 @@ ON CONFLICT(site_id, resource_type, resource_subtype, language_code) WHERE resou
 
 
 INSERT INTO site_settings(site_id, namespace, setting_key, value_json, is_public) VALUES (1, 'api', 'cors_allowed_origins', '[]', 0);
+
+-- Product 1 is the deterministic first Business demo product (vol-decouverte).
+-- The cross-database reference is validated and projected by b0_db_seed.py.
+INSERT OR IGNORE INTO business_product_content_links(
+    site_id, product_id, content_entry_id, relation_type, locale, is_canonical, status, seo_config_json
+)
+SELECT 1, 1, ce.id, 'storytelling', NULL, 1, 'active', '{"schema_type":"Service"}'
+FROM content_entries ce
+WHERE ce.site_id = 1 AND ce.entry_key = 'home'
+LIMIT 1;

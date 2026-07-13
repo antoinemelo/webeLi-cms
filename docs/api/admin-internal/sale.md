@@ -5,7 +5,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-10
+last_verified: 2026-07-13
 source_of_truth: contract
 source_paths:
   - backend/src/Modules/Sale/SaleModuleProvider.php
@@ -77,16 +77,22 @@ Cette surface alimente le back-office Vente. Elle exige une session admin, le co
 | GET | `/admin/api/sale/pos/catalog` | `sale.pos.use` |
 | GET | `/admin/api/sale/pos/variants` | `sale.pos.use` |
 | GET | `/admin/api/sale/pos/registers` | `sale.pos.use` |
-| POST | `/admin/api/sale/pos/sessions/open` | `sale.cash.manage` |
-| POST | `/admin/api/sale/pos/sessions/{id}/close` | `sale.cash.manage` |
+| PATCH | `/admin/api/sale/pos/registers/{id}` | `sale.pos.manage` |
+| POST | `/admin/api/sale/pos/sessions/open` | `sale.pos.sessions.open` |
+| POST | `/admin/api/sale/pos/sessions/{id}/close` | `sale.pos.sessions.close` |
+| POST | `/admin/api/sale/pos/sessions/{id}/movements` | `sale.pos.cash.correct` |
 | POST | `/admin/api/sale/pos/carts` | `sale.pos.use` |
 | POST | `/admin/api/sale/pos/carts/{id}/lines` | `sale.pos.use` |
 | PATCH | `/admin/api/sale/pos/carts/{id}/lines/{line_id}` | `sale.pos.use` |
 | DELETE | `/admin/api/sale/pos/carts/{id}/lines/{line_id}` | `sale.pos.use` |
-| POST | `/admin/api/sale/pos/carts/{id}/adjustments` | `sale.pos.use` |
+| POST | `/admin/api/sale/pos/carts/{id}/adjustments` | `sale.pos.discounts.manage` |
 | POST | `/admin/api/sale/pos/checkout` | `sale.pos.use` |
 | GET | `/admin/api/sale/pos/orders/{id}/receipt` | `sale.pos.use` |
+| POST | `/admin/api/sale/pos/orders/{id}/receipt/reprint` | `sale.pos.receipts.reprint` |
 | POST | `/admin/api/sale/pos/orders/{id}/receipt/email` | `sale.pos.use` |
+| POST | `/admin/api/sale/pos/orders/{id}/returns` | `sale.pos.refunds.manage` |
+
+Le bootstrap retourne `offline_supported=false`. Une vente requiert une session appartenant à l'opérateur courant et un moyen autorisé par la caisse. La clôture exige `difference_justification` lorsque le comptage diffère de l'attendu ; une réimpression exige `reason`.
 
 ## Stock
 

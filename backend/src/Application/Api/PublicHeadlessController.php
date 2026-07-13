@@ -10,6 +10,7 @@ use App\Application\PublicApi\PublicCookieConsentApiHandler;
 use App\Application\PublicApi\PublicCatalogApiHandler;
 use App\Application\PublicApi\PosCatalogApiHandler;
 use App\Application\PublicApi\PublicSaleApiHandler;
+use App\Application\PublicApi\PublicCustomerAccountApiHandler;
 use App\Application\PublicApi\PublicFormApiHandler;
 use App\Application\PublicApi\PublicSearchApiHandler;
 use App\Application\PublicApi\PublicTaxonomyApiHandler;
@@ -27,6 +28,7 @@ final class PublicHeadlessController
         private readonly PublicCatalogApiHandler $catalog,
         private readonly PosCatalogApiHandler $posCatalog,
         private readonly PublicSaleApiHandler $sale,
+        private readonly PublicCustomerAccountApiHandler $customer,
     ) {}
 
     public function health(): Response { return $this->api->health(); }
@@ -53,6 +55,9 @@ final class PublicHeadlessController
     public function catalogProducts(): Response { return $this->catalog->products(); }
     public function catalogProduct(string $slug): Response { return $this->catalog->product($slug); }
     public function catalogVariant(string|int $id): Response { return $this->catalog->variant($id); }
+    public function storefrontProducts(): Response { return $this->catalog->storefrontProducts(); }
+    public function storefrontProduct(string $slug): Response { return $this->catalog->storefrontProduct($slug); }
+    public function storefrontCollections(): Response { return $this->catalog->storefrontCollections(); }
     public function posCatalogBootstrap(): Response { return $this->posCatalog->bootstrap(); }
     public function posCatalogProducts(): Response { return $this->posCatalog->products(); }
     public function posCatalogVariants(): Response { return $this->posCatalog->variants(); }
@@ -64,5 +69,22 @@ final class PublicHeadlessController
     public function saleCartLineStore(string $code, string $token): Response { return $this->sale->addLine($code, $token); }
     public function saleCartLineUpdate(string $code, string $token, string|int $line_id): Response { return $this->sale->updateLine($code, $token, $line_id); }
     public function saleCartLineDelete(string $code, string $token, string|int $line_id): Response { return $this->sale->deleteLine($code, $token, $line_id); }
+    public function saleCheckoutUpdate(string $code, string $token): Response { return $this->sale->updateCheckout($code, $token); }
+    public function saleCartAbandon(string $code, string $token): Response { return $this->sale->abandonCart($code, $token); }
     public function saleCheckout(string $code): Response { return $this->sale->checkout($code); }
+    public function salePaymentReturn(): Response { return $this->sale->paymentReturn(); }
+    public function salePaymentSandbox(string $reference): Response { return $this->sale->sandbox($reference); }
+    public function salePaymentSandboxSimulate(string $reference): Response { return $this->sale->simulateSandbox($reference); }
+    public function salePaymentWebhook(string $provider): Response { return $this->sale->paymentWebhook($provider); }
+    public function customerRegister(): Response { return $this->customer->register(); }
+    public function customerLogin(): Response { return $this->customer->login(); }
+    public function customerLogout(): Response { return $this->customer->logout(); }
+    public function customerMe(): Response { return $this->customer->me(); }
+    public function customerProfileUpdate(): Response { return $this->customer->updateProfile(); }
+    public function customerOrderClaim(): Response { return $this->customer->claimOrder(); }
+    public function customerOrders(): Response { return $this->customer->orders(); }
+    public function customerOrder(string|int $id): Response { return $this->customer->order($id); }
+    public function customerAddresses(): Response { return $this->customer->addresses(); }
+    public function customerAddressStore(): Response { return $this->customer->storeAddress(); }
+    public function customerReturnStore(string|int $id): Response { return $this->customer->requestReturn($id); }
 }

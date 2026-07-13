@@ -1,0 +1,21 @@
+{
+  "contract": "public.sale.payment.webhook.v1",
+  "kind": "schema",
+  "summary": "Recevoir un webhook de paiement provider.",
+  "description": "Endpoint serveur-à-serveur. Vérifie HMAC SHA-256, timestamp (tolérance 5 minutes), identifiant d'événement et ordre avant toute transition locale.",
+  "method": "POST",
+  "path": "/api/v1/sale/payments/webhooks/{provider}",
+  "security": "Signed webhook; X-Sale-Signature is mandatory.",
+  "headers": {"X-Sale-Signature": {"type": "string", "required": true, "description": "t=<unix>,v1=<HMAC_SHA256(timestamp.raw_body)>"}},
+  "path_params": {"provider": {"type": "string", "required": true}},
+  "request_body": {"required": true, "schema": {"type": "object", "required": ["id", "type", "provider_reference", "occurred_at"], "properties": {
+    "id": {"type": "string"}, "type": {"type": "string"}, "provider_reference": {"type": "string"},
+    "provider_transaction_id": {"type": "string"}, "occurred_at": {"type": "string", "format": "date-time"},
+    "amount_minor": {"type": "integer", "minimum": 0}, "currency": {"type": "string"}, "data": {"type": "object", "additionalProperties": true}
+  }, "additionalProperties": false}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {
+    "data": {"type": "object", "required": ["processed"], "properties": {"processed": {"type": "boolean"}, "duplicate": {"type": "boolean"}, "ignored_out_of_order": {"type": "boolean"}, "event_id": {"type": "string"}}},
+    "meta": {"$ref": "#/components/schemas/PublicMeta"}
+  }}},
+  "errors": [{"code": "VALIDATION_FAILED", "status": 422, "description": "Signature, timestamp, provider ou événement invalide."}]
+}

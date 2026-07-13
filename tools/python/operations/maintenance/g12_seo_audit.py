@@ -305,12 +305,12 @@ def audit(con: sqlite3.Connection) -> dict[str, Any]:
         WHERE LOWER(COALESCE(sm.meta_robots,'index,follow')) LIKE '%noindex%'
     """))
     technical_checks.append({
-        'code': 'search.noindex_filtered_at_runtime',
+        'code': 'search.noindex_absent_from_internal_index',
         'severity': 'medium',
-        'passed': True,
+        'passed': not noindex_docs,
         'count': len(noindex_docs),
-        'message': 'Documents noindex conservés dans la projection atomique search_documents et filtrés à la lecture',
-        'recommendation': 'Conserver la jointure avec seo_metadata.meta_robots dans les requêtes de recherche publiques.'
+        'message': 'Documents noindex présents dans l’index interne search_documents',
+        'recommendation': 'Reconstruire les projections publiques afin de retirer ces contenus de l’index de recherche.'
     })
 
     for row in con.execute("""

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Sale;
 
+use App\Application\Capability\DryRunResult;
+use App\Application\Capability\ModuleCapabilityHandlerProvider;
+use App\Application\Capability\ModuleCapabilityProvider;
 use App\Module\ModuleProvider;
 use App\Modules\Sale\Contracts\SaleAiContextContracts;
 use App\Modules\Sale\Contracts\SaleIntegrationEventContracts;
@@ -15,7 +18,7 @@ use App\Modules\Sale\Contracts\SaleIntegrationEventContracts;
  * recus, retours, remboursements et evenements dans sale.sqlite. Le catalogue
  * et le CRM restent fournis par Operations via des identifiants et snapshots.
  */
-final class SaleModuleProvider implements ModuleProvider
+final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvider, ModuleCapabilityHandlerProvider
 {
     public function key(): string { return 'sale'; }
 
@@ -54,13 +57,22 @@ final class SaleModuleProvider implements ModuleProvider
             ['key' => 'sale.payments.read', 'name' => 'Lire les paiements', 'description' => 'Consulter moyens de paiement, intentions, transactions et allocations.'],
             ['key' => 'sale.payments.manage', 'name' => 'Gerer les paiements', 'description' => 'Enregistrer, capturer, annuler ou rapprocher des paiements.'],
             ['key' => 'sale.refunds.manage', 'name' => 'Gerer les remboursements', 'description' => 'Creer et suivre les remboursements sans modifier la transaction originale.'],
+            ['key' => 'sale.returns.manage', 'name' => 'Gerer les retours', 'description' => 'Créer, approuver, recevoir et terminer les retours physiques.'],
             ['key' => 'sale.pos.use', 'name' => 'Utiliser le POS', 'description' => 'Utiliser une caisse et finaliser une vente POS.'],
             ['key' => 'sale.pos.manage', 'name' => 'Gerer le POS', 'description' => 'Configurer registres, terminaux et appareils de caisse.'],
             ['key' => 'sale.cash.manage', 'name' => 'Gerer la caisse', 'description' => 'Ouvrir, fermer et ajuster les sessions de caisse.'],
+            ['key' => 'sale.pos.sessions.open', 'name' => 'Ouvrir une caisse', 'description' => 'Ouvrir une session sur une caisse et un appareil autorises.'],
+            ['key' => 'sale.pos.sessions.close', 'name' => 'Fermer une caisse', 'description' => 'Compter et fermer une session de caisse avec justification des ecarts.'],
+            ['key' => 'sale.pos.discounts.manage', 'name' => 'Accorder une remise POS', 'description' => 'Appliquer une remise ou une majoration manuelle au panier POS.'],
+            ['key' => 'sale.pos.refunds.manage', 'name' => 'Rembourser au POS', 'description' => 'Effectuer un retour ou remboursement POS lie a la commande originale.'],
+            ['key' => 'sale.pos.cash.correct', 'name' => 'Corriger le cash POS', 'description' => 'Enregistrer une entree, sortie ou correction de cash auditee.'],
+            ['key' => 'sale.pos.receipts.reprint', 'name' => 'Reimprimer un ticket POS', 'description' => 'Reimprimer un ticket avec motif et audit operateur.'],
             ['key' => 'sale.stock.read', 'name' => 'Lire le stock Vente', 'description' => 'Consulter les stocks transactionnels, disponibilites et reservations Vente.'],
             ['key' => 'sale.stock.manage', 'name' => 'Gerer le stock Vente', 'description' => 'Creer reservations, mouvements et corrections de stock transactionnel.'],
             ['key' => 'sale.reports.read', 'name' => 'Lire les rapports Vente', 'description' => 'Consulter les rapports commerciaux et POS.'],
             ['key' => 'sale.settings.manage', 'name' => 'Gerer les reglages Vente', 'description' => 'Configurer canaux, moyens de paiement et reglages du module Vente.'],
+            ['key' => 'sale.channels.manage', 'name' => 'Gérer les canaux de vente', 'description' => 'Résoudre, configurer et contrôler les références SalesChannel intermodules.'],
+            ['key' => 'sale.customer_accounts.manage', 'name' => 'Fusionner les comptes clients', 'description' => 'Réaliser une fusion IAM–CRM–Vente contrôlée et auditée.'],
         ];
     }
 
@@ -74,7 +86,7 @@ final class SaleModuleProvider implements ModuleProvider
                 'sellable_catalog' => 'optional_port',
                 'customer_snapshot' => 'optional_port',
                 'crm_activity_sink' => 'planned_optional_port',
-                'cms_account_bridge' => 'planned_optional_port',
+                'cms_account_bridge' => 'active_iam_crm_sale_port',
             ],
             'defaults' => [
                 'currency' => 'CHF',
@@ -82,6 +94,98 @@ final class SaleModuleProvider implements ModuleProvider
                 'public_ecommerce_enabled' => false,
                 'payment_providers' => ['cash', 'manual_card', 'external_terminal', 'bank_transfer', 'test'],
             ],
+        ];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function capabilities(): array
+    {
+        return [
+            $this->capability('catalog.product.read', 'Lire le catalogue vendable', 'port', 'catalog.product_reader.v1', 'sale.read', 100, [
+                'source' => 'SellableCatalogPort',
+                'foreign_tables' => [],
+                'mutates' => false,
+            ]),
+            $this->capability('pricing.calculate', 'Calculer un prix de vente', 'port', 'sale.pricing_calculator.v1', 'sale.orders.read', 110, [
+                'source' => 'SalePricingService',
+                'foreign_tables' => [],
+                'mutates' => false,
+            ]),
+            $this->capability('cart.validate', 'Valider un panier Vente', 'validator', 'sale.cart_validator.v1', 'sale.orders.manage', 120, [
+                'foreign_tables' => [],
+                'mutates_order' => false,
+                'mutates_payment' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'cart_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['cart_id'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('checkout.validate', 'Valider un checkout Vente', 'validator', 'sale.checkout_validator.v1', 'sale.orders.manage', 130, [
+                'foreign_tables' => [],
+                'mutates_order' => false,
+                'mutates_payment' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'cart_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['cart_id'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('payment.provider', 'Provider de paiement Vente', 'provider', 'sale.payment_provider.v1', 'sale.payments.manage', 140, [
+                'registry' => 'PaymentProviderRegistry',
+                'foreign_tables' => [],
+                'mutates_order' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'provider' => ['type' => 'string'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['provider'],
+                'additionalProperties' => false,
+            ]),
+            $this->capability('order.after_place', 'Réagir après placement de commande', 'event', 'sale.order_after_place.v1', 'sale.orders.manage', 150, [
+                'transport' => 'outbox',
+                'foreign_tables' => [],
+                'mutates_order' => false,
+            ], [
+                'type' => 'object',
+                'properties' => [
+                    'order_id' => ['type' => 'integer'],
+                    'contract' => ['type' => 'string'],
+                ],
+                'required' => ['order_id'],
+                'additionalProperties' => false,
+            ]),
+        ];
+    }
+
+    /** @return array<string,callable> */
+    public function capabilityHandlers(): array
+    {
+        return [
+            'cart.validate' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'cart_id' => (int) $input['cart_id'],
+                'scope' => 'sale',
+            ], [], ['Validation déclarative uniquement; aucune mutation de commande.']),
+            'checkout.validate' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'cart_id' => (int) $input['cart_id'],
+                'scope' => 'sale',
+            ], [], ['Validation déclarative uniquement; création de commande réservée au workflow checkout.']),
+            'payment.provider' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'provider' => (string) $input['provider'],
+                'contract' => 'sale.payment_provider.v1',
+            ], [], ['Provider vérifié sans capture, autorisation ni transaction.']),
+            'order.after_place' => fn(array $input, string $mode): array => DryRunResult::make(true, false, [
+                'order_id' => (int) $input['order_id'],
+                'transport' => 'outbox',
+            ], [], ['Événement après commande publié via outbox; pas de mutation synchrone externe.']),
         ];
     }
 
@@ -106,7 +210,7 @@ final class SaleModuleProvider implements ModuleProvider
             $this->blueprint('order', 'Commande', 'Commande validee comme snapshot transactionnel stable.', 'sale_orders', [
                 $this->field('order_number', 'Numero', 'text', 'identity', true, 'order_number'),
                 $this->enumField('source', 'Source', ['ecommerce', 'pos', 'admin'], 'identity', true, 'source'),
-                $this->enumField('status', 'Statut', ['draft', 'placed', 'confirmed', 'completed', 'cancelled'], 'identity', true, 'status'),
+                $this->enumField('status', 'Statut', ['draft', 'pending_payment', 'placed', 'confirmed', 'completed', 'cancelled'], 'identity', true, 'status'),
                 $this->enumField('payment_status', 'Paiement', ['unpaid', 'pending', 'authorized', 'partially_paid', 'paid', 'partially_refunded', 'refunded', 'failed'], 'payment', true, 'payment_status'),
                 $this->field('grand_total_minor', 'Total', 'money_minor', 'totals', true, 'grand_total_minor'),
                 $this->field('metadata_json', 'Metadonnees', 'json', 'audit', false, 'metadata_json'),
@@ -130,7 +234,7 @@ final class SaleModuleProvider implements ModuleProvider
                 $this->enumField('status', 'Statut', ['active', 'disabled', 'archived'], 'identity', true, 'status'),
             ], ['read' => 'sale.stock.read', 'create' => 'sale.stock.manage', 'update' => 'sale.stock.manage']),
             $this->blueprint('stock_movement', 'Mouvement stock', 'Journal immuable des changements de stock Vente.', 'sale_stock_movements', [
-                $this->enumField('movement_type', 'Type', ['initial', 'adjustment', 'reservation', 'release', 'sale', 'return', 'refund', 'correction'], 'identity', true, 'movement_type'),
+                $this->enumField('movement_type', 'Type', ['initial', 'receipt', 'issue', 'adjustment', 'correction', 'return', 'transfer_in', 'transfer_out', 'reservation', 'release', 'consumption'], 'identity', true, 'movement_type'),
                 $this->field('quantity', 'Quantite', 'number', 'quantity', true, 'quantity'),
                 $this->field('reference_type', 'Reference', 'text', 'reference', false, 'reference_type'),
                 $this->field('created_at', 'Cree le', 'datetime', 'audit', false, 'created_at', ['system' => true]),
@@ -178,6 +282,8 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('GET', '/admin/api/sale/dashboard', $c . 'dashboard'),
             $this->route('GET', '/admin/api/sale/channels', $c . 'channels'),
             $this->route('POST', '/admin/api/sale/channels', $c . 'storeChannel'),
+            $this->route('GET', '/admin/api/sale/channels/resolve', $c . 'resolveChannel'),
+            $this->route('GET', '/admin/api/sale/channels/integrity', $c . 'channelIntegrity'),
             $this->route('GET', '/admin/api/sale/channels/{id}', $c . 'showChannel'),
             $this->route('PATCH', '/admin/api/sale/channels/{id}', $c . 'updateChannel'),
             $this->route('POST', '/admin/api/sale/channels/{id}/archive', $c . 'archiveChannel'),
@@ -188,6 +294,7 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('PATCH', '/admin/api/sale/carts/{id}/lines/{line_id}', $c . 'updateCartLine'),
             $this->route('DELETE', '/admin/api/sale/carts/{id}/lines/{line_id}', $c . 'deleteCartLine'),
             $this->route('POST', '/admin/api/sale/carts/{id}/recalculate', $c . 'recalculateCart'),
+            $this->route('POST', '/admin/api/sale/carts/{id}/merge', $c . 'mergeCart'),
             $this->route('POST', '/admin/api/sale/carts/{id}/checkout', $c . 'checkoutCart'),
             $this->route('GET', '/admin/api/sale/orders', $c . 'orders'),
             $this->route('POST', '/admin/api/sale/orders', $c . 'storeOrder'),
@@ -197,6 +304,9 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('GET', '/admin/api/sale/orders/{id}/events', $c . 'orderEvents'),
             $this->route('GET', '/admin/api/sale/orders/{id}/receipt', $c . 'orderReceipt'),
             $this->route('GET', '/admin/api/sale/payments', $c . 'payments'),
+            $this->route('POST', '/admin/api/sale/payments/reconcile', $c . 'reconcilePayments'),
+            $this->route('POST', '/admin/api/sale/payments/expire', $c . 'expirePayments'),
+            $this->route('GET', '/admin/api/sale/payments/observability', $c . 'paymentObservability'),
             $this->route('GET', '/admin/api/sale/payment-methods', $c . 'paymentMethods'),
             $this->route('POST', '/admin/api/sale/payment-methods', $c . 'storePaymentMethod'),
             $this->route('POST', '/admin/api/sale/orders/{id}/payments', $c . 'storeOrderPayment'),
@@ -215,8 +325,10 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/sale/import/stock/apply', $c . 'applyStockImport'),
             $this->route('GET', '/admin/api/sale/pos/variants', $c . 'posVariants'),
             $this->route('GET', '/admin/api/sale/pos/registers', $c . 'posRegisters'),
+            $this->route('PATCH', '/admin/api/sale/pos/registers/{id}', $c . 'configurePosRegister'),
             $this->route('POST', '/admin/api/sale/pos/sessions/open', $c . 'openCashSession'),
             $this->route('POST', '/admin/api/sale/pos/sessions/{id}/close', $c . 'closeCashSession'),
+            $this->route('POST', '/admin/api/sale/pos/sessions/{id}/movements', $c . 'storeCashMovement'),
             $this->route('POST', '/admin/api/sale/pos/carts', $c . 'posStoreCart'),
             $this->route('POST', '/admin/api/sale/pos/carts/{id}/lines', $c . 'posAddCartLine'),
             $this->route('PATCH', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', $c . 'posUpdateCartLine'),
@@ -224,7 +336,9 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('POST', '/admin/api/sale/pos/carts/{id}/adjustments', $c . 'posSetCartAdjustment'),
             $this->route('POST', '/admin/api/sale/pos/checkout', $c . 'posCheckout'),
             $this->route('GET', '/admin/api/sale/pos/orders/{id}/receipt', $c . 'posOrderReceipt'),
+            $this->route('POST', '/admin/api/sale/pos/orders/{id}/receipt/reprint', $c . 'reprintPosOrderReceipt'),
             $this->route('POST', '/admin/api/sale/pos/orders/{id}/receipt/email', $c . 'posEmailReceipt'),
+            $this->route('POST', '/admin/api/sale/pos/orders/{id}/returns', $c . 'storePosReturn'),
             $this->route('GET', '/admin/api/sale/ai/schema', $c . 'aiSchema'),
             $this->route('GET', '/admin/api/sale/ai/orders/{id}/summary-context', $c . 'aiOrderSummaryContext'),
             $this->route('GET', '/admin/api/sale/ai/pos/day-summary-context', $c . 'aiPosDaySummaryContext'),
@@ -234,7 +348,15 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('GET', '/admin/api/sale/stock/items', $c . 'stockItems'),
             $this->route('POST', '/admin/api/sale/stock/adjustments', $c . 'stockAdjustments'),
             $this->route('GET', '/admin/api/sale/stock/movements', $c . 'stockMovements'),
+            $this->route('POST', '/admin/api/sale/stock/transfers', $c . 'transferStock'),
+            $this->route('POST', '/admin/api/sale/stock/reconciliation', $c . 'reconcileInventory'),
             $this->route('GET', '/admin/api/sale/returns', $c . 'returns'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/returns', $c . 'storeReturn'),
+            $this->route('POST', '/admin/api/sale/returns/{id}/transition', $c . 'transitionReturn'),
+            $this->route('GET', '/admin/api/sale/orders/{id}/timeline', $c . 'orderTimeline'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/customer-reconciliation', $c . 'reconcileOrderCustomer'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/payments/corrections', $c . 'correctOrderPayment'),
+            $this->route('POST', '/admin/api/sale/payment-intents/{id}/void', $c . 'voidPaymentIntent'),
             $this->route('GET', '/admin/api/sale/reports/daily', $c . 'dailyReport'),
             $this->route('GET', '/admin/api/sale/reports/orders', $c . 'ordersReport'),
             $this->route('GET', '/admin/api/sale/reports/channels', $c . 'channelsReport'),
@@ -243,6 +365,12 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('GET', '/admin/api/sale/reports/stock', $c . 'stockReport'),
             $this->route('GET', '/admin/api/sale/reports/refunds', $c . 'refundsReport'),
             $this->route('GET', '/admin/api/sale/settings', $c . 'settings'),
+            $this->route('GET', '/admin/api/sale/fulfillment', $c . 'fulfillmentConfiguration'),
+            $this->route('POST', '/admin/api/sale/fulfillment/methods', $c . 'saveFulfillmentMethod'),
+            $this->route('POST', '/admin/api/sale/fulfillment/zones', $c . 'saveFulfillmentZone'),
+            $this->route('GET', '/admin/api/sale/reports/taxes', $c . 'taxesReport'),
+            $this->route('GET', '/admin/api/sale/reports/fulfillment', $c . 'fulfillmentReport'),
+            $this->route('POST', '/admin/api/sale/customer-accounts/merge', $c . 'mergeCustomerAccounts'),
         ];
     }
 
@@ -260,7 +388,24 @@ final class SaleModuleProvider implements ModuleProvider
             $this->route('POST', '/api/v1/sale/channels/{code}/cart/{token}/lines', $c . 'saleCartLineStore'),
             $this->route('PATCH', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', $c . 'saleCartLineUpdate'),
             $this->route('DELETE', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', $c . 'saleCartLineDelete'),
+            $this->route('PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', $c . 'saleCheckoutUpdate'),
+            $this->route('DELETE', '/api/v1/sale/channels/{code}/cart/{token}', $c . 'saleCartAbandon'),
             $this->route('POST', '/api/v1/sale/channels/{code}/checkout', $c . 'saleCheckout'),
+            $this->route('GET', '/api/v1/sale/payments/return', $c . 'salePaymentReturn'),
+            $this->route('GET', '/api/v1/sale/payments/sandbox/{reference}', $c . 'salePaymentSandbox'),
+            $this->route('POST', '/api/v1/sale/payments/sandbox/{reference}/simulate', $c . 'salePaymentSandboxSimulate'),
+            $this->route('POST', '/api/v1/sale/payments/webhooks/{provider}', $c . 'salePaymentWebhook'),
+            $this->route('POST', '/api/v1/customer/accounts/register', $c . 'customerRegister'),
+            $this->route('POST', '/api/v1/customer/login', $c . 'customerLogin'),
+            $this->route('DELETE', '/api/v1/customer/logout', $c . 'customerLogout'),
+            $this->route('GET', '/api/v1/customer/me', $c . 'customerMe'),
+            $this->route('PATCH', '/api/v1/customer/me', $c . 'customerProfileUpdate'),
+            $this->route('POST', '/api/v1/customer/orders/claim', $c . 'customerOrderClaim'),
+            $this->route('GET', '/api/v1/customer/orders', $c . 'customerOrders'),
+            $this->route('GET', '/api/v1/customer/orders/{id}', $c . 'customerOrder'),
+            $this->route('GET', '/api/v1/customer/addresses', $c . 'customerAddresses'),
+            $this->route('POST', '/api/v1/customer/addresses', $c . 'customerAddressStore'),
+            $this->route('POST', '/api/v1/customer/orders/{id}/returns', $c . 'customerReturnStore'),
         ];
     }
 
@@ -281,6 +426,8 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.dashboard.v1', 'GET', '/admin/api/sale/dashboard', 'sale.read'),
             $this->contract('admin.sale.channels.index.v1', 'GET', '/admin/api/sale/channels', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.store.v1', 'POST', '/admin/api/sale/channels', 'sale.settings.manage'),
+            $this->contract('admin.sale.channels.resolve.v1', 'GET', '/admin/api/sale/channels/resolve', 'sale.channels.manage'),
+            $this->contract('admin.sale.channels.integrity.v1', 'GET', '/admin/api/sale/channels/integrity', 'sale.channels.manage'),
             $this->contract('admin.sale.channels.show.v1', 'GET', '/admin/api/sale/channels/{id}', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.update.v1', 'PATCH', '/admin/api/sale/channels/{id}', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.archive.v1', 'POST', '/admin/api/sale/channels/{id}/archive', 'sale.settings.manage'),
@@ -291,6 +438,7 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.carts.lines.update.v1', 'PATCH', '/admin/api/sale/carts/{id}/lines/{line_id}', 'sale.orders.manage'),
             $this->contract('admin.sale.carts.lines.delete.v1', 'DELETE', '/admin/api/sale/carts/{id}/lines/{line_id}', 'sale.orders.manage'),
             $this->contract('admin.sale.carts.recalculate.v1', 'POST', '/admin/api/sale/carts/{id}/recalculate', 'sale.orders.manage'),
+            $this->contract('admin.sale.carts.merge.v1', 'POST', '/admin/api/sale/carts/{id}/merge', 'sale.orders.manage'),
             $this->contract('admin.sale.carts.checkout.v1', 'POST', '/admin/api/sale/carts/{id}/checkout', 'sale.orders.manage'),
             $this->contract('admin.sale.orders.index.v1', 'GET', '/admin/api/sale/orders', 'sale.orders.read'),
             $this->contract('admin.sale.orders.store.v1', 'POST', '/admin/api/sale/orders', 'sale.orders.manage'),
@@ -300,6 +448,9 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.orders.events.v1', 'GET', '/admin/api/sale/orders/{id}/events', 'sale.orders.read'),
             $this->contract('admin.sale.orders.receipt.v1', 'GET', '/admin/api/sale/orders/{id}/receipt', 'sale.orders.read'),
             $this->contract('admin.sale.payments.index.v1', 'GET', '/admin/api/sale/payments', 'sale.payments.read'),
+            $this->contract('admin.sale.payments.reconcile.v1', 'POST', '/admin/api/sale/payments/reconcile', 'sale.payments.manage'),
+            $this->contract('admin.sale.payments.expire.v1', 'POST', '/admin/api/sale/payments/expire', 'sale.payments.manage'),
+            $this->contract('admin.sale.payments.observability.v1', 'GET', '/admin/api/sale/payments/observability', 'sale.payments.read'),
             $this->contract('admin.sale.payment_methods.index.v1', 'GET', '/admin/api/sale/payment-methods', 'sale.payments.read'),
             $this->contract('admin.sale.payment_methods.store.v1', 'POST', '/admin/api/sale/payment-methods', 'sale.payments.manage'),
             $this->contract('admin.sale.orders.payments.store.v1', 'POST', '/admin/api/sale/orders/{id}/payments', 'sale.payments.manage'),
@@ -318,16 +469,20 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.import.stock.apply.v1', 'POST', '/admin/api/sale/import/stock/apply', 'sale.stock.manage'),
             $this->contract('admin.sale.pos.variants.v1', 'GET', '/admin/api/sale/pos/variants', 'sale.pos.use'),
             $this->contract('admin.sale.pos.registers.v1', 'GET', '/admin/api/sale/pos/registers', 'sale.pos.use'),
-            $this->contract('admin.sale.pos.sessions.open.v1', 'POST', '/admin/api/sale/pos/sessions/open', 'sale.cash.manage'),
-            $this->contract('admin.sale.pos.sessions.close.v1', 'POST', '/admin/api/sale/pos/sessions/{id}/close', 'sale.cash.manage'),
+            $this->contract('admin.sale.pos.registers.update.v1', 'PATCH', '/admin/api/sale/pos/registers/{id}', 'sale.pos.manage'),
+            $this->contract('admin.sale.pos.sessions.open.v1', 'POST', '/admin/api/sale/pos/sessions/open', 'sale.pos.sessions.open'),
+            $this->contract('admin.sale.pos.sessions.close.v1', 'POST', '/admin/api/sale/pos/sessions/{id}/close', 'sale.pos.sessions.close'),
+            $this->contract('admin.sale.pos.sessions.movements.store.v1', 'POST', '/admin/api/sale/pos/sessions/{id}/movements', 'sale.pos.cash.correct'),
             $this->contract('admin.sale.pos.carts.store.v1', 'POST', '/admin/api/sale/pos/carts', 'sale.pos.use'),
             $this->contract('admin.sale.pos.carts.lines.store.v1', 'POST', '/admin/api/sale/pos/carts/{id}/lines', 'sale.pos.use'),
             $this->contract('admin.sale.pos.carts.lines.update.v1', 'PATCH', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', 'sale.pos.use'),
             $this->contract('admin.sale.pos.carts.lines.delete.v1', 'DELETE', '/admin/api/sale/pos/carts/{id}/lines/{line_id}', 'sale.pos.use'),
-            $this->contract('admin.sale.pos.carts.adjustments.store.v1', 'POST', '/admin/api/sale/pos/carts/{id}/adjustments', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.carts.adjustments.store.v1', 'POST', '/admin/api/sale/pos/carts/{id}/adjustments', 'sale.pos.discounts.manage'),
             $this->contract('admin.sale.pos.checkout.v1', 'POST', '/admin/api/sale/pos/checkout', 'sale.pos.use'),
             $this->contract('admin.sale.pos.receipt.v1', 'GET', '/admin/api/sale/pos/orders/{id}/receipt', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.receipt.reprint.v1', 'POST', '/admin/api/sale/pos/orders/{id}/receipt/reprint', 'sale.pos.receipts.reprint'),
             $this->contract('admin.sale.pos.receipt.email.v1', 'POST', '/admin/api/sale/pos/orders/{id}/receipt/email', 'sale.pos.use'),
+            $this->contract('admin.sale.pos.orders.returns.store.v1', 'POST', '/admin/api/sale/pos/orders/{id}/returns', 'sale.pos.refunds.manage'),
             $this->contract('admin.sale.ai.schema.v1', 'GET', '/admin/api/sale/ai/schema', 'sale.reports.read'),
             $this->contract('admin.sale.ai.order_summary_context.v1', 'GET', '/admin/api/sale/ai/orders/{id}/summary-context', 'sale.orders.read'),
             $this->contract('admin.sale.ai.pos_day_summary_context.v1', 'GET', '/admin/api/sale/ai/pos/day-summary-context', 'sale.reports.read'),
@@ -337,7 +492,15 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.stock.items.v1', 'GET', '/admin/api/sale/stock/items', 'sale.stock.read'),
             $this->contract('admin.sale.stock.adjustments.v1', 'POST', '/admin/api/sale/stock/adjustments', 'sale.stock.manage'),
             $this->contract('admin.sale.stock.movements.v1', 'GET', '/admin/api/sale/stock/movements', 'sale.stock.read'),
+            $this->contract('admin.sale.stock.transfers.v1', 'POST', '/admin/api/sale/stock/transfers', 'sale.stock.manage'),
+            $this->contract('admin.sale.stock.reconciliation.v1', 'POST', '/admin/api/sale/stock/reconciliation', 'sale.stock.manage'),
             $this->contract('admin.sale.returns.index.v1', 'GET', '/admin/api/sale/returns', 'sale.orders.read'),
+            $this->contract('admin.sale.orders.returns.store.v1', 'POST', '/admin/api/sale/orders/{id}/returns', 'sale.returns.manage'),
+            $this->contract('admin.sale.returns.transition.v1', 'POST', '/admin/api/sale/returns/{id}/transition', 'sale.returns.manage'),
+            $this->contract('admin.sale.orders.timeline.v1', 'GET', '/admin/api/sale/orders/{id}/timeline', 'sale.orders.read'),
+            $this->contract('admin.sale.orders.customer_reconciliation.v1', 'POST', '/admin/api/sale/orders/{id}/customer-reconciliation', 'sale.orders.manage'),
+            $this->contract('admin.sale.orders.payments.correction.v1', 'POST', '/admin/api/sale/orders/{id}/payments/corrections', 'sale.payments.manage'),
+            $this->contract('admin.sale.payment_intents.void.v1', 'POST', '/admin/api/sale/payment-intents/{id}/void', 'sale.payments.manage'),
             $this->contract('admin.sale.reports.daily.v1', 'GET', '/admin/api/sale/reports/daily', 'sale.reports.read'),
             $this->contract('admin.sale.reports.orders.v1', 'GET', '/admin/api/sale/reports/orders', 'sale.reports.read'),
             $this->contract('admin.sale.reports.channels.v1', 'GET', '/admin/api/sale/reports/channels', 'sale.reports.read'),
@@ -346,15 +509,69 @@ final class SaleModuleProvider implements ModuleProvider
             $this->contract('admin.sale.reports.stock.v1', 'GET', '/admin/api/sale/reports/stock', 'sale.reports.read'),
             $this->contract('admin.sale.reports.refunds.v1', 'GET', '/admin/api/sale/reports/refunds', 'sale.reports.read'),
             $this->contract('admin.sale.settings.v1', 'GET', '/admin/api/sale/settings', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.configuration.v1', 'GET', '/admin/api/sale/fulfillment', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.methods.store.v1', 'POST', '/admin/api/sale/fulfillment/methods', 'sale.settings.manage'),
+            $this->contract('admin.sale.fulfillment.zones.store.v1', 'POST', '/admin/api/sale/fulfillment/zones', 'sale.settings.manage'),
+            $this->contract('admin.sale.reports.taxes.v1', 'GET', '/admin/api/sale/reports/taxes', 'sale.reports.read'),
+            $this->contract('admin.sale.reports.fulfillment.v1', 'GET', '/admin/api/sale/reports/fulfillment', 'sale.reports.read'),
+            $this->contract('admin.sale.customer_accounts.merge.v1', 'POST', '/admin/api/sale/customer-accounts/merge', 'sale.customer_accounts.manage'),
             $this->contract('public.sale.channels.bootstrap.v1', 'GET', '/api/v1/sale/channels/{code}/bootstrap', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.show.v1', 'GET', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart/{token}/lines', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.lines.delete.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}', 'anonymous', 'headless'),
+            $this->contract('public.sale.checkout.update.v1', 'PATCH', '/api/v1/sale/channels/{code}/cart/{token}/checkout', 'anonymous', 'headless'),
+            $this->contract('public.sale.cart.abandon.v1', 'DELETE', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),
             $this->contract('public.sale.checkout.v1', 'POST', '/api/v1/sale/channels/{code}/checkout', 'anonymous', 'headless'),
+            $this->contract('public.sale.payment.return.v1', 'GET', '/api/v1/sale/payments/return', 'anonymous', 'headless'),
+            $this->contract('public.sale.payment.sandbox.v1', 'GET', '/api/v1/sale/payments/sandbox/{reference}', 'anonymous', 'headless'),
+            $this->contract('public.sale.payment.sandbox.simulate.v1', 'POST', '/api/v1/sale/payments/sandbox/{reference}/simulate', 'anonymous', 'headless'),
+            $this->contract('public.sale.payment.webhook.v1', 'POST', '/api/v1/sale/payments/webhooks/{provider}', 'anonymous', 'headless'),
+            $this->contract('public.customer.accounts.register.v1', 'POST', '/api/v1/customer/accounts/register', 'claim_proof', 'headless'),
+            $this->contract('public.customer.login.v1', 'POST', '/api/v1/customer/login', 'anonymous', 'headless'),
+            $this->contract('public.customer.logout.v1', 'DELETE', '/api/v1/customer/logout', 'customer_session', 'headless'),
+            $this->contract('public.customer.me.v1', 'GET', '/api/v1/customer/me', 'customer_session', 'headless'),
+            $this->contract('public.customer.me.update.v1', 'PATCH', '/api/v1/customer/me', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.claim.v1', 'POST', '/api/v1/customer/orders/claim', 'customer_session+claim_proof', 'headless'),
+            $this->contract('public.customer.orders.index.v1', 'GET', '/api/v1/customer/orders', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.show.v1', 'GET', '/api/v1/customer/orders/{id}', 'customer_session', 'headless'),
+            $this->contract('public.customer.addresses.index.v1', 'GET', '/api/v1/customer/addresses', 'customer_session', 'headless'),
+            $this->contract('public.customer.addresses.store.v1', 'POST', '/api/v1/customer/addresses', 'customer_session', 'headless'),
+            $this->contract('public.customer.orders.returns.store.v1', 'POST', '/api/v1/customer/orders/{id}/returns', 'customer_session', 'headless'),
             $this->integrationContract('integration.sale.events.v1', SaleIntegrationEventContracts::payloads()),
             $this->integrationContract('integration.sale.ai_contexts.v1', SaleAiContextContracts::contexts()),
+        ];
+    }
+
+    /** @param array<string,mixed> $config @param array<string,mixed> $inputSchema */
+    private function capability(
+        string $key,
+        string $label,
+        string $type,
+        string $contract,
+        string $permission,
+        int $priority,
+        array $config,
+        array $inputSchema = [],
+    ): array {
+        return [
+            'key' => $key,
+            'label' => $label,
+            'module' => 'sale',
+            'permission' => $permission,
+            'version' => '1.0',
+            'type' => $type,
+            'contract' => $contract,
+            'config' => $config,
+            'active' => true,
+            'priority' => $priority,
+            'input_schema' => $inputSchema,
+            'output_schema' => ['type' => 'object'],
+            'supports_dry_run' => true,
+            'requires_confirmation' => false,
+            'risk_level' => $type === 'provider' ? 'medium' : 'low',
+            'description' => 'Extension point contrôlé du module Vente; les tables étrangères ne sont pas modifiées directement.',
         ];
     }
 

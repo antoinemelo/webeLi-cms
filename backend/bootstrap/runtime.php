@@ -25,6 +25,10 @@ function cms_load_env_file(string $envFile): array
         if ($key === '') {
             continue;
         }
+        $existing = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+        if ($existing !== false && $existing !== null && $existing !== '') {
+            continue;
+        }
         $value = trim($value, " \t\n\r\0\x0B\"'");
         $values[$key] = $value;
         $_ENV[$key] = $value;

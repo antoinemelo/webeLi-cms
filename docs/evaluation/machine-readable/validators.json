@@ -7,7 +7,7 @@
     ],
     "execution_result": null,
     "id": "validator-repository-layout-07566eb46b",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -25,7 +25,7 @@
     ],
     "execution_result": null,
     "id": "validator-config-consistency-2c517a4541",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -43,7 +43,7 @@
     ],
     "execution_result": null,
     "id": "validator-db-schema-3dcd9b5fc5",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -61,7 +61,7 @@
     ],
     "execution_result": null,
     "id": "validator-db-inventory-a119b52f6f",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -79,13 +79,85 @@
     ],
     "execution_result": null,
     "id": "validator-projection-definitions-5dde5fc823",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
     "name": "PROJECTION_DEFINITIONS",
     "source": [
       "tools/python/validation/database/projections.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PRODUCT_CONTENT_LINKS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/product_content_links.py"
+    ],
+    "execution_result": null,
+    "id": "validator-product-content-links-aa8637404b",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PRODUCT_CONTENT_LINKS",
+    "source": [
+      "tools/python/validation/database/product_content_links.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PRICING_OFFERS_BUNDLES",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/pricing_offers_bundles.py"
+    ],
+    "execution_result": null,
+    "id": "validator-pricing-offers-bundles-152f8eb36d",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PRICING_OFFERS_BUNDLES",
+    "source": [
+      "tools/python/validation/database/pricing_offers_bundles.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator PIM_QUALITY_IMPORT_CHANNELS",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/pim_quality_import_channels.py"
+    ],
+    "execution_result": null,
+    "id": "validator-pim-quality-import-channels-477f0bfb2a",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "PIM_QUALITY_IMPORT_CHANNELS",
+    "source": [
+      "tools/python/validation/database/pim_quality_import_channels.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator SALE_STATE_INTEGRITY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/database/sale_state_integrity.py"
+    ],
+    "execution_result": null,
+    "id": "validator-sale-state-integrity-6551bcf40e",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "SALE_STATE_INTEGRITY",
+    "source": [
+      "tools/python/validation/database/sale_state_integrity.py"
     ],
     "status": "unverified"
   },
@@ -97,7 +169,7 @@
     ],
     "execution_result": null,
     "id": "validator-blueprint-schema-2423d511f8",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -115,7 +187,7 @@
     ],
     "execution_result": null,
     "id": "validator-content-contracts-a4f9c3dc34",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -133,13 +205,31 @@
     ],
     "execution_result": null,
     "id": "validator-multisite-locale-model-6df23f74d0",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
     "name": "MULTISITE_LOCALE_MODEL",
     "source": [
       "tools/python/validation/content/site_locale.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator I18N_COVERAGE",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/content/i18n.py"
+    ],
+    "execution_result": null,
+    "id": "validator-i18n-coverage-b66fba2a2f",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "I18N_COVERAGE",
+    "source": [
+      "tools/python/validation/content/i18n.py"
     ],
     "status": "unverified"
   },
@@ -151,7 +241,7 @@
     ],
     "execution_result": null,
     "id": "validator-permission-model-4fcbb51500",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -169,7 +259,7 @@
     ],
     "execution_result": null,
     "id": "validator-api-spec-e6944f9381",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -187,7 +277,7 @@
     ],
     "execution_result": null,
     "id": "validator-security-baseline-00af30c8c3",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -205,7 +295,7 @@
     ],
     "execution_result": null,
     "id": "validator-pii-email-guard-c86ec86f1f",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -223,7 +313,7 @@
     ],
     "execution_result": null,
     "id": "validator-media-storage-model-bc7a3898ed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -241,7 +331,7 @@
     ],
     "execution_result": null,
     "id": "validator-operations-manifests-f1f8f20586",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -259,7 +349,7 @@
     ],
     "execution_result": null,
     "id": "validator-module-manifests-f1b55ec6ed",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -277,7 +367,7 @@
     ],
     "execution_result": null,
     "id": "validator-migration-safety-a989e5bd80",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -295,7 +385,7 @@
     ],
     "execution_result": null,
     "id": "validator-release-structure-ff4ac01e41",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -313,13 +403,31 @@
     ],
     "execution_result": null,
     "id": "validator-documentation-contracts-851aac6774",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
     "name": "DOCUMENTATION_CONTRACTS",
     "source": [
       "tools/python/validation/documentation/contracts.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py validate --validator CAPABILITY_REGISTRY",
+    "confidence": "high",
+    "evidence": [
+      "tools/python/validation/shared/capabilities.py"
+    ],
+    "execution_result": null,
+    "id": "validator-capability-registry-e68eec71a8",
+    "last_verified": "2026-07-13",
+    "limitations": [
+      "Validator presence is distinct from execution and coverage completeness."
+    ],
+    "name": "CAPABILITY_REGISTRY",
+    "source": [
+      "tools/python/validation/shared/capabilities.py"
     ],
     "status": "unverified"
   },
@@ -331,7 +439,7 @@
     ],
     "execution_result": null,
     "id": "validator-dependency-boundaries-ccaabe92cf",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -349,7 +457,7 @@
     ],
     "execution_result": null,
     "id": "validator-runtime-integrity-4fbe62429a",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -367,7 +475,7 @@
     ],
     "execution_result": null,
     "id": "validator-static-export-dry-run-e315597537",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],
@@ -385,7 +493,7 @@
     ],
     "execution_result": null,
     "id": "validator-backup-restore-roundtrip-68afdc9574",
-    "last_verified": "2026-07-10",
+    "last_verified": "2026-07-13",
     "limitations": [
       "Validator presence is distinct from execution and coverage completeness."
     ],

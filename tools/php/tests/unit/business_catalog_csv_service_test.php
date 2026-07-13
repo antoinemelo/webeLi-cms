@@ -20,6 +20,8 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $db->pdo()->exec($catalogSchema);
+$db->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0007_pricing_offers_bundles.sql'));
+$db->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0008_pim_quality_import_channels.sql'));
 
 try {
     $brands = new CatalogBrandRepository($db);
@@ -62,6 +64,8 @@ try {
     $fullExport = parse_catalog_csv($csv->exportProductsCsv(1, true));
     $header = $fullExport[0];
     $row = $fullExport[1];
+    $h->assertSame('format_version', $header[0], 'export format is explicitly versioned');
+    $h->assertSame('pim.catalog.v1', $row[0], 'export row declares stable format version');
     $basePurchaseIndex = array_search('base_purchase_price', $header, true);
     $computedPurchaseIndex = array_search('computed_purchase_price', $header, true);
     $variantOptionsIndex = array_search('variant_options', $header, true);
@@ -120,6 +124,9 @@ try {
     $h->assertTrue(is_array($importedVariant), 'import writes variant');
     $saleAdjustment = $db->one('SELECT * FROM business_product_variant_price_adjustments WHERE variant_id = ? AND price_kind = "sale"', [(int) $importedVariant['id']]);
     $h->assertSame('percent_delta', $saleAdjustment['adjustment_type'] ?? null, 'import writes sale adjustment');
+    $journal = $db->one('SELECT status, rows_total, changed_rows FROM business_catalog_import_runs WHERE id = ?', [(int) ($applied['journal']['run_id'] ?? 0)]);
+    $h->assertSame('applied', $journal['status'] ?? null, 'applied import writes a synthetic journal');
+    $h->assertSame(1, (int) ($journal['changed_rows'] ?? 0), 'journal records changed row count');
 
     $conflict = $csv->importProductsCsv(1, $import, [
         'dry_run' => '0',
@@ -127,8 +134,18 @@ try {
         'create_categories' => '1',
         'create_options' => '1',
     ], 1);
-    $h->assertSame(1, $conflict['skipped'], 'import does not overwrite without confirmation');
-    $h->assertSame(false, $conflict['writes_performed'], 'conflicting import performs no writes');
+    $h->assertSame(true, $conflict['replayed'] ?? false, 'exact reimport is idempotently replayed');
+    $h->assertSame(false, $conflict['writes_performed'], 'idempotent reimport performs no writes');
+
+    $noOp = $csv->importProductsCsv(1, $import, [
+        'dry_run' => '0',
+        'create_brands' => '1',
+        'create_categories' => '1',
+        'create_options' => '1',
+        'idempotency_key' => 'same-content-new-run',
+    ], 1);
+    $h->assertSame(1, $noOp['unchanged_rows'], 'same content with another run key resolves to a no-op diff');
+    $h->assertSame(false, $noOp['writes_performed'], 'no-op diff does not mutate the catalog');
 
     $overwrite = $csv->importProductsCsv(1, catalog_import_csv([
         'product_name' => 'Imported Product Updated',
@@ -147,6 +164,51 @@ try {
     $h->assertSame(1, $overwrite['updated_products'], 'confirmed overwrite updates product');
     $updatedVariant = $db->one('SELECT * FROM business_product_variants WHERE sku = ?', ['IMPORT-V1']);
     $h->assertSame(9.0, (float) ($updatedVariant['stock_quantity'] ?? 0), 'confirmed overwrite updates variant stock');
+
+    $diffPreview = $csv->importProductsCsv(1, catalog_import_csv([
+        'product_name' => 'Imported Product Updated',
+        'product_slug' => 'imported-product',
+        'status' => 'active',
+        'variant_sku' => 'IMPORT-V1',
+        'variant_name' => 'Imported Variant Updated',
+        'variant_options' => 'format:box',
+        'base_sale_price' => '31',
+        'stock_quantity' => '10',
+    ]), ['dry_run' => '1', 'create_options' => '1', 'overwrite_existing' => '1'], 1);
+    $h->assertTrue(isset($diffPreview['rows'][0]['diff']['product']['base_sale_price']), 'preview explains product price diff before mutation');
+    $h->assertTrue(isset($diffPreview['rows'][0]['diff']['variant']['stock_quantity']), 'preview explains variant stock diff before mutation');
+    $h->assertSame(9.0, (float) ($db->one('SELECT stock_quantity FROM business_product_variants WHERE sku = ?', ['IMPORT-V1'])['stock_quantity'] ?? 0), 'dry-run diff leaves data unchanged');
+
+    $partial = catalog_import_rows([
+        ['product_name' => 'Atomic Valid', 'product_slug' => 'atomic-valid', 'variant_sku' => 'ATOMIC-VALID', 'base_sale_price' => '10'],
+        ['product_name' => 'Atomic Invalid', 'product_slug' => 'atomic-invalid', 'variant_sku' => 'ATOMIC-INVALID', 'base_sale_price' => '-2'],
+    ]);
+    $partialResult = $csv->importProductsCsv(1, $partial, ['dry_run' => '0'], 1);
+    $h->assertSame(1, $partialResult['valid_rows'], 'partially invalid file reports its valid row');
+    $h->assertSame(1, $partialResult['skipped'], 'partially invalid file localizes its invalid row');
+    $h->assertSame(false, $partialResult['writes_performed'], 'any validation error prevents partial import');
+    $h->assertSame(null, $db->one('SELECT id FROM business_products WHERE slug = ?', ['atomic-valid']), 'atomic validation failure leaves no created product');
+
+    $external = catalog_import_csv([
+        'format_version' => 'pim.catalog.v1', 'site_id' => '1', 'external_id' => 'erp-product-42',
+        'product_name' => 'External Product', 'product_slug' => 'external-product', 'variant_sku' => 'EXTERNAL-42', 'base_sale_price' => '42',
+    ]);
+    $externalApply = $csv->importProductsCsv(1, $external, ['dry_run' => '0', 'idempotency_key' => 'external-42'], 1);
+    $h->assertSame(1, $externalApply['created_products'], 'external identifier import creates a product');
+    $h->assertTrue($db->one('SELECT id FROM business_products WHERE site_id = 1 AND external_id = ?', ['erp-product-42']) !== null, 'external identifier is persisted as reconciliation key');
+
+    $db->run("INSERT INTO business_products(site_id,type,status,visibility,name,slug,is_catalogue_enabled) VALUES(2,'physical','draft','internal','Other site external','other-site-external',1)");
+    $otherSiteProductId = (int) $db->lastInsertId();
+    $db->run('UPDATE business_products SET external_id = ? WHERE id = ?', ['erp-other-site', $otherSiteProductId]);
+    $crossSite = $csv->importProductsCsv(1, catalog_import_csv([
+        'external_id' => 'erp-other-site', 'product_name' => 'Wrong site', 'product_slug' => 'wrong-site', 'variant_sku' => 'WRONG-SITE',
+    ]), ['dry_run' => '1'], 1);
+    $h->assertSame('business.catalog.import_product_site_mismatch', $crossSite['errors'][0]['message'] ?? null, 'external identifier cannot cross site boundaries');
+
+    $db->run("INSERT INTO business_product_channel_visibility(site_id,product_id,channel,status,starts_at) VALUES(1,?,'ecommerce','active','2999-01-01 00:00:00')", [(int) $product['id']]);
+    $ecommerceExport = parse_catalog_csv($csv->exportProductsCsv(1, false, ['channel' => 'ecommerce', 'status' => 'active']));
+    $exportedSlugs = array_column(array_slice($ecommerceExport, 1), (int) array_search('product_slug', $ecommerceExport[0], true));
+    $h->assertSame(false, in_array('csv-product', $exportedSlugs, true), 'future channel visibility excludes product from contextual export');
 } finally {
     $db = null;
     gc_collect_cycles();
@@ -173,7 +235,7 @@ function parse_catalog_csv(string $csv): array
 function catalog_import_csv(array $values): string
 {
     $headers = [
-        'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
+        'format_version', 'site_id', 'external_id', 'product_name', 'product_slug', 'type', 'status', 'brand', 'category', 'sku_base',
         'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'base_purchase_price',
         'base_sale_price', 'currency', 'variant_sku', 'variant_name', 'variant_options',
         'purchase_adjustment_type', 'purchase_adjustment_value', 'sale_adjustment_type',
@@ -182,6 +244,21 @@ function catalog_import_csv(array $values): string
     $handle = fopen('php://temp', 'r+');
     fputcsv($handle, $headers, ';', '"', '');
     fputcsv($handle, array_map(static fn(string $header): string => $values[$header] ?? '', $headers), ';', '"', '');
+    rewind($handle);
+    $csv = stream_get_contents($handle) ?: '';
+    fclose($handle);
+    return $csv;
+}
+
+/** @param list<array<string,string>> $rows */
+function catalog_import_rows(array $rows): string
+{
+    $headers = ['product_name', 'product_slug', 'variant_sku', 'base_sale_price'];
+    $handle = fopen('php://temp', 'r+');
+    fputcsv($handle, $headers, ';', '"', '');
+    foreach ($rows as $values) {
+        fputcsv($handle, array_map(static fn(string $header): string => $values[$header] ?? '', $headers), ';', '"', '');
+    }
     rewind($handle);
     $csv = stream_get_contents($handle) ?: '';
     fclose($handle);

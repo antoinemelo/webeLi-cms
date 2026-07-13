@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
+use App\Application\Maintenance\DependencyInventoryService;
 use App\Application\Maintenance\VersionInventoryService;
 use App\Application\Publication\PublishedProjectionPipeline;
 use App\Core\Database;
@@ -28,6 +29,7 @@ final class MaintenanceApiController
         private readonly Authorization $authorization,
         private readonly PublishedProjectionPipeline $projectionPipeline,
         private readonly VersionInventoryService $versions,
+        private readonly DependencyInventoryService $dependencies,
     ) {}
 
     public function index(): Response
@@ -44,6 +46,7 @@ final class MaintenanceApiController
             'audit_logs' => $this->auditLogs(),
             'runtime_logs' => $this->runtimeLogs(),
             'versions' => $this->versions->maintenancePayload(),
+            'dependencies' => $this->dependencies->maintenancePayload(true),
             'actions' => $this->actions(),
         ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
     }
@@ -63,6 +66,19 @@ final class MaintenanceApiController
             'message' => sprintf('Cache vidé: %d fichier(s) supprimé(s).', $deleted),
             'deleted_files' => $deleted,
             'status' => $this->status((int) $site['id'], $languageCode),
+        ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
+    }
+
+    public function refreshDependencies(): Response
+    {
+        $this->auth->requireAuth();
+        $site = $this->site();
+        $this->authorization->require('maintenance.manage', (int) $site['id']);
+        $languageCode = AdminApiContract::language($this->request, $this->sites, $site);
+
+        return Response::success([
+            'message' => 'Cache des versions de dépendances mis à jour.',
+            'dependencies' => $this->dependencies->maintenancePayload(true, true),
         ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
     }
 
@@ -285,6 +301,7 @@ final class MaintenanceApiController
     private function actions(): array
     {
         return [
+            'refresh_dependencies' => ['method' => 'POST', 'path' => '/admin/api/maintenance/dependencies/refresh'],
             'clear_cache' => ['method' => 'POST', 'path' => '/admin/api/maintenance/cache/clear'],
             'reindex_search' => ['method' => 'POST', 'path' => '/admin/api/maintenance/search/reindex'],
             'clear_audit_logs' => ['method' => 'DELETE', 'path' => '/admin/api/maintenance/audit-logs'],

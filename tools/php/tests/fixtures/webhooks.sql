@@ -36,15 +36,42 @@ CREATE TABLE webhook_endpoints (
 
 CREATE TABLE outbox_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL UNIQUE,
+    event_type TEXT NOT NULL,
+    schema_version INTEGER NOT NULL DEFAULT 1 CHECK(schema_version >= 1),
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    site_id INTEGER,
+    correlation_id TEXT NOT NULL,
+    causation_id TEXT,
+    aggregate_type TEXT NOT NULL DEFAULT 'system',
+    aggregate_id TEXT,
     topic TEXT NOT NULL,
     payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','processed','failed')),
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','processed','failed','dead_letter','archived')),
     attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 5 CHECK(max_attempts BETWEEN 1 AND 100),
     last_error TEXT,
+    error_type TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     available_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    locked_until TEXT,
+    lock_token TEXT,
     claimed_at TEXT,
-    processed_at TEXT
+    processed_at TEXT,
+    dead_lettered_at TEXT,
+    archived_at TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE outbox_consumptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL,
+    consumer_key TEXT NOT NULL,
+    processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    result_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(result_json)),
+    UNIQUE(event_id, consumer_key),
+    FOREIGN KEY(event_id) REFERENCES outbox_events(event_id) ON DELETE CASCADE
 );
 
 CREATE TABLE webhook_deliveries (

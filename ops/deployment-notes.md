@@ -77,7 +77,7 @@ python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
 
 Pour Hostpoint `/mod`, `ops/ftp.deploy.json` doit pointer vers le répertoire distant `/www/webe.li/mod`. Ce fichier contient des identifiants et doit rester hors Git.
 
-Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi propose ensuite de commiter les changements locaux, puis de pousser la branche si une upstream Git est configurée. Cette proposition est optionnelle et doit être acceptée uniquement après lecture de l'état Git affiché.
+Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi affiche l'état Git. Le push optionnel n'est proposé que si le worktree est propre et si la branche contient des commits locaux. Le menu ne crée jamais de commit : les fichiers doivent être sélectionnés et revus séparément.
 
 ## Clone local d'instance
 

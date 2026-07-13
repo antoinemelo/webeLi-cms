@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from tools.python.commands import qualify
+from tools.python.qualification.performance_baseline import _measure
 from tools.python.qualification.run_all import (
     E2E_INPUTS,
     FRONTEND_BUILD_INPUTS,
@@ -11,12 +12,17 @@ from tools.python.qualification.run_all import (
     Result,
     _display_path,
     _exit_code,
+    _gate_matrix,
     parse_args,
     steps,
 )
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
+    def test_performance_baseline_rejects_client_errors(self):
+        result = _measure("invalid-contract", 2000.0, 1, lambda: (422, 1.0, "validation failed"))
+        self.assertEqual("failed", result["status"])
+
     def test_profiles_have_expected_depth_without_database_rebuild(self):
         registry = steps()
         profiles = ("quick", "complete", "release")
@@ -32,6 +38,8 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertNotIn("fresh-install", by_profile["complete"])
 
         self.assertIn("browser-e2e", by_profile["release"])
+        self.assertIn("php-dependencies", by_profile["release"])
+        self.assertIn("performance-baseline", by_profile["release"])
         self.assertIn("preflight", by_profile["release"])
         self.assertIn("package", by_profile["release"])
         self.assertIn("fresh-install", by_profile["release"])
@@ -86,6 +94,18 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual((), e2e.env_vars)
         self.assertIn("e2e", e2e.command)
         self.assertIn("--use-built-assets", e2e.command)
+        self.assertIn("tools/python/qualification/performance_baseline.py", registry["performance-baseline"].files)
+
+    def test_release_gate_matrix_distinguishes_source_and_release_controls(self):
+        matrix = _gate_matrix()
+        requirements = {entry["requirement"]: entry for entry in matrix}
+
+        self.assertIn("baseline performance", requirements)
+        self.assertIn("gate E2E omnicanale storefront/POS", requirements)
+        self.assertEqual(["performance-baseline"], requirements["baseline performance"]["source_steps"])
+        self.assertEqual(["browser-e2e"], requirements["gate E2E omnicanale storefront/POS"]["source_steps"])
+        self.assertIn("tools/cms.py validate", requirements["validation statique"]["release_commands"])
+        self.assertIn("tools/cms.py backup --restore", requirements["backup/restore et intégrité SQLite"]["release_commands"])
 
     def test_qualification_cache_is_explicit_and_forceable(self):
         args = parse_args(["--profile", "release", "--no-cache"])
@@ -93,6 +113,7 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("frontend/admin-vue/src", FRONTEND_BUILD_INPUTS)
         self.assertIn("frontend/admin-vue/tests/e2e", E2E_INPUTS)
         self.assertIn("backend/src", E2E_INPUTS)
+        self.assertIn("tools/python/qualification/omnichannel_gate.py", E2E_INPUTS)
 
         class Parser:
             def __init__(self) -> None:

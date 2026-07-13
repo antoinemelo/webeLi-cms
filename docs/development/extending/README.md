@@ -36,6 +36,7 @@ Pour vérifier une installation existante, utilisez les migrations incrémentale
 
 - [Route ou endpoint](route-endpoint.md)
 - [Module, type de contenu ou blueprint](module-content-type.md)
+- [Registre de capacités](capabilities.md)
 - [Champ ou bloc](field-block.md)
 - [Table, repository ou service](database-repository.md)
 - [Commande, validateur ou test](command-validator.md)

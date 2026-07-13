@@ -18,7 +18,7 @@ try {
     $pdo->exec("INSERT INTO languages(code,name,locale,is_active) VALUES('fr','Français','fr-CH',1)");
     $pdo->exec("INSERT INTO sites(id,site_key,name,default_language_code,is_active) VALUES(1,'main','Main','fr',1),(2,'other','Other','fr',1)");
     $pdo->exec("INSERT INTO webhook_endpoints(id,site_id,name,url,events_json,secret,is_active,max_attempts) VALUES(1,1,'Main hook','https://example.test/hook','[\"content.published\"]','0123456789abcdef',1,2),(2,2,'Other hook','https://example.test/other','[\"*\"]','fedcba9876543210',1,2)");
-    $pdo->exec("INSERT INTO outbox_events(id,topic,payload_json,status,available_at) VALUES(1,'content.published','{}','pending',CURRENT_TIMESTAMP)");
+    $pdo->exec("INSERT INTO outbox_events(id,event_id,event_type,schema_version,occurred_at,site_id,correlation_id,aggregate_type,aggregate_id,topic,payload_json,metadata_json,status,available_at) VALUES(1,'evt_webhook_test','content.published',1,CURRENT_TIMESTAMP,1,'corr-webhook','content_entry','42','content.published','{}','{}','pending',CURRENT_TIMESTAMP)");
 
     $repo = new SqlWebhookRepository($db);
     $matches = $repo->matchingEndpoints('content.published', 1);

@@ -59,17 +59,23 @@
         "docs/administration/security/tokens-cors-webhooks.md",
         "docs/administration/users-roles-permissions/sessions-and-2fa.md",
         "docs/business/crm-redesign-final-review.md",
+        "docs/development/admin-i18n.en.md",
+        "docs/development/admin-i18n.md",
         "docs/development/architecture/README.md",
         "docs/development/architecture/business-catalog-migrations.md",
         "docs/development/architecture/business-crm-redesign-guardrails.md",
         "docs/development/architecture/business-module-plan.md",
+        "docs/development/architecture/business-pim-lite-final-review.md",
+        "docs/development/architecture/sale-internal-payments-returns-timeline.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
+        "docs/development/architecture/sale-state-machines-snapshots.md",
         "docs/development/backoffice/visual-editor.md",
         "docs/development/command-reliability.md",
         "docs/development/contributing-documentation.md",
         "docs/development/database/README.md",
         "docs/development/extending/README.md",
+        "docs/development/extending/capabilities.md",
         "docs/development/extending/command-validator.md",
         "docs/development/extending/module-content-type.md",
         "docs/development/extending/modules.md",
@@ -78,10 +84,13 @@
         "docs/development/testing-validation/CI_VALIDATION_RESULTS.md",
         "docs/development/testing-validation/E2E_RESULTS.md",
         "docs/development/testing-validation/FRONTEND_DEPENDENCIES.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/development/testing-validation/README.md",
         "docs/development/testing-validation/business-crm.md",
+        "docs/development/testing-validation/business-pim-lite.md",
         "docs/development/testing-validation/load-testing.md",
+        "docs/development/testing-validation/sale-module.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/evidence-index.md",
@@ -90,7 +99,11 @@
         "docs/evaluation/machine-readable/validators.json",
         "docs/evaluation/release-audit-policy.md",
         "docs/evaluation/reproducible-checks.md",
+        "docs/evaluation/rm1-gap-analysis.md",
+        "docs/evaluation/sale-module-review.md",
         "docs/getting-started/README.md",
+        "docs/getting-started/role-guides.md",
+        "docs/getting-started/verified-scenarios.md",
         "docs/installation/README.md",
         "docs/installation/install-release.md",
         "docs/installation/requirements.md",
@@ -103,8 +116,12 @@
         "docs/operations/instance-clone.md",
         "docs/operations/instance-update.md",
         "docs/operations/local-update.md",
+        "docs/operations/m0-m4-final-qualification.md",
+        "docs/operations/m0-release-gate.md",
         "docs/operations/module-migrations.md",
+        "docs/operations/outbox.md",
         "docs/operations/runbook.md",
+        "docs/operations/source-vs-release.md",
         "docs/operations/static-export.md",
         "docs/public-api/quickstart.md",
         "docs/reference/README.md",
@@ -131,6 +148,7 @@
         "tools/python/cms/cli.py",
         "tools/python/commands/__init__.py",
         "tools/python/commands/instance.py",
+        "tools/python/commands/outbox.py",
         "tools/python/commands/test.py",
         "tools/python/diagnostics/list_python_tools.py",
         "tools/python/generators/c40_generate_openapi_headless_v1.py",
@@ -172,6 +190,8 @@
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/omnichannel_gate.py",
+        "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
@@ -180,6 +200,7 @@
         "tools/python/tests/test_cms_cli.py",
         "tools/python/tests/test_migrate_plan_readonly.py",
         "tools/python/tests/test_module_foundation.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tests/test_release_package_cli.py",
         "tools/python/tests/test_sale_module_smoke.py",
         "tools/python/tests/test_static_export_multisite.py",
@@ -327,6 +348,7 @@
         "tools/cms.py",
         "tools/python/ARCHITECTURE.md",
         "tools/python/archive/c_validate.py",
+        "tools/python/tests/test_admin_menu.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py"
       ],
@@ -381,6 +403,7 @@
         "tools/python/commands/init.py",
         "tools/python/commands/instance.py",
         "tools/python/commands/migrate.py",
+        "tools/python/commands/outbox.py",
         "tools/python/commands/qualify.py",
         "tools/python/commands/release.py",
         "tools/python/commands/smoke.py",
@@ -498,6 +521,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/E2E_RESULTS.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/qualification/run_all.py",
         "tools/python/tool-manifest.json"
       ],
@@ -589,6 +613,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/commands/outbox.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/operations/outbox.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/commands/qualify.py",
       "category": "command",
       "public": false,
@@ -647,6 +687,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/business-crm.md",
+        "docs/development/testing-validation/sale-module.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
@@ -756,6 +797,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
+        "docs/evaluation/rm1-gap-analysis.md",
         "docs/public-api/quickstart.md",
         "packages/amcms-client/README.md",
         "tools/python/commands/docs.py",
@@ -776,6 +818,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
+        "docs/evaluation/rm1-gap-analysis.md",
         "packages/amcms-client/README.md",
         "packages/amcms-client/src/generated/openapi-types.ts",
         "tools/python/commands/docs.py",
@@ -908,7 +951,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "tools/python/qualification/run_all.py"
+        "TREE.txt",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -944,6 +989,7 @@
         "tools/python/tool-manifest.json",
         "tools/python/validation/database/inventory.py",
         "tools/python/validation/operations/manifests.py",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py",
         "tools/python/validation/qualification/runtime_integrity.py"
       ],
       "replacement": null,
@@ -964,7 +1010,9 @@
         "tools/python/operations/backup/d6_backup_sqlite.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
-        "tools/python/tool-manifest.json"
+        "tools/python/qualification/performance_baseline.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/qualification/backup_restore_roundtrip.py"
       ],
       "replacement": null,
       "status": "active",
@@ -1007,6 +1055,7 @@
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d4_verify_release_archive.py",
         "tools/python/operations/deployment/d_deploy.py",
+        "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1767,7 +1816,9 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/testing-validation/E2E_RESULTS.md",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/commands/e2e.py",
+        "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1795,6 +1846,46 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/omnichannel_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_omnichannel_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/performance_baseline.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/operations/m0-release-gate.md",
+        "docs/reference/generated/configuration.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/run_all.py",
       "category": "internal",
       "public": false,
@@ -1802,6 +1893,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/README.md",
         "docs/evaluation/evidence-index.md",
@@ -1809,8 +1901,12 @@
         "docs/evaluation/limitations.md",
         "docs/evaluation/product-scope.md",
         "docs/evaluation/reproducible-checks.md",
+        "docs/getting-started/verified-scenarios.md",
         "docs/operations/backup-restore.md",
+        "docs/operations/m0-m4-final-qualification.md",
+        "docs/operations/m0-release-gate.md",
         "docs/operations/production-checklist.md",
+        "docs/operations/source-vs-release.md",
         "docs/operations/troubleshooting.md",
         "tools/python/commands/qualify.py",
         "tools/python/operations/deployment/d11_ci_release.py",
@@ -1866,6 +1962,22 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_admin_menu.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2039,6 +2151,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_i18n_coverage.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_instance_clone.py",
       "category": "test",
       "public": false,
@@ -2078,6 +2206,21 @@
       "called_by": [
         "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_omnichannel_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2172,6 +2315,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/sale-module.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2280,9 +2426,14 @@
         "tools/python/validation/configuration/repository_layout.py",
         "tools/python/validation/content/blueprints.py",
         "tools/python/validation/content/contracts.py",
+        "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pim_quality_import_channels.py",
+        "tools/python/validation/database/pricing_offers_bundles.py",
+        "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/sale_state_integrity.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/operations/manifests.py",
         "tools/python/validation/operations/media.py",
@@ -2417,6 +2568,27 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/validation/content/i18n.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/admin-i18n.en.md",
+        "docs/development/admin-i18n.md",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tests/test_i18n_coverage.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/validation/content/site_locale.py",
       "category": "internal",
       "public": false,
@@ -2481,6 +2653,60 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/validation/database/pim_quality_import_channels.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/pricing_offers_bundles.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/product_content_links.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/validation/database/projections.py",
       "category": "internal",
       "public": false,
@@ -2493,6 +2719,25 @@
         "docs/reference/generated/validators.md",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/operations/deployment/d11_ci_release.py",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/database/sale_state_integrity.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/architecture/sale-state-machines-snapshots.md",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
@@ -2576,9 +2821,14 @@
         "tools/python/validation/configuration/repository_layout.py",
         "tools/python/validation/content/blueprints.py",
         "tools/python/validation/content/contracts.py",
+        "tools/python/validation/content/i18n.py",
         "tools/python/validation/content/site_locale.py",
         "tools/python/validation/database/inventory.py",
+        "tools/python/validation/database/pim_quality_import_channels.py",
+        "tools/python/validation/database/pricing_offers_bundles.py",
+        "tools/python/validation/database/product_content_links.py",
         "tools/python/validation/database/projections.py",
+        "tools/python/validation/database/sale_state_integrity.py",
         "tools/python/validation/database/schema.py",
         "tools/python/validation/documentation/contracts.py",
         "tools/python/validation/operations/manifests.py",
@@ -2592,6 +2842,7 @@
         "tools/python/validation/qualification/static_export_dry_run.py",
         "tools/python/validation/security/baseline.py",
         "tools/python/validation/security/pii.py",
+        "tools/python/validation/shared/capabilities.py",
         "tools/python/validation/shared/dependency_boundaries.py"
       ],
       "replacement": null,
@@ -2791,7 +3042,9 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/m0-release-gate.md",
         "docs/reference/generated/validators.md",
+        "tools/python/qualification/omnichannel_gate.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
@@ -2852,6 +3105,7 @@
         "tools/python/generators/generate_documentation.py",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/tests/test_cli_rationalization.py",
+        "tools/python/tests/test_i18n_coverage.py",
         "tools/python/tool-manifest.json",
         "tools/python/validators/registry.py"
       ],
@@ -2906,13 +3160,18 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/machine-readable/features.json",
         "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/m0-release-gate.md",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/generators/generate_evaluation_documentation.py",
+        "tools/python/qualification/run_all.py",
         "tools/python/tests/test_characterization_baseline.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],
@@ -2952,6 +3211,24 @@
         "TREE.txt",
         "tools/python/tests/test_release_package_cli.py",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/validation/shared/capabilities.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/validators.md",
+        "tools/python/tool-manifest.json",
+        "tools/python/validation/registry.py"
       ],
       "replacement": null,
       "status": "active",

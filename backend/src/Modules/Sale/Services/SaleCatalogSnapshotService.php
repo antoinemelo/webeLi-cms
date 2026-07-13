@@ -16,15 +16,15 @@ final class SaleCatalogSnapshotService
         private readonly SellableCatalogPort $sellables
     ) {}
 
-    /** @return array<string,mixed> */
-    public function snapshotForVariant(int $siteId, int $businessVariantId, string $channel = 'admin', bool $requireSellable = true): array
+    /** @param array<string,mixed> $pricingContext @return array<string,mixed> */
+    public function snapshotForVariant(int $siteId, int $businessVariantId, string $channel = 'admin', bool $requireSellable = true, array $pricingContext = []): array
     {
-        $snapshot = $this->sellables->getSellableVariantSnapshot($siteId, $businessVariantId, [
+        $snapshot = $this->sellables->getSellableVariantSnapshot($siteId, $businessVariantId, $pricingContext + [
             'channel' => $channel,
             'include_purchase_price' => true,
             'include_internal_fields' => true,
         ]);
-        $snapshot = $this->applyInventorySnapshot($siteId, $snapshot);
+        $snapshot = $this->applyInventorySnapshot($siteId, $snapshot, isset($pricingContext['stock_location_id']) ? (int) $pricingContext['stock_location_id'] : null);
         if ($requireSellable && !((bool) ($snapshot['is_sellable'] ?? false))) {
             throw new InvalidArgumentException('sale.catalog.variant_not_sellable');
         }
@@ -42,12 +42,12 @@ final class SaleCatalogSnapshotService
     public function searchSellableVariants(int $siteId, array $filters = []): array
     {
         $result = $this->sellables->searchSellableVariants($siteId, $filters);
-        $result['items'] = $this->applyInventorySnapshots($siteId, $result['items']);
+        $result['items'] = $this->applyInventorySnapshots($siteId, $result['items'], isset($filters['stock_location_id']) ? (int) $filters['stock_location_id'] : null);
         return $result;
     }
 
     /** @param array<string,mixed> $snapshot @return array<string,mixed> */
-    private function applyInventorySnapshot(int $siteId, array $snapshot): array
+    private function applyInventorySnapshot(int $siteId, array $snapshot, ?int $locationId = null): array
     {
         $variantId = (int) ($snapshot['business_variant_id'] ?? 0);
         if ($variantId < 1) {
@@ -60,15 +60,15 @@ final class SaleCatalogSnapshotService
                     COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
                     COALESCE(SUM(available_quantity), 0) AS available_quantity
              FROM sale_inventory_items
-             WHERE site_id = ? AND business_variant_id = ?
+             WHERE site_id = ? AND business_variant_id = ?' . ($locationId === null ? '' : ' AND stock_location_id = ?') . '
              GROUP BY business_variant_id',
-            [$siteId, $variantId]
+            $locationId === null ? [$siteId, $variantId] : [$siteId, $variantId, $locationId]
         );
         return $row === null ? $snapshot : $this->withInventory($snapshot, $row);
     }
 
     /** @param list<array<string,mixed>> $items @return list<array<string,mixed>> */
-    private function applyInventorySnapshots(int $siteId, array $items): array
+    private function applyInventorySnapshots(int $siteId, array $items, ?int $locationId = null): array
     {
         $variantIds = [];
         foreach ($items as $item) {
@@ -89,9 +89,9 @@ final class SaleCatalogSnapshotService
                     COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
                     COALESCE(SUM(available_quantity), 0) AS available_quantity
              FROM sale_inventory_items
-             WHERE site_id = ? AND business_variant_id IN (' . $placeholders . ')
+             WHERE site_id = ? AND business_variant_id IN (' . $placeholders . ')' . ($locationId === null ? '' : ' AND stock_location_id = ?') . '
              GROUP BY business_variant_id',
-            array_merge([$siteId], array_values($variantIds))
+            array_merge([$siteId], array_values($variantIds), $locationId === null ? [] : [$locationId])
         );
         $byVariant = [];
         foreach ($rows as $row) {
@@ -124,7 +124,15 @@ final class SaleCatalogSnapshotService
         $metadata['stock_quantity'] = $stockQuantity;
         $metadata['stock_reserved'] = $stockReserved;
         $metadata['available_quantity'] = $availableQuantity;
+        $metadata['inventory_source'] = 'sale_transactional';
         $snapshot['metadata'] = $metadata;
+        $allowBackorder = (bool) ($snapshot['allow_backorder'] ?? $metadata['allow_backorder'] ?? false);
+        $days = max(1, (int) ($snapshot['backorder_delivery_days'] ?? $metadata['backorder_delivery_days'] ?? 7));
+        $snapshot['availability'] = !$snapshot['track_stock'] || $availableQuantity > 0
+            ? ['status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null]
+            : ($allowBackorder
+                ? ['status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days]
+                : ['status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null]);
         return $snapshot;
     }
 
@@ -136,6 +144,7 @@ final class SaleCatalogSnapshotService
             'site_id' => (int) $snapshot['site_id'],
             'business_product_id' => (int) $snapshot['business_product_id'],
             'business_variant_id' => (int) $snapshot['business_variant_id'],
+            'sellable_id' => (int) ($snapshot['sellable_id'] ?? $snapshot['business_variant_id']),
             'sku' => $snapshot['sku'] ?? null,
             'barcode' => $snapshot['barcode'] ?? null,
             'product_name' => (string) $snapshot['product_name'],
@@ -147,12 +156,12 @@ final class SaleCatalogSnapshotService
         ];
 
         $existing = $db->one(
-            'SELECT id FROM sale_catalog_variant_refs WHERE site_id = :site_id AND business_variant_id = :business_variant_id LIMIT 1',
-            ['site_id' => $payload['site_id'], 'business_variant_id' => $payload['business_variant_id']]
+            'SELECT id FROM sale_catalog_variant_refs WHERE site_id = :site_id AND sellable_id = :sellable_id LIMIT 1',
+            ['site_id' => $payload['site_id'], 'sellable_id' => $payload['sellable_id']]
         );
         if ($existing) {
             $updatePayload = $payload;
-            unset($updatePayload['site_id'], $updatePayload['business_variant_id']);
+            unset($updatePayload['site_id'], $updatePayload['business_variant_id'], $updatePayload['sellable_id']);
             $db->run(
                 'UPDATE sale_catalog_variant_refs
                  SET business_product_id = :business_product_id,
@@ -174,10 +183,10 @@ final class SaleCatalogSnapshotService
 
         $db->run(
             'INSERT INTO sale_catalog_variant_refs(
-                site_id, business_product_id, business_variant_id, sku, barcode,
+                site_id, business_product_id, business_variant_id, sellable_id, sku, barcode,
                 product_name, variant_name, product_type, track_stock, tax_class_id, last_snapshot_json
              ) VALUES(
-                :site_id, :business_product_id, :business_variant_id, :sku, :barcode,
+                :site_id, :business_product_id, :business_variant_id, :sellable_id, :sku, :barcode,
                 :product_name, :variant_name, :product_type, :track_stock, :tax_class_id, :last_snapshot_json
              )',
             $payload

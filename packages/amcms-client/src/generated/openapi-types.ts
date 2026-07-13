@@ -257,6 +257,195 @@ export interface OpenApiPublicRouteResponse {
   };
 }
 
+export interface OpenApiPublicSaleAddress {
+  city: string;
+  country_code: string;
+  line1: string;
+  line2?: null | string;
+  postal_code: string;
+  region?: null | string;
+}
+
+export interface OpenApiPublicSaleBootstrapResponse {
+  data: {
+    cart: Record<string, unknown>;
+    channel: OpenApiPublicSaleChannel;
+    checkout: Record<string, unknown>;
+    fulfillment_methods: Array<Record<string, unknown>>;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCart {
+  billing_address?: OpenApiPublicSaleAddress;
+  calculation_version: number;
+  cart_id: number;
+  cart_kind: "admin" | "pos" | "web";
+  channel_id: number;
+  checkout_step?: string;
+  currency: string;
+  discount_total_minor: number;
+  expires_at?: null | string;
+  grand_total_minor: number;
+  id: number;
+  identity?: OpenApiPublicSaleGuestIdentity;
+  lines?: Array<OpenApiPublicSaleCartLine>;
+  locale: string;
+  marketing_consent?: boolean | null;
+  payment_method?: Record<string, unknown>;
+  shipping_address?: OpenApiPublicSaleAddress;
+  shipping_method?: Record<string, unknown>;
+  shipping_total_minor: number;
+  status: string;
+  subtotal_minor: number;
+  tax_total_minor: number;
+  terms_accepted?: boolean;
+  token?: string;
+  version: number;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCartAbandonResponse {
+  data: {
+    abandoned: boolean;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCartLine {
+  availability_state: "available" | "backorder" | "contact_us" | "unavailable";
+  barcode?: null | string;
+  business_product_id?: number;
+  business_variant_id: number;
+  calculation_version: number;
+  currency: string;
+  fulfillment_class: "digital" | "none" | "shipping";
+  id: number;
+  line_discount_minor?: number;
+  line_subtotal_minor?: number;
+  line_tax_minor?: number;
+  line_total_minor: number;
+  options?: Record<string, unknown>;
+  personalization?: Record<string, unknown>;
+  previous_unit_price_minor?: null | number;
+  price_changed_at?: null | string;
+  product_name?: string;
+  quantity: number;
+  regular_unit_price_minor?: number;
+  sellable_id: number;
+  sku?: null | string;
+  tax_class_code?: string;
+  tax_included?: boolean;
+  tax_rate_basis_points?: number;
+  unit_price_minor: number;
+  variant_name?: null | string;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCartLineDeleteResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    deleted: boolean;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCartLineMutationResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    line: OpenApiPublicSaleCartLine;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCartResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleChannel {
+  channel_id: number;
+  code: string;
+  currency: string;
+  default_currency: string;
+  default_language: string;
+  default_locale: string;
+  name: string;
+  site_id: number;
+  tax_mode: string;
+  type: "admin" | "partner" | "pos" | "storefront";
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSaleCheckoutResponse {
+  data: {
+    account_creation: {
+      expires_at: string;
+      token: string;
+    };
+    order: OpenApiPublicSaleOrder;
+    payment?: OpenApiPublicSalePaymentIntent;
+    [key: string]: unknown;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleCheckoutUpdateResponse {
+  data: {
+    cart: OpenApiPublicSaleCart;
+    price_changed: boolean;
+  };
+  meta: OpenApiPublicMeta;
+}
+
+export interface OpenApiPublicSaleGuestIdentity {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: null | string;
+}
+
+export interface OpenApiPublicSaleOrder {
+  currency: string;
+  discount_total_minor?: number;
+  grand_total_minor: number;
+  id: number;
+  lines?: Array<OpenApiPublicSaleCartLine>;
+  order_number: string;
+  payment_status: string;
+  placed_at?: null | string;
+  shipping_total_minor?: number;
+  source: string;
+  status: string;
+  subtotal_minor?: number;
+  tax_total_minor?: number;
+  [key: string]: unknown;
+}
+
+export interface OpenApiPublicSalePaymentIntent {
+  amount_minor: number;
+  authorized_minor?: number;
+  captured_minor?: number;
+  checkout_url?: null | string;
+  contract: "sale.payment_provider.v1";
+  currency: string;
+  expires_at?: null | string;
+  id: number;
+  order_id: number;
+  provider: string;
+  reference?: null | string;
+  refunded_minor?: number;
+  replayed?: boolean;
+  sandbox_token?: string;
+  status: "authorized" | "cancelled" | "captured" | "expired" | "failed" | "partially_captured" | "requires_action" | "requires_payment";
+}
+
 export interface OpenApiPublicSearchResponse {
   data: {
     items: Array<{

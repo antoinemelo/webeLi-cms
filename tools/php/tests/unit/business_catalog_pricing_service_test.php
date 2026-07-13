@@ -15,6 +15,11 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $db->pdo()->exec($catalogSchema);
+$pricingMigration = file_get_contents(__DIR__ . '/../../../../database/migrations/business/0007_pricing_offers_bundles.sql');
+if ($pricingMigration === false) {
+    throw new RuntimeException('Unable to read pricing lists schema.');
+}
+$db->pdo()->exec($pricingMigration);
 
 try {
     $validator = new BusinessCatalogValidator();

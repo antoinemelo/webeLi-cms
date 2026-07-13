@@ -1,0 +1,19 @@
+{% set items = data.items|default([]) %}
+{% if block_type in ['featured_product','product_card','product_detail'] %}{% set items = data.product ? [data.product] : [] %}{% endif %}
+{% if block_type == 'collection_grid' %}
+<section class="storefront-grid storefront-grid--collections" data-storefront-block="collection-grid">
+  {% for item in items %}<article class="storefront-card"><h2><a href="{{ item.url }}">{{ item.name }}</a></h2>{% if item.description %}<p>{{ item.description }}</p>{% endif %}<small>{{ item.product_count }} produit(s)</small></article>{% endfor %}
+</section>
+{% elseif block_type == 'add_to_cart' %}
+  {% set resolved = data.resolved|default(null) %}{% if resolved %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ resolved.sellable.sellable_id }}" data-quantity="{{ data.quantity|default(1) }}">{{ data.label|default('Ajouter au panier') }}</button>{% endif %}
+{% else %}
+<section class="storefront-grid storefront-grid--products" data-storefront-block="{{ block_type }}">
+  {% for item in items %}<article class="storefront-card" data-product-id="{{ item.product_id }}">
+    {% if item.media|default([]) %}<img src="{{ item.media[0].url }}" alt="{{ item.media[0].alt }}" loading="lazy">{% endif %}
+    <h2><a href="{{ item.url }}">{{ item.name }}</a></h2>{% if item.summary %}<p>{{ item.summary }}</p>{% endif %}
+    {% if data.show_price|default(true) and item.price|default(null) %}<p><strong>{{ (item.price.final_minor / 100)|number_format(2, '.', ' ') }} {{ item.price.currency }}</strong></p>{% endif %}
+    {% if data.show_availability|default(true) and item.availability|default(null) %}<p>{{ item.availability.label|default(item.availability.status) }}</p>{% endif %}
+    {% if item.cta|default(null) %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ item.cta.sellable_id }}">{{ data.cta_label|default(item.cta.label) }}</button>{% endif %}
+  </article>{% endfor %}
+</section>
+{% endif %}

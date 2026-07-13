@@ -73,6 +73,16 @@ CREATE UNIQUE INDEX idx_site_domains_one_primary_per_site
 CREATE INDEX idx_site_domains_lookup
     ON site_domains(host, base_path, is_active);
 
+CREATE TABLE IF NOT EXISTS cms_sales_channel_storefronts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id INTEGER NOT NULL UNIQUE, site_id INTEGER NOT NULL,
+    domain_id INTEGER, route_prefix TEXT NOT NULL DEFAULT '/', is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE, FOREIGN KEY(domain_id) REFERENCES site_domains(id) ON DELETE SET NULL,
+    CHECK(channel_id>0), CHECK(route_prefix LIKE '/%')
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cms_sales_channel_storefront_default ON cms_sales_channel_storefronts(site_id) WHERE is_default=1 AND status='active';
+
 CREATE TABLE site_localizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -2303,27 +2313,59 @@ CREATE TABLE webhook_deliveries (
 
 CREATE TABLE outbox_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL UNIQUE,
+    event_type TEXT NOT NULL,
+    schema_version INTEGER NOT NULL DEFAULT 1 CHECK(schema_version >= 1),
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    site_id INTEGER,
+    correlation_id TEXT NOT NULL,
+    causation_id TEXT,
+    aggregate_type TEXT NOT NULL DEFAULT 'system',
+    aggregate_id TEXT,
     topic TEXT NOT NULL,
     payload_json TEXT NOT NULL CHECK(json_valid(payload_json)),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','processed','failed')),
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','processed','failed','dead_letter','archived')),
     attempts INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 5 CHECK(max_attempts BETWEEN 1 AND 100),
     last_error TEXT,
+    error_type TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     available_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    locked_until TEXT,
+    lock_token TEXT,
     claimed_at TEXT,
     processed_at TEXT,
+    dead_lettered_at TEXT,
+    archived_at TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id IS NULL OR site_id > 0),
     CHECK(available_at >= created_at),
     CHECK(claimed_at IS NULL OR claimed_at >= created_at),
     CHECK(processed_at IS NULL OR processed_at >= created_at),
-    CHECK(processed_at IS NULL OR status = 'processed')
+    CHECK(dead_lettered_at IS NULL OR status = 'dead_letter'),
+    CHECK(archived_at IS NULL OR status = 'archived'),
+    CHECK(processed_at IS NULL OR status IN ('processed','archived'))
+);
+
+CREATE TABLE outbox_consumptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL,
+    consumer_key TEXT NOT NULL,
+    processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    result_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(result_json)),
+    UNIQUE(event_id, consumer_key),
+    FOREIGN KEY(event_id) REFERENCES outbox_events(event_id) ON DELETE CASCADE
 );
 
 CREATE TABLE system_jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_key TEXT NOT NULL UNIQUE,
     last_run_at TEXT,
+    last_heartbeat_at TEXT,
     last_status TEXT,
     last_message TEXT,
+    locked_until TEXT,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -2346,6 +2388,11 @@ CREATE INDEX IF NOT EXISTS idx_tombstones_lookup ON tombstones(site_id, old_path
 CREATE INDEX IF NOT EXISTS idx_redirects_active_old_path ON redirects(site_id, language_code, old_path) WHERE is_active = 1;
 CREATE INDEX IF NOT EXISTS idx_tombstones_active_old_path ON tombstones(site_id, language_code, old_path) WHERE is_active = 1;
 CREATE INDEX IF NOT EXISTS idx_outbox_status_available ON outbox_events(status, available_at, id);
+CREATE INDEX IF NOT EXISTS idx_outbox_lock ON outbox_events(status, locked_until, id);
+CREATE INDEX IF NOT EXISTS idx_outbox_event_id ON outbox_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_correlation ON outbox_events(correlation_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_site_status ON outbox_events(site_id, status, available_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_consumptions_event ON outbox_consumptions(event_id);
 
 CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_site_active ON webhook_endpoints(site_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_due ON webhook_deliveries(status, next_attempt_at, id);
@@ -3305,6 +3352,78 @@ END;
 
 CREATE INDEX IF NOT EXISTS idx_public_content_snapshots_runtime ON public_content_snapshots(site_id, language_code, route_path);
 CREATE INDEX IF NOT EXISTS idx_public_content_snapshots_source_revision ON public_content_snapshots(source_published_revision_id);
+
+-- CMS/Product links live in core because content is local and products belong
+-- to business.sqlite. product_id is intentionally an application-level
+-- reference; public rendering consumes only the projected JSON below.
+CREATE TABLE IF NOT EXISTS business_product_content_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    content_entry_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL DEFAULT 'product_page' CHECK(relation_type IN ('product_page','storytelling','faq','guide','comparison','seo','related')),
+    locale TEXT,
+    is_canonical INTEGER NOT NULL DEFAULT 0 CHECK(is_canonical IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+    seo_config_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(seo_config_json)),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE RESTRICT,
+    FOREIGN KEY(content_entry_id) REFERENCES content_entries(id) ON DELETE RESTRICT,
+    CHECK(site_id > 0 AND product_id > 0),
+    CHECK(locale IS NULL OR locale = lower(trim(locale)))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_content_links_identity ON business_product_content_links(site_id, product_id, content_entry_id, relation_type, COALESCE(locale, ''));
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_content_links_canonical ON business_product_content_links(site_id, product_id, COALESCE(locale, '')) WHERE is_canonical = 1 AND status = 'active';
+CREATE INDEX IF NOT EXISTS idx_business_product_content_links_content ON business_product_content_links(site_id, content_entry_id, locale, status);
+
+CREATE TABLE IF NOT EXISTS business_product_public_projections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    link_id INTEGER NOT NULL UNIQUE,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    content_entry_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL,
+    locale TEXT,
+    is_canonical INTEGER NOT NULL DEFAULT 0 CHECK(is_canonical IN (0,1)),
+    is_active INTEGER NOT NULL DEFAULT 0 CHECK(is_active IN (0,1)),
+    product_json TEXT NOT NULL CHECK(json_valid(product_json)),
+    structured_data_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(structured_data_json)),
+    source_product_updated_at TEXT,
+    projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(link_id) REFERENCES business_product_content_links(id) ON DELETE CASCADE,
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE RESTRICT,
+    FOREIGN KEY(content_entry_id) REFERENCES content_entries(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_business_product_public_projections_content ON business_product_public_projections(site_id, content_entry_id, locale, is_active);
+
+CREATE TABLE IF NOT EXISTS storefront_product_projections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL,
+    product_id INTEGER NOT NULL, slug TEXT NOT NULL, collection_id INTEGER, dto_version INTEGER NOT NULL DEFAULT 1,
+    is_indexable INTEGER NOT NULL DEFAULT 1 CHECK(is_indexable IN (0,1)), dto_json TEXT NOT NULL CHECK(json_valid(dto_json)),
+    source_hash TEXT NOT NULL, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,channel_id,locale,product_id), UNIQUE(site_id,channel_id,locale,slug), FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_products_listing ON storefront_product_projections(site_id,channel_id,locale,collection_id,slug);
+CREATE TABLE IF NOT EXISTS storefront_collection_projections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL,
+    collection_id INTEGER NOT NULL, slug TEXT NOT NULL, dto_version INTEGER NOT NULL DEFAULT 1,
+    dto_json TEXT NOT NULL CHECK(json_valid(dto_json)), source_hash TEXT NOT NULL, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,channel_id,locale,collection_id), UNIQUE(site_id,channel_id,locale,slug), FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+
+CREATE TRIGGER IF NOT EXISTS trg_business_product_content_links_site_insert BEFORE INSERT ON business_product_content_links BEGIN
+    SELECT RAISE(ABORT, 'content entry must belong to product link site') WHERE NOT EXISTS (SELECT 1 FROM content_entries ce WHERE ce.id=NEW.content_entry_id AND ce.site_id=NEW.site_id);
+END;
+CREATE TRIGGER IF NOT EXISTS trg_business_product_content_links_site_update BEFORE UPDATE OF site_id, content_entry_id ON business_product_content_links BEGIN
+    SELECT RAISE(ABORT, 'content entry must belong to product link site') WHERE NOT EXISTS (SELECT 1 FROM content_entries ce WHERE ce.id=NEW.content_entry_id AND ce.site_id=NEW.site_id);
+END;
+CREATE TRIGGER IF NOT EXISTS trg_business_product_content_links_content_delete_guard BEFORE DELETE ON content_entries
+WHEN EXISTS (SELECT 1 FROM business_product_content_links l WHERE l.content_entry_id=OLD.id) BEGIN
+    SELECT RAISE(ABORT, 'remove product content links before deleting content entry');
+END;
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

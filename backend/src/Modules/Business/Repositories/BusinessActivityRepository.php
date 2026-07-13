@@ -57,7 +57,8 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             $this->memoActivity($siteId, $type, $id),
             $this->commentActivity($siteId, $type, $id),
             $this->shareActivity($siteId, $type, $id),
-            $this->messageActivity($siteId, $type, $id)
+            $this->messageActivity($siteId, $type, $id),
+            $this->saleActivity($siteId, $type, $id)
         );
         usort($items, static fn(array $a, array $b): int => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')) ?: strcmp((string) $b['id'], (string) $a['id']));
         $total = count($items);
@@ -153,6 +154,26 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             ['site_id' => $siteId, 'id' => $id]
         );
         return array_map(fn(array $row): array => $this->activityRow($row, 'message'), $rows);
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function saleActivity(int $siteId, string $type, int $id): array
+    {
+        if (!$this->database()->tableExists('crm_sale_activities')) {
+            return [];
+        }
+        $where = $type === 'company' ? 'related_company_id = :id' : 'related_contact_id = :id';
+        $rows = $this->database()->all(
+            "SELECT id,site_id,linked_by_iam_user_id AS actor_iam_user_id,
+                    'crm_sale_activity' AS entity_type,source_aggregate_id AS entity_id,
+                    related_company_id,related_contact_id,'business.sale.' || activity_type AS action,summary,
+                    json_object('channel',channel,'status',status,'source_reference',source_reference,'source_event_type',source_event_type,'resolution_strategy',resolution_strategy) AS metadata_json,
+                    occurred_at AS created_at
+             FROM crm_sale_activities WHERE site_id=:site_id AND {$where}
+             ORDER BY occurred_at DESC,id DESC LIMIT 200",
+            ['site_id' => $siteId, 'id' => $id]
+        );
+        return array_map(fn(array $row): array => $this->activityRow($row, 'sale'), $rows);
     }
 
     private function companyIdForContact(int $siteId, int $contactId): ?int

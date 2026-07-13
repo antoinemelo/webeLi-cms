@@ -5,6 +5,7 @@ import type {
   ContentOptions,
   FetchLike,
   MediaListOptions,
+  MutationOptions,
   PublicApiErrorPayload,
   PublicContentIndexResponse,
   PublicContentShowResponse,
@@ -15,10 +16,26 @@ import type {
   PublicMenusResponse,
   PublicRouteResponse,
   PublicRoutesResponse,
+  PublicSaleBootstrapResponse,
+  PublicSaleCartLineDeleteResponse,
+  PublicSaleCartLineMutationResponse,
+  PublicSaleCartResponse,
+  PublicSaleCartAbandonResponse,
+  PublicSaleCheckoutUpdateResponse,
+  PublicSaleCheckoutResponse,
+  PublicSalePaymentReturnResponse,
+  PublicSaleSandboxSimulationResponse,
   PublicSearchResponse,
   PublicTaxonomiesResponse,
   RouteOptions,
   RoutesOptions,
+  SaleCartCreateOptions,
+  SaleCartLinePayload,
+  SaleCartLineUpdatePayload,
+  SaleChannelOptions,
+  SaleCheckoutPayload,
+  SaleCheckoutUpdatePayload,
+  SaleSandboxSimulationPayload,
   SearchOptions,
 } from './types';
 
@@ -164,6 +181,127 @@ export class AmCmsClient {
     });
   }
 
+  getSaleChannel(code: string, options: SaleChannelOptions = {}): Promise<PublicSaleBootstrapResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/bootstrap`, {
+      query: this.withCommonQuery({}, options),
+      options,
+    });
+  }
+
+  createSaleCart(code: string, options: SaleCartCreateOptions = {}): Promise<PublicSaleCartResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart`, {
+      method: 'POST',
+      query: this.withCommonQuery({}, options),
+      body: {},
+      options,
+    });
+  }
+
+  getSaleCart(code: string, token: string, options: SaleChannelOptions = {}): Promise<PublicSaleCartResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}`, {
+      query: this.withCommonQuery({}, options),
+      options,
+    });
+  }
+
+  addSaleCartLine(
+    code: string,
+    token: string,
+    payload: SaleCartLinePayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleCartLineMutationResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}/lines`, {
+      method: 'POST',
+      query: this.withCommonQuery({}, options),
+      body: payload,
+      options,
+    });
+  }
+
+  updateSaleCartLine(
+    code: string,
+    token: string,
+    lineId: string | number,
+    payload: SaleCartLineUpdatePayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleCartLineMutationResponse> {
+    return this.request(
+      `/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}/lines/${encodeSegment(String(lineId))}`,
+      {
+        method: 'PATCH',
+        query: this.withCommonQuery({}, options),
+        body: payload,
+        options,
+      },
+    );
+  }
+
+  deleteSaleCartLine(
+    code: string,
+    token: string,
+    lineId: string | number,
+    options: SaleChannelOptions = {},
+  ): Promise<PublicSaleCartLineDeleteResponse> {
+    return this.request(
+      `/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}/lines/${encodeSegment(String(lineId))}`,
+      {
+        method: 'DELETE',
+        query: this.withCommonQuery({}, options),
+        options,
+      },
+    );
+  }
+
+  checkoutSaleCart(
+    code: string,
+    payload: SaleCheckoutPayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleCheckoutResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/checkout`, {
+      method: 'POST',
+      query: this.withCommonQuery({}, options),
+      body: payload,
+      options,
+    });
+  }
+
+  updateSaleCheckout(
+    code: string,
+    token: string,
+    payload: SaleCheckoutUpdatePayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleCheckoutUpdateResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}/checkout`, {
+      method: 'PATCH', query: this.withCommonQuery({}, options), body: payload, options,
+    });
+  }
+
+  abandonSaleCart(code: string, token: string, options: SaleChannelOptions = {}): Promise<PublicSaleCartAbandonResponse> {
+    return this.request(`/api/v1/sale/channels/${encodeSegment(code)}/cart/${encodeSegment(token)}`, {
+      method: 'DELETE', query: this.withCommonQuery({}, options), options,
+    });
+  }
+
+  getSalePaymentReturn(
+    provider: string,
+    reference: string,
+    options: SaleChannelOptions = {},
+  ): Promise<PublicSalePaymentReturnResponse> {
+    return this.request('/api/v1/sale/payments/return', {
+      query: this.withCommonQuery({ provider, reference }, options), options,
+    });
+  }
+
+  simulateSaleSandboxPayment(
+    reference: string,
+    payload: SaleSandboxSimulationPayload,
+    options: MutationOptions = {},
+  ): Promise<PublicSaleSandboxSimulationResponse> {
+    return this.request(`/api/v1/sale/payments/sandbox/${encodeSegment(reference)}/simulate`, {
+      method: 'POST', query: this.withCommonQuery({}, options), body: payload, options,
+    });
+  }
+
   private withCommonQuery(query: QueryInput, options: CommonQueryOptions): QueryInput {
     const merged: QueryInput = {
       site: options.site ?? this.site,
@@ -183,7 +321,7 @@ export class AmCmsClient {
 
   private async request<T>(
     endpoint: string,
-    params: { query?: QueryInput; options?: CommonQueryOptions } = {},
+    params: { method?: string; query?: QueryInput; body?: unknown; options?: CommonQueryOptions | MutationOptions } = {},
   ): Promise<T> {
     const url = new URL(`${this.baseUrl}${endpoint}`);
     appendQuery(url, params.query ?? {});
@@ -193,15 +331,28 @@ export class AmCmsClient {
       ...this.defaultHeaders,
       ...(params.options?.headers ?? {}),
     };
+    const idempotencyKey = 'idempotencyKey' in (params.options ?? {}) ? (params.options as MutationOptions).idempotencyKey : undefined;
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
 
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    const response = await this.fetchImpl(url, {
-      method: 'GET',
+    const init: RequestInit = {
+      method: params.method ?? 'GET',
       headers,
       signal: params.options?.signal,
+    };
+
+    if (params.body !== undefined) {
+      headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+      init.body = JSON.stringify({ data: params.body });
+    }
+
+    const response = await this.fetchImpl(url, {
+      ...init,
     });
 
     const payload = await readJson(response);

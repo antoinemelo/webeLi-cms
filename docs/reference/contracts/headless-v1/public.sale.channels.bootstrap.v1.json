@@ -1,0 +1,52 @@
+{
+  "contract": "public.sale.channels.bootstrap.v1",
+  "kind": "schema",
+  "summary": "Initialiser un canal e-commerce public.",
+  "description": "Retourne les informations publiques d'un canal Sale e-commerce actif et public. Les canaux brouillon, admin, POS ou non publics retournent 404.",
+  "method": "GET",
+  "path": "/api/v1/sale/channels/{code}/bootstrap",
+  "source": "sale_channels",
+  "security": "Public endpoint: no bearer token is required; site and channel publication rules still apply.",
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$", "description": "Code du canal e-commerce public."}
+  },
+  "response": {
+    "status": 200,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["channel", "cart", "checkout", "fulfillment_methods"],
+          "properties": {
+            "channel": {"$ref": "#/components/schemas/PublicSaleChannel"},
+            "cart": {"type": "object", "additionalProperties": true},
+            "checkout": {"type": "object", "additionalProperties": true},
+            "fulfillment_methods": {"type": "array", "items": {"type": "object", "required": ["code", "label", "type", "flat_rate_minor", "requires_shipping_address"], "additionalProperties": true}}
+          },
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal public introuvable."}
+  ],
+  "examples": {
+    "response": {
+      "data": {
+        "channel": {"channel_id": 3, "site_id": 1, "code": "web-main", "type": "storefront", "name": "Boutique", "default_currency": "CHF", "default_locale": "fr", "currency": "CHF", "default_language": "fr", "tax_mode": "tax_included"},
+        "cart": {"enabled": true, "token_transport": "opaque_token"},
+        "checkout": {"enabled": true, "idempotency_required": true},
+        "fulfillment_methods": [{"code": "standard", "label": "Livraison standard", "type": "shipping", "flat_rate_minor": 900, "free_above_minor": 10000, "requires_shipping_address": true}, {"code": "pickup", "label": "Retrait local", "type": "pickup", "flat_rate_minor": 0, "requires_shipping_address": false}]
+      },
+      "meta": {"contract": "public.sale.channels.bootstrap.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

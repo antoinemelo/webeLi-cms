@@ -53,7 +53,7 @@ vendable et des snapshots client via des ports optionnels :
   catalogue de vente ;
 - `CustomerSnapshotPort` pour copier un client externe dans `sale_customer_refs` ;
 - `CrmActivitySink` pour une future projection CRM des evenements Vente ;
-- `CmsAccountBridge` pour une future liaison compte/profil CMS.
+- `CmsAccountBridge` actif pour la liaison explicite IAM–CRM–Vente des comptes clients post-achat.
 
 L'adaptateur `BusinessSellableCatalogAdapter` branche le catalogue Operations
 quand `business` est actif. `BusinessCustomerSnapshotAdapter` branche les
@@ -284,8 +284,9 @@ Les groupes couverts sont :
 
 Les actions de checkout, ajout de ligne, paiement, remboursement et checkout
 POS acceptent une cle d'idempotence via payload ou en-tete `Idempotency-Key`
-lorsque le workflow la supporte. Les routes Vente restent admin-only : le module
-ne declare aucune API publique active par defaut.
+lorsque le workflow la supporte. Les routes d'administration Vente restent
+admin-only ; l'API publique décrite ci-dessous possède une activation runtime
+distincte.
 
 ## API e-commerce publique optionnelle
 
@@ -293,7 +294,9 @@ Vente prepare aussi une API e-commerce publique minimale sous
 `/api/v1/sale/channels/{code}/...`. Elle n'est utilisable que lorsque les
 routes API publiques de modules sont activees cote configuration et que le canal
 vise est explicitement `channel_type=ecommerce`, `status=active` et
-`is_public=1`. Le seed `web-main` reste en `draft` et non public.
+`is_public=1`. Le seed de développement/test rend `web-main` actif et public.
+En production, `APP_PUBLIC_API_MODULE_ROUTES` reste désactivé par défaut et doit
+être activé explicitement pour charger ces routes.
 
 Les endpoints declares sont :
 

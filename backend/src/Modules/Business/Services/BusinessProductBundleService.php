@@ -11,6 +11,8 @@ final class BusinessProductBundleService
 {
     private const PRICING_MODES = ['fixed', 'sum_components', 'discount_components'];
     private const STOCK_MODES = ['components', 'virtual', 'none'];
+    private const COMPOSITION_TYPES = ['bundle', 'kit'];
+    private const UNAVAILABLE_STRATEGIES = ['reject', 'backorder', 'contact'];
 
     public function __construct(private readonly Database $db) {}
 
@@ -43,19 +45,23 @@ final class BusinessProductBundleService
 
         $pricingMode = $this->choice((string) ($payload['pricing_mode'] ?? 'fixed'), self::PRICING_MODES, 'pricing_mode');
         $stockMode = $this->choice((string) ($payload['stock_mode'] ?? 'components'), self::STOCK_MODES, 'stock_mode');
+        $compositionType = $this->choice((string) ($payload['composition_type'] ?? 'bundle'), self::COMPOSITION_TYPES, 'composition_type');
+        $unavailableStrategy = $this->choice((string) ($payload['unavailable_strategy'] ?? 'reject'), self::UNAVAILABLE_STRATEGIES, 'unavailable_strategy');
         $isActive = (int) (bool) ($payload['is_active'] ?? true);
         $current = $variantId === null ? $this->bundleRowForProduct($siteId, $productId) : $this->bundleRowForVariant($siteId, $variantId);
 
         if ($current === null) {
             $this->db->run(
-                'INSERT INTO business_product_bundles(site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, is_active, created_by_iam_user_id, updated_by_iam_user_id)
-                 VALUES(:site_id, :product_id, :variant_id, :pricing_mode, :stock_mode, :is_active, :actor, :actor)',
+                'INSERT INTO business_product_bundles(site_id, bundle_product_id, bundle_variant_id, pricing_mode, stock_mode, composition_type, unavailable_strategy, is_active, created_by_iam_user_id, updated_by_iam_user_id)
+                 VALUES(:site_id, :product_id, :variant_id, :pricing_mode, :stock_mode, :composition_type, :unavailable_strategy, :is_active, :actor, :actor)',
                 [
                     'site_id' => $siteId,
                     'product_id' => $productId,
                     'variant_id' => $variantId,
                     'pricing_mode' => $pricingMode,
                     'stock_mode' => $stockMode,
+                    'composition_type' => $compositionType,
+                    'unavailable_strategy' => $unavailableStrategy,
                     'is_active' => $isActive,
                     'actor' => $actorId > 0 ? $actorId : null,
                 ]
@@ -66,6 +72,7 @@ final class BusinessProductBundleService
             $this->db->run(
                 'UPDATE business_product_bundles
                  SET bundle_variant_id = :variant_id, pricing_mode = :pricing_mode, stock_mode = :stock_mode, is_active = :is_active,
+                     composition_type = :composition_type, unavailable_strategy = :unavailable_strategy,
                      updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP, archived_at = NULL
                  WHERE id = :id AND site_id = :site_id',
                 [
@@ -74,6 +81,8 @@ final class BusinessProductBundleService
                     'variant_id' => $variantId,
                     'pricing_mode' => $pricingMode,
                     'stock_mode' => $stockMode,
+                    'composition_type' => $compositionType,
+                    'unavailable_strategy' => $unavailableStrategy,
                     'is_active' => $isActive,
                     'actor' => $actorId > 0 ? $actorId : null,
                 ]
@@ -173,6 +182,8 @@ final class BusinessProductBundleService
                 'bundle_components' => [],
                 'bundle_pricing_mode' => null,
                 'bundle_stock_mode' => null,
+                'bundle_composition_type' => null,
+                'bundle_unavailable_strategy' => null,
                 'bundle_available_quantity' => null,
                 'bundle_missing_requirements' => [],
             ];
@@ -180,6 +191,7 @@ final class BusinessProductBundleService
 
         $missing = [];
         $availability = $this->availabilitySummary($bundle);
+        $strategy = (string) ($bundle['unavailable_strategy'] ?? 'reject');
         foreach ($bundle['components'] as $component) {
             if (($component['component_status'] ?? '') !== 'active' || ($component['component_variant_status'] ?? 'active') !== 'active') {
                 $missing[] = 'bundle_component_not_sellable';
@@ -188,7 +200,9 @@ final class BusinessProductBundleService
                 $missing[] = 'bundle_component_archived';
             }
         }
-        if ($availability['status'] === 'contact_us') {
+        if ($availability['status'] === 'contact_us' && $strategy === 'backorder') {
+            $availability = ['status' => 'backorder', 'delivery_lead_time_days' => 7];
+        } elseif ($availability['status'] === 'contact_us') {
             $missing[] = 'bundle_stock_unavailable';
         }
 
@@ -198,6 +212,8 @@ final class BusinessProductBundleService
             'bundle_components' => $bundle['components'],
             'bundle_pricing_mode' => (string) $bundle['pricing_mode'],
             'bundle_stock_mode' => (string) $bundle['stock_mode'],
+            'bundle_composition_type' => (string) ($bundle['composition_type'] ?? 'bundle'),
+            'bundle_unavailable_strategy' => (string) ($bundle['unavailable_strategy'] ?? 'reject'),
             'bundle_available_quantity' => $this->availableQuantity($bundle),
             'bundle_availability_status' => $availability['status'],
             'bundle_backorder_delivery_days' => $availability['delivery_lead_time_days'],
@@ -216,17 +232,17 @@ final class BusinessProductBundleService
             }
             $this->addComponent($siteId, $bundleId, $component + ['sort_order' => ($index + 1) * 10]);
         }
-        $this->assertNoDirectLoop($siteId, $bundle);
+        $this->assertBundleAcyclic($siteId, (int) $bundle['bundle_product_id']);
     }
 
     /** @param array<string,mixed> $bundle @param array<string,mixed> $payload @return array<string,mixed> */
     private function componentPayload(int $siteId, array $bundle, array $payload): array
     {
         $productId = $this->id($payload['component_product_id'] ?? $payload['product_id'] ?? 0, 'component_product_id');
-        $product = $this->product($siteId, $productId, true);
+        $product = $this->product($siteId, $productId);
         $variantId = $this->nullableId($payload['component_variant_id'] ?? $payload['variant_id'] ?? null, 'component_variant_id');
         if ($variantId !== null) {
-            $variant = $this->variant($siteId, $variantId, true);
+            $variant = $this->variant($siteId, $variantId);
             if ((int) $variant['product_id'] !== $productId) {
                 throw new InvalidArgumentException('business.bundle_component_variant_product_mismatch');
             }
@@ -234,15 +250,10 @@ final class BusinessProductBundleService
         if ($productId === (int) $bundle['bundle_product_id'] || ($variantId !== null && $variantId === ($bundle['bundle_variant_id'] === null ? null : (int) $bundle['bundle_variant_id']))) {
             throw new InvalidArgumentException('business.bundle_loop_detected');
         }
-        $componentBundle = $variantId === null ? $this->bundleRowForProduct($siteId, $productId) : $this->bundleRowForVariant($siteId, $variantId);
-        if ($componentBundle !== null) {
-            foreach ($this->componentsRows((int) $componentBundle['id']) as $nested) {
-                if ((int) $nested['component_product_id'] === (int) $bundle['bundle_product_id']
-                    || (($bundle['bundle_variant_id'] ?? null) !== null && (int) ($nested['component_variant_id'] ?? 0) === (int) $bundle['bundle_variant_id'])) {
-                    throw new InvalidArgumentException('business.bundle_loop_detected');
-                }
-            }
+        if (($product['status'] ?? '') !== 'active' || ($variantId !== null && ($variant['status'] ?? '') !== 'active')) {
+            throw new InvalidArgumentException('business.bundle_component_not_active');
         }
+        $this->assertNoCycleForComponent($siteId, (int) $bundle['bundle_product_id'], $productId);
 
         $quantity = (float) ($payload['quantity'] ?? 1);
         if ($quantity <= 0) {
@@ -391,14 +402,46 @@ final class BusinessProductBundleService
     }
 
     /** @param array<string,mixed> $bundle */
-    private function assertNoDirectLoop(int $siteId, array $bundle): void
+    private function assertNoCycleForComponent(int $siteId, int $bundleProductId, int $componentProductId): void
     {
+        if ($componentProductId === $bundleProductId || $this->productGraphReaches($siteId, $componentProductId, $bundleProductId, [])) {
+            throw new InvalidArgumentException('business.bundle_loop_detected');
+        }
+    }
+
+    private function assertBundleAcyclic(int $siteId, int $bundleProductId): void
+    {
+        $bundle = $this->bundleRowForProduct($siteId, $bundleProductId);
+        if ($bundle === null) {
+            return;
+        }
         foreach ($this->componentsRows((int) $bundle['id']) as $component) {
-            if ((int) $component['component_product_id'] === (int) $bundle['bundle_product_id']
-                || (($bundle['bundle_variant_id'] ?? null) !== null && (int) ($component['component_variant_id'] ?? 0) === (int) $bundle['bundle_variant_id'])) {
-                throw new InvalidArgumentException('business.bundle_loop_detected');
+            $this->assertNoCycleForComponent($siteId, $bundleProductId, (int) $component['component_product_id']);
+        }
+    }
+
+    /** @param array<int,bool> $visited */
+    private function productGraphReaches(int $siteId, int $fromProductId, int $targetProductId, array $visited): bool
+    {
+        if ($fromProductId === $targetProductId) {
+            return true;
+        }
+        if (isset($visited[$fromProductId])) {
+            return false;
+        }
+        $visited[$fromProductId] = true;
+        $bundles = $this->db->all(
+            'SELECT id FROM business_product_bundles WHERE site_id=? AND bundle_product_id=? AND is_active=1 AND archived_at IS NULL',
+            [$siteId, $fromProductId]
+        );
+        foreach ($bundles as $bundle) {
+            foreach ($this->componentsRows((int) $bundle['id']) as $component) {
+                if ($this->productGraphReaches($siteId, (int) $component['component_product_id'], $targetProductId, $visited)) {
+                    return true;
+                }
             }
         }
+        return false;
     }
 
     /** @return array<string,mixed> */

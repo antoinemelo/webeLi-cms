@@ -45,6 +45,7 @@ generated: true
 | `DELETE` | `/admin/api/business/pim/attribute-options/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/attributes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/bundle-components/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
@@ -74,6 +75,7 @@ generated: true
 | `DELETE` | `/admin/api/taxonomies/{key}/terms/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/visual/entries/{id}/block-lock` | API administrative | `backend/routes/api.php` |
 | `GET` | `/` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/account` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/admin` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/api/ai/actions` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -143,11 +145,15 @@ generated: true
 | `GET` | `/admin/api/business/pim/attribute-groups` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/attributes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/bundles/{id}/components` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/content-candidates` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/offers/export.csv` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/price-lists` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/assets` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/attributes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/completeness` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/sellable-variants` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
@@ -158,6 +164,7 @@ generated: true
 | `GET` | `/admin/api/business/relations/{type}/{id}/comments` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/sale-activities/unlinked` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/schema` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/search` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
@@ -259,10 +266,15 @@ generated: true
 | `GET` | `/api/v1/route` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/routes` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/search` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/collections` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/products` | API publique | `backend/routes/api.php` |
+| `GET` | `/api/v1/storefront/products/{slug}` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies` | API publique | `backend/routes/api.php` |
 | `GET` | `/api/v1/taxonomies/{taxonomy}` | API publique | `backend/routes/api.php` |
 | `GET` | `/business/memos/share/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/cart` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/checkout` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
@@ -290,6 +302,7 @@ generated: true
 | `PATCH` | `/admin/api/business/pim/attribute-options/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/pim/attributes/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/pim/bundle-components/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/tags/{id}` | API administrative | `backend/routes/api.php` |
@@ -379,11 +392,16 @@ generated: true
 | `POST` | `/admin/api/business/pim/offers/bulk-update` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/offers/import/apply` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/offers/import/preview` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/price-lists` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/price-lists/{id}/items` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/bulk-asset-assign` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/bulk-recalculate` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/bulk-update` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/assets` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/recalculate-completeness` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/storefront-projections/rebuild` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/archive` | API administrative | `backend/routes/api.php` |
@@ -391,6 +409,8 @@ generated: true
 | `POST` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/restore` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/sale-activities/reconcile` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/sale-activities/{id}/link` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/capabilities/{key}/apply` | API administrative | `backend/routes/api.php` |
@@ -426,6 +446,7 @@ generated: true
 | `POST` | `/admin/api/imports-exports/static/actions/rerun` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/imports-exports/static/actions/site` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/cache/clear` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/dependencies/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/search/reindex` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/folders` | API administrative | `backend/routes/api.php` |
@@ -457,6 +478,7 @@ generated: true
 | `PUT` | `/admin/api/business/catalog/variants/{id}/price-adjustments` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/products/{id}/attributes` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
+| `PUT` | `/admin/api/business/pim/products/{id}/gift-card-policy` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/fieldsets/{key}` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/menus/{key}/items` | API administrative | `backend/routes/api.php` |

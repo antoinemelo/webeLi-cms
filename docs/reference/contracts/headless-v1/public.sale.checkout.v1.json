@@ -1,0 +1,84 @@
+{
+  "contract": "public.sale.checkout.v1",
+  "kind": "schema",
+  "summary": "Convertir un panier public en commande.",
+  "description": "Valide une commande invitée depuis un panier public actif. Un paiement sandbox crée d'abord une commande pending_payment avec snapshots figés et réservations confirmées; seul un webhook signé ou une réconciliation fiable la confirme. Les montants client et toute donnée carte sont ignorés.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/checkout",
+  "source": "sale_carts + sale_orders + sale_order_lines",
+  "security": "Public endpoint: no bearer token is required; the opaque cart token is required.",
+  "headers": {
+    "Idempotency-Key": {"type": "string", "required": true, "pattern": "^[A-Za-z0-9._:-]{8,128}$", "description": "Clé obligatoire de rejeu idempotent pour le placement."}
+  },
+  "query_params": {
+    "lang": {"type": "string", "required": false, "description": "Langue active du site."}
+  },
+  "path_params": {
+    "code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$", "description": "Code du canal e-commerce public."}
+  },
+  "request_body": {
+    "required": true,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["cart_token", "identity", "billing_address", "shipping_method", "payment", "terms_accepted"],
+          "properties": {
+            "cart_token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+            "token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$"},
+            "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{8,128}$"},
+            "identity": {"$ref": "#/components/schemas/PublicSaleGuestIdentity"},
+            "billing_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
+            "shipping_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
+            "shipping_same_as_billing": {"type": "boolean"},
+            "shipping_method": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^[a-z0-9_-]+$"}}, "additionalProperties": false},
+            "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual", "sandbox_online"]}}, "additionalProperties": false},
+            "return_url": {"type": "string", "format": "uri"},
+            "cancel_url": {"type": "string", "format": "uri"},
+            "terms_accepted": {"type": "boolean", "enum": [true]},
+            "marketing_consent": {"type": "boolean"}
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "response": {
+    "status": 201,
+    "schema": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "object",
+          "required": ["order", "account_creation"],
+          "properties": {
+            "order": {"$ref": "#/components/schemas/PublicSaleOrder"},
+            "account_creation": {"type": "object", "required": ["token", "expires_at"], "properties": {"token": {"type": "string"}, "expires_at": {"type": "string"}}},
+            "payment": {"$ref": "#/components/schemas/PublicSalePaymentIntent"}
+          },
+          "additionalProperties": true
+        },
+        "meta": {"$ref": "#/components/schemas/PublicMeta"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "errors": [
+    {"code": "PUBLIC_CONTENT_NOT_FOUND", "status": 404, "description": "Canal ou panier public introuvable."},
+    {"code": "VALIDATION_FAILED", "status": 422, "description": "Checkout incomplet, produit indisponible, panier converti ou idempotence invalide."},
+    {"code": "RATE_LIMIT_EXCEEDED", "status": 429, "description": "Trop de validations de checkout."}
+  ],
+  "examples": {
+    "request": {"data": {"cart_token": "opaque-cart-token", "identity": {"email": "guest@example.test", "first_name": "Anne", "last_name": "Exemple"}, "billing_address": {"line1": "Rue du Test 1", "postal_code": "1000", "city": "Lausanne", "country_code": "CH"}, "shipping_same_as_billing": true, "shipping_method": {"code": "standard"}, "payment": {"code": "bank_transfer"}, "terms_accepted": true, "marketing_consent": false}},
+    "response": {
+      "data": {
+        "order": {"id": 50, "order_number": "WEB-000050", "source": "ecommerce", "status": "placed", "payment_status": "unpaid", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []},
+        "account_creation": {"token": "opaque-one-time-proof", "expires_at": "2026-07-19 12:00:00"}
+      },
+      "meta": {"contract": "public.sale.checkout.v1", "site_id": 1, "language_code": "fr"}
+    }
+  }
+}

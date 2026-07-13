@@ -1,0 +1,16 @@
+{
+  "contract": "public.sale.payment.sandbox.v1",
+  "kind": "schema",
+  "summary": "Afficher les capacités du provider sandbox.",
+  "description": "Provider de démonstration sans formulaire ni stockage de carte.",
+  "method": "GET",
+  "path": "/api/v1/sale/payments/sandbox/{reference}",
+  "security": "Public endpoint; sandbox only, no bearer token.",
+  "path_params": {"reference": {"type": "string", "required": true}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {
+    "data": {"type": "object", "required": ["provider", "reference", "outcomes", "card_fields"], "properties": {
+      "provider": {"type": "string", "enum": ["sandbox"]}, "reference": {"type": "string"},
+      "outcomes": {"type": "array", "items": {"type": "string"}}, "card_fields": {"type": "boolean", "enum": [false]}
+    }}, "meta": {"$ref": "#/components/schemas/PublicMeta"}
+  }}}
+}

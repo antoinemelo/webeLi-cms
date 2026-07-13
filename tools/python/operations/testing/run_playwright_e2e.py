@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import secrets
 import shutil
@@ -19,8 +20,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from tools.python.qualification.omnichannel_gate import validate_report_file
+
 FRONTEND = ROOT / "frontend" / "admin-vue"
 PLAYWRIGHT_CLI = FRONTEND / "node_modules" / "@playwright" / "test" / "cli.js"
+OMNICHANNEL_REPORT = ROOT / "storage/qualification/omnichannel/latest.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,6 +35,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--headed", action="store_true", help="Affiche Chromium pendant les tests.")
     parser.add_argument("--keep-instance", action="store_true", help="Conserve l’instance temporaire et affiche son chemin pour diagnostic.")
     parser.add_argument("--use-built-assets", action="store_true", help="Utilise les assets déjà compilés (réservé à la qualification après son étape de build).")
+    parser.add_argument("--omnichannel-only", action="store_true", help="Exécute uniquement la gate storefront/POS.")
     return parser.parse_args()
 
 
@@ -119,6 +126,130 @@ def normalize_e2e_site(instance: Path) -> None:
         )
         if cursor.rowcount != 1:
             raise RuntimeError("Le domaine primaire du site main est absent de la base E2E reconstruite.")
+        connection.commit()
+
+
+def create_blueprint_e2e_fixtures(instance: Path) -> None:
+    """Add deterministic Blueprint Designer data to the disposable E2E database."""
+    database = instance / "storage/database/core.sqlite"
+    fields = (
+        ("e2e_title", "text", "Titre E2E", {}, {"max": 160}, {"maxlength": 160}),
+        ("e2e_summary", "textarea", "Résumé E2E", {}, {"max": 500}, {"rows": 5}),
+        (
+            "e2e_choice",
+            "select",
+            "Choix E2E",
+            {"choices": {"standard": "Standard", "featured": "Mis en avant"}},
+            {},
+            {},
+        ),
+        (
+            "e2e_media",
+            "media",
+            "Média E2E",
+            {},
+            {"alt_policy": "required", "allowed_mimes": ["image/jpeg"]},
+            {"kind": "image", "max_files": 1},
+        ),
+    )
+
+    with sqlite3.connect(database) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        main_site = connection.execute("SELECT id FROM sites WHERE site_key='main' LIMIT 1").fetchone()
+        if main_site is None:
+            raise RuntimeError("Le site main est absent de la base E2E reconstruite.")
+        main_site_id = int(main_site[0])
+
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO sites(site_key, name, default_language_code, is_active)
+            VALUES('e2e_secondary', 'Site secondaire E2E', 'fr', 1)
+            """
+        )
+        secondary_site = connection.execute("SELECT id FROM sites WHERE site_key='e2e_secondary'").fetchone()
+        if secondary_site is None:
+            raise RuntimeError("Impossible de créer le second site de la fixture E2E.")
+        secondary_site_id = int(secondary_site[0])
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO site_languages(
+                site_id, language_code, locale, url_prefix, hreflang_code,
+                fallback_language_code, is_default, is_active, is_rtl, sort_order
+            ) VALUES(?, 'fr', 'fr-CH', '', 'fr-CH', NULL, 1, 1, 0, 10)
+            """,
+            (secondary_site_id,),
+        )
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO site_domains(
+                site_id, host, base_path, scheme, is_primary, is_active,
+                enforce_https, canonical_host_strategy
+            ) VALUES(?, 'e2e-secondary.test', '', 'http', 1, 1, 0, 'none')
+            """,
+            (secondary_site_id,),
+        )
+
+        def insert_blueprint(key: str, label: str, site_id: int | None) -> None:
+            cursor = connection.execute(
+                """
+                INSERT INTO blueprints(
+                    blueprint_key, resource_type, site_id, label, description, is_active
+                ) VALUES(?, 'block', ?, ?, 'Fixture isolée du Blueprint Designer E2E.', 1)
+                """,
+                (key, site_id, label),
+            )
+            blueprint_id = int(cursor.lastrowid)
+            version = connection.execute(
+                """
+                INSERT INTO blueprint_versions(
+                    blueprint_id, version, version_label, status, schema_json,
+                    ui_schema_json, validation_json, seo_policy_json,
+                    routing_policy_json, workflow_policy_json,
+                    translation_policy_json, permissions_policy_json,
+                    checksum_sha256, is_active, activated_at
+                ) VALUES(?, 1, 'Fixture E2E', 'active', ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, CURRENT_TIMESTAMP)
+                """,
+                (blueprint_id,) + tuple(json.dumps({}) for _ in range(8)),
+            )
+            connection.execute(
+                "UPDATE blueprints SET active_version_id=? WHERE id=?",
+                (int(version.lastrowid), blueprint_id),
+            )
+            section = connection.execute(
+                """
+                INSERT INTO blueprint_sections(
+                    blueprint_id, section_key, label, description, layout, sort_order
+                ) VALUES(?, 'content', 'Contenu E2E', 'Champs déterministes pour Playwright.', 'tab', 10)
+                """,
+                (blueprint_id,),
+            )
+            section_id = int(section.lastrowid)
+            for index, (handle, field_type, field_label, options, validation, config) in enumerate(fields, 1):
+                connection.execute(
+                    """
+                    INSERT INTO blueprint_fields(
+                        blueprint_id, section_id, field_handle, field_type, label,
+                        field_purpose, width, is_required, is_localized, is_system,
+                        is_deletable, sort_order, options_json, validation_json,
+                        conditions_json, config_json
+                    ) VALUES(?, ?, ?, ?, ?, 'content', 100, 0, 1, 0, 1, ?, ?, ?, '[]', ?)
+                    """,
+                    (
+                        blueprint_id,
+                        section_id,
+                        handle,
+                        field_type,
+                        field_label,
+                        index * 10,
+                        json.dumps(options, ensure_ascii=False),
+                        json.dumps(validation, ensure_ascii=False),
+                        json.dumps(config, ensure_ascii=False),
+                    ),
+                )
+
+        insert_blueprint("000_e2e_fixture", "Fixture Blueprint E2E locale", main_site_id)
+        insert_blueprint("000_e2e_fixture", "Fixture Blueprint E2E globale", None)
+        insert_blueprint("001_e2e_secondary", "Seconde fixture Blueprint E2E", main_site_id)
         connection.commit()
 
 
@@ -220,18 +351,32 @@ def require_playwright_chromium() -> None:
         )
 
 
-def run_playwright(environment: dict[str, str], *, headed: bool) -> int:
+def run_playwright(environment: dict[str, str], *, headed: bool, omnichannel_only: bool = False) -> int:
     node = require_executable("node")
     if not PLAYWRIGHT_CLI.is_file():
         raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
     require_playwright_chromium()
+    report = Path(environment.get("E2E_OMNICHANNEL_REPORT", str(OMNICHANNEL_REPORT))).resolve()
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.unlink(missing_ok=True)
+    environment["E2E_OMNICHANNEL_REPORT"] = str(report)
     command = [node, str(PLAYWRIGHT_CLI), "test"]
+    if omnichannel_only:
+        command.append("tests/e2e/omnichannel-release-gate.spec.ts")
     if headed:
         command.append("--headed")
-    return subprocess.run(command, cwd=FRONTEND, env=environment, timeout=900).returncode
+    returncode = subprocess.run(command, cwd=FRONTEND, env=environment, timeout=900).returncode
+    if returncode != 0:
+        return returncode
+    _payload, errors = validate_report_file(report, ROOT)
+    if errors:
+        print("Gate E2E omnicanale échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
+        return 1
+    print(f"Gate E2E omnicanale validée: {report}")
+    return 0
 
 
-def run_external(*, headed: bool) -> int | None:
+def run_external(*, headed: bool, omnichannel_only: bool = False) -> int | None:
     names = ("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD")
     provided = [name for name in names if os.environ.get(name, "").strip()]
     if not provided:
@@ -240,10 +385,10 @@ def run_external(*, headed: bool) -> int | None:
         missing = ", ".join(name for name in names if name not in provided)
         raise RuntimeError(f"Configuration E2E externe incomplète; variables manquantes: {missing}")
     print("E2E: utilisation de l’environnement externe configuré.")
-    return run_playwright(os.environ.copy(), headed=headed)
+    return run_playwright(os.environ.copy(), headed=headed, omnichannel_only=omnichannel_only)
 
 
-def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool) -> int:
+def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool, omnichannel_only: bool = False) -> int:
     php = require_executable("php")
     require_executable("node")
     email = "e2e-admin@example.test"
@@ -271,6 +416,7 @@ def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool) -
             build_frontend(instance)
         rebuild_databases(instance)
         normalize_e2e_site(instance)
+        create_blueprint_e2e_fixtures(instance)
         create_e2e_admin(instance, php, email, password)
         router = create_php_router(instance)
         receiver_thread.start()
@@ -295,7 +441,7 @@ def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool) -
             "E2E_WEBHOOK_URL": webhook_url,
         })
         print(f"E2E: CMS {base_url}; récepteur webhook {webhook_url}")
-        return run_playwright(test_env, headed=headed)
+        return run_playwright(test_env, headed=headed, omnichannel_only=omnichannel_only)
     finally:
         if receiver is not None and receiver_started:
             receiver.shutdown()
@@ -325,11 +471,12 @@ def main() -> int:
         if not PLAYWRIGHT_CLI.is_file():
             raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
         return subprocess.run([node, str(PLAYWRIGHT_CLI), "install", "chromium"], cwd=FRONTEND).returncode
-    external = run_external(headed=args.headed)
+    external = run_external(headed=args.headed, omnichannel_only=args.omnichannel_only)
     return external if external is not None else run_isolated(
         headed=args.headed,
         keep_instance=args.keep_instance,
         use_built_assets=args.use_built_assets,
+        omnichannel_only=args.omnichannel_only,
     )
 
 

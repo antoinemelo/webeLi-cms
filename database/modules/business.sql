@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS business_contacts (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_business_contacts_active_iam_user
-    ON business_contacts(iam_user_id)
+    ON business_contacts(site_id, iam_user_id)
     WHERE iam_user_id IS NOT NULL AND archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_business_companies_site_status ON business_companies(site_id, status, archived_at);
 CREATE INDEX IF NOT EXISTS idx_business_companies_name ON business_companies(site_id, normalized_name);
@@ -285,6 +285,7 @@ CREATE TABLE IF NOT EXISTS business_products (
     type TEXT NOT NULL CHECK(type IN ('physical','service','gift_card','bundle')),
     status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
     visibility TEXT NOT NULL DEFAULT 'internal' CHECK(visibility IN ('private','internal','public')),
+    external_id TEXT,
     sku_base TEXT,
     name TEXT NOT NULL,
     slug TEXT NOT NULL,
@@ -397,6 +398,40 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_variants_sku_active
     ON business_product_variants(sku)
     WHERE archived_at IS NULL;
 
+CREATE TABLE IF NOT EXISTS business_sellables (
+    sellable_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, product_id INTEGER NOT NULL, variant_id INTEGER NOT NULL UNIQUE,
+    kind TEXT NOT NULL CHECK(kind IN ('simple','variant','service','gift_card','bundle')), is_default INTEGER NOT NULL DEFAULT 0 CHECK(is_default IN (0,1)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive','archived')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE, CHECK(sellable_id=variant_id), CHECK(site_id>0)
+);
+CREATE INDEX IF NOT EXISTS idx_business_sellables_product ON business_sellables(site_id,product_id,status,is_default);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_sellables_default ON business_sellables(product_id) WHERE is_default=1 AND status='active';
+
+CREATE TABLE IF NOT EXISTS business_storefront_projection_invalidations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, product_id INTEGER,
+    reason TEXT NOT NULL CHECK(reason IN ('product','variant','price','visibility','availability','media','collection')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, processed_at TEXT, CHECK(site_id>0)
+);
+CREATE INDEX IF NOT EXISTS idx_business_storefront_invalidations_pending ON business_storefront_projection_invalidations(processed_at,site_id,product_id);
+
+-- Projection reconstruisible de la disponibilité Sale. Les colonnes de stock
+-- historiques des variantes restent des données d'amorçage catalogue et ne
+-- sont jamais une source transactionnelle après initialisation de Sale.
+CREATE TABLE IF NOT EXISTS business_inventory_availability_projections (
+    sellable_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, tracked INTEGER NOT NULL CHECK(tracked IN (0,1)),
+    on_hand_quantity INTEGER NOT NULL, reserved_quantity INTEGER NOT NULL, available_quantity INTEGER NOT NULL,
+    availability_status TEXT NOT NULL CHECK(availability_status IN ('available','backorder','unavailable','not_tracked')),
+    source_version INTEGER NOT NULL DEFAULT 0, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(sellable_id) REFERENCES business_sellables(sellable_id) ON DELETE CASCADE,
+    CHECK(site_id>0), CHECK(available_quantity=on_hand_quantity-reserved_quantity)
+);
+CREATE INDEX IF NOT EXISTS idx_business_inventory_projection_site ON business_inventory_availability_projections(site_id,availability_status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_business_products_external_id
+    ON business_products(site_id, external_id)
+    WHERE external_id IS NOT NULL AND archived_at IS NULL;
+
 CREATE TABLE IF NOT EXISTS business_product_variant_option_values (
     variant_id INTEGER NOT NULL,
     option_id INTEGER NOT NULL,
@@ -458,6 +493,7 @@ CREATE TABLE IF NOT EXISTS business_catalog_discounts (
     scope_type TEXT NOT NULL CHECK(scope_type IN ('product','variant','category','brand')),
     scope_id INTEGER NOT NULL,
     channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
+    customer_segment TEXT,
     starts_at TEXT,
     ends_at TEXT,
     priority INTEGER NOT NULL DEFAULT 100,
@@ -470,7 +506,55 @@ CREATE TABLE IF NOT EXISTS business_catalog_discounts (
     CHECK(trim(name) <> ''),
     CHECK((discount_type = 'percent' AND discount_value > 0 AND discount_value <= 100 AND currency IS NULL)
        OR (discount_type = 'amount' AND discount_value > 0 AND currency IS NOT NULL)),
+    CHECK(customer_segment IS NULL OR customer_segment = lower(trim(customer_segment))),
     CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at)
+);
+
+CREATE TABLE IF NOT EXISTS business_price_lists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    currency TEXT NOT NULL CHECK(currency IN ('CHF','EUR','USD')),
+    channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','ecommerce','pos','catalogue','admin')),
+    customer_segment TEXT,
+    priority INTEGER NOT NULL DEFAULT 100,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','active','archived')),
+    starts_at TEXT,
+    ends_at TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    CHECK(site_id > 0),
+    CHECK(trim(name) <> ''),
+    CHECK(customer_segment IS NULL OR customer_segment = lower(trim(customer_segment))),
+    CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at)
+);
+
+CREATE TABLE IF NOT EXISTS business_price_list_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    price_list_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    variant_id INTEGER,
+    adjustment_type TEXT NOT NULL DEFAULT 'fixed' CHECK(adjustment_type IN ('fixed','amount_delta','percent_delta')),
+    adjustment_value REAL NOT NULL,
+    compare_at_amount REAL,
+    priority INTEGER NOT NULL DEFAULT 100,
+    starts_at TEXT,
+    ends_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    archived_at TEXT,
+    FOREIGN KEY(price_list_id) REFERENCES business_price_lists(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK((adjustment_type = 'fixed' AND adjustment_value >= 0)
+       OR adjustment_type = 'amount_delta'
+       OR (adjustment_type = 'percent_delta' AND adjustment_value >= -100 AND adjustment_value <= 1000)),
+    CHECK(compare_at_amount IS NULL OR compare_at_amount >= 0),
+    CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at),
+    UNIQUE(price_list_id, product_id, variant_id)
 );
 
 CREATE TABLE IF NOT EXISTS business_product_bundles (
@@ -480,6 +564,8 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     bundle_variant_id INTEGER,
     pricing_mode TEXT NOT NULL DEFAULT 'fixed' CHECK(pricing_mode IN ('fixed','sum_components','discount_components')),
     stock_mode TEXT NOT NULL DEFAULT 'components' CHECK(stock_mode IN ('components','virtual','none')),
+    composition_type TEXT NOT NULL DEFAULT 'bundle' CHECK(composition_type IN ('bundle','kit')),
+    unavailable_strategy TEXT NOT NULL DEFAULT 'reject' CHECK(unavailable_strategy IN ('reject','backorder','contact')),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
     created_by_iam_user_id INTEGER,
     updated_by_iam_user_id INTEGER,
@@ -491,6 +577,26 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     CHECK(site_id > 0),
     CHECK(bundle_product_id > 0),
     CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0)
+);
+
+CREATE TABLE IF NOT EXISTS business_gift_card_policies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL UNIQUE,
+    currency TEXT NOT NULL CHECK(currency IN ('CHF','EUR','USD')),
+    value_mode TEXT NOT NULL DEFAULT 'fixed' CHECK(value_mode IN ('fixed','open')),
+    minimum_amount REAL,
+    maximum_amount REAL,
+    expires_after_days INTEGER,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(site_id > 0),
+    CHECK(minimum_amount IS NULL OR minimum_amount >= 0),
+    CHECK(maximum_amount IS NULL OR maximum_amount >= 0),
+    CHECK(maximum_amount IS NULL OR minimum_amount IS NULL OR maximum_amount >= minimum_amount),
+    CHECK(expires_after_days IS NULL OR expires_after_days > 0)
 );
 
 CREATE TABLE IF NOT EXISTS business_bundle_components (
@@ -574,6 +680,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_business_variant_adjustments_current_uniqu
     WHERE valid_from IS NULL;
 CREATE INDEX IF NOT EXISTS idx_business_catalog_discounts_scope ON business_catalog_discounts(scope_type, scope_id, status, priority);
 CREATE INDEX IF NOT EXISTS idx_business_catalog_discounts_site_channel ON business_catalog_discounts(site_id, channel, status, starts_at, ends_at);
+CREATE INDEX IF NOT EXISTS idx_business_catalog_discounts_segment ON business_catalog_discounts(site_id, customer_segment, channel, status, priority);
+CREATE INDEX IF NOT EXISTS idx_business_price_lists_context ON business_price_lists(site_id, currency, channel, customer_segment, status, priority);
+CREATE INDEX IF NOT EXISTS idx_business_price_list_items_target ON business_price_list_items(product_id, variant_id, priority, archived_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_business_product_bundles_product_active
     ON business_product_bundles(bundle_product_id)
     WHERE bundle_variant_id IS NULL AND archived_at IS NULL;
@@ -802,6 +911,9 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
     scope TEXT NOT NULL CHECK(scope IN ('product','variant','asset','price','tax','channel')),
     required_field TEXT,
     required_attribute_id INTEGER,
+    product_type TEXT NOT NULL DEFAULT 'all' CHECK(product_type IN ('all','physical','service','gift_card','bundle')),
+    severity TEXT NOT NULL DEFAULT 'block' CHECK(severity IN ('block','warn')),
+    required_language TEXT,
     channel TEXT NOT NULL DEFAULT 'all' CHECK(channel IN ('all','public','ecommerce','pos','catalogue','admin','pdf')),
     weight INTEGER NOT NULL DEFAULT 1 CHECK(weight > 0),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
@@ -817,6 +929,73 @@ CREATE TABLE IF NOT EXISTS business_product_completeness_rules (
 
 CREATE INDEX IF NOT EXISTS idx_business_product_completeness_rules_scope
     ON business_product_completeness_rules(site_id, scope, channel, is_active);
+
+CREATE TABLE IF NOT EXISTS business_product_channel_visibility (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('public','ecommerce','pos','catalogue')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','archived')),
+    starts_at TEXT,
+    ends_at TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id, product_id, channel),
+    CHECK(site_id > 0),
+    CHECK(ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_product_channel_visibility_context
+    ON business_product_channel_visibility(site_id, channel, status, starts_at, ends_at);
+
+CREATE TABLE IF NOT EXISTS business_sales_channel_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id INTEGER NOT NULL UNIQUE, site_id INTEGER NOT NULL,
+    catalog_channel TEXT NOT NULL CHECK(catalog_channel IN ('public','ecommerce','pos','catalogue','admin','partner')),
+    price_list_code TEXT, visibility_policy TEXT NOT NULL DEFAULT 'published' CHECK(visibility_policy IN ('published','private','all')),
+    default_currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(default_currency)=3 AND default_currency=upper(default_currency)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT, CHECK(channel_id>0), CHECK(site_id>0)
+);
+CREATE INDEX IF NOT EXISTS idx_business_sales_channel_configs_site ON business_sales_channel_configs(site_id,status,catalog_channel);
+
+CREATE TRIGGER IF NOT EXISTS trg_business_product_channel_visibility_site_insert
+BEFORE INSERT ON business_product_channel_visibility
+BEGIN
+    SELECT RAISE(ABORT, 'business channel visibility product must belong to site')
+    WHERE NOT EXISTS (SELECT 1 FROM business_products p WHERE p.id = NEW.product_id AND p.site_id = NEW.site_id);
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_business_product_channel_visibility_site_update
+BEFORE UPDATE OF site_id, product_id ON business_product_channel_visibility
+BEGIN
+    SELECT RAISE(ABORT, 'business channel visibility product must belong to site')
+    WHERE NOT EXISTS (SELECT 1 FROM business_products p WHERE p.id = NEW.product_id AND p.site_id = NEW.site_id);
+END;
+
+CREATE TABLE IF NOT EXISTS business_catalog_import_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    format_version TEXT NOT NULL,
+    checksum TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('applied','rejected')),
+    rows_total INTEGER NOT NULL DEFAULT 0 CHECK(rows_total >= 0),
+    changed_rows INTEGER NOT NULL DEFAULT 0 CHECK(changed_rows >= 0),
+    summary_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(summary_json)),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, idempotency_key),
+    CHECK(site_id > 0),
+    CHECK(trim(idempotency_key) <> ''),
+    CHECK(trim(format_version) <> ''),
+    CHECK(trim(checksum) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_catalog_import_runs_site_created
+    ON business_catalog_import_runs(site_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS business_product_completeness_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1521,6 +1700,84 @@ CREATE INDEX IF NOT EXISTS idx_business_activity_company ON business_activity_lo
 CREATE INDEX IF NOT EXISTS idx_business_activity_contact ON business_activity_log(site_id, related_contact_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_business_activity_entity ON business_activity_log(site_id, entity_type, entity_id, created_at DESC);
 
+-- Rebuildable CRM read model fed exclusively from Sale integration events.
+-- Sale remains the source of truth: this projection must never be used to write
+-- customer or order snapshots back into the Sale database.
+CREATE TABLE IF NOT EXISTS crm_sale_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dto_version INTEGER NOT NULL DEFAULT 1 CHECK(dto_version = 1),
+    site_id INTEGER NOT NULL,
+    activity_type TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('web','pos','admin','unknown')),
+    related_company_id INTEGER,
+    related_contact_id INTEGER,
+    source_event_id INTEGER NOT NULL UNIQUE,
+    source_outbox_id INTEGER NOT NULL,
+    source_event_type TEXT NOT NULL,
+    source_aggregate_type TEXT NOT NULL,
+    source_aggregate_id INTEGER NOT NULL,
+    source_reference TEXT,
+    summary TEXT NOT NULL,
+    status TEXT NOT NULL,
+    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_order','iam_account_link','manual','anonymous')),
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    linked_by_iam_user_id INTEGER,
+    linked_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    CHECK(site_id > 0),
+    CHECK(source_event_id > 0),
+    CHECK(source_outbox_id > 0),
+    CHECK(source_aggregate_id > 0),
+    CHECK(trim(activity_type) <> ''),
+    CHECK(trim(summary) <> ''),
+    CHECK((resolution_strategy = 'anonymous' AND related_company_id IS NULL AND related_contact_id IS NULL)
+       OR resolution_strategy <> 'anonymous')
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_contact ON crm_sale_activities(site_id, related_contact_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_company ON crm_sale_activities(site_id, related_company_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'anonymous';
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_source ON crm_sale_activities(source_event_type, source_aggregate_type, source_aggregate_id);
+
+CREATE TABLE IF NOT EXISTS crm_sale_activity_link_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id INTEGER NOT NULL,
+    previous_company_id INTEGER,
+    previous_contact_id INTEGER,
+    company_id INTEGER,
+    contact_id INTEGER,
+    reason TEXT NOT NULL,
+    linked_by_iam_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(activity_id) REFERENCES crm_sale_activities(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(company_id IS NOT NULL OR contact_id IS NOT NULL),
+    CHECK(linked_by_iam_user_id > 0),
+    CHECK(trim(reason) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activity_link_audit_activity ON crm_sale_activity_link_audit(activity_id, created_at, id);
+
+CREATE TRIGGER IF NOT EXISTS trg_crm_sale_activity_link_audit_no_update
+BEFORE UPDATE ON crm_sale_activity_link_audit BEGIN SELECT RAISE(ABORT, 'CRM sale activity link audit is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_crm_sale_activity_link_audit_no_delete
+BEFORE DELETE ON crm_sale_activity_link_audit BEGIN SELECT RAISE(ABORT, 'CRM sale activity link audit is immutable'); END;
+
+CREATE TABLE IF NOT EXISTS crm_sale_activity_reconciliation_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    supported_events INTEGER NOT NULL DEFAULT 0,
+    projected_events INTEGER NOT NULL DEFAULT 0,
+    missing_events INTEGER NOT NULL DEFAULT 0,
+    duplicate_events INTEGER NOT NULL DEFAULT 0,
+    repaired_events INTEGER NOT NULL DEFAULT 0,
+    report_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(report_json)),
+    run_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0)
+);
+
 INSERT OR IGNORE INTO business_companies (
     site_id,
     name,
@@ -1536,3 +1793,49 @@ INSERT OR IGNORE INTO business_companies (
     'other',
     1
 );
+
+INSERT OR IGNORE INTO business_sales_channel_configs(channel_id,site_id,catalog_channel,price_list_code,visibility_policy,default_currency,status)
+VALUES
+    (1,1,'admin',NULL,'published','CHF','active'),
+    (2,1,'pos',NULL,'published','CHF','disabled'),
+    (3,1,'ecommerce',NULL,'published','CHF','active');
+
+INSERT INTO business_product_variants(product_id,status,sku,name,track_stock,allow_backorder)
+SELECT p.id,CASE WHEN p.status='active' THEN 'active' ELSE 'draft' END,'AUTO-' || p.id,'Default',p.track_stock,p.allow_backorder
+FROM business_products p WHERE p.archived_at IS NULL
+AND NOT EXISTS(SELECT 1 FROM business_product_variants v WHERE v.product_id=p.id AND v.archived_at IS NULL);
+INSERT OR IGNORE INTO business_sellables(sellable_id,site_id,product_id,variant_id,kind,is_default,status)
+SELECT v.id,p.site_id,p.id,v.id,
+ CASE p.type WHEN 'service' THEN 'service' WHEN 'gift_card' THEN 'gift_card' WHEN 'bundle' THEN 'bundle'
+ ELSE CASE WHEN (SELECT COUNT(*) FROM business_product_variants vx WHERE vx.product_id=p.id AND vx.archived_at IS NULL)>1 THEN 'variant' ELSE 'simple' END END,
+ CASE WHEN v.id=(SELECT MIN(vd.id) FROM business_product_variants vd WHERE vd.product_id=p.id AND vd.archived_at IS NULL) THEN 1 ELSE 0 END,
+ CASE WHEN p.status='active' AND v.status='active' THEN 'active' WHEN p.status='archived' OR v.status='archived' THEN 'archived' ELSE 'inactive' END
+FROM business_product_variants v JOIN business_products p ON p.id=v.product_id WHERE p.archived_at IS NULL AND v.archived_at IS NULL;
+
+CREATE TRIGGER IF NOT EXISTS trg_storefront_product_invalidation AFTER UPDATE ON business_products BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) VALUES(NEW.site_id,NEW.id,'product'); END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_variant_invalidation AFTER UPDATE ON business_product_variants BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'variant' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_price_invalidation_insert AFTER INSERT ON business_product_base_prices BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'price' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_price_invalidation_update AFTER UPDATE ON business_product_base_prices BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'price' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_visibility_invalidation AFTER INSERT ON business_product_channel_visibility BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) VALUES(NEW.site_id,NEW.product_id,'visibility'); END;
+CREATE TRIGGER IF NOT EXISTS trg_business_sellable_variant_insert AFTER INSERT ON business_product_variants BEGIN
+ INSERT OR IGNORE INTO business_sellables(sellable_id,site_id,product_id,variant_id,kind,is_default,status)
+ SELECT NEW.id,p.site_id,p.id,NEW.id,CASE p.type WHEN 'service' THEN 'service' WHEN 'gift_card' THEN 'gift_card' WHEN 'bundle' THEN 'bundle'
+ ELSE CASE WHEN EXISTS(SELECT 1 FROM business_sellables s WHERE s.product_id=p.id) THEN 'variant' ELSE 'simple' END END,
+ CASE WHEN EXISTS(SELECT 1 FROM business_sellables s WHERE s.product_id=p.id AND s.status='active') THEN 0 ELSE 1 END,
+ CASE WHEN p.status='active' AND NEW.status='active' THEN 'active' WHEN NEW.status='archived' THEN 'archived' ELSE 'inactive' END
+ FROM business_products p WHERE p.id=NEW.product_id;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_business_sellable_variant_update AFTER UPDATE OF status,product_id ON business_product_variants BEGIN
+ UPDATE business_sellables SET product_id=NEW.product_id,status=CASE WHEN NEW.status='active' AND (SELECT status FROM business_products WHERE id=NEW.product_id)='active' THEN 'active' WHEN NEW.status='archived' THEN 'archived' ELSE 'inactive' END,updated_at=CURRENT_TIMESTAMP WHERE variant_id=NEW.id;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation AFTER INSERT ON business_product_assets BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'media' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_visibility_invalidation_update AFTER UPDATE ON business_product_channel_visibility BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) VALUES(NEW.site_id,NEW.product_id,'visibility'); END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_price_invalidation_delete AFTER DELETE ON business_product_base_prices BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,OLD.product_id,'price' FROM business_products p WHERE p.id=OLD.product_id; END;

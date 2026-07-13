@@ -40,6 +40,7 @@ use App\Application\Api\Admin\VisualEditingApiController;
 use App\Application\Api\PublicHeadlessController;
 use App\Application\Api\ModuleHeadlessSchemaController;
 use App\Application\Frontend\UpdateManifestController;
+use App\Application\Maintenance\DependencyInventoryService;
 use App\Application\Maintenance\VersionInventoryService;
 use App\Application\PublicApi\PublicApiKernel;
 use App\Application\PublicApi\PublicContentApiHandler;
@@ -50,6 +51,7 @@ use App\Application\PublicApi\PublicCookieConsentApiHandler;
 use App\Application\PublicApi\PublicCatalogApiHandler;
 use App\Application\PublicApi\PosCatalogApiHandler;
 use App\Application\PublicApi\PublicSaleApiHandler;
+use App\Application\PublicApi\PublicCustomerAccountApiHandler;
 use App\Application\Configuration\ConfigurationRepository;
 use App\Application\Configuration\MultisiteRepository;
 use App\Application\Frontend\HomeController;
@@ -57,6 +59,9 @@ use App\Application\Frontend\BusinessMemoShareController;
 use App\Application\Frontend\BusinessUnsubscribeController;
 use App\Application\Frontend\PublicApiDocsController;
 use App\Application\Frontend\RouteResolutionController;
+use App\Application\Frontend\PublicSaleCheckoutController;
+use App\Application\Frontend\PublicStorefrontCartController;
+use App\Application\Frontend\PublicCustomerAccountController;
 use App\Security\AdminApiRequestGuard;
 use App\Security\PublicApiCorsGuard;
 use App\Security\PublicApiRateLimitGuard;
@@ -308,14 +313,15 @@ final class App
             AdminSpaController::class => new AdminSpaController($this->config, $services->auth()),
             PublicHeadlessController::class => new PublicHeadlessController(
                 new PublicApiKernel($this->request, $services->coreDatabase(), $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->taxonomies(), $services->menus(), $services->resolvePublicRoute()),
-                new PublicContentApiHandler($this->request, $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->coreDatabase()),
+                new PublicContentApiHandler($this->request, $services->publicContent(), $services->publicRouteReads(), $services->sites(), $services->coreDatabase(), $services->productContentLinks()),
                 new PublicTaxonomyApiHandler($this->request, $services->taxonomies(), $services->sites()),
                 new PublicSearchApiHandler($this->request, $services->publicSearch(), $services->sites()),
                 new PublicFormApiHandler($this->request, $services->forms(), $services->sites()),
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
-                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
+                new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles(), $services->storefrontProjections()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
-                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver(), $services->saleOnlinePayments()),
+                new PublicCustomerAccountApiHandler($this->request, $services->sites(), $services->saleCustomerAccounts()),
             ),
             UpdateManifestController::class => new UpdateManifestController(new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
             ModuleHeadlessSchemaController::class => new ModuleHeadlessSchemaController($this->request, $services->sites(), $services->moduleBlueprintGovernance()),
@@ -356,6 +362,7 @@ final class App
                 $services->businessCsv(),
                 $services->businessRelationSummary(),
                 $services->iamAdmin(),
+                $services->saleCrmActivities(),
             ),
             BusinessCatalogApiController::class => new BusinessCatalogApiController(
                 $this->request,
@@ -386,6 +393,10 @@ final class App
                 $services->businessProductAssets(),
                 $services->businessProductBundles(),
                 $services->businessCatalogSellables(),
+                $services->productContentLinks(),
+                $services->businessPriceLists(),
+                $services->businessCommercialRelations(),
+                $services->storefrontProjectionBuilder(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,
@@ -428,6 +439,16 @@ final class App
                 $services->saleImportExportReports(),
                 $services->saleIdempotency(),
                 $services->mailer(),
+                $services->saleReceiptService(),
+                $services->saleReturnService(),
+                $services->saleOrderTimeline(),
+                $services->saleCustomerAccounts(),
+                $services->saleFulfillment(),
+                $services->salesChannelResolver(),
+                $services->salesChannelIntegrity(),
+                $services->saleInventoryReconciliation(),
+                $services->saleOnlinePayments(),
+                $services->salePosService(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),
@@ -468,7 +489,7 @@ final class App
             MenuApiController::class => new MenuApiController($this->request, $services->menus(), $services->sites(), $services->auth(), $services->authorization()),
             MediaApiController::class => new MediaApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->logger()),
             DocsApiController::class => new DocsApiController($this->request, $services->auth()),
-            MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline(), new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
+            MaintenanceApiController::class => new MaintenanceApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->sites(), $services->auth(), $services->authorization(), $services->publishedProjectionPipeline(), new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? []), new DependencyInventoryService($this->config['app'] ?? [], $this->config['updates'] ?? [])),
             FormApiController::class => new FormApiController($this->request, $services->forms(), $services->sites(), $services->auth(), $services->authorization()),
             CookieConsentApiController::class => new CookieConsentApiController($this->request, $services->cookies(), $services->sites(), $services->auth(), $services->authorization()),
             SeoAuditApiController::class => new SeoAuditApiController($this->request, $services->coreDatabase(), $services->sites(), $services->auth(), $services->authorization(), $services->seoAudit()),
@@ -476,6 +497,9 @@ final class App
             SecurityAdminApiController::class => new SecurityAdminApiController($this->request, $services->coreDatabase(), $services->auth()->database(), $services->auth(), $services->authorization()),
             IamAdminApiController::class => new IamAdminApiController($this->request, $services->auth(), $services->authorization(), $services->iamAdmin()),
             PublicApiDocsController::class => new PublicApiDocsController(),
+            PublicSaleCheckoutController::class => new PublicSaleCheckoutController($this->request),
+            PublicStorefrontCartController::class => new PublicStorefrontCartController(),
+            PublicCustomerAccountController::class => new PublicCustomerAccountController(),
             BusinessMemoShareController::class => new BusinessMemoShareController($services->businessMemos(), $services->logger()),
             BusinessUnsubscribeController::class => new BusinessUnsubscribeController($services->businessMailingRepository(), $services->logger()),
             HomeController::class,

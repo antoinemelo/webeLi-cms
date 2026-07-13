@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Application\Api\Admin\BusinessPimApiController;
+use App\Application\Business\ProductContentLinkService;
 use App\Core\ApiException;
 use App\Core\Database;
 use App\Core\Request;
@@ -16,6 +17,8 @@ use App\Modules\Business\Services\BusinessCatalogSellableReadService;
 use App\Modules\Business\Services\BusinessPimAdminService;
 use App\Modules\Business\Services\BusinessProductAssetService;
 use App\Modules\Business\Services\BusinessProductBundleService;
+use App\Modules\Business\Repositories\ProductContentSourceRepository;
+use App\Infrastructure\Persistence\Sql\SqlCmsContentSource;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -103,7 +106,7 @@ try {
     $authRepository = static fn(): AuthRepository => new AuthRepository($iam);
     $pricingRepository = new BusinessCatalogPricingRepository($businessDb);
     $pricing = new CatalogPricingService($pricingRepository);
-    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($sites, $authRepository, $businessDb, $pricingRepository, $pricing): BusinessPimApiController {
+    $controllerFor = static function (int $userId, string $method, string $path, array $query = [], array $payload = []) use ($sites, $authRepository, $businessDb, $pricingRepository, $pricing, $core): BusinessPimApiController {
         $token = 'business-pim-api-test-token-' . $userId;
         $_SESSION['admin_user'] = ['id' => $userId, 'email' => 'pim-' . $userId . '@example.test', 'session_secret' => $token];
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
@@ -116,7 +119,8 @@ try {
             new BusinessPimAdminService($businessDb),
             new BusinessProductAssetService($businessDb),
             new BusinessProductBundleService($businessDb),
-            new BusinessCatalogSellableReadService($pricingRepository, $pricing, new PosCatalogRepository($businessDb), null, new BusinessProductBundleService($businessDb))
+            new BusinessCatalogSellableReadService($pricingRepository, $pricing, new PosCatalogRepository($businessDb), null, new BusinessProductBundleService($businessDb)),
+            new ProductContentLinkService($core, new ProductContentSourceRepository($businessDb), new SqlCmsContentSource($core))
         );
     };
 

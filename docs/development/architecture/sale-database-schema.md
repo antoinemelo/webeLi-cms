@@ -64,7 +64,7 @@ La commande copie les montants calcules depuis le panier :
 available_quantity = on_hand_quantity - reserved_quantity
 ```
 
-Une reservation cree une ligne `sale_stock_reservations` et un mouvement `reservation`. Une liberation ecrit `release`. Un checkout ecrit `sale` avec une quantite negative. Un retour restocke ecrit `return` avec une quantite positive. Le schema refuse un mouvement de stock a zero.
+Une réservation est créée au checkout et écrit un mouvement `reservation`. Une libération écrit `release`. Une conversion écrit `consumption` avec une quantité négative. Un retour écrit `return` avec une quantité positive. Les mouvements sont immuables et rejouables par clé d'idempotence ; le schéma refuse un mouvement nul.
 
 ## Idempotence
 
@@ -80,7 +80,7 @@ La contrainte unique `(site_id, scope, key_hash)` empeche deux executions concur
 
 ## Events et outbox
 
-`sale_events` accepte les topics metier declares par le module Vente, notamment commande placee, paiement enregistre, paiement echoue, session POS ouverte/fermee et stock reserve/consomme/libere. Chaque event cree une entree `sale_outbox` avec le meme topic. Les consommateurs CRM, CMS ou IA doivent traiter l'outbox sans bloquer le workflow source.
+`sale_events` accepte les topics metier declares par le module Vente, notamment commande placee/confirmée/annulée, paiement capturé ou échoué, livraison terminée, retour, remboursement, vente POS et stock réservé/consommé/libéré. Chaque événement crée une entrée `sale_outbox` avec le même topic. Les consommateurs CRM, CMS ou IA traitent l'outbox sans bloquer le workflow source et doivent être idempotents. La projection CRM est décrite dans [crm-sale-activity-projection.md](crm-sale-activity-projection.md).
 
 ## Seeds
 
@@ -88,9 +88,10 @@ Le schema installe trois canaux :
 
 - `admin-manual`, actif, non public ;
 - `pos-main`, brouillon, non public ;
-- `web-main`, brouillon, non public.
+- `web-main`, actif et public pour les scénarios de développement/test.
 
 Un canal ne peut etre public que s'il est de type `ecommerce`.
+L'exposition en production reste en plus contrôlée par `APP_PUBLIC_API_MODULE_ROUTES`, désactivé par défaut dans cet environnement.
 
 ## Migrations
 

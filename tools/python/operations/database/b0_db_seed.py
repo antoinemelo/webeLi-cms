@@ -27,6 +27,7 @@ if str(BASE) not in sys.path:
 from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.processes import cms_subprocess_env
 CORE_DB = BASE / "storage" / "database" / "core.sqlite"
+BUSINESS_DB = BASE / "storage" / "database" / "business.sqlite"
 IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
 FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
 COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
@@ -70,7 +71,7 @@ def hash_pw(_password: str) -> str:
 
 
 def ensure_databases_exist() -> None:
-    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB) if not path.exists()]
+    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB) if not path.exists()]
     if missing:
         raise RuntimeError(
             "Base(s) SQLite introuvable(s): "
@@ -82,10 +83,98 @@ def ensure_databases_exist() -> None:
 def run_seed_file(connection: sqlite3.Connection, sql_path: Path) -> None:
     if not sql_path.exists():
         raise FileNotFoundError(f"Seed SQL introuvable: {sql_path}")
-    sql = sql_path.read_text(encoding="utf-8").strip()
+    sql = normalize_seed_sql(sql_path, sql_path.read_text(encoding="utf-8")).strip()
     if sql:
         connection.executescript(sql)
         connection.commit()
+
+
+def normalize_seed_sql(sql_path: Path, sql: str) -> str:
+    """Ignore les anciennes traces outbox incompatibles avec le schéma M0."""
+    if sql_path != CORE_DEFAULT_SEED:
+        return sql
+    lines = []
+    for line in sql.splitlines():
+        if 'INSERT INTO "outbox_events"' in line:
+            continue
+        if 'INSERT INTO "sqlite_sequence"' in line and "'outbox_events'" in line:
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def rebuild_seed_product_content_projections() -> None:
+    """Materialise les liens CMS/PIM seedes sans lecture inter-base au runtime."""
+    with connect_sqlite(CORE_DB) as core, connect_sqlite(BUSINESS_DB) as business:
+        core.row_factory = sqlite3.Row
+        business.row_factory = sqlite3.Row
+        core.execute(
+            """
+            INSERT OR IGNORE INTO business_product_content_links(
+                site_id,product_id,content_entry_id,relation_type,locale,is_canonical,status,seo_config_json
+            )
+            SELECT 1,1,ce.id,'storytelling',NULL,1,'active','{"schema_type":"Service"}'
+            FROM content_entries ce WHERE ce.site_id=1 AND ce.entry_key='home' LIMIT 1
+            """
+        )
+        links = core.execute(
+            "SELECT * FROM business_product_content_links WHERE status='active' ORDER BY id"
+        ).fetchall()
+        for link in links:
+            product = business.execute(
+                """
+                SELECT p.id,p.site_id,p.type,p.status,p.visibility,p.sku_base,p.name,p.slug,
+                       p.short_description,p.unit,p.is_public,p.is_ecommerce_enabled,p.updated_at,
+                       b.name AS brand_name,b.slug AS brand_slug,c.name AS category_name,c.slug AS category_slug
+                FROM business_products p
+                LEFT JOIN business_product_brands b ON b.id=p.brand_id AND b.site_id=p.site_id
+                LEFT JOIN business_product_categories c ON c.id=p.category_id AND c.site_id=p.site_id
+                WHERE p.id=? AND p.site_id=? AND p.archived_at IS NULL
+                """,
+                (int(link["product_id"]), int(link["site_id"])),
+            ).fetchone()
+            if product is None:
+                raise RuntimeError(f"Lien CMS/PIM seed invalide: produit {link['product_id']} absent du site {link['site_id']}")
+            variants = [dict(row) for row in business.execute(
+                "SELECT id,sku,name,status,stock_quantity,stock_reserved,track_stock,allow_backorder,updated_at FROM business_product_variants WHERE product_id=? AND archived_at IS NULL ORDER BY sort_order,id",
+                (int(link["product_id"]),),
+            )]
+            assets = [dict(row) for row in business.execute(
+                "SELECT media_id,variant_id,role,title,alt_text,caption,channel_scope,sort_order FROM business_product_assets WHERE product_id=? AND archived_at IS NULL AND is_public=1 AND role<>'internal' ORDER BY CASE role WHEN 'main' THEN 0 ELSE 1 END,sort_order,id",
+                (int(link["product_id"]),),
+            )]
+            snapshot = {"product": dict(product), "variants": variants, "assets": assets, "attributes": []}
+            seo_config = json.loads(link["seo_config_json"] or "{}")
+            schema_type = seo_config.get("schema_type") or ("Service" if product["type"] == "service" else "Product")
+            structured = {
+                "@context": "https://schema.org",
+                "@type": schema_type if schema_type in {"Product", "Service"} else "Product",
+                "name": product["name"],
+                "sku": product["sku_base"] or "",
+                "description": product["short_description"] or "",
+            }
+            if product["brand_name"]:
+                structured["brand"] = {"@type": "Brand", "name": product["brand_name"]}
+            active = int(product["status"] == "active" and bool(product["is_public"]))
+            core.execute(
+                """
+                INSERT INTO business_product_public_projections(
+                    link_id,site_id,product_id,content_entry_id,relation_type,locale,is_canonical,is_active,
+                    product_json,structured_data_json,source_product_updated_at,projected_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+                ON CONFLICT(link_id) DO UPDATE SET
+                    product_json=excluded.product_json,structured_data_json=excluded.structured_data_json,
+                    is_active=excluded.is_active,source_product_updated_at=excluded.source_product_updated_at,
+                    projected_at=CURRENT_TIMESTAMP
+                """,
+                (
+                    int(link["id"]), int(link["site_id"]), int(link["product_id"]), int(link["content_entry_id"]),
+                    link["relation_type"], link["locale"], int(link["is_canonical"]), active,
+                    json.dumps(snapshot, ensure_ascii=False, separators=(",", ":")),
+                    json.dumps(structured, ensure_ascii=False, separators=(",", ":")), product["updated_at"],
+                ),
+            )
+        core.commit()
 
 def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
     """Synchronise la politique IAM native des modules.
@@ -952,29 +1041,26 @@ def rebuild_seed_public_projections(cur: sqlite3.Cursor) -> None:
             """,
             (site_id, "content_entry", entry_id, lang, meta_title, meta_description, meta_robots, path, meta_title, meta_description, meta_title, meta_description, seo.get("json_ld"), score, rev_id, checksum, ts),
         )
-        # Contrat de projection critique: search_documents garde une ligne par
-        # publication, y compris pour les pages noindex. Le filtrage public de
-        # recherche se fait a la lecture via seo_metadata.meta_robots, afin que
-        # routes + snapshots + SEO + search_documents restent atomiquement
-        # vérifiables et reconstructibles depuis la même révision publiée.
-        cur.execute(
-            """
-            INSERT INTO search_documents(
-                site_id, resource_type, resource_id, language_code, path,
-                title, summary, search_text, source_published_revision_id,
-                source_revision_checksum_sha256, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
-                path = excluded.path,
-                title = excluded.title,
-                summary = excluded.summary,
-                search_text = excluded.search_text,
-                source_published_revision_id = excluded.source_published_revision_id,
-                source_revision_checksum_sha256 = excluded.source_revision_checksum_sha256,
-                updated_at = excluded.updated_at
-            """,
-            (site_id, "content_entry", entry_id, lang, path, title, summary, " ".join((title, summary, blocks_text)).strip(), rev_id, checksum, ts),
-        )
+        if "noindex" not in meta_robots.lower():
+            cur.execute(
+                """
+                INSERT INTO search_documents(
+                    site_id, resource_type, resource_id, language_code, path,
+                    title, summary, search_text, source_published_revision_id,
+                    source_revision_checksum_sha256, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
+                    path=excluded.path,title=excluded.title,summary=excluded.summary,
+                    search_text=excluded.search_text,source_published_revision_id=excluded.source_published_revision_id,
+                    source_revision_checksum_sha256=excluded.source_revision_checksum_sha256,updated_at=excluded.updated_at
+                """,
+                (site_id, "content_entry", entry_id, lang, path, title, summary, " ".join((title, summary, blocks_text)).strip(), rev_id, checksum, ts),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM search_documents WHERE site_id=? AND resource_type='content_entry' AND resource_id=? AND language_code=?",
+                (site_id, entry_id, lang),
+            )
 
 
 
@@ -1041,21 +1127,24 @@ def rebuild_seed_taxonomy_projections(cur: sqlite3.Cursor) -> None:
             """,
             (site_id, 'taxonomy_term', term_id, lang, title, summary, robots, path, title, summary, title, summary, seo_score(title, summary, str(slug or '')), ts),
         )
-        cur.execute(
-            """
-            INSERT INTO search_documents(
-                site_id, resource_type, resource_id, language_code, path,
-                title, summary, search_text, updated_at
-            ) VALUES(?,?,?,?,?,?,?,?,?)
-            ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
-                path=excluded.path,
-                title=excluded.title,
-                summary=excluded.summary,
-                search_text=excluded.search_text,
-                updated_at=excluded.updated_at
-            """,
-            (site_id, 'taxonomy_term', term_id, lang, path, str(name or title), summary, ' '.join([str(name or ''), summary, str(taxonomy_key or '')]).strip(), ts),
-        )
+        if "noindex" not in robots.lower():
+            cur.execute(
+                """
+                INSERT INTO search_documents(
+                    site_id, resource_type, resource_id, language_code, path,
+                    title, summary, search_text, updated_at
+                ) VALUES(?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id, resource_type, resource_id, language_code) DO UPDATE SET
+                    path=excluded.path,title=excluded.title,summary=excluded.summary,
+                    search_text=excluded.search_text,updated_at=excluded.updated_at
+                """,
+                (site_id, 'taxonomy_term', term_id, lang, path, str(name or title), summary, ' '.join([str(name or ''), summary, str(taxonomy_key or '')]).strip(), ts),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM search_documents WHERE site_id=? AND resource_type='taxonomy_term' AND resource_id=? AND language_code=?",
+                (site_id, term_id, lang),
+            )
 
 
 def _seed_text(value: object) -> str:
@@ -1497,6 +1586,32 @@ def rebuild_public_projections(required: bool = True) -> int:
         "corrigez la verite editoriale ou relancez explicitement avec --skip-projections.",
         file=sys.stderr,
     )
+    return proc.returncode
+
+
+def sync_php_modules(required: bool = True) -> int:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
+        message = f"{php_error or 'backend/bin/console introuvable'}: les modules PHP ne sont pas synchronises."
+        if required:
+            print(f"ERREUR: {message}", file=sys.stderr)
+            return 2
+        print(f"AVERTISSEMENT: {message}")
+        return 0
+
+    proc = subprocess.run([php, str(CONSOLE), "modules:sync"], cwd=str(BASE), env=cms_subprocess_env(), text=True, capture_output=True)
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr, end="")
+    if proc.returncode == 0:
+        return 0
+    print("ERREUR: modules PHP non synchronises.", file=sys.stderr)
     return proc.returncode
 
 
@@ -1983,6 +2098,7 @@ def main() -> int:
     args = parse_args()
     try:
         seed()
+        rebuild_seed_product_content_projections()
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR seed: {exc}", file=sys.stderr)
         return 1
@@ -1996,6 +2112,10 @@ def main() -> int:
         return code
 
     if not args.skip_projections:
+        code = sync_php_modules(required=not args.allow_missing_php)
+        if code != 0:
+            return code
+
         code = rebuild_public_projections(required=not args.allow_missing_php)
         if code != 0:
             return code

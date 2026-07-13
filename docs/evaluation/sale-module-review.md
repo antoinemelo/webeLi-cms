@@ -64,7 +64,7 @@ sans validation terrain longue sur l'ergonomie caisse/commandes.
 | Idempotence actions critiques | Conforme : checkout, paiement, remboursement, checkout POS et ajout ligne sont couverts. |
 | POS sans client CRM | Conforme : le checkout POS fonctionne sans contact CRM. |
 | Prix achat proteges | Conforme : payloads publics masquent `unit_purchase_price_minor`, export achat exige permission et flag explicite. |
-| API publique fermee par defaut | Conforme : `web-main` est `draft` et `is_public=0`, canal non public refuse. |
+| API publique contrôlée | Conforme : `web-main` est actif/public pour les tests, les routes module sont désactivées par défaut en production et tout canal non actif/public est refusé. |
 | Tests des invariants | Conforme : suite PHP Sale, integration Business/Sale et suite Python globale passent. |
 | Documentation honnete | Conforme : limites v1 documentees dans guides utilisateur, architecture et API interne. |
 
@@ -123,7 +123,7 @@ Les conditions de blocage explicites du jalon sont couvertes :
 - stock modifie avec mouvement : couvert par `sale_inventory_service_test.php`
   et `sale_module_contracts_test.php` ;
 - rebuild/validate/docs : validations executees avec succes ;
-- API publique fermee par defaut : seed et test public le prouvent.
+- API publique contrôlée : garde-fou de configuration en production et test du refus d'un canal brouillon/non public.
 
 ## Risques de donnees
 
@@ -179,8 +179,8 @@ Les conditions de blocage explicites du jalon sont couvertes :
 4. Tester manuellement POS : ouverture session, vente cash, recu, envoi email,
    cloture avec ecart nul puis ecart non nul.
 5. Tester un import stock avec preview, apply et export des mouvements.
-6. Tester l'API publique avec `web-main` brouillon, puis avec canal actif/public
-   sur une instance de preproduction.
+6. Tester l'API publique en basculant temporairement `web-main` en brouillon/non
+   public, puis en le réactivant sur une instance de preproduction.
 7. Verifier les roles reels : utilisateur lecture, vendeur POS, gestionnaire
    stock, gestionnaire paiements, admin Vente.
 8. Verifier qu'aucun export public ou payload public ne contient de prix achat.

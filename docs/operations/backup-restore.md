@@ -4,7 +4,7 @@ audience:
   - installer
   - superadministrator
 status: stable
-last_verified: 2026-06-20
+last_verified: 2026-07-11
 source_of_truth: procedure
 source_paths:
   - tools/python/operations
@@ -52,4 +52,6 @@ python3 tools/cms.py migrate --plan
 python3 tools/cms.py migrate --apply --backup --yes
 ```
 
-Les bases couvertes par cette procédure sont celles de l’inventaire Python unifié : les cinq bases natives (`core.sqlite`, `iam.sqlite`, `forms.sqlite`, `cookies.sqlite`, `ai.sqlite`) et les bases de modules clients activées localement dans `ops/modules.local.json`. Le manifeste de sauvegarde indique pour chaque base la clé, le chemin, le type, le module éventuel, le SHA-256, la taille et le résultat de `PRAGMA integrity_check`.
+Les bases couvertes par cette procédure sont celles de l’inventaire Python unifié : `core.sqlite`, `iam.sqlite`, les bases de modules système déclarées (`forms.sqlite`, `cookies.sqlite`, `ai.sqlite`, `business.sqlite`, `sale.sqlite`) et les bases de modules clients activées localement dans `ops/modules.local.json`. Le manifeste de sauvegarde indique pour chaque base la clé, le chemin, le type, le module éventuel, le SHA-256, la taille et le résultat de `PRAGMA integrity_check`.
+
+La gate M0 exécute `BACKUP_RESTORE_ROUNDTRIP` : elle crée une archive, vérifie que toutes les bases attendues y sont présentes, compare les SHA-256 extraits au manifeste, simule une restauration dans un répertoire temporaire et relance `PRAGMA integrity_check` sur chaque base restaurée.

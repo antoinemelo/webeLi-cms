@@ -109,6 +109,28 @@ async function returnToRelationsIfNeeded(page: Page): Promise<void> {
   }
 }
 
+async function openRelations(page: Page): Promise<void> {
+  const responsePromise = page.waitForResponse((response) => {
+    if (response.request().method() !== 'GET') return false;
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/admin/api/business/relations');
+  }, { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Relations' }).click();
+  expect((await responsePromise).ok(), 'Initial relations request succeeds').toBeTruthy();
+  await expect(page.getByText('Chargement des relations...')).toBeHidden();
+}
+
+async function searchRelations(page: Page, query: string): Promise<void> {
+  const responsePromise = page.waitForResponse((response) => {
+    if (response.request().method() !== 'GET') return false;
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/admin/api/business/search') && url.searchParams.get('q') === query;
+  }, { timeout: 30_000 });
+  await page.getByPlaceholder(/Recherche globale/i).fill(query);
+  expect((await responsePromise).ok(), 'Global relations search request succeeds').toBeTruthy();
+  await expect(page.getByText('Recherche...')).toBeHidden();
+}
+
 async function createCrmFixture(page: Page): Promise<CrmFixture> {
   const context = await jsonEnvelope<AdminContextData>(
     await page.request.get(cmsPath('/admin/api/context')),
@@ -152,7 +174,7 @@ async function createCrmFixture(page: Page): Promise<CrmFixture> {
 
 test.describe('business CRM UX smoke', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
@@ -163,7 +185,7 @@ test.describe('business CRM UX smoke', () => {
 
     await page.goto(cmsPath('/admin/app/business'));
     await expect(page.getByRole('button', { name: 'Relations' })).toBeVisible();
-    await page.getByRole('button', { name: 'Relations' }).click();
+    await openRelations(page);
 
     await expect(page.getByRole('heading', { name: 'Relations' })).toBeVisible();
     await expect(page.getByPlaceholder(/Recherche globale/i)).toBeVisible();
@@ -182,11 +204,10 @@ test.describe('business CRM UX smoke', () => {
     await expect(page.getByRole('button', { name: 'Nouvelle relation' })).toBeVisible();
     await menu.click();
     await expect(page.getByRole('button', { name: 'Nouveau contact' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Mémos' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mémos', exact: true })).toBeVisible();
     await menu.click();
 
-    await page.getByPlaceholder(/Recherche globale/i).fill(`E2E ${stamp}`);
-    await page.keyboard.press('Enter');
+    await searchRelations(page, `E2E ${stamp}`);
     const contactRow = page.locator('.relations-table tbody tr').filter({ hasText: contactName }).first();
     const companyRow = page.locator('.relations-table tbody tr').filter({ hasText: companyName }).filter({ hasText: companyEmail }).first();
     await expect(contactRow).toBeVisible();
@@ -250,9 +271,8 @@ test.describe('business CRM UX smoke', () => {
     const { stamp, contactName, contactEmail } = await createCrmFixture(page);
 
     await page.goto(cmsPath('/admin/app/business'));
-    await page.getByRole('button', { name: 'Relations' }).click();
-    await page.getByPlaceholder(/Recherche globale/i).fill(`E2E ${stamp}`);
-    await page.keyboard.press('Enter');
+    await openRelations(page);
+    await searchRelations(page, `E2E ${stamp}`);
 
     await expect(page.locator('.relations-table')).toBeHidden();
     const card = page.locator('.relation-card').filter({ hasText: contactName }).first();

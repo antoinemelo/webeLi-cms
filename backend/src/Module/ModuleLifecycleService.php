@@ -88,6 +88,20 @@ final class ModuleLifecycleService
         return ['module' => $this->contract($provider), 'applied' => $applied];
     }
 
+    /** @return array{modules:int,routes:int,contracts:int} */
+    public function syncAllDeclarations(): array
+    {
+        $this->registry->syncManifest();
+        $summary = ['modules' => 0, 'routes' => 0, 'contracts' => 0];
+        foreach ($this->registry->activeProviders() as $provider) {
+            $summary['modules']++;
+            $summary['routes'] += count($provider->adminRoutes()) + count($provider->apiRoutes()) + count($provider->publicHeadlessRoutes());
+            $summary['contracts'] += count($provider->apiContracts());
+            $this->syncDeclarations($provider, true);
+        }
+        return $summary;
+    }
+
     /** @return array<string,mixed> */
     public function health(string $key): array
     {

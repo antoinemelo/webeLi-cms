@@ -74,7 +74,8 @@ final class PublicApiCorsGuard
 
     private function isPublicApiV1Request(): bool
     {
-        return str_starts_with((string) $this->request->path, '/api/v1/');
+        $path = (string) $this->request->path;
+        return $path === '/api/v1' || str_starts_with($path, '/api/v1/');
     }
 
     /** @return array<string,mixed> */
@@ -96,11 +97,27 @@ final class PublicApiCorsGuard
     /** @param array<string,mixed> $settings */
     private function isAllowedOrigin(string $origin, array $settings): bool
     {
-        $allowed = $this->allowedOrigins($settings);
-        if (in_array('*', $allowed, true)) {
+        if ($this->isSameRequestOrigin($origin)) {
             return true;
         }
+        $allowed = $this->allowedOrigins($settings);
+        if (in_array('*', $allowed, true)) {
+            // Les sessions client reposent sur un cookie : une origine
+            // explicite est obligatoire lorsque des credentials circulent.
+            return !str_starts_with($this->request->path, '/api/v1/customer/');
+        }
         return in_array(strtolower($origin), array_map('strtolower', $allowed), true);
+    }
+
+    private function isSameRequestOrigin(string $origin): bool
+    {
+        $host = strtolower(trim((string) ($this->request->server['HTTP_HOST'] ?? '')));
+        if ($host === '') {
+            return false;
+        }
+        $https = strtolower((string) ($this->request->server['HTTPS'] ?? ''));
+        $scheme = in_array($https, ['1', 'on', 'true'], true) ? 'https' : 'http';
+        return hash_equals($scheme . '://' . $host, strtolower(rtrim($origin, '/')));
     }
 
     /** @param array<string,mixed> $settings @return list<string> */
@@ -203,13 +220,17 @@ final class PublicApiCorsGuard
         $headers = $this->headerList($settings['allowed_headers'] ?? ['Authorization', 'Content-Type']);
         $maxAge = max(0, (int) ($settings['max_age'] ?? 600));
 
-        return [
+        $result = [
             'Access-Control-Allow-Origin' => $origin,
             'Access-Control-Allow-Methods' => implode(', ', $methods ?: ['GET', 'OPTIONS']),
             'Access-Control-Allow-Headers' => implode(', ', $headers ?: ['Authorization', 'Content-Type']),
             'Access-Control-Max-Age' => (string) $maxAge,
             'Vary' => 'Origin',
         ];
+        if (str_starts_with($this->request->path, '/api/v1/customer/')) {
+            $result['Access-Control-Allow-Credentials'] = 'true';
+        }
+        return $result;
     }
 
     /** @param mixed $value @return list<string> */

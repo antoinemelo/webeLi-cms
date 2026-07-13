@@ -2,6 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import { hasTranslation, useI18n } from '@/i18n';
+import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 import SalePosView from './SalePosView.vue';
@@ -35,6 +37,7 @@ type SortDirection = 'asc' | 'desc';
 
 const route = useRoute();
 const router = useRouter();
+const { languageCode, t, money: formatMoney, dateTime } = useI18n();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -47,6 +50,7 @@ const orderPayments = ref<Row[]>([]);
 const orderEvents = ref<Row[]>([]);
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
+const fulfillmentMethods = ref<Row[]>([]);
 const sessions = ref<Row[]>([]);
 const paymentAmount = ref(0);
 const cancelReason = ref('');
@@ -65,18 +69,18 @@ const visibleOrderColumns = ref<Record<OrderColumnKey, boolean>>({
 });
 
 const tabs = [
-  { key: 'dashboard', label: 'Tableau de bord', path: '/sale' },
-  { key: 'orders', label: 'Commandes', path: '/sale/orders' },
-  { key: 'pos', label: 'POS', path: '/sale/pos' },
-  { key: 'settings', label: 'Réglages', path: '/sale/settings' }
+  { key: 'dashboard', labelKey: 'sale.tabs.dashboard', path: '/sale' },
+  { key: 'orders', labelKey: 'sale.tabs.orders', path: '/sale/orders' },
+  { key: 'pos', labelKey: 'sale.tabs.pos', path: '/sale/pos' },
+  { key: 'settings', labelKey: 'sale.tabs.settings', path: '/sale/settings' }
 ];
-const orderColumns: Array<{ key: OrderColumnKey; label: string }> = [
-  { key: 'number', label: 'Numéro' },
-  { key: 'date', label: 'Date' },
-  { key: 'source', label: 'Source' },
-  { key: 'total', label: 'Total' },
-  { key: 'payment', label: 'Paiement' },
-  { key: 'status', label: 'Statut' }
+const orderColumns: Array<{ key: OrderColumnKey; labelKey: string }> = [
+  { key: 'number', labelKey: 'common.number' },
+  { key: 'date', labelKey: 'common.date' },
+  { key: 'source', labelKey: 'common.source' },
+  { key: 'total', labelKey: 'common.total' },
+  { key: 'payment', labelKey: 'common.payment' },
+  { key: 'status', labelKey: 'common.status' }
 ];
 const orderPageSizeOptions: Array<number | 'all'> = [10, 25, 50, 'all'];
 const orderSourceOptions = ['ecommerce', 'pos', 'admin'];
@@ -104,7 +108,7 @@ const filteredOrders = computed(() => {
       statusLabel(order.payment_status),
       statusLabel(order.status),
       money(order.grand_total_minor, order.currency)
-    ].join(' ').toLowerCase().includes(q);
+    ].join(' ').toLocaleLowerCase(languageCode.value).includes(q);
   });
 });
 const sortedOrders = computed(() => {
@@ -113,7 +117,7 @@ const sortedOrders = computed(() => {
     const left = orderSortValue(a, orderSort.value.key);
     const right = orderSortValue(b, orderSort.value.key);
     if (typeof left === 'number' && typeof right === 'number') return (left - right) * direction;
-    return String(left).localeCompare(String(right), 'fr', { numeric: true, sensitivity: 'base' }) * direction;
+    return String(left).localeCompare(String(right), languageCode.value, { numeric: true, sensitivity: 'base' }) * direction;
   });
 });
 const orderPageCount = computed(() => {
@@ -127,41 +131,29 @@ const paginatedOrders = computed(() => {
 });
 const orderPaginationLabel = computed(() => {
   const total = filteredOrders.value.length;
-  if (total === 0) return '0 commande';
-  if (orderPageSize.value === 'all') return `${total} commande(s)`;
+  if (total === 0) return t('sale.orders.count.zero');
+  if (orderPageSize.value === 'all') return t('sale.orders.count.all', { count: total });
   const start = (orderPage.value - 1) * orderPageSize.value + 1;
   const end = Math.min(total, start + orderPageSize.value - 1);
-  return `${start}-${end} sur ${total} commande(s)`;
+  return t('sale.orders.count.range', { start, end, total });
 });
 
 function money(minor?: unknown, currency?: unknown): string {
-  return `${(Number(minor || 0) / 100).toFixed(2)} ${String(currency || 'CHF')}`;
+  return formatMoney(minor, currency || 'CHF');
 }
 
 function shortDate(value?: unknown): string {
-  const text = String(value || '');
-  return text ? text.replace('T', ' ').slice(0, 16) : '-';
+  return dateTime(value);
 }
 
 function statusLabel(value?: unknown): string {
-  const labels: Record<string, string> = {
-    draft: 'Brouillon',
-    active: 'Actif',
-    placed: 'Placée',
-    confirmed: 'Confirmée',
-    completed: 'Terminée',
-    cancelled: 'Annulée',
-    unpaid: 'Non payé',
-    pending: 'En attente',
-    partially_paid: 'Partiel',
-    paid: 'Payé',
-    failed: 'Échec',
-    ecommerce: 'E-commerce',
-    pos: 'POS',
-    admin: 'Admin'
-  };
   const key = String(value || '');
-  return labels[key] || key || '-';
+  return key ? (hasTranslation(`sale.status.${key}`, languageCode.value) ? t(`sale.status.${key}`) : key) : '-';
+}
+
+function orderColumnLabel(key: OrderColumnKey): string {
+  const column = orderColumns.find((item) => item.key === key);
+  return column ? t(column.labelKey) : key;
 }
 
 function saleCatalogPdfUrl(channel: Channel): string {
@@ -200,14 +192,16 @@ async function loadOrders(): Promise<void> {
 }
 
 async function loadSettings(): Promise<void> {
-  const [channelResponse, methodResponse, sessionResponse] = await Promise.all([
+  const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse] = await Promise.all([
     adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
     adminApi.get<{ payment_methods: Row[] }>('/sale/payment-methods'),
-    adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions')
+    adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions'),
+    adminApi.get<{ methods: Row[] }>('/sale/fulfillment')
   ]);
   channels.value = channelResponse.data.channels || [];
   paymentMethods.value = methodResponse.data.payment_methods || [];
   sessions.value = sessionResponse.data.sessions || [];
+  fulfillmentMethods.value = fulfillmentResponse.data.methods || [];
 }
 
 async function load(): Promise<void> {
@@ -250,7 +244,7 @@ async function recordPayment(): Promise<void> {
   notice.value = '';
   try {
     const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/payments`, { amount_minor: Math.round(paymentAmount.value) });
-    notice.value = 'Paiement enregistré.';
+    notice.value = t('sale.orders.paymentRecorded');
     selectedOrder.value = response.data.order;
     await selectOrder(selectedOrder.value);
     await loadOrders();
@@ -262,13 +256,13 @@ async function recordPayment(): Promise<void> {
 }
 
 async function cancelOrder(): Promise<void> {
-  if (!selectedOrder.value?.id || !confirm('Annuler cette commande ?')) return;
+  if (!selectedOrder.value?.id || !confirm(t('sale.orders.cancelConfirm'))) return;
   saving.value = true;
   error.value = '';
   notice.value = '';
   try {
-    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/cancel`, { reason: cancelReason.value || 'Annulation back-office' });
-    notice.value = 'Commande annulée.';
+    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/cancel`, { reason: cancelReason.value || t('sale.orders.cancelFallbackReason') });
+    notice.value = t('sale.orders.cancelled');
     selectedOrder.value = response.data.order;
     await loadOrders();
   } catch (err) {
@@ -282,10 +276,10 @@ async function printReceipt(): Promise<void> {
   if (!selectedOrder.value?.id) return;
   try {
     const response = await adminApi.get<{ receipt: Row | null }>(`/sale/orders/${selectedOrder.value.id}/receipt`);
-    const printable = String(response.data.receipt?.printable_text || `Commande ${selectedOrder.value.order_number || selectedOrder.value.id}\nTotal ${money(selectedOrder.value.grand_total_minor, selectedOrder.value.currency)}`);
+    const printable = String(response.data.receipt?.printable_text || `${t('sale.tabs.orders')} ${selectedOrder.value.order_number || selectedOrder.value.id}\n${t('common.total')} ${money(selectedOrder.value.grand_total_minor, selectedOrder.value.currency)}`);
     const win = window.open('', 'sale-order-receipt', 'popup,width=360,height=640');
     if (!win) {
-      error.value = 'Impossible de préparer le ticket à imprimer.';
+      error.value = t('sale.orders.printUnavailable');
       return;
     }
     win.document.open();
@@ -306,10 +300,10 @@ async function printReceipt(): Promise<void> {
 
 function receiptPrintHtml(text: string): string {
   return `<!doctype html>
-<html lang="fr">
+<html lang="${languageCode.value}">
 <head>
   <meta charset="utf-8">
-  <title>Ticket</title>
+  <title>${escapeHtml(t('sale.orders.receiptTitle'))}</title>
   <style>
     @page { size: 80mm auto; margin: 4mm; }
     * { box-sizing: border-box; }
@@ -355,9 +349,9 @@ function orderSortValue(order: Order, key: OrderColumnKey): string | number {
 }
 
 function orderSortLabel(key: OrderColumnKey): string {
-  const column = orderColumns.find((item) => item.key === key);
-  if (orderSort.value.key !== key) return `Trier par ${column?.label || key}`;
-  return `Tri ${column?.label || key} ${orderSort.value.direction === 'asc' ? 'ascendant' : 'descendant'}`;
+  const label = orderColumnLabel(key);
+  if (orderSort.value.key !== key) return t('common.sortBy', { label });
+  return t('common.sortState', { label, direction: t(orderSort.value.direction === 'asc' ? 'common.ascending' : 'common.descending') });
 }
 
 function setOrderSort(key: OrderColumnKey): void {
@@ -370,7 +364,7 @@ function setOrderSort(key: OrderColumnKey): void {
 }
 
 function orderPageSizeLabel(size: number | 'all'): string {
-  return size === 'all' ? 'Toutes' : String(size);
+  return size === 'all' ? t('common.all') : String(size);
 }
 
 function onOrderPageSizeChange(event: Event): void {
@@ -406,7 +400,7 @@ function csvCell(value: unknown): string {
 }
 
 function exportOrdersCsv(): void {
-  const header = ['Numéro', 'Date', 'Source', 'Total', 'Paiement', 'Statut'];
+  const header = orderColumns.map((column) => t(column.labelKey));
   const rows = sortedOrders.value.map((order) => [
     order.order_number || order.id,
     shortDate(order.placed_at),
@@ -420,7 +414,7 @@ function exportOrdersCsv(): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `commandes-vente-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `${t('sale.orders.csvFilename')}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
   closeSaleMenus();
@@ -435,9 +429,10 @@ onMounted(load);
 
 <template>
   <section class="page-stack sale-admin">
-    <PageHeader title="Vente" intro="Commandes, POS, paiements et stock transactionnel." />
+    <PageHeader :title="t('sale.title')" :intro="t('sale.intro')" />
+    <ContextualHelpLink id="modules.sale" class="mb-3" />
 
-    <nav class="editor-tabs sale-tabs" aria-label="Navigation Vente">
+    <nav class="editor-tabs sale-tabs" :aria-label="`${t('common.mainNavigation')} ${t('sale.title')}`">
       <button
         v-for="tab in tabs"
         :key="tab.key"
@@ -445,7 +440,7 @@ onMounted(load);
         :class="['editor-tab', { active: activeTab === tab.key }]"
         @click="go(tab.path)"
       >
-        {{ tab.label }}
+        {{ t(tab.labelKey) }}
       </button>
     </nav>
 
@@ -455,19 +450,19 @@ onMounted(load);
     <section v-if="activeTab === 'dashboard'" class="sale-admin__panel">
       <div class="sale-admin__metrics">
         <div class="sale-admin__metric">
-          <span>Ventes du jour</span>
+          <span>{{ t('sale.metrics.todaySales') }}</span>
           <strong>{{ money(dashboard.today_sales_minor) }}</strong>
         </div>
         <div class="sale-admin__metric">
-          <span>Commandes</span>
+          <span>{{ t('sale.metrics.orders') }}</span>
           <strong>{{ dashboard.orders || 0 }}</strong>
         </div>
         <div class="sale-admin__metric">
-          <span>Paniers actifs</span>
+          <span>{{ t('sale.metrics.activeCarts') }}</span>
           <strong>{{ dashboard.active_carts || 0 }}</strong>
         </div>
         <div class="sale-admin__metric">
-          <span>Payé total</span>
+          <span>{{ t('sale.metrics.paidTotal') }}</span>
           <strong>{{ money(dashboard.paid_total_minor) }}</strong>
         </div>
       </div>
@@ -475,9 +470,9 @@ onMounted(load);
       <div class="sale-admin__grid">
         <section class="sale-admin__section">
           <div class="sale-admin__section-head">
-            <h2>Commandes récentes</h2>
+            <h2>{{ t('sale.dashboard.recentOrders') }}</h2>
           </div>
-          <div v-if="!(dashboard.recent_orders || []).length" class="text-muted">Aucune commande.</div>
+          <div v-if="!(dashboard.recent_orders || []).length" class="text-muted">{{ t('sale.empty.orders') }}</div>
           <button v-for="order in dashboard.recent_orders || []" :key="String(order.id)" class="sale-admin__list-row" type="button" @click="go('/sale/orders')">
             <span>{{ order.order_number }}</span>
             <b>{{ money(order.grand_total_minor, order.currency) }}</b>
@@ -486,8 +481,8 @@ onMounted(load);
         </section>
 
         <section class="sale-admin__section">
-          <h2>Paiements récents</h2>
-          <div v-if="!(dashboard.recent_payments || []).length" class="text-muted">Aucun paiement.</div>
+          <h2>{{ t('sale.dashboard.recentPayments') }}</h2>
+          <div v-if="!(dashboard.recent_payments || []).length" class="text-muted">{{ t('sale.empty.payments') }}</div>
           <div v-for="payment in dashboard.recent_payments || []" :key="String(payment.id)" class="sale-admin__list-row">
             <span>{{ payment.order_number }}</span>
             <b>{{ money(payment.amount_minor, payment.currency) }}</b>
@@ -496,8 +491,8 @@ onMounted(load);
         </section>
 
         <section class="sale-admin__section">
-          <h2>Sessions caisse ouvertes</h2>
-          <div v-if="!(dashboard.open_cash_sessions || []).length" class="text-muted">Aucune session ouverte.</div>
+          <h2>{{ t('sale.dashboard.openCashSessions') }}</h2>
+          <div v-if="!(dashboard.open_cash_sessions || []).length" class="text-muted">{{ t('sale.empty.openSessions') }}</div>
           <div v-for="session in dashboard.open_cash_sessions || []" :key="String(session.id)" class="sale-admin__list-row">
             <span>{{ session.register_name || session.register_code }}</span>
             <b>{{ money(session.expected_cash_minor, session.currency) }}</b>
@@ -509,67 +504,67 @@ onMounted(load);
 
     <section v-if="activeTab === 'orders'" class="sale-admin__panel sale-admin__orders">
       <section class="sale-admin__section sale-orders-list">
-        <BusinessPageHeader eyebrow="Vente" title="Commandes" />
+        <BusinessPageHeader :eyebrow="t('sale.title')" :title="t('sale.orders.title')" />
 
         <form class="sale-toolbar" @submit.prevent="applyOrderFilters">
           <div class="sale-search-control">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            <input v-model="orderSearch" type="search" placeholder="Recherche commande, source, paiement" @keyup.enter="applyOrderFilters">
-            <button v-if="orderSearch" type="button" aria-label="Effacer la recherche" @click="orderSearch = ''; applyOrderFilters()">×</button>
+            <input v-model="orderSearch" type="search" :placeholder="t('sale.orders.searchPlaceholder')" @keyup.enter="applyOrderFilters">
+            <button v-if="orderSearch" type="button" :aria-label="t('sale.orders.clearSearch')" @click="orderSearch = ''; applyOrderFilters()">×</button>
           </div>
           <div class="sale-toolbar-buttons">
             <details class="sale-menu sale-menu--filters">
-              <summary class="sale-icon-summary" aria-label="Filtres commandes" title="Filtres">
+              <summary class="sale-icon-summary" :aria-label="t('sale.orders.filtersLabel')" :title="t('common.filters')">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16l-6 7v5l-4 2v-7L4 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
               </summary>
               <div class="sale-menu-panel sale-filter-panel">
-                <strong>Filtres</strong>
+                <strong>{{ t('common.filters') }}</strong>
                 <label>
-                  <select v-model="orderFilter.source" aria-label="Source">
-                    <option value="">Toutes sources</option>
+                  <select v-model="orderFilter.source" :aria-label="t('common.source')">
+                    <option value="">{{ t('sale.orders.allSources') }}</option>
                     <option v-for="source in orderSourceOptions" :key="source" :value="source">{{ statusLabel(source) }}</option>
                   </select>
                 </label>
                 <label>
-                  <select v-model="orderFilter.payment_status" aria-label="Paiement">
-                    <option value="">Tous paiements</option>
+                  <select v-model="orderFilter.payment_status" :aria-label="t('common.payment')">
+                    <option value="">{{ t('sale.orders.allPayments') }}</option>
                     <option v-for="status in orderPaymentStatusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
                   </select>
                 </label>
                 <label>
-                  <select v-model="orderFilter.status" aria-label="Statut">
-                    <option value="">Tous statuts</option>
+                  <select v-model="orderFilter.status" :aria-label="t('common.status')">
+                    <option value="">{{ t('sale.orders.allStatuses') }}</option>
                     <option v-for="status in orderStatusOptions" :key="status" :value="status">{{ statusLabel(status) }}</option>
                   </select>
                 </label>
                 <div class="sale-filter-actions">
-                  <button class="btn small" type="submit" :disabled="loading">Appliquer</button>
-                  <button class="btn ghost small" type="button" :disabled="loading" @click="resetOrderFilters">Réinitialiser</button>
+                  <button class="btn small" type="submit" :disabled="loading">{{ t('common.apply') }}</button>
+                  <button class="btn ghost small" type="button" :disabled="loading" @click="resetOrderFilters">{{ t('common.reset') }}</button>
                 </div>
               </div>
             </details>
             <details class="sale-menu sale-menu--columns">
-              <summary class="sale-icon-summary" aria-label="Colonnes commandes" title="Colonnes">
+              <summary class="sale-icon-summary" :aria-label="t('sale.orders.columnsLabel')" :title="t('common.columns')">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4V5Zm5 0v14m6-14v14" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
               </summary>
               <div class="sale-menu-panel sale-column-panel">
-                <strong>Colonnes</strong>
-                <label v-for="column in orderColumns" :key="column.key"><input v-model="visibleOrderColumns[column.key]" type="checkbox"> {{ column.label }}</label>
+                <strong>{{ t('common.columns') }}</strong>
+                <label v-for="column in orderColumns" :key="column.key"><input v-model="visibleOrderColumns[column.key]" type="checkbox"> {{ t(column.labelKey) }}</label>
               </div>
             </details>
             <details class="sale-menu sale-menu--exports">
-              <summary class="sale-icon-summary" aria-label="Import / Export commandes" title="Import / Export">
+              <summary class="sale-icon-summary" :aria-label="t('sale.orders.importExportLabel')" :title="t('common.importExport')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/></svg>
               </summary>
               <div class="sale-menu-panel">
-                <button type="button" :disabled="!filteredOrders.length" @click="exportOrdersCsv">Exporter commandes CSV</button>
-                <button type="button" disabled title="Prévu dans les contrats d’intégration">Importer commandes CSV</button>
+                <button type="button" :disabled="!filteredOrders.length" @click="exportOrdersCsv">{{ t('sale.orders.exportCsv') }}</button>
+                <button type="button" disabled :title="t('sale.orders.importCsvPlanned')">{{ t('sale.orders.importCsv') }}</button>
               </div>
             </details>
             <details class="sale-menu sale-menu--actions">
-              <summary aria-label="Actions commandes" title="Actions">...</summary>
+              <summary :aria-label="t('sale.orders.actionsLabel')" :title="t('common.actions')">...</summary>
               <div class="sale-menu-panel">
-                <button type="button" :disabled="loading" @click="loadOrders(); closeSaleMenus()">Actualiser</button>
+                <button type="button" :disabled="loading" @click="loadOrders(); closeSaleMenus()">{{ t('common.refresh') }}</button>
               </div>
             </details>
           </div>
@@ -579,12 +574,12 @@ onMounted(load);
           <table class="table table-hover align-middle sale-orders-table">
             <thead>
               <tr>
-                <th v-if="orderColumnVisible('number')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('number')" @click="setOrderSort('number')">Numéro<span :class="{ active: orderSort.key === 'number' }">{{ orderSort.key === 'number' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
-                <th v-if="orderColumnVisible('date')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('date')" @click="setOrderSort('date')">Date<span :class="{ active: orderSort.key === 'date' }">{{ orderSort.key === 'date' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
-                <th v-if="orderColumnVisible('source')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('source')" @click="setOrderSort('source')">Source<span :class="{ active: orderSort.key === 'source' }">{{ orderSort.key === 'source' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
-                <th v-if="orderColumnVisible('total')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('total')" @click="setOrderSort('total')">Total<span :class="{ active: orderSort.key === 'total' }">{{ orderSort.key === 'total' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
-                <th v-if="orderColumnVisible('payment')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('payment')" @click="setOrderSort('payment')">Paiement<span :class="{ active: orderSort.key === 'payment' }">{{ orderSort.key === 'payment' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
-                <th v-if="orderColumnVisible('status')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('status')" @click="setOrderSort('status')">Statut<span :class="{ active: orderSort.key === 'status' }">{{ orderSort.key === 'status' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('number')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('number')" @click="setOrderSort('number')">{{ orderColumnLabel('number') }}<span :class="{ active: orderSort.key === 'number' }">{{ orderSort.key === 'number' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('date')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('date')" @click="setOrderSort('date')">{{ orderColumnLabel('date') }}<span :class="{ active: orderSort.key === 'date' }">{{ orderSort.key === 'date' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('source')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('source')" @click="setOrderSort('source')">{{ orderColumnLabel('source') }}<span :class="{ active: orderSort.key === 'source' }">{{ orderSort.key === 'source' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('total')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('total')" @click="setOrderSort('total')">{{ orderColumnLabel('total') }}<span :class="{ active: orderSort.key === 'total' }">{{ orderSort.key === 'total' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('payment')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('payment')" @click="setOrderSort('payment')">{{ orderColumnLabel('payment') }}<span :class="{ active: orderSort.key === 'payment' }">{{ orderSort.key === 'payment' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
+                <th v-if="orderColumnVisible('status')"><button class="sale-sort-button" type="button" :aria-label="orderSortLabel('status')" @click="setOrderSort('status')">{{ orderColumnLabel('status') }}<span :class="{ active: orderSort.key === 'status' }">{{ orderSort.key === 'status' && orderSort.direction === 'desc' ? '↓' : '↑' }}</span></button></th>
               </tr>
             </thead>
             <tbody>
@@ -597,24 +592,24 @@ onMounted(load);
                 <td v-if="orderColumnVisible('status')">{{ statusLabel(order.status) }}</td>
               </tr>
               <tr v-if="!paginatedOrders.length && !loading">
-                <td :colspan="orderColumns.length" class="text-muted p-3">Aucune commande ne correspond aux filtres.</td>
+                <td :colspan="orderColumns.length" class="text-muted p-3">{{ t('sale.empty.filteredOrders') }}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="sale-pagination" aria-label="Pagination commandes">
+        <div class="sale-pagination" :aria-label="`${t('common.page')} ${t('sale.orders.title')}`">
           <label>
-            Lignes
+            {{ t('sale.orders.rows') }}
             <select class="select" :value="orderPageSize" @change="onOrderPageSizeChange">
               <option v-for="size in orderPageSizeOptions" :key="String(size)" :value="size">{{ orderPageSizeLabel(size) }}</option>
             </select>
           </label>
           <span>{{ orderPaginationLabel }}</span>
           <div class="sale-pagination-actions">
-            <button class="btn ghost btn-sm" type="button" :disabled="orderPage <= 1 || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage - 1)">Précédent</button>
-            <strong>Page {{ orderPage }} / {{ orderPageCount }}</strong>
-            <button class="btn ghost btn-sm" type="button" :disabled="orderPage >= orderPageCount || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage + 1)">Suivant</button>
+            <button class="btn ghost btn-sm" type="button" :disabled="orderPage <= 1 || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage - 1)">{{ t('common.previous') }}</button>
+            <strong>{{ t('common.page') }} {{ orderPage }} / {{ orderPageCount }}</strong>
+            <button class="btn ghost btn-sm" type="button" :disabled="orderPage >= orderPageCount || loading || orderPageSize === 'all'" @click="setOrderPage(orderPage + 1)">{{ t('common.next') }}</button>
           </div>
         </div>
       </section>
@@ -625,45 +620,45 @@ onMounted(load);
             <h2>{{ selectedOrder.order_number }}</h2>
             <p>{{ statusLabel(selectedOrder.source) }} · {{ shortDate(selectedOrder.placed_at) }}</p>
           </div>
-          <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">Imprimer reçu</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">{{ t('sale.orders.printReceipt') }}</button>
         </div>
 
         <div class="sale-admin__totals">
-          <span>Total</span>
+          <span>{{ t('common.total') }}</span>
           <strong>{{ money(selectedOrder.grand_total_minor, selectedOrder.currency) }}</strong>
-          <span>Payé</span>
+          <span>{{ t('sale.status.paid') }}</span>
           <strong>{{ money(selectedOrder.paid_total_minor, selectedOrder.currency) }}</strong>
         </div>
 
-        <h3>Lignes</h3>
+        <h3>{{ t('sale.orders.lines') }}</h3>
         <div v-for="line in selectedOrder.lines || []" :key="String(line.id)" class="sale-admin__line">
           <span>{{ line.product_name }} <small>{{ line.sku }}</small></span>
           <b>{{ line.quantity }} × {{ money(line.unit_price_minor, line.currency) }}</b>
         </div>
 
-        <h3>Paiements</h3>
-        <div v-if="!orderPayments.length" class="text-muted">Aucun paiement.</div>
+        <h3>{{ t('sale.orders.payments') }}</h3>
+        <div v-if="!orderPayments.length" class="text-muted">{{ t('sale.empty.payments') }}</div>
         <div v-for="payment in orderPayments" :key="String(payment.id)" class="sale-admin__line">
           <span>{{ statusLabel(payment.transaction_type) }} · {{ statusLabel(payment.status) }}</span>
           <b>{{ money(payment.amount_minor, payment.currency) }}</b>
         </div>
 
         <div class="sale-admin__actions-block">
-          <label class="form-label">Montant paiement manuel</label>
+          <label class="form-label">{{ t('sale.orders.manualPaymentAmount') }}</label>
           <div class="input-group">
             <input v-model.number="paymentAmount" class="form-control" type="number" min="1" step="1">
-            <button class="btn btn-primary" type="button" :disabled="saving || paymentAmount < 1" @click="recordPayment">Enregistrer</button>
+            <button class="btn btn-primary" type="button" :disabled="saving || paymentAmount < 1" @click="recordPayment">{{ t('sale.orders.recordPayment') }}</button>
           </div>
         </div>
 
         <div class="sale-admin__actions-block">
-          <label class="form-label">Raison d’annulation</label>
-          <input v-model="cancelReason" class="form-control" type="text" placeholder="Optionnel">
-          <button class="btn btn-outline-danger mt-2" type="button" :disabled="saving || selectedOrder.status === 'cancelled'" @click="cancelOrder">Annuler la commande</button>
+          <label class="form-label">{{ t('sale.orders.cancelReason') }}</label>
+          <input v-model="cancelReason" class="form-control" type="text" :placeholder="t('common.optional')">
+          <button class="btn btn-outline-danger mt-2" type="button" :disabled="saving || selectedOrder.status === 'cancelled'" @click="cancelOrder">{{ t('sale.orders.cancelOrder') }}</button>
         </div>
 
-        <h3>Événements</h3>
-        <div v-if="!orderEvents.length" class="text-muted">Aucun événement.</div>
+        <h3>{{ t('sale.orders.events') }}</h3>
+        <div v-if="!orderEvents.length" class="text-muted">{{ t('common.none') }}</div>
         <div v-for="event in orderEvents" :key="String(event.id)" class="sale-admin__line">
           <span>{{ event.event_type }}</span>
           <small>{{ shortDate(event.created_at) }}</small>
@@ -678,31 +673,40 @@ onMounted(load);
     <section v-if="activeTab === 'settings'" class="sale-admin__panel">
       <div class="sale-admin__grid">
         <section class="sale-admin__section">
-          <h2>Canaux</h2>
+          <h2>{{ t('sale.settings.channels') }}</h2>
           <div v-for="channel in channels" :key="channel.id" class="sale-admin__list-row">
             <span>{{ channel.name }} <small>{{ channel.code }}</small></span>
             <b>{{ statusLabel(channel.channel_type) }}</b>
-            <small>{{ statusLabel(channel.status) }} · {{ channel.is_public ? 'Public' : 'Privé' }} · {{ channel.price_tax_included ? 'TTC' : 'HT' }}</small>
-            <a class="btn btn-sm btn-outline-secondary" :href="saleCatalogPdfUrl(channel)">Brochure</a>
+            <small>{{ statusLabel(channel.status) }} · {{ channel.is_public ? t('common.public') : t('common.private') }} · {{ channel.price_tax_included ? t('sale.tax.included') : t('sale.tax.excluded') }}</small>
+            <a class="btn btn-sm btn-outline-secondary" :href="saleCatalogPdfUrl(channel)">{{ t('sale.settings.brochure') }}</a>
           </div>
         </section>
         <section class="sale-admin__section">
-          <h2>Moyens de paiement</h2>
+          <h2>{{ t('sale.settings.paymentMethods') }}</h2>
           <div v-for="method in paymentMethods" :key="String(method.id)" class="sale-admin__list-row">
             <span>{{ method.name }}</span>
             <b>{{ method.method_type }}</b>
             <small>{{ statusLabel(method.status) }}</small>
           </div>
-          <div v-if="!paymentMethods.length" class="text-muted">Aucun moyen configuré.</div>
+          <div v-if="!paymentMethods.length" class="text-muted">{{ t('sale.empty.paymentMethods') }}</div>
         </section>
         <section class="sale-admin__section">
-          <h2>Sessions POS</h2>
+          <h2>{{ t('sale.settings.fulfillmentMethods') }}</h2>
+          <div v-for="method in fulfillmentMethods" :key="String(method.id)" class="sale-admin__list-row">
+            <span>{{ languageCode === 'en' ? method.label_en : method.label_fr }} <small>{{ method.code }}</small></span>
+            <b>{{ money(method.flat_rate_minor, 'CHF') }}</b>
+            <small>{{ statusLabel(method.status) }} · {{ method.fulfillment_type }} · {{ method.requires_shipping_address ? t('sale.fulfillment.addressRequired') : t('sale.fulfillment.addressOptional') }}</small>
+          </div>
+          <div v-if="!fulfillmentMethods.length" class="text-muted">{{ t('sale.empty.fulfillmentMethods') }}</div>
+        </section>
+        <section class="sale-admin__section">
+          <h2>{{ t('sale.settings.posSessions') }}</h2>
           <div v-for="session in sessions" :key="String(session.id)" class="sale-admin__list-row">
             <span>{{ session.register_id }}</span>
             <b>{{ money(session.expected_cash_minor, session.currency) }}</b>
             <small>{{ statusLabel(session.status) }}</small>
           </div>
-          <div v-if="!sessions.length" class="text-muted">Aucune session.</div>
+          <div v-if="!sessions.length" class="text-muted">{{ t('sale.empty.sessions') }}</div>
         </section>
       </div>
     </section>

@@ -25,7 +25,7 @@
       "ok": "boolean",
       "action": "capability key",
       "mode": "dry_run | apply",
-      "status": "success | not_found | forbidden | validation_failed | confirmation_required | failed | not_implemented",
+      "status": "success | not_found | forbidden | inactive | validation_failed | confirmation_required | incompatible_contract | validator_apply_forbidden | failed | not_implemented",
       "data": "object; dry-run details or execution output",
       "warnings": "array",
       "errors": "array"

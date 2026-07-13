@@ -35,34 +35,58 @@ final class SaleOrderRepository extends SaleRepositoryBase
     }
 
     /** @param array<string,mixed> $cart @param list<array<string,mixed>> $lines @param list<array<string,mixed>> $adjustments @return array<string,mixed> */
-    public function createFromCart(array $cart, array $lines, string $source = 'admin', array $adjustments = []): array
+    public function createFromCart(array $cart, array $lines, string $source = 'admin', array $adjustments = [], ?string $correlationId = null, string $initialStatus = 'placed'): array
     {
+        $existing = $this->rawDatabase()->one('SELECT id FROM sale_orders WHERE source_cart_id = ? LIMIT 1', [(int) $cart['id']]);
+        if ($existing !== null) {
+            throw new SaleValidationException('sale.cart_already_converted');
+        }
+        $correlationId = \App\Modules\Sale\Services\SaleStateMachineService::correlationId($correlationId);
+        if (!in_array($initialStatus, ['pending_payment', 'placed'], true)) {
+            throw new SaleValidationException('sale.order_initial_status_invalid');
+        }
+        $paymentStatus = $initialStatus === 'pending_payment' ? 'pending' : 'unpaid';
+        $placedAt = $initialStatus === 'placed' ? gmdate('Y-m-d H:i:s') : null;
         $prefix = $source === 'pos' ? 'POS' : 'SALE';
         $orderNumber = $prefix . '-' . gmdate('YmdHis') . '-' . bin2hex(random_bytes(3));
         $this->rawDatabase()->run(
             'INSERT INTO sale_orders(
-                site_id, channel_id, order_number, source, status, payment_status, currency,
+                site_id, channel_id, order_number, source, status, payment_status, currency, source_cart_id, correlation_id,
                 customer_company_id, customer_contact_id, customer_snapshot_json,
-                billing_address_json, shipping_address_json, subtotal_minor, discount_total_minor,
-                tax_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
-             ) VALUES(?, ?, ?, ?, \'placed\', \'unpaid\', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
+                billing_address_json, shipping_address_json, shipping_method_snapshot_json,
+                terms_accepted, terms_accepted_at, marketing_consent, marketing_consent_at, payment_method_snapshot_json,
+                subtotal_minor, discount_total_minor,
+                tax_total_minor, shipping_total_minor, grand_total_minor, placed_at, created_by_iam_user_id, metadata_json
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 (int) $cart['site_id'],
                 (int) $cart['channel_id'],
                 $orderNumber,
                 $source,
+                $initialStatus,
+                $paymentStatus,
                 (string) $cart['currency'],
+                (int) $cart['id'],
+                $correlationId,
                 $cart['customer_company_id'] ?? null,
                 $cart['customer_contact_id'] ?? null,
                 (string) $cart['customer_snapshot_json'],
                 (string) $cart['billing_address_json'],
                 (string) $cart['shipping_address_json'],
+                (string) ($cart['shipping_method_snapshot_json'] ?? '{}'),
+                (int) ($cart['terms_accepted'] ?? 0),
+                $cart['terms_accepted_at'] ?? null,
+                $cart['marketing_consent'] ?? null,
+                $cart['marketing_consent_at'] ?? null,
+                (string) ($cart['payment_method_snapshot_json'] ?? '{}'),
                 (int) $cart['subtotal_minor'],
                 (int) $cart['discount_total_minor'],
                 (int) $cart['tax_total_minor'],
+                (int) ($cart['shipping_total_minor'] ?? 0),
                 (int) $cart['grand_total_minor'],
+                $placedAt,
                 $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null,
-                $this->json(['source_cart_id' => (int) $cart['id']]),
+                $this->json(['source_cart_id' => (int) $cart['id'], 'correlation_id' => $correlationId]),
             ]
         );
         $orderId = (int) $this->rawDatabase()->lastInsertId();
@@ -70,17 +94,18 @@ final class SaleOrderRepository extends SaleRepositoryBase
         foreach ($lines as $line) {
             $this->rawDatabase()->run(
                 'INSERT INTO sale_order_lines(
-                    order_id, line_number, business_product_id, business_variant_id, sku, barcode,
+                    order_id, line_number, business_product_id, business_variant_id, sellable_id, sku, barcode,
                     product_name, variant_name, product_type, quantity, unit_price_minor,
-                    regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id,
+                    regular_unit_price_minor, unit_purchase_price_minor, currency, tax_class_id, tax_class_code,
                     tax_rate_basis_points, tax_included, line_subtotal_minor, line_discount_minor,
                     line_tax_minor, line_total_minor, snapshot_json
-                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     $orderId,
                     $lineNumber++,
                     (int) $line['business_product_id'],
                     (int) $line['business_variant_id'],
+                    (int) ($line['sellable_id'] ?? $line['business_variant_id']),
                     $line['sku'] ?? null,
                     $line['barcode'] ?? null,
                     (string) $line['product_name'],
@@ -92,6 +117,7 @@ final class SaleOrderRepository extends SaleRepositoryBase
                     $line['unit_purchase_price_minor'] ?? null,
                     (string) $line['currency'],
                     $line['tax_class_id'] ?? null,
+                    (string) ($line['tax_class_code'] ?? 'standard'),
                     (int) $line['tax_rate_basis_points'],
                     (int) $line['tax_included'],
                     (int) $line['line_subtotal_minor'],
@@ -101,6 +127,15 @@ final class SaleOrderRepository extends SaleRepositoryBase
                     (string) $line['metadata_json'],
                 ]
             );
+            $orderLineId = (int) $this->rawDatabase()->lastInsertId();
+            $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+            foreach ((is_array($metadata) ? ($metadata['pricing']['tax_lines'] ?? []) : []) as $taxLine) {
+                if (!is_array($taxLine) || (int) ($taxLine['tax_amount_minor'] ?? 0) <= 0) continue;
+                $this->rawDatabase()->run(
+                    'INSERT INTO sale_order_tax_lines(order_id,order_line_id,tax_class_code,tax_rate_basis_points,taxable_amount_minor,tax_amount_minor,currency) VALUES(?,?,?,?,?,?,?)',
+                    [$orderId,$orderLineId,(string)($taxLine['tax_class_code']??$line['tax_class_code']??'standard'),(int)($taxLine['tax_rate_basis_points']??0),(int)($taxLine['taxable_amount_minor']??0),(int)($taxLine['tax_amount_minor']??0),(string)$line['currency']]
+                );
+            }
         }
         foreach ($adjustments as $adjustment) {
             $this->rawDatabase()->run(
@@ -119,9 +154,9 @@ final class SaleOrderRepository extends SaleRepositoryBase
             );
         }
         $this->rawDatabase()->run(
-            'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason)
-             VALUES(?, NULL, \'placed\', ?, \'checkout\')',
-            [$orderId, $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null]
+            'INSERT INTO sale_order_status_history(order_id, from_status, to_status, changed_by_iam_user_id, reason, correlation_id)
+             VALUES(?, NULL, ?, ?, \'checkout\', ?)',
+            [$orderId, $initialStatus, $cart['updated_by_iam_user_id'] ?? $cart['created_by_iam_user_id'] ?? null, $correlationId]
         );
         return $this->requireOrder($orderId);
     }

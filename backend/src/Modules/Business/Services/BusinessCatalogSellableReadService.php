@@ -15,6 +15,7 @@ final class BusinessCatalogSellableReadService
     private readonly BusinessProductBundleService $bundles;
     private readonly BusinessProductCompletenessService $completenessService;
     private ?bool $hasVariantSalesNoteColumn = null;
+    private ?bool $hasInventoryProjectionTable = null;
 
     public function __construct(
         private readonly BusinessCatalogPricingRepository $pricingRepository,
@@ -189,12 +190,23 @@ final class BusinessCatalogSellableReadService
         $brand = $this->catalog->brand($siteId, isset($row['brand_id']) ? (int) $row['brand_id'] : null);
         $category = $this->catalog->category($siteId, isset($row['category_id']) ? (int) $row['category_id'] : null);
         $taxClass = $this->catalog->taxClass(isset($row['tax_class_id']) ? (int) $row['tax_class_id'] : null);
-        $pricingSummary = $this->pricing->pricingSummary($variantId, $pricingChannel);
+        $pricingSummary = $this->pricing->pricingSummary($variantId, $pricingChannel, null, [
+            'currency' => $context['currency'],
+            'customer_segment' => $context['customer_segment'],
+        ]);
 
-        $trackStock = $row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'];
+        $inventoryProjection = $this->hasInventoryProjectionTable() ? $this->pricingRepository->rawDatabase()->one(
+            'SELECT * FROM business_inventory_availability_projections WHERE site_id=? AND sellable_id=?',
+            [$siteId, $variantId]
+        ) : null;
+        $trackStock = $inventoryProjection === null
+            ? ($row['variant_track_stock'] === null ? (bool) $row['product_track_stock'] : (bool) $row['variant_track_stock'])
+            : (bool) $inventoryProjection['tracked'];
         $allowBackorder = $row['variant_allow_backorder'] === null ? (bool) $row['product_allow_backorder'] : (bool) $row['variant_allow_backorder'];
         $backorderDeliveryDays = $row['variant_backorder_delivery_days'] === null ? (int) $row['product_backorder_delivery_days'] : (int) $row['variant_backorder_delivery_days'];
-        $available = (float) $row['stock_quantity'] - (float) $row['stock_reserved'];
+        $stockQuantity = $inventoryProjection === null ? (float) $row['stock_quantity'] : (float) $inventoryProjection['on_hand_quantity'];
+        $stockReserved = $inventoryProjection === null ? (float) $row['stock_reserved'] : (float) $inventoryProjection['reserved_quantity'];
+        $available = $inventoryProjection === null ? $stockQuantity - $stockReserved : (float) $inventoryProjection['available_quantity'];
         $availability = $this->availability($trackStock, $allowBackorder, $available, $backorderDeliveryDays);
         $currency = strtoupper((string) ($context['currency'] ?: ($pricingSummary['currency'] ?? $row['sale_currency'] ?? 'CHF')));
         $regularSaleMinor = $this->moneyMinor($pricingSummary['regular_sale_price'] ?? $row['base_sale_price'] ?? null);
@@ -212,6 +224,8 @@ final class BusinessCatalogSellableReadService
         $isSellable = $missing === [];
 
         $snapshot = [
+            'contract' => 'storefront.sellable.v1',
+            'sellable_id' => (int) $row['business_variant_id'],
             'site_id' => $siteId,
             'product_id' => (int) $row['business_product_id'],
             'variant_id' => (int) $row['business_variant_id'],
@@ -236,6 +250,8 @@ final class BusinessCatalogSellableReadService
             'regular_unit_price_minor' => $regularSaleMinor,
             'purchase_price_visible' => (bool) $context['include_purchase_price'],
             'tax_class_id' => $row['tax_class_id'] === null ? null : (int) $row['tax_class_id'],
+            'tax_class_code' => (string) ($taxClass['code'] ?? 'exempt'),
+            'tax_country' => (string) ($taxClass['country'] ?? 'CH'),
             'tax_rate_basis_points' => $taxRateBasisPoints,
             'tax_included' => $taxIncluded,
             'discounts_applied' => $pricingSummary['active_discount'] === null ? [] : [$pricingSummary['active_discount']],
@@ -266,9 +282,10 @@ final class BusinessCatalogSellableReadService
                 'product_slug' => (string) $row['product_slug'],
                 'brand_id' => $row['brand_id'] === null ? null : (int) $row['brand_id'],
                 'category_id' => $row['category_id'] === null ? null : (int) $row['category_id'],
-                'stock_quantity' => (float) $row['stock_quantity'],
-                'stock_reserved' => (float) $row['stock_reserved'],
+                'stock_quantity' => $stockQuantity,
+                'stock_reserved' => $stockReserved,
                 'available_quantity' => $available,
+                'inventory_source' => $inventoryProjection === null ? 'catalog_bootstrap' : 'sale_projection',
                 'allow_backorder' => $allowBackorder,
                 'backorder_delivery_days' => $backorderDeliveryDays,
                 'availability_status' => $availability['status'],
@@ -608,12 +625,17 @@ final class BusinessCatalogSellableReadService
         return $variantId;
     }
 
-    /** @param array<string,mixed> $context @return array{channel:string,currency:string,include_purchase_price:bool,include_internal_fields:bool,language:string} */
+    /** @param array<string,mixed> $context @return array{channel:string,currency:string,customer_segment:?string,include_purchase_price:bool,include_internal_fields:bool,language:string} */
     private function normalizeContext(array $context): array
     {
+        $segment = strtolower(trim((string) ($context['customer_segment'] ?? '')));
+        if ($segment !== '' && !preg_match('/^[a-z0-9][a-z0-9_-]{0,79}$/', $segment)) {
+            throw new InvalidArgumentException('business.pricing.customer_segment_invalid');
+        }
         return [
             'channel' => $this->channel((string) ($context['channel'] ?? 'admin')),
             'currency' => strtoupper(trim((string) ($context['currency'] ?? 'CHF')) ?: 'CHF'),
+            'customer_segment' => $segment === '' ? null : $segment,
             'include_purchase_price' => (bool) ($context['include_purchase_price'] ?? false),
             'include_internal_fields' => (bool) ($context['include_internal_fields'] ?? false),
             'language' => strtolower(trim((string) ($context['language'] ?? 'fr')) ?: 'fr'),
@@ -673,9 +695,21 @@ final class BusinessCatalogSellableReadService
             $where[] = 'p.is_public = 1';
             $where[] = 'p.visibility = \'public\'';
         }
+        if (in_array($channel, ['pos', 'catalogue', 'ecommerce', 'public'], true)) {
+            $where[] = 'NOT EXISTS (
+                SELECT 1 FROM business_product_channel_visibility cv
+                WHERE cv.product_id = p.id AND cv.site_id = p.site_id AND cv.channel = :visibility_channel
+                  AND (cv.status <> \'active\' OR (cv.starts_at IS NOT NULL AND cv.starts_at > CURRENT_TIMESTAMP) OR (cv.ends_at IS NOT NULL AND cv.ends_at <= CURRENT_TIMESTAMP))
+            )';
+            $params['visibility_channel'] = $channel === 'public' ? 'ecommerce' : $channel;
+        }
         if (trim((string) ($filters['product_type'] ?? '')) !== '') {
             $where[] = 'p.type = :product_type';
             $params['product_type'] = $this->productType((string) $filters['product_type']);
+        }
+        if ((int) ($filters['product_id'] ?? 0) > 0) {
+            $where[] = 'p.id = :product_id';
+            $params['product_id'] = (int) $filters['product_id'];
         }
         if (trim((string) ($filters['sku'] ?? '')) !== '') {
             $where[] = 'v.sku = :sku';
@@ -734,6 +768,16 @@ final class BusinessCatalogSellableReadService
             return 0;
         }
         return (int) round(((float) $amount) * 100);
+    }
+
+    private function hasInventoryProjectionTable(): bool
+    {
+        if ($this->hasInventoryProjectionTable === null) {
+            $this->hasInventoryProjectionTable = $this->pricingRepository->rawDatabase()->one(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='business_inventory_availability_projections'"
+            ) !== null;
+        }
+        return $this->hasInventoryProjectionTable;
     }
 
     /** @return array<mixed> */

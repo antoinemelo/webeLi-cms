@@ -38,5 +38,10 @@ evidence_scope:
 | éditeur visuel non qualifié par scénario E2E complet | moyen | moyenne | élevée | scénario navigateur sélection, sauvegarde, révision, publication, langue, média et verrous | haute avant diffusion externe |
 | stockage S3, e-mail, webhooks externes | variable | moyenne | moyenne | tests d’intégration et monitoring | moyenne |
 | documentation générée susceptible de dériver | moyen | moyenne | élevée | `docs check` en CI | moyenne |
+| marketplace multivendeur | hors périmètre actuel | élevée si attendu par un client | élevée | cadrer comme développement spécifique | non inclus |
+| fiscalité mondiale | hors périmètre actuel | élevée si vente internationale | élevée | moteur fiscal externe ou module dédié | non inclus |
+| comptabilité légale complète | hors périmètre actuel | élevée si tenue comptable attendue | élevée | export vers outil comptable | non inclus |
+| abonnements avancés | hors périmètre actuel | moyenne selon projet | élevée | module spécifique | non inclus |
+| logistique internationale complexe | hors périmètre actuel | moyenne à élevée | élevée | intégration transporteurs dédiée | non inclus |
 
 Les fonctionnalités expérimentales ou partielles ne doivent pas être utilisées comme dépendances critiques sans tests ciblés. Aucun résultat de performance, de pentest ou de conformité réglementaire n’est fourni ici.

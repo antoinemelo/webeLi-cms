@@ -110,14 +110,18 @@ try {
     $h->assertSame(5300, (int) $discountedCart['grand_total_minor'], 'manual POS cart discount updates total');
     $h->assertSame(500, (int) $discountedCart['adjustments'][0]['amount_minor'], 'manual POS cart discount is stored');
 
-    $reservation = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id = ? AND status = "active"', [(int) $cart['id']]);
-    $h->assertSame(2, (int) $reservation['quantity'], 'tracked variant reserves stock');
-    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
-    $h->assertSame(23, (int) $inventoryItem['available_quantity'], 'reservation decreases available stock');
+    $h->assertSame(0, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_reservations WHERE cart_id=?', [(int) $cart['id']])['count'] ?? -1), 'cart uses a soft stock check and does not reserve');
 
-    $order = $checkout->placeOrder((int) $cart['id'], ['idempotency_key' => 'checkout-demo', 'source' => 'admin']);
+    $order = $checkout->placeOrder((int) $cart['id'], [
+        'idempotency_key' => 'checkout-demo',
+        'source' => 'admin',
+        'correlation_id' => 'corr-checkout-demo',
+        'shipping_method_snapshot' => ['code' => 'pickup', 'label' => 'Retrait'],
+    ]);
     $h->assertSame('placed', $order['status'], 'checkout creates placed order');
     $h->assertSame(5300, (int) $order['grand_total_minor'], 'order copies adjusted cart total');
+    $h->assertSame('corr-checkout-demo', $order['correlation_id'] ?? null, 'checkout stores correlation id on order');
+    $h->assertSame('pickup', json_decode((string) $order['shipping_method_snapshot_json'], true)['code'] ?? null, 'checkout freezes shipping method snapshot');
     $h->assertSame('converted', $carts->requireCart((int) $cart['id'])['status'], 'checkout converts cart');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_order_lines WHERE order_id = ?', [(int) $order['id']])['count'] ?? 0), 'checkout copies order lines');
     $h->assertSame(500, (int) ($saleDb->one('SELECT amount_minor FROM sale_order_adjustments WHERE order_id = ? LIMIT 1', [(int) $order['id']])['amount_minor'] ?? 0), 'checkout copies cart adjustment');
@@ -127,6 +131,9 @@ try {
     $h->assertSame('Gourde demo', $orderLine['product_name'] ?? null, 'order line freezes product name');
     $h->assertSame(2900, (int) ($orderLine['unit_price_minor'] ?? 0), 'order line freezes unit price');
     $h->assertSame(2900, (int) ($orderLineSnapshot['snapshot']['unit_price_minor'] ?? 0), 'order line snapshot JSON freezes unit price');
+    $reservation = $saleDb->one('SELECT * FROM sale_stock_reservations WHERE cart_id=?', [(int) $cart['id']]);
+    $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id=?', [(int) ($reservation['inventory_item_id'] ?? 0)]);
+    $h->assertSame(2, (int) ($reservation['quantity'] ?? 0), 'checkout reserves the exact line quantity before consumption');
     $businessDb->run("UPDATE business_products SET name = 'Gourde modifiée après commande' WHERE id = ?", [(int) $orderLine['business_product_id']]);
     $businessDb->run('UPDATE business_product_base_prices SET amount = 99 WHERE product_id = ? AND price_kind = "sale"', [(int) $orderLine['business_product_id']]);
     $frozenOrderLine = $saleDb->one('SELECT * FROM sale_order_lines WHERE id = ? LIMIT 1', [(int) $orderLine['id']]);
@@ -136,6 +143,8 @@ try {
     $inventoryItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE id = ?', [(int) $reservation['inventory_item_id']]);
     $h->assertSame(23, (int) $inventoryItem['on_hand_quantity'], 'checkout decreases on-hand stock through movement');
     $h->assertSame(0, (int) $inventoryItem['reserved_quantity'], 'checkout clears reserved stock');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_orders WHERE source_cart_id = ?', [(int) $cart['id']])['count'] ?? 0), 'source cart uniqueness prevents double order creation');
+    $h->assertSame(2, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_state_transitions WHERE correlation_id = ?', ['corr-checkout-demo'])['count'] ?? 0), 'checkout records correlated order and cart transitions');
 
     $h->expectException(
         fn() => $checkout->placeOrder((int) $cart['id']),
@@ -187,6 +196,7 @@ try {
     $h->assertSame(1, (int) ($orderEnvelope['schema_version'] ?? 0), 'sale outbox envelope exposes schema version');
     $h->assertSame('sale.order.placed', $orderEnvelope['event_type'] ?? null, 'sale outbox envelope exposes event type');
     $h->assertSame('order', $orderEnvelope['aggregate']['type'] ?? null, 'sale outbox envelope exposes aggregate type');
+    $h->assertSame('corr-checkout-demo', $orderEnvelope['correlation_id'] ?? null, 'sale outbox envelope propagates checkout correlation id');
     $h->assertSame((string) $order['order_number'], $orderEnvelope['payload']['order_number'] ?? null, 'sale order outbox payload exposes order number');
     $paymentOutbox = $saleDb->one('SELECT payload_json FROM sale_outbox WHERE topic = "sale.payment.recorded" ORDER BY id DESC LIMIT 1');
     $paymentEnvelope = json_decode((string) ($paymentOutbox['payload_json'] ?? '{}'), true);

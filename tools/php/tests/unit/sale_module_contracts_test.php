@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Core\Router;
+use App\Application\Capability\CapabilityDefinition;
 use App\Modules\Sale\SaleModuleProvider;
 
 $h = new TestHarness();
@@ -29,6 +30,7 @@ $expectedTables = [
     'sale_payment_transactions',
     'sale_payment_allocations',
     'sale_pos_registers',
+    'sale_pos_register_payment_methods',
     'sale_pos_devices',
     'sale_cash_sessions',
     'sale_cash_movements',
@@ -37,9 +39,15 @@ $expectedTables = [
     'sale_stock_reservations',
     'sale_stock_movements',
     'sale_receipts',
+    'sale_receipt_actions',
     'sale_returns',
     'sale_return_lines',
     'sale_refunds',
+    'sale_financial_corrections',
+    'sale_order_customer_reconciliations',
+    'sale_fulfillments',
+    'sale_fulfillment_lines',
+    'sale_state_transitions',
     'sale_promotions',
     'sale_coupons',
     'sale_idempotency_keys',
@@ -55,13 +63,21 @@ $expectedPermissions = [
     'sale.payments.read',
     'sale.payments.manage',
     'sale.refunds.manage',
+    'sale.returns.manage',
     'sale.pos.use',
     'sale.pos.manage',
     'sale.cash.manage',
+    'sale.pos.sessions.open',
+    'sale.pos.sessions.close',
+    'sale.pos.discounts.manage',
+    'sale.pos.refunds.manage',
+    'sale.pos.cash.correct',
+    'sale.pos.receipts.reprint',
     'sale.stock.read',
     'sale.stock.manage',
     'sale.reports.read',
     'sale.settings.manage',
+    'sale.customer_accounts.manage',
 ];
 
 $h->assertSame('sale', $provider->key(), 'sale provider key is stable');
@@ -74,7 +90,21 @@ $settings = $provider->settingsSchema();
 $h->assertSame('optional_port', $settings['integrations']['sellable_catalog'] ?? null, 'sellable catalog stays an optional port');
 $h->assertSame('optional_port', $settings['integrations']['customer_snapshot'] ?? null, 'customer snapshot stays an optional port');
 $h->assertSame('planned_optional_port', $settings['integrations']['crm_activity_sink'] ?? null, 'CRM integration stays planned');
-$h->assertSame('planned_optional_port', $settings['integrations']['cms_account_bridge'] ?? null, 'CMS integration stays planned');
+$h->assertSame('active_iam_crm_sale_port', $settings['integrations']['cms_account_bridge'] ?? null, 'CMS account integration is active');
+
+$capabilities = [];
+foreach ($provider->capabilities() as $capability) {
+    $definition = CapabilityDefinition::fromArray($capability);
+    $capabilities[$definition->key] = $definition;
+    $h->assertSame('sale', $definition->module, 'sale capability is owned by sale: ' . $definition->key);
+    $h->assertSame([], $definition->config['foreign_tables'] ?? null, 'sale capability has no direct foreign table access: ' . $definition->key);
+}
+foreach (['catalog.product.read', 'pricing.calculate', 'cart.validate', 'checkout.validate', 'payment.provider', 'order.after_place'] as $key) {
+    $h->assertTrue(isset($capabilities[$key]), 'sale capability is declared: ' . $key);
+}
+$h->assertSame('validator', $capabilities['cart.validate']->type ?? null, 'sale cart validation is a validator capability');
+$h->assertSame(false, $capabilities['cart.validate']->config['mutates_order'] ?? null, 'sale cart validator cannot mutate orders');
+$h->assertSame('outbox', $capabilities['order.after_place']->config['transport'] ?? null, 'sale after-order capability uses outbox');
 
 $permissionKeys = array_column($provider->permissions(), 'key');
 foreach ($expectedPermissions as $permission) {
@@ -129,7 +159,7 @@ foreach ($contracts as $contract) {
     $routeContracts[$routeKey] = $contract;
     if ($scope === 'headless') {
         $h->assertTrue(isset($publicRouteKeys[$routeKey]), 'headless sale contract has public route: ' . $routeKey);
-        $h->assertSame('anonymous', $contract['permission'] ?? null, 'headless sale contract stays anonymous: ' . $key);
+        $h->assertTrue(trim((string) ($contract['permission'] ?? '')) !== '', 'headless sale contract declares its authentication mode: ' . $key);
         continue;
     }
 
@@ -150,6 +180,16 @@ foreach ([
     ['GET', '/admin/api/sale/export/stock-movements.csv', 'admin.sale.export.stock_movements.v1', 'sale.stock.read'],
     ['POST', '/admin/api/sale/import/stock/apply', 'admin.sale.import.stock.apply.v1', 'sale.stock.manage'],
     ['POST', '/admin/api/sale/pos/checkout', 'admin.sale.pos.checkout.v1', 'sale.pos.use'],
+    ['PATCH', '/admin/api/sale/pos/registers/{id}', 'admin.sale.pos.registers.update.v1', 'sale.pos.manage'],
+    ['POST', '/admin/api/sale/pos/sessions/{id}/movements', 'admin.sale.pos.sessions.movements.store.v1', 'sale.pos.cash.correct'],
+    ['POST', '/admin/api/sale/pos/orders/{id}/receipt/reprint', 'admin.sale.pos.receipt.reprint.v1', 'sale.pos.receipts.reprint'],
+    ['POST', '/admin/api/sale/pos/orders/{id}/returns', 'admin.sale.pos.orders.returns.store.v1', 'sale.pos.refunds.manage'],
+    ['POST', '/admin/api/sale/orders/{id}/returns', 'admin.sale.orders.returns.store.v1', 'sale.returns.manage'],
+    ['POST', '/admin/api/sale/returns/{id}/transition', 'admin.sale.returns.transition.v1', 'sale.returns.manage'],
+    ['GET', '/admin/api/sale/orders/{id}/timeline', 'admin.sale.orders.timeline.v1', 'sale.orders.read'],
+    ['POST', '/admin/api/sale/orders/{id}/customer-reconciliation', 'admin.sale.orders.customer_reconciliation.v1', 'sale.orders.manage'],
+    ['POST', '/admin/api/sale/orders/{id}/payments/corrections', 'admin.sale.orders.payments.correction.v1', 'sale.payments.manage'],
+    ['POST', '/admin/api/sale/payment-intents/{id}/void', 'admin.sale.payment_intents.void.v1', 'sale.payments.manage'],
 ] as [$method, $path, $key, $permission]) {
     $matched = $router->match($method, samplePath($path), $adminRoutes);
     $h->assertTrue($matched !== null, 'sale route matches router: ' . $method . ' ' . $path);
@@ -172,8 +212,8 @@ try {
     $h->assertSame([
         ['code' => 'admin-manual', 'channel_type' => 'admin', 'status' => 'active', 'is_public' => 0],
         ['code' => 'pos-main', 'channel_type' => 'pos', 'status' => 'draft', 'is_public' => 0],
-        ['code' => 'web-main', 'channel_type' => 'ecommerce', 'status' => 'draft', 'is_public' => 0],
-    ], $seededChannels, 'sale schema seeds non-public channels by default');
+        ['code' => 'web-main', 'channel_type' => 'ecommerce', 'status' => 'active', 'is_public' => 1],
+    ], $seededChannels, 'sale schema seeds a public ecommerce channel for headless smoke coverage');
 
     $adminChannel = $saleDb->one("SELECT id FROM sale_channels WHERE code = 'admin-manual'");
     $h->expectException(
@@ -189,7 +229,7 @@ try {
 
     $saleDb->run("INSERT INTO sale_stock_locations(site_id, code, name, location_type, status) VALUES(1, 'test-stock', 'Test stock', 'main', 'active')");
     $locationId = $saleDb->lastInsertId();
-    $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990001, ?, "TEST-STOCK", 5, 0, 5)', [$locationId]);
+    $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, sellable_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990001, 990001, ?, "TEST-STOCK", 5, 0, 5)', [$locationId]);
     $inventoryItemId = $saleDb->lastInsertId();
     $h->expectException(
         fn() => $saleDb->run('INSERT INTO sale_stock_movements(inventory_item_id, movement_type, quantity) VALUES(?, "adjustment", 0)', [$inventoryItemId]),
@@ -197,10 +237,16 @@ try {
         'sale stock movement cannot be zero'
     );
     $h->expectException(
-        fn() => $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990002, ?, "BAD-STOCK", 5, 2, 5)', [$locationId]),
+        fn() => $saleDb->run('INSERT INTO sale_inventory_items(site_id, business_variant_id, sellable_id, stock_location_id, sku, on_hand_quantity, reserved_quantity, available_quantity) VALUES(1, 990002, 990002, ?, "BAD-STOCK", 5, 2, 5)', [$locationId]),
         PDOException::class,
         'sale inventory availability must match on-hand minus reserved'
     );
+    $returnColumns = array_column($saleDb->all('PRAGMA table_info(sale_returns)'), 'name');
+    $receiptColumns = array_column($saleDb->all('PRAGMA table_info(sale_receipts)'), 'name');
+    $transactionColumns = array_column($saleDb->all('PRAGMA table_info(sale_payment_transactions)'), 'name');
+    $h->assertTrue(in_array('request_hash', $returnColumns, true), 'sale returns persist the idempotency request hash');
+    $h->assertTrue(in_array('language', $receiptColumns, true), 'sale receipts persist their language');
+    $h->assertTrue(in_array('correlation_id', $transactionColumns, true), 'sale financial transactions persist correlation ids');
 } finally {
     $saleDb = null;
     gc_collect_cycles();

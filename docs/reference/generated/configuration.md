@@ -18,7 +18,17 @@ generated: true
 
 | Variable | Références dans le dépôt |
 |---|---|
+| `AMCMS_M0_PERF_BASE_URL` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_CRITICAL_MS` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_REPEAT` | `tools/python/qualification/performance_baseline.py` |
+| `AMCMS_M0_PERF_VARIANT_ID` | `tools/python/qualification/performance_baseline.py` |
 | `APP_BASE_PATH` | `backend/config/app.php`, `backend/src/Shared/Support/helpers.php`, `tools/python/operations/database/b2_cleanup_noindex_search_documents.py` |
+| `APP_DEPENDENCIES_HTTP_TIMEOUT` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_BUDGET` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_CACHE_TTL` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_LATEST_ENABLED` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_REFRESH_BUDGET` | `backend/config/updates.php` |
+| `APP_DEPENDENCIES_REFRESH_HTTP_TIMEOUT` | `backend/config/updates.php` |
 | `APP_EDITORIAL_IMPORT_MAX_ARCHIVE_BYTES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_FILES` | `backend/config/app.php` |
 | `APP_EDITORIAL_IMPORT_MAX_UNCOMPRESSED_BYTES` | `backend/config/app.php` |
@@ -41,7 +51,11 @@ generated: true
 | `APP_PUBLIC_API_AUTH_DEFAULT_SCOPE` | `backend/config/app.php` |
 | `APP_PUBLIC_API_CORS_DEFAULT_ORIGINS` | `backend/config/app.php` |
 | `APP_PUBLIC_API_CORS_MAX_AGE` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CHECKOUT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_CLEANUP_PROBABILITY` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX` | `backend/config/app.php` |
+| `APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_MAX` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_DEFAULT_WINDOW` | `backend/config/app.php` |
 | `APP_PUBLIC_API_RATE_LIMIT_MEDIA_MAX` | `backend/config/app.php` |
@@ -83,6 +97,7 @@ generated: true
 | `MAIL_FROM_EMAIL` | `backend/config/app.php` |
 | `MAIL_FROM_NAME` | `backend/config/app.php` |
 | `MAIL_TRANSPORT` | `backend/config/app.php` |
+| `SALE_SANDBOX_WEBHOOK_SECRET` | `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php` |
 | `SFTP_PORT` | `tools/python/operations/deployment/d11_ci_release.py` |
 
 Les secrets et valeurs propres à un environnement ne sont jamais inclus dans cette page.

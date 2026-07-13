@@ -26,6 +26,8 @@ if ($catalogSchema === false) {
     throw new RuntimeException('Unable to read business catalog schema.');
 }
 $businessDb->pdo()->exec($catalogSchema);
+$businessDb->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0007_pricing_offers_bundles.sql'));
+$businessDb->pdo()->exec((string) file_get_contents(__DIR__ . '/../../../../database/migrations/business/0008_pim_quality_import_channels.sql'));
 $coreDir = sys_get_temp_dir() . '/amcms-business-public-catalog-core-' . bin2hex(random_bytes(6));
 mkdir($coreDir, 0775, true);
 

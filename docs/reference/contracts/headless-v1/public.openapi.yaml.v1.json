@@ -1,0 +1,24 @@
+{
+  "contract": "public.openapi.yaml.v1",
+  "kind": "schema",
+  "summary": "Servir le contrat OpenAPI public YAML.",
+  "description": "Retourne le même contrat OpenAPI public que /api/v1/openapi.json, sérialisé en YAML.",
+  "method": "GET",
+  "path": "/api/v1/openapi.yaml",
+  "source": "docs/public-api/openapi.v1.yaml",
+  "security": "Public endpoint: no bearer token is required.",
+  "query_params": {},
+  "path_params": {},
+  "response": {
+    "status": 200,
+    "content_type": "application/yaml",
+    "schema": {
+      "type": "string",
+      "description": "Document OpenAPI 3.1 au format YAML."
+    }
+  },
+  "errors": [],
+  "examples": {
+    "response": "openapi: \"3.1.0\""
+  }
+}

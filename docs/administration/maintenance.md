@@ -1,5 +1,5 @@
 ---
-title: Maintenance et versions installées
+title: Maintenance et modules installés
 audience:
   - administrator
   - superadministrator
@@ -8,6 +8,7 @@ last_verified: 2026-07-10
 source_of_truth: code
 source_paths:
   - backend/src/Application/Api/Admin/MaintenanceApiController.php
+  - backend/src/Application/Maintenance/DependencyInventoryService.php
   - backend/src/Application/Maintenance/VersionInventoryService.php
   - backend/src/Infrastructure/Maintenance/DatabaseMigrationInventory.php
   - frontend/admin-vue/src/views/tools/MaintenanceView.vue
@@ -18,15 +19,15 @@ owners:
 document_type: guide
 generated: false
 ---
-# Maintenance et versions installées
+# Maintenance et modules installés
 
 L'écran **Maintenance** rassemble les opérations courantes d'exploitation et un bloc informatif sur l'état technique de l'instance. Il est accessible aux comptes disposant de la permission `maintenance.manage`.
 
 Le bloc de versions est volontairement en lecture seule. Il ne télécharge pas de fichier, ne lance pas de migration et ne modifie aucune base. Il sert à décider si une intervention de mise à jour doit être préparée avec les outils d'exploitation.
 
-## Versions installées
+## Modules installés
 
-Le tableau **Versions installées** compare l'instance courante avec deux canaux de référence :
+Le tableau **Modules installés** compare l'instance courante avec deux canaux de référence :
 
 | Colonne | Rôle |
 |---|---|
@@ -70,6 +71,40 @@ Les statuts importants sont :
 - `Divergence checksum` : une migration déjà appliquée ne correspond plus au fichier attendu.
 
 Une divergence ne doit pas être corrigée depuis l'interface. Elle doit être traitée par plan de migration, sauvegarde et validation.
+
+## Environnements et dépendences
+
+Le panneau **Environnements et dépendences** est également informatif. Il aide à comprendre quel environnement et quels vendors sont utilisés par l'instance ouverte.
+
+Il affiche deux familles d'information :
+
+| Famille | Rôle |
+|---|---|
+| `Environnement` | Versions détectées de PHP, Composer, Node et npm, avec la contrainte déclarée lorsqu'elle existe. |
+| `Dépendances` | Packages suivis, version installée, dernière version connue en cache, chemin local et état. |
+
+Les versions installées sont lues localement :
+
+- Composer : `backend/composer.lock` et le vendor Composer réellement détecté (`backend/vendor`, `vendor` ou `../vendor`) ;
+- npm : `frontend/admin-vue/package-lock.json` ;
+- chemins runtime : configuration `APP_TWIG_VENDOR_PATH`, `APP_VUE_NODE_MODULES_PATH` et chemins standards du projet.
+
+Les chemins Twig suivent le même ordre que le fallback runtime :
+
+1. chemin configuré par `APP_TWIG_VENDOR_PATH` ;
+2. `vendor/twig` dans l'instance ;
+3. `../vendor/twig` lorsque plusieurs instances partagent un vendor parent.
+
+Les dernières versions disponibles sont vérifiées à l'ouverture de la page avec le budget court `APP_DEPENDENCIES_LATEST_BUDGET`. Si ce budget est dépassé, le dernier cache local reste affiché. Le bouton **Mettre à jour les versions** déclenche explicitement une vérification plus longue :
+
+- php.net pour PHP ;
+- getcomposer.org pour Composer ;
+- nodejs.org pour Node ;
+- npm registry pour npm ;
+- Packagist pour les packages Composer comme `twig/twig` et les composants `symfony/*` ;
+- npm registry pour les dépendances directes du back-office Vue.
+
+Ces vérifications réseau utilisent un timeout et un budget dédiés au refresh manuel, puis écrivent le cache sous `storage/cache/maintenance-dependencies/`. Si le réseau est absent, la page conserve les versions installées et le dernier cache disponible.
 
 ## Canaux de référence
 

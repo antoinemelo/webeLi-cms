@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import re
 from tools.python.validation.checks import *
 from tools.python.validation.model import ValidationReport
@@ -65,6 +66,92 @@ def _validate_content_type_column_references(r: ValidationReport) -> None:
                 r.add("API-022", "Référence SQL non aliasée vers une colonne absente de content_types", path=rel, column=column)
 
 
+def _module_public_headless_routes() -> list[tuple[str, str, str]]:
+    routes: list[tuple[str, str, str]] = []
+    modules_dir = ROOT / "backend/src/Modules"
+    if not modules_dir.exists():
+        return routes
+    for path in sorted(modules_dir.glob("*/*ModuleProvider.php")):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        match = re.search(r"public\s+function\s+publicHeadlessRoutes\s*\([^)]*\)\s*:\s*array\s*\{(?P<body>.*?)\n\s*\}", text, re.DOTALL)
+        if not match:
+            continue
+        rel = path.relative_to(ROOT).as_posix()
+        for method, route_path in re.findall(r"\$this->route\(\s*'([A-Z]+)'\s*,\s*'([^']+)'", match.group("body")):
+            if route_path == "/api/v1" or route_path.startswith("/api/v1/"):
+                routes.append((method, route_path, rel))
+    return routes
+
+
+def _public_runtime_routes() -> list[tuple[str, str, str]]:
+    routes: list[tuple[str, str, str]] = []
+    for method, path, _handler in php_route_entries("backend/routes/api.php"):
+        if path == "/api/v1" or path.startswith("/api/v1/"):
+            routes.append((method, path, "backend/routes/api.php"))
+    routes.extend(_module_public_headless_routes())
+    return sorted(routes, key=lambda item: (item[1], item[0], item[2]))
+
+
+def _openapi_operations(rel: str) -> set[tuple[str, str]]:
+    path = ROOT / rel
+    if not path.is_file():
+        return set()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    operations: set[tuple[str, str]] = set()
+    paths = data.get("paths", {})
+    if not isinstance(paths, dict):
+        return operations
+    for route_path, methods in paths.items():
+        if not isinstance(route_path, str) or not isinstance(methods, dict):
+            continue
+        for method in methods:
+            if str(method).upper() in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}:
+                operations.add((str(method).upper(), route_path))
+    return operations
+
+
+def _validate_public_openapi_alignment(r: ValidationReport) -> None:
+    openapi_rel = "docs/public-api/openapi.v1.json"
+    reference_rel = "docs/reference/contracts/public-api/openapi.v1.json"
+    require_paths(r, [openapi_rel, reference_rel, "packages/amcms-client/src/generated/openapi-types.ts"], code="API-030")
+
+    runtime = {(method, path) for method, path, _source in _public_runtime_routes()}
+    documented = _openapi_operations(openapi_rel)
+    reference = _openapi_operations(reference_rel)
+
+    for method, path, source in _public_runtime_routes():
+        r.checked()
+        if (method, path) not in documented:
+            r.add("API-031", "Route publique runtime absente de l’OpenAPI public", path=source, method=method, route=path)
+
+    for method, path in sorted(documented):
+        r.checked()
+        if (method, path) not in runtime:
+            r.add("API-032", "Opération OpenAPI absente du runtime public", path=openapi_rel, method=method, route=path)
+
+    r.checked()
+    if documented != reference:
+        missing = sorted(documented - reference)
+        extra = sorted(reference - documented)
+        r.add("API-033", "OpenAPI public et OpenAPI de référence divergents", path=reference_rel, missing_in_reference=missing[:20], extra_in_reference=extra[:20])
+
+    sdk = ROOT / "packages/amcms-client/src/generated/openapi-types.ts"
+    sdk_text = sdk.read_text(encoding="utf-8", errors="ignore") if sdk.is_file() else ""
+    for token in [
+        "OpenApiPublicSaleBootstrapResponse",
+        "OpenApiPublicSaleCartResponse",
+        "OpenApiPublicSaleCartLineMutationResponse",
+        "OpenApiPublicSaleCartLineDeleteResponse",
+        "OpenApiPublicSaleCheckoutResponse",
+    ]:
+        r.checked()
+        if token not in sdk_text:
+            r.add("API-034", "Type SDK généré manquant pour l’API publique Sale", path=sdk.relative_to(ROOT).as_posix(), token=token)
+
+
 def validate(mode: str="fast") -> ValidationReport:
     r=ValidationReport(VALIDATOR_ID,DOMAIN,mode)
     routes=[]
@@ -78,4 +165,5 @@ def validate(mode: str="fast") -> ValidationReport:
         if "@" not in handler: r.add("API-003","Handler de route invalide",path=rel,handler=handler)
     require_paths(r,["docs/reference/contracts/headless-v1/README.md"])
     _validate_content_type_column_references(r)
+    _validate_public_openapi_alignment(r)
     return r
