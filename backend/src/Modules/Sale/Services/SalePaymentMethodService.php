@@ -50,6 +50,12 @@ final class SalePaymentMethodService
         throw new SaleValidationException('sale.checkout.payment_method_unavailable');
     }
 
+    /** @param array<string,mixed> $payload */
+    public function validateConfiguration(array $payload): void
+    {
+        $this->providers->contract((string) ($payload['provider_key'] ?? ''));
+    }
+
     /** @param array<string,mixed> $row @param array<string,bool> $capabilities @return array<string,mixed> */
     private function payload(array $row, string $language, array $capabilities): array
     {
@@ -66,6 +72,12 @@ final class SalePaymentMethodService
             'mode' => (string) ($config['public_mode'] ?? ($capabilities['online'] ? 'redirect' : 'offline')),
             'next_action' => (string) ($config['next_action'] ?? ($capabilities['online'] ? 'redirect' : 'await_confirmation')),
             'recoverable' => ($config['recoverable'] ?? true) === true,
+            'create_session' => ($config['create_session'] ?? false) === true,
+            'defer_order_until_payment' => ($config['defer_order_until_payment'] ?? false) === true,
+            'allow_partial' => ($config['allow_partial'] ?? false) === true,
+            'test_mode' => ($config['test_mode'] ?? false) === true,
+            'badge' => ($config['test_mode'] ?? false) === true ? 'MODE TEST' : null,
+            'scenarios' => is_array($config['scenarios'] ?? null) ? array_values($config['scenarios']) : [],
             'capabilities' => [
                 'online' => (bool) ($capabilities['online'] ?? false),
                 'authorize' => (bool) ($capabilities['authorize'] ?? false),
@@ -74,6 +86,7 @@ final class SalePaymentMethodService
             ],
             'provider_key' => (string) $row['provider_key'],
             'contract_version' => (string) $row['contract_version'],
+            '_provider_config' => $config,
         ];
     }
 

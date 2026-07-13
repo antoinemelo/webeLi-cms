@@ -78,6 +78,8 @@ Si `site` et `site_id` sont absents, le site est résolu comme le front public, 
 | `PATCH /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.update.v1` | `public.sale.cart.lines.update.v1` | Modifier la quantité d’une ligne de panier public. |
 | `DELETE /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.delete.v1` | `public.sale.cart.lines.delete.v1` | Supprimer une ligne d’un panier public. |
 | `POST /api/v1/sale/channels/{code}/checkout` | `public.sale.checkout.v1` | `public.sale.checkout.v1` | Convertir un panier public en commande e-commerce. |
+| `POST /api/v1/sale/channels/{code}/cart/{token}/payment-retry` | `public.sale.payment.retry.v1` | `public.sale.payment.retry.v1` | Relancer un paiement refusé sans perdre la commande ni le panier converti. |
+| `POST /api/v1/sale/payments/test/{reference}/simulate` | `public.sale.payment.test.simulate.v1` | `public.sale.payment.test.simulate.v1` | Piloter un scénario déterministe, uniquement hors production. |
 
 ## Structure minimale exigée
 

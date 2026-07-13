@@ -17,7 +17,8 @@ final class SalePaymentService
         private readonly SaleEventService $events,
         private readonly ?SaleIdempotencyService $idempotency = null,
         private readonly ?PaymentProviderRegistry $providers = null,
-        private readonly ?SaleStateMachineService $states = null
+        private readonly ?SaleStateMachineService $states = null,
+        private readonly ?SaleInventoryService $inventory = null,
     ) {}
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -76,6 +77,10 @@ final class SalePaymentService
             'intent_id' => (int) $intent['id'],
             'amount_minor' => $amountMinor,
             'currency' => (string) $order['currency'],
+            'idempotency_key' => $options['idempotency_key'] ?? null,
+            'operator_reference' => $options['operator_reference'] ?? null,
+            'comment' => $options['comment'] ?? null,
+            'proof_asset_id' => $options['proof_asset_id'] ?? null,
         ]);
         $status = (string) ($providerResult['status'] ?? 'succeeded');
         $this->payments->setIntentReference((int) $intent['id'], $providerResult['provider_reference'] ?? null);
@@ -227,6 +232,49 @@ final class SalePaymentService
         return $this->providers ?? new PaymentProviderRegistry();
     }
 
+    /** @param array<string,mixed> $options @return array<string,mixed> */
+    public function confirmIntent(int $intentId, int $amountMinor, int $iamUserId, array $options = []): array
+    {
+        $intent = $this->payments->requireIntentWithOrder($intentId);
+        $request = ['intent_id'=>$intentId,'amount_minor'=>$amountMinor,'operator_reference'=>trim((string)($options['operator_reference']??'')),'comment'=>trim((string)($options['comment']??'')),'proof_asset_id'=>$options['proof_asset_id']??null];
+        $callback = function () use ($intent, $intentId, $amountMinor, $iamUserId, $options): array {
+            return $this->payments->rawDatabase()->transaction(function () use ($intent, $intentId, $amountMinor, $iamUserId, $options): array {
+                $fresh = $this->payments->requireIntentWithOrder($intentId);
+                if (!in_array((string)$fresh['status'], ['requires_payment','requires_action','authorized','partially_captured'], true)) throw new SalePaymentException('sale.payment_intent_not_confirmable');
+                $remaining = (int)$fresh['amount_minor'] - (int)$fresh['captured_minor'];
+                if ($amountMinor < 1 || $amountMinor > $remaining) throw new SalePaymentException('sale.payment_capture_amount_invalid');
+                $contract = $this->providerRegistry()->contract((string)$fresh['provider_key']);
+                $result = $contract->authorize([
+                    'order_id'=>(int)$fresh['order_id'],'intent_id'=>$intentId,'provider_reference'=>$fresh['intent_reference'],
+                    'amount_minor'=>$amountMinor,'currency'=>(string)$fresh['currency'],'idempotency_key'=>$options['idempotency_key']??null,
+                    'operator_reference'=>$options['operator_reference']??null,'comment'=>$options['comment']??null,'proof_asset_id'=>$options['proof_asset_id']??null,
+                ]);
+                if ((string)($result['status']??'') !== 'succeeded') throw new SalePaymentException('sale.payment_provider_failed');
+                $correlationId = SaleStateMachineService::correlationId();
+                $transaction = $this->payments->recordTransaction((int)$fresh['order_id'],$amountMinor,(string)$fresh['currency'],'payment',[
+                    'payment_intent_id'=>$intentId,'status'=>'succeeded','provider_transaction_id'=>$result['provider_transaction_id']??null,
+                    'provider_payload'=>$result['payload']??[],'correlation_id'=>$correlationId,'created_by_iam_user_id'=>$iamUserId,
+                ]);
+                $captured = (int)$fresh['captured_minor'] + $amountMinor;
+                $target = $captured >= (int)$fresh['amount_minor'] ? 'captured' : 'partially_captured';
+                $states = $this->states ?? new SaleStateMachineService($this->payments->rawDatabase(), $this->events);
+                $states->transition('payment_intent',$intentId,$target,$iamUserId,trim((string)($options['comment']??''))?:'operator confirmation',$correlationId);
+                $this->payments->rawDatabase()->run('UPDATE sale_payment_intents SET authorized_minor=MAX(authorized_minor,?),captured_minor=?,provider_synced_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?',[$captured,$captured,$intentId]);
+                $order = $this->orders->updatePaidTotal((int)$fresh['order_id'],$this->payments->allocatedTotal((int)$fresh['order_id']));
+                if ($target === 'captured' && (string)$order['status'] === 'pending_payment') {
+                    if ($this->inventory !== null && $order['source_cart_id'] !== null) $this->inventory->consumeCartReservations((int)$order['source_cart_id'],(int)$order['id']);
+                    $order = $states->transition('order',(int)$order['id'],'confirmed',$iamUserId,'payment confirmed',$correlationId);
+                    $this->payments->rawDatabase()->run('UPDATE sale_orders SET placed_at=COALESCE(placed_at,CURRENT_TIMESTAMP) WHERE id=?',[(int)$order['id']]);
+                }
+                $this->payments->rawDatabase()->run("UPDATE sale_payment_attempts SET status=?,finished_at=CASE WHEN ?='succeeded' THEN CURRENT_TIMESTAMP ELSE finished_at END WHERE payment_intent_id=?",[$target==='captured'?'succeeded':'pending',$target==='captured'?'succeeded':'pending',$intentId]);
+                $this->events->emit((int)$fresh['site_id'],'sale.payment.confirmed','order',(int)$fresh['order_id'],['site_id'=>(int)$fresh['site_id'],'order_id'=>(int)$fresh['order_id'],'payment_intent_id'=>$intentId,'transaction_id'=>(int)$transaction['id'],'amount_minor'=>$amountMinor,'currency'=>(string)$fresh['currency'],'provider_key'=>(string)$fresh['provider_key'],'operator_reference'=>$options['operator_reference']??null,'proof_asset_id'=>$options['proof_asset_id']??null,'iam_user_id'=>$iamUserId],$iamUserId,$correlationId);
+                return ['order'=>$order,'intent'=>$this->payments->requireIntentWithOrder($intentId),'transaction'=>$transaction,'remaining_minor'=>max(0,(int)$fresh['amount_minor']-$captured),'replayed'=>false];
+            });
+        };
+        if ($this->idempotency === null) return $callback();
+        return $this->idempotency->run((int)$intent['site_id'],'payment.confirm',$options['idempotency_key']??null,$request,$callback);
+    }
+
     /** @return array<string,mixed> */
     public function recordCorrection(int $orderId, int $amountDeltaMinor, string $reason, string $idempotencyKey, ?int $iamUserId = null, ?int $transactionId = null): array
     {
@@ -272,13 +320,13 @@ final class SalePaymentService
         if ((string) $intent['status'] === 'captured') {
             throw new SalePaymentException('sale.payment_intent_already_captured');
         }
-        $provider = $this->providerRegistry()->get((string) $intent['provider_key']);
-        if (!$provider->supports('void')) {
+        $provider = $this->providerRegistry()->contract((string) $intent['provider_key']);
+        if (!($provider->capabilities()['cancel'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_unsupported');
         }
         $correlationId = SaleStateMachineService::correlationId();
         return $this->payments->rawDatabase()->transaction(function () use ($intent, $intentId, $iamUserId, $provider, $correlationId): array {
-            $result = $provider->void(['order_id' => (int) $intent['order_id'], 'intent_id' => $intentId, 'amount_minor' => (int) $intent['amount_minor'], 'currency' => (string) $intent['currency']]);
+            $result = $provider->cancel(['order_id' => (int) $intent['order_id'], 'intent_id' => $intentId, 'provider_reference'=>$intent['intent_reference'], 'amount_minor' => (int) $intent['amount_minor'], 'currency' => (string) $intent['currency']]);
             $cancelled = ($this->states ?? new SaleStateMachineService($this->payments->rawDatabase()))->transition('payment_intent', $intentId, 'cancelled', $iamUserId, 'void before capture', $correlationId);
             $transaction = $this->payments->recordTransaction((int) $intent['order_id'], (int) $intent['amount_minor'], (string) $intent['currency'], 'void', [
                 'payment_intent_id' => $intentId,

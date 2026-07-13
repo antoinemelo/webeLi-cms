@@ -45,6 +45,9 @@ type PaymentSession = Row & {
   customer?: { name?: string; email?: string };
   timeline?: PaymentTimelineEvent[];
   technical?: Row;
+  provider?: string;
+  instructions?: Row | null;
+  test_mode?: boolean;
 };
 type OrderColumnKey = 'number' | 'date' | 'source' | 'total' | 'payment' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -66,6 +69,12 @@ const paymentSessions = ref<PaymentSession[]>([]);
 const selectedPayment = ref<PaymentSession | null>(null);
 const paymentSearch = ref('');
 const paymentFilter = ref({ status: '', provider: '' });
+const paymentSort = ref('');
+const confirmAmount = ref(0);
+const paymentReference = ref('');
+const paymentComment = ref('');
+const proofAssetId = ref<number | null>(null);
+const manualProvider = ref('manual_card');
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
 const fulfillmentMethods = ref<Row[]>([]);
@@ -229,6 +238,7 @@ async function loadPayments(): Promise<void> {
     q: paymentSearch.value,
     status: paymentFilter.value.status,
     provider: paymentFilter.value.provider,
+    sort: paymentSort.value,
     limit: 100
   });
   paymentSessions.value = response.data.payment_sessions || [];
@@ -240,11 +250,21 @@ async function selectPayment(payment: PaymentSession): Promise<void> {
   try {
     const response = await adminApi.get<{ payment: PaymentSession }>(`/sale/payments/${payment.id}`);
     selectedPayment.value = response.data.payment;
+    confirmAmount.value = Math.max(0, Number(response.data.payment.amount_minor || 0) - Number(response.data.payment.captured_minor || 0));
   } catch (err) { error.value = apiErrorMessage(err); }
 }
 
 function applyPaymentFilters(): void { void loadPayments(); }
-function clearPaymentFilters(): void { paymentSearch.value = ''; paymentFilter.value = { status: '', provider: '' }; void loadPayments(); }
+function clearPaymentFilters(): void { paymentSearch.value = ''; paymentFilter.value = { status: '', provider: '' }; paymentSort.value = ''; void loadPayments(); }
+function showBankQueue(): void { paymentFilter.value = { status: 'requires_payment', provider: 'bank_transfer' }; paymentSort.value = 'oldest'; void loadPayments(); }
+async function confirmSelectedPayment(): Promise<void> {
+  if (!selectedPayment.value?.id || confirmAmount.value < 1) return;
+  saving.value = true; error.value = ''; notice.value = '';
+  try {
+    await adminApi.post(`/sale/payment-intents/${selectedPayment.value.id}/confirm`, { amount_minor: Math.round(confirmAmount.value), operator_reference: paymentReference.value || null, comment: paymentComment.value || null, proof_asset_id: proofAssetId.value || null, idempotency_key: crypto.randomUUID() });
+    notice.value = t('sale.payments.confirmed'); paymentReference.value = ''; paymentComment.value = ''; proofAssetId.value = null; await loadPayments();
+  } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
+}
 function jsonText(value: unknown): string { return JSON.stringify(value || {}, null, 2); }
 
 async function load(): Promise<void> {
@@ -287,7 +307,7 @@ async function recordPayment(): Promise<void> {
   error.value = '';
   notice.value = '';
   try {
-    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/payments`, { amount_minor: Math.round(paymentAmount.value) });
+    const response = await adminApi.post<{ order: Order }>(`/sale/orders/${selectedOrder.value.id}/payments`, { amount_minor: Math.round(paymentAmount.value), provider_key: manualProvider.value, operator_reference: paymentReference.value || null, comment: paymentComment.value || null, proof_asset_id: proofAssetId.value || null, idempotency_key: crypto.randomUUID() });
     notice.value = t('sale.orders.paymentRecorded');
     selectedOrder.value = response.data.order;
     await selectOrder(selectedOrder.value);
@@ -689,10 +709,15 @@ onMounted(load);
 
         <div class="sale-admin__actions-block">
           <label class="form-label">{{ t('sale.orders.manualPaymentAmount') }}</label>
+          <select v-model="manualProvider" class="select"><option value="manual_card">{{ t('sale.payments.manual') }}</option><option value="bank_transfer">{{ t('sale.payments.bankTransfer') }}</option></select>
           <div class="input-group">
             <input v-model.number="paymentAmount" class="form-control" type="number" min="1" step="1">
             <button class="btn btn-primary" type="button" :disabled="saving || paymentAmount < 1" @click="recordPayment">{{ t('sale.orders.recordPayment') }}</button>
           </div>
+          <small>{{ t('sale.payments.impact', { amount: money(paymentAmount, selectedOrder.currency), balance: money(Math.max(0, Number(selectedOrder.grand_total_minor || 0) - Number(selectedOrder.paid_total_minor || 0) - paymentAmount), selectedOrder.currency) }) }}</small>
+          <input v-model="paymentReference" class="form-control" type="text" :placeholder="t('sale.payments.referenceOptional')">
+          <input v-model="paymentComment" class="form-control" type="text" :placeholder="t('sale.payments.commentOptional')">
+          <input v-model.number="proofAssetId" class="form-control" type="number" min="1" :placeholder="t('sale.payments.proofOptional')">
         </div>
 
         <div class="sale-admin__actions-block">
@@ -713,6 +738,8 @@ onMounted(load);
     <section v-if="activeTab === 'payments'" class="sale-admin__panel sale-admin__orders">
       <section class="sale-admin__section sale-orders-list">
         <BusinessPageHeader :eyebrow="t('sale.title')" :title="t('sale.payments.title')" />
+        <div v-if="paymentSessions.some((payment) => payment.test_mode)" class="alert alert-warning"><b>MODE TEST</b> — {{ t('sale.payments.testWarning') }}</div>
+        <button class="btn btn-outline-primary btn-sm" type="button" @click="showBankQueue">{{ t('sale.payments.bankQueue') }}</button>
         <form class="sale-toolbar" @submit.prevent="applyPaymentFilters">
           <input v-model="paymentSearch" class="form-control" type="search" :placeholder="t('sale.payments.searchPlaceholder')">
           <select v-model="paymentFilter.status" class="select">
@@ -738,10 +765,20 @@ onMounted(load);
         </div>
         <p><b>{{ t('sale.payments.nextAction') }}:</b> {{ selectedPayment.state?.next_action_label || selectedPayment.state?.next_action }}</p>
         <p><b>{{ t('sale.payments.customer') }}:</b> {{ selectedPayment.customer?.name || '—' }} · {{ selectedPayment.customer?.email || '—' }}</p>
+        <div v-if="selectedPayment.instructions" class="alert alert-info"><b>{{ t('sale.payments.bankTransfer') }}</b><pre>{{ jsonText(selectedPayment.instructions) }}</pre></div>
         <div class="sale-admin__totals">
           <span>{{ t('sale.payments.authorized') }}</span><strong>{{ money(selectedPayment.authorized_minor, selectedPayment.currency) }}</strong>
           <span>{{ t('sale.payments.captured') }}</span><strong>{{ money(selectedPayment.captured_minor, selectedPayment.currency) }}</strong>
           <span>{{ t('sale.payments.refunded') }}</span><strong>{{ money(selectedPayment.refunded_minor, selectedPayment.currency) }}</strong>
+        </div>
+        <div v-if="['requires_payment','requires_action','authorized','partially_captured'].includes(String(selectedPayment.status || ''))" class="sale-admin__actions-block">
+          <h3>{{ t('sale.payments.guidedConfirmation') }}</h3>
+          <label>{{ t('sale.orders.manualPaymentAmount') }}<input v-model.number="confirmAmount" class="form-control" type="number" min="1"></label>
+          <small>{{ t('sale.payments.remaining') }}: {{ money(Math.max(0, Number(selectedPayment.amount_minor || 0) - Number(selectedPayment.captured_minor || 0)), selectedPayment.currency) }}</small>
+          <input v-model="paymentReference" class="form-control" type="text" :placeholder="t('sale.payments.referenceOptional')">
+          <input v-model="paymentComment" class="form-control" type="text" :placeholder="t('sale.payments.commentOptional')">
+          <input v-model.number="proofAssetId" class="form-control" type="number" min="1" :placeholder="t('sale.payments.proofOptional')">
+          <button class="btn btn-primary" type="button" :disabled="saving || confirmAmount < 1" @click="confirmSelectedPayment">{{ t('sale.payments.confirmReceipt') }}</button>
         </div>
         <h3>{{ t('sale.payments.timeline') }}</h3>
         <div v-for="(event, index) in selectedPayment.timeline || []" :key="`${event.kind}-${index}`" class="sale-admin__line">

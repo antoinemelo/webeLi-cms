@@ -12,4 +12,11 @@ input, select { border: 1px solid #aeb9c8; border-radius: 8px; padding: .75rem; 
 button { border: 0; border-radius: 9px; padding: .85rem 1.25rem; background: #1358d4; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .checkout-error { color: #a11; min-height: 1.5rem; margin-bottom: .75rem; }
 .summary-line { display: flex; justify-content: space-between; gap: 1rem; padding: .5rem 0; border-bottom: 1px solid #eef1f5; }
+.checkout-test-mode { background: #7c2d12; border-radius: 10px; color: #fff; font-weight: 800; letter-spacing: .04em; margin-bottom: 1rem; padding: .85rem 1rem; text-align: center; }
+.checkout-bank-instructions { border-top: 1px solid #dce2ea; margin-top: 1rem; padding-top: 1rem; }
+.checkout-bank-instructions p { align-items: center; display: grid; gap: .4rem; grid-template-columns: minmax(7rem,1fr) minmax(8rem,2fr) auto; }
+.checkout-bank-instructions button { padding: .45rem .7rem; margin: .2rem; }
+[data-test-scenarios] { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; margin-top: .5rem; padding: .6rem; }
 @media (max-width: 700px) { .guest-checkout { margin: 1rem auto; } .checkout-grid { grid-template-columns: 1fr; } fieldset { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .checkout-bank-instructions p { grid-template-columns: 1fr; } }
+@media print { form, .checkout-test-mode, .checkout-bank-instructions button { display: none !important; } .checkout-grid { display: block; } aside { box-shadow: none; } }

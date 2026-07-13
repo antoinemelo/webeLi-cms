@@ -34,13 +34,14 @@ final class SalePaymentRepository extends SaleRepositoryBase
         }
         $params[] = max(1, min(500, $limit));
         $params[] = max(0, $offset);
+        $orderBy = (string) ($filters['sort'] ?? '') === 'oldest' ? 'i.created_at ASC,i.id ASC' : 'i.id DESC';
         return $this->rawDatabase()->all(
             'SELECT i.*,o.order_number,o.payment_status AS order_payment_status,o.status AS order_status,
                     o.customer_snapshot_json,o.grand_total_minor,
                     COALESCE((SELECT SUM(t.amount_minor) FROM sale_payment_transactions t WHERE t.payment_intent_id=i.id AND t.transaction_type IN (\'payment\',\'capture\') AND t.status=\'succeeded\'),0) AS settled_minor,
                     COALESCE((SELECT SUM(r.amount_minor) FROM sale_refunds r JOIN sale_payment_transactions rt ON rt.id=r.payment_transaction_id WHERE rt.payment_intent_id=i.id AND r.status IN (\'pending\',\'succeeded\')),0) AS refund_total_minor
              FROM sale_payment_intents i JOIN sale_orders o ON o.id=i.order_id
-             WHERE ' . implode(' AND ', $where) . ' ORDER BY i.id DESC LIMIT ? OFFSET ?',
+             WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy . ' LIMIT ? OFFSET ?',
             $params
         );
     }

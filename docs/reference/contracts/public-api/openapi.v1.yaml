@@ -3695,6 +3695,19 @@ paths:
                           type: "pickup"
                           flat_rate_minor: 0
                           requires_shipping_address: false
+                      payment_methods:
+                        -
+                          code: "bank_transfer"
+                          label: "Virement bancaire"
+                          mode: "offline"
+                          next_action: "display_instructions"
+                          recoverable: true
+                          capabilities:
+                            online: false
+                            authorize: true
+                            capture: true
+                            refund: true
+                          contract_version: "sale.payment_provider.v1"
                     meta:
                       contract: "public.sale.channels.bootstrap.v1"
                       site_id: 1
@@ -4508,6 +4521,66 @@ paths:
                       description: "Version observée du panier pour la concurrence optimiste."
                   additionalProperties: false
               additionalProperties: true
+  "/api/v1/sale/channels/{code}/cart/{token}/payment-retry":
+    post:
+      operationId: "post_public_sale_payment_retry_v1"
+      summary: "Relancer un paiement public conservé."
+      description: "Relance une session échouée depuis le jeton opaque du panier converti, avec un moyen encore disponible."
+      tags:
+        - "Headless v1"
+      security: []
+      parameters:
+        -
+          name: "code"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+        -
+          name: "token"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+      responses:
+        "201":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "order"
+                      - "payment"
+                    additionalProperties: true
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+                additionalProperties: false
+        "422":
+          description: "Relance indisponible ou moyen invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Relance indisponible ou moyen invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
   "/api/v1/sale/channels/{code}/checkout":
     post:
       operationId: "post_public_sale_checkout_v1"
@@ -4672,6 +4745,9 @@ paths:
                             - "bank_transfer"
                             - "manual"
                             - "sandbox_online"
+                            - "test_deterministic"
+                        scenario:
+                          type: "string"
                       additionalProperties: false
                     return_url:
                       type: "string"
@@ -4912,6 +4988,62 @@ paths:
                       type: "boolean"
                       default: true
                   additionalProperties: false
+  "/api/v1/sale/payments/test/{reference}/simulate":
+    post:
+      operationId: "post_public_sale_payment_test_simulate_v1"
+      summary: "Exécuter un scénario de paiement déterministe hors production."
+      description: "Endpoint développeur absent fonctionnellement en production car le provider test n'y est jamais enregistré."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "reference"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    required:
+                      - "test_mode"
+                      - "provider_status"
+                      - "webhook_delivered"
+                    additionalProperties: true
+                  meta:
+                    type: "object"
+                    additionalProperties: true
+                additionalProperties: false
+        "422":
+          description: "Provider indisponible, jeton ou scénario invalide."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Provider indisponible, jeton ou scénario invalide."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
   "/api/v1/sale/payments/webhooks/{provider}":
     post:
       operationId: "post_public_sale_payment_webhook_v1"
@@ -6772,6 +6904,7 @@ components:
             - "cart"
             - "checkout"
             - "fulfillment_methods"
+            - "payment_methods"
           properties:
             channel:
               "$ref": "#/components/schemas/PublicSaleChannel"
@@ -6791,6 +6924,19 @@ components:
                   - "type"
                   - "flat_rate_minor"
                   - "requires_shipping_address"
+                additionalProperties: true
+            payment_methods:
+              type: "array"
+              items:
+                type: "object"
+                required:
+                  - "code"
+                  - "label"
+                  - "mode"
+                  - "next_action"
+                  - "recoverable"
+                  - "capabilities"
+                  - "contract_version"
                 additionalProperties: true
           additionalProperties: true
         meta:

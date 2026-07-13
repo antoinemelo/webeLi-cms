@@ -23,6 +23,8 @@ use App\Modules\Sale\Repositories\SaleEventRepository;
 use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
+use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Payments\PaymentProviderRegistry;
 use App\Modules\Sale\SaleModuleProvider;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
@@ -32,6 +34,7 @@ use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\SiteRepository;
 
@@ -66,10 +69,11 @@ try {
     $cartService = new SaleCartService($carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, $events, $idempotency);
     $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
     $guestCheckout = new SaleGuestCheckoutService($saleConnection, $carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, new SaleStateMachineService($saleConnection->database()));
+    $onlinePayments = new SaleOnlinePaymentService($saleConnection,new SalePaymentRepository($saleConnection),$orders,$inventory,new SaleStateMachineService($saleConnection->database()),new PaymentProviderRegistry(null,$saleConnection->database(),null,'test'));
 
-    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout): PublicSaleApiHandler {
+    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, $onlinePayments): PublicSaleApiHandler {
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
-        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout);
+        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, null, null, null, $onlinePayments);
     };
 
     $provider = new SaleModuleProvider();
@@ -84,6 +88,7 @@ try {
         ['PATCH', '/api/v1/sale/channels/web-main/cart/test-token/checkout'],
         ['DELETE', '/api/v1/sale/channels/web-main/cart/test-token'],
         ['POST', '/api/v1/sale/channels/web-main/checkout'],
+        ['POST', '/api/v1/sale/channels/web-main/cart/test-token/payment-retry'],
     ] as [$method, $path]) {
         $h->assertTrue((new Router())->match($method, $path, $routes) !== null, 'sale public ecommerce route is declared: ' . $method . ' ' . $path);
     }
@@ -197,7 +202,13 @@ try {
     $h->assertSame(0, (int) ($placedOrder['marketing_consent'] ?? 1), 'marketing refusal is frozen separately');
     $h->assertSame('guest@example.test', json_decode((string) $placedOrder['customer_snapshot_json'], true)['email'] ?? null, 'guest identity snapshot is frozen on the order');
     $h->assertSame(900, (int) $placedOrder['shipping_total_minor'], 'fulfillment total is frozen on the order');
-    $h->assertSame('consumed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront checkout consumes its confirmed reservation');
+    $h->assertSame('confirmed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Bank transfer keeps the checkout reservation while awaiting receipt');
+    $h->assertSame('pending_payment',(string)($placedOrder['status']??''),'bank transfer order remains explicitly pending');
+    $h->assertSame('awaiting_receipt',$checkoutBody['data']['payment']['instructions']['status']??null,'bank transfer exposes unambiguous pending instructions');
+    $retryResponse=$handlerFor('POST','/api/v1/sale/channels/web-main/cart/'.$token.'/payment-retry',['payment'=>['code'=>'manual'],'idempotency_key'=>'public-sale-payment-retry'])->retryPayment('web-main',$token);
+    $h->assertSame(201,$retryResponse->status(),'pending checkout can retry with another configured provider');
+    $retryBody=json_decode($retryResponse->body(),true);
+    $h->assertSame('manual_card',$retryBody['data']['payment']['provider']??null,'payment retry resolves provider through configured method');
     $h->assertTrue((int) ($saleDb->one('SELECT COUNT(*) AS c FROM sale_order_tax_lines WHERE order_id=?',[$orderId])['c']??0)>0, 'tax snapshots are persisted per order line');
     $shippingSnapshot=(string)$placedOrder['shipping_method_snapshot_json'];
     $saleDb->run("UPDATE sale_fulfillment_methods SET flat_rate_minor=1500 WHERE site_id=1 AND code='standard'");

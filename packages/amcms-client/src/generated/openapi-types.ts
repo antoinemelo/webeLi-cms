@@ -272,6 +272,7 @@ export interface OpenApiPublicSaleBootstrapResponse {
     channel: OpenApiPublicSaleChannel;
     checkout: Record<string, unknown>;
     fulfillment_methods: Array<Record<string, unknown>>;
+    payment_methods: Array<Record<string, unknown>>;
     [key: string]: unknown;
   };
   meta: OpenApiPublicMeta;

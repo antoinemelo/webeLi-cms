@@ -64,6 +64,7 @@ final class PublicSaleApiHandler
             );
             $paymentMethods = array_map(static function (array $method): array {
                 unset($method['provider_key']);
+                foreach (array_keys($method) as $key) { if (str_starts_with((string) $key, '_')) unset($method[$key]); }
                 return $method;
             }, $paymentMethods);
             return $this->json([
@@ -196,16 +197,16 @@ final class PublicSaleApiHandler
                 (int) $site['id'], (int) $channel['id'], $languageCode, (string) $cart['currency'],
                 (int) $cart['grand_total_minor'], $paymentCode
             );
-            $online = (bool) ($resolvedPayment['capabilities']['online'] ?? false);
+            $createSession = (bool) ($resolvedPayment['create_session'] ?? false);
             $order = $this->checkout->placeOrder((int) $cart['id'], [
                 'idempotency_key' => $idempotencyKey,
                 'source' => 'ecommerce',
-                'defer_inventory_until_payment' => $online,
+                'defer_inventory_until_payment' => (bool) ($resolvedPayment['defer_order_until_payment'] ?? false),
                 'payment_reservation_ttl_seconds' => 1800,
                 'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
             ]);
             $data = ['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))];
-            if ($online) {
+            if ($createSession) {
                 if ($this->onlinePayments === null) {
                     throw new SalePaymentException('sale.online_payment_unavailable');
                 }
@@ -215,6 +216,9 @@ final class PublicSaleApiHandler
                     'return_url' => isset($payload['return_url']) ? (string) $payload['return_url'] : null,
                     'cancel_url' => isset($payload['cancel_url']) ? (string) $payload['cancel_url'] : null,
                     'language' => $languageCode,
+                    'scenario' => (string) ($payload['payment']['scenario'] ?? ''),
+                    'provider_config' => $resolvedPayment['_provider_config'] ?? [],
+                    'ttl_seconds' => (int) ($resolvedPayment['_provider_config']['ttl_seconds'] ?? 1800),
                 ]);
             }
             if ($this->customerAccounts !== null) {
@@ -242,6 +246,25 @@ final class PublicSaleApiHandler
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function retryPayment(string $code,string $token): Response
+    {
+        [$site,$languageCode]=$this->context();
+        try {
+            $channel=$this->publicChannel((int)$site['id'],$code); $cart=$this->cartByToken($channel,$token,true);
+            $orderId=(int)($cart['converted_order_id']??0); if($orderId<1) throw new SaleValidationException('sale.payment_retry_unavailable');
+            $order=$this->orders->requireOrder($orderId); if((string)$order['status']!=='pending_payment') throw new SaleValidationException('sale.payment_retry_unavailable');
+            $payload=$this->payload(); $paymentCode=strtolower(trim((string)($payload['payment']['code']??'')));
+            $method=$this->paymentMethodResolver()->requireAvailable((int)$site['id'],(int)$channel['id'],$languageCode,(string)$order['currency'],(int)$order['grand_total_minor'],$paymentCode);
+            if(!($method['create_session']??false)) throw new SaleValidationException('sale.payment_retry_unavailable');
+            $payment=($this->onlinePayments??throw new SalePaymentException('sale.online_payment_unavailable'))->createIntentForOrder($orderId,(string)$method['provider_key'],[
+                'idempotency_key'=>$this->requiredIdempotencyKey($payload),'language'=>$languageCode,'scenario'=>(string)($payload['payment']['scenario']??''),'provider_config'=>$method['_provider_config']??[],
+                'ttl_seconds'=>(int)($method['_provider_config']['ttl_seconds']??1800),
+                'return_url'=>$payload['return_url']??null,'cancel_url'=>$payload['cancel_url']??null,
+            ]);
+            return $this->json(['order'=>$this->orderPayload($this->orders->orderWithLines($orderId)),'payment'=>$payment],'public.sale.payment.retry.v1',$site,$languageCode,201);
+        } catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function abandonCart(string $code, string $token): Response
@@ -289,6 +312,16 @@ final class PublicSaleApiHandler
                 ($payload['deliver_webhook'] ?? true) === true
             );
             return $this->json($result, 'public.sale.payment.sandbox.simulate.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function simulateDeterministicTest(string $reference): Response
+    {
+        [$site,$languageCode]=$this->context();
+        try {
+            $payload=$this->payload();
+            $result=($this->onlinePayments??throw new SalePaymentException('sale.online_payment_unavailable'))->simulateDeterministicTest(trim($reference),(string)($payload['test_token']??''),(string)($payload['outcome']??''),($payload['deliver_webhook']??true)===true);
+            return $this->json($result,'public.sale.payment.test.simulate.v1',$site,$languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }
     }
 
@@ -347,7 +380,7 @@ final class PublicSaleApiHandler
     {
         return $this->paymentMethods ?? new SalePaymentMethodService(
             $this->sale,
-            new PaymentProviderRegistry(null, $this->sale->database())
+            new PaymentProviderRegistry(null, $this->sale->database(), null, (string) (function_exists('env') ? env('APP_ENV', 'production') : 'production'))
         );
     }
 

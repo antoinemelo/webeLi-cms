@@ -35,6 +35,7 @@ use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleInventoryReconciliationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleReceiptService;
@@ -80,6 +81,7 @@ final class SaleAdminApiController
         private readonly ?SaleInventoryReconciliationService $inventoryReconciliation = null,
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
         private readonly ?SalePosService $posService = null,
+        private readonly ?SalePaymentMethodService $paymentMethodsService = null,
     ) {}
 
     public function schema(): Response
@@ -90,7 +92,7 @@ final class SaleAdminApiController
             'scope' => 'admin',
             'headless_public' => false,
             'resources' => ['channels', 'carts', 'orders', 'payments', 'pos', 'stock', 'reports', 'ai_contexts'],
-            'idempotent_actions' => ['cart.add_line', 'checkout.place_order', 'payment.capture', 'pos.complete_sale', 'refund.create'],
+            'idempotent_actions' => ['cart.add_line', 'checkout.place_order', 'payment.capture', 'payment.confirm', 'pos.complete_sale', 'refund.create'],
         ], 'admin.sale.schema.v1', $site, $languageCode);
     }
 
@@ -548,7 +550,7 @@ final class SaleAdminApiController
             [(int) $site['id'], $this->limit(), $this->offset()]
         );
         $sessions = $this->onlinePayments?->adminSessions((int) $site['id'], $languageCode, [
-            'q' => $this->request->query['q'] ?? '', 'status' => $this->request->query['status'] ?? '', 'provider' => $this->request->query['provider'] ?? '',
+            'q' => $this->request->query['q'] ?? '', 'status' => $this->request->query['status'] ?? '', 'provider' => $this->request->query['provider'] ?? '', 'sort' => $this->request->query['sort'] ?? '',
         ], $this->limit(), $this->offset()) ?? [];
         return $this->ok(['payments' => $items, 'payment_sessions' => $sessions], 'admin.sale.payments.index.v1', $site, $languageCode);
     }
@@ -602,7 +604,9 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.payments.manage');
         try {
-            return $this->ok(['payment_method' => $this->payments->createMethod((int) $site['id'], $this->payload())], 'admin.sale.payment_methods.store.v1', $site, $languageCode, 201);
+            $payload=$this->payload();
+            $this->paymentMethodsService?->validateConfiguration($payload);
+            return $this->ok(['payment_method' => $this->payments->createMethod((int) $site['id'], $payload)], 'admin.sale.payment_methods.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -620,6 +624,9 @@ final class SaleAdminApiController
                 'payment_method' => $payload['payment_method'] ?? $payload['provider_key'] ?? 'manual_card',
                 'provider_key' => $payload['provider_key'] ?? null,
                 'source' => 'admin',
+                'operator_reference' => $payload['operator_reference'] ?? null,
+                'comment' => $payload['comment'] ?? null,
+                'proof_asset_id' => isset($payload['proof_asset_id']) ? (int) $payload['proof_asset_id'] : null,
             ]), 'admin.sale.orders.payments.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -636,6 +643,22 @@ final class SaleAdminApiController
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function confirmPaymentIntent(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.payments.confirm');
+        try {
+            $intent=$this->payments->requireIntentWithOrder($this->id($id));
+            $this->ensureSite((int)$site['id'],(int)$intent['order_site_id']);
+            $payload=$this->payload();
+            $result=$this->paymentService->confirmIntent($this->id($id),(int)($payload['amount_minor']??0),$this->actorId(),[
+                'idempotency_key'=>$this->idempotencyKey($payload),'operator_reference'=>$payload['operator_reference']??null,
+                'comment'=>$payload['comment']??null,'proof_asset_id'=>isset($payload['proof_asset_id'])?(int)$payload['proof_asset_id']:null,
+            ]);
+            if ($this->receiptService !== null) $result['receipt']=$this->receiptService->issue((int)$intent['order_id'],$languageCode,$this->actorId());
+            return $this->ok($result,'admin.sale.payment_intents.confirm.v1',$site,$languageCode,201);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function refundPayment(string|int $transaction_id): Response

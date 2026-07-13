@@ -35,6 +35,30 @@ Le provider `sandbox` est persistant et testable de bout en bout. Il accepte les
 
 Le checkout résout à nouveau le moyen côté serveur avant de placer la commande. Un moyen désactivé, hors devise ou hors bornes de montant est refusé même si son code est envoyé manuellement. Le provider est ensuite obtenu par le registry à partir de la configuration canonique : aucun branchement provider n'est présent dans le contrôleur public.
 
+## Providers de référence M5.2
+
+Les providers `manual_card`, `bank_transfer` et `test` implémentent le même contrat v1.
+
+- **Manuel** : une session reste en attente jusqu'à la confirmation d'un opérateur possédant `sale.payments.confirm`. Montant partiel, référence, commentaire et identifiant de preuve sont tracés dans la transaction et l'événement d'audit. Aucun statut libre n'est accepté.
+- **Virement** : Shop reçoit bénéficiaire, IBAN de démonstration/configuré, montant, devise, référence déterministe et délai attendu. La commande reste `pending_payment`; le stock reste réservé. La file **Virements à rapprocher** est triée du plus ancien au plus récent. La confirmation guidée utilise la même action auditée que le manuel.
+- **Test déterministe** : les scénarios `success_immediate`, `authorize_then_capture`, `refused`, `temporary_error`, `timeout`, `cancelled`, `duplicate_webhook`, `out_of_order_webhook` et `reconciliation_divergence` sont reproductibles à partir de l'intention et de la clé d'idempotence. Shop affiche en permanence `MODE TEST` et place ces choix dans un panneau développeur.
+
+Le registry n'enregistre ni `test` ni `sandbox` lorsque `APP_ENV` vaut `production` ou `prod`. Une configuration qui les référence reste donc inutilisable et n'est jamais exposée par le sélecteur public. Aucun endpoint de simulation ne peut produire de confirmation dans ce contexte.
+
+### Procédure opérateur
+
+1. Ouvrir **Vente → Paiements** puis, pour les virements, **Virements à rapprocher**.
+2. Vérifier commande, client, montant attendu, devise et référence.
+3. Saisir le montant effectivement reçu. Un acompte laisse le solde en attente.
+4. Ajouter référence, commentaire ou identifiant de preuve seulement si utile.
+5. Lire l'impact annoncé puis confirmer. La réponse fournit une confirmation/reçu imprimable.
+
+Une erreur de saisie ne modifie rien. Une même clé d'idempotence ne crée jamais deux transactions. Une annulation précède toute capture ; après capture, utiliser remboursement ou correction auditée selon le cas.
+
+### Limites
+
+La preuve est une référence vers un média déjà autorisé, pas un fichier bancaire interprété automatiquement. L'import de relevé et les connexions bancaires réelles sont futurs. Les coordonnées du fixture sont volontairement fictives et doivent être remplacées dans la configuration de l'instance.
+
 ## Workflow commande, stock et paiement
 
 Pour `payment.code=sandbox_online`, le checkout crée d'abord une commande `pending_payment`. Les snapshots client, adresses, livraison, lignes, taxes, montants et méthode de paiement sont alors figés. Le panier devient `converted`, mais ses réservations restent `confirmed` avec une échéance.

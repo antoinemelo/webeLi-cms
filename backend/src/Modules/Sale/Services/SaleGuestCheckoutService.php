@@ -80,6 +80,8 @@ final class SaleGuestCheckoutService
                     (int) $freshCart['site_id'], (int) $freshCart['channel_id'], (string) ($payload['language'] ?? 'fr'),
                     (string) $freshCart['currency'], (int) $freshCart['grand_total_minor'], (string) ($paymentMethod['code'] ?? '')
                 );
+                unset($paymentMethod['provider_key']);
+                foreach (array_keys($paymentMethod) as $key) { if (str_starts_with((string)$key, '_')) unset($paymentMethod[$key]); }
             }
             $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
         }

@@ -45,6 +45,14 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - liste/détail Paiements dans l'administration, chronologie et panneau technique ;
 - schéma canonique et fixtures reconstruits from scratch, sans migration.
 
+# 2026-07-13 — Sale M5.2 : providers de référence
+
+- providers manuel, virement et test déterministe derrière le contrat v1 ;
+- confirmation partielle auditée, idempotente et permissionnée ;
+- instructions de virement copiables/imprimables et file de rapprochement ;
+- badge `MODE TEST`, scénarios développeur et verrou absolu en production ;
+- fixtures fictives dans le schéma canonique, sans migration.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;

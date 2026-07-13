@@ -833,7 +833,7 @@ final class ServiceFactory
     {
         return $this->once('sale_payment_methods', fn() => new SalePaymentMethodService(
             $this->saleDatabaseConnection(),
-            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database())
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'))
         ));
     }
 
@@ -844,8 +844,9 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
-            $this->saleStateMachines()
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production')),
+            $this->saleStateMachines(),
+            $this->saleInventory()
         ));
     }
 
@@ -857,7 +858,7 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleInventory(),
             $this->saleStateMachines(),
-            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production')),
             $this->logger()
         ));
     }

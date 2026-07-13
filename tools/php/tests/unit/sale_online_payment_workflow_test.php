@@ -30,8 +30,11 @@ try {
     $events = new SaleEventService(new SaleEventRepository($connection));
     $inventory = new SaleInventoryService(new SaleInventoryRepository($connection), null, null, $events);
     $states = new SaleStateMachineService($serviceDb);
-    $sandbox = new SandboxPaymentProvider($serviceDb, $secret);
-    $registry = new PaymentProviderRegistry([$sandbox]);
+    $registry = new PaymentProviderRegistry(null, $serviceDb, $secret, 'test');
+    $sandbox = $registry->get('sandbox');
+    if (!$sandbox instanceof SandboxPaymentProvider) {
+        throw new RuntimeException('sandbox provider unavailable');
+    }
     $online = new SaleOnlinePaymentService($connection, $payments, $orders, $inventory, $states, $registry);
     $paymentService = new SalePaymentService($payments, $orders, $events, null, $registry, $states);
     $channelId = (int) ($db->one("SELECT id FROM sale_channels WHERE code='web-main'")['id'] ?? 0);
@@ -121,10 +124,31 @@ try {
         $failedIntent = $online->createIntentForOrder($failed['order_id'], 'sandbox', ['idempotency_key' => 'online-payment-' . $outcome]);
         $failureEvent = $sandbox->simulate((string) $failedIntent['reference'], (string) $failedIntent['sandbox_token'], $outcome);
         $online->processWebhook('sandbox', $failureEvent['body'], ['x-sale-signature' => $failureEvent['signature']]);
-        $h->assertSame('cancelled', $orders->requireOrder($failed['order_id'])['status'], $outcome . ' cancels pending order');
-        $h->assertSame('released', $db->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$failed['cart_id']])['status'] ?? null, $outcome . ' releases reservation');
+        $expectedOrderStatus = $outcome === 'decline' ? 'pending_payment' : 'cancelled';
+        $expectedReservationStatus = $outcome === 'decline' ? 'confirmed' : 'released';
+        $h->assertSame($expectedOrderStatus, $orders->requireOrder($failed['order_id'])['status'], $outcome . ' applies the retry policy to the pending order');
+        $h->assertSame($expectedReservationStatus, $db->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$failed['cart_id']])['status'] ?? null, $outcome . ' applies the retry policy to the reservation');
         $h->assertSame($providerStatus, $db->one('SELECT status FROM sale_payment_intents WHERE id=?', [(int) $failedIntent['id']])['status'] ?? null, $outcome . ' persists normalized intent status');
     }
+
+    $duplicateTest = $pendingOrder();
+    $duplicateIntent = $online->createIntentForOrder($duplicateTest['order_id'], 'test', ['idempotency_key' => 'deterministic-duplicate', 'scenario' => 'duplicate_webhook']);
+    $duplicateResult = $online->simulateDeterministicTest((string) $duplicateIntent['reference'], (string) $duplicateIntent['test_token'], 'duplicate_webhook', true);
+    $h->assertSame(true, $duplicateResult['webhook']['duplicate_delivery']['duplicate'] ?? false, 'deterministic duplicate scenario delivers the same event twice');
+    $h->assertSame('confirmed', $orders->requireOrder($duplicateTest['order_id'])['status'], 'first deterministic duplicate delivery confirms the order once');
+
+    $outOfOrderTest = $pendingOrder();
+    $outOfOrderIntent = $online->createIntentForOrder($outOfOrderTest['order_id'], 'test', ['idempotency_key' => 'deterministic-out-of-order', 'scenario' => 'out_of_order_webhook']);
+    $outOfOrderResult = $online->simulateDeterministicTest((string) $outOfOrderIntent['reference'], (string) $outOfOrderIntent['test_token'], 'out_of_order_webhook', true);
+    $h->assertSame(true, $outOfOrderResult['webhook']['ignored_out_of_order'] ?? false, 'deterministic out-of-order scenario first establishes a newer provider event');
+    $h->assertSame('authorized', $db->one('SELECT status FROM sale_payment_intents WHERE id=?', [(int) $outOfOrderIntent['id']])['status'] ?? null, 'ignored deterministic capture cannot overwrite the newer authorization');
+
+    $divergenceTest = $pendingOrder();
+    $divergenceIntent = $online->createIntentForOrder($divergenceTest['order_id'], 'test', ['idempotency_key' => 'deterministic-divergence', 'scenario' => 'reconciliation_divergence']);
+    $divergenceResult = $online->simulateDeterministicTest((string) $divergenceIntent['reference'], (string) $divergenceIntent['test_token'], 'reconciliation_divergence', true);
+    $h->assertSame(false, $divergenceResult['webhook_delivered'] ?? true, 'deterministic divergence updates the provider without delivering a webhook');
+    $divergenceRepair = $online->reconcile(1, (int) $divergenceIntent['id'], 1);
+    $h->assertSame('repaired', $divergenceRepair['results'][0]['status'] ?? null, 'reconciliation repairs deterministic provider divergence');
 
     $reconcile = $pendingOrder();
     $reconcileIntent = $online->createIntentForOrder($reconcile['order_id'], 'sandbox', ['idempotency_key' => 'online-payment-reconcile']);

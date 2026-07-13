@@ -10,6 +10,7 @@ use App\Modules\Sale\Exceptions\SalePaymentException;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
 use App\Modules\Sale\Payments\SandboxPaymentProvider;
 use App\Modules\Sale\Payments\PaymentProviderContractV1;
+use App\Modules\Sale\Payments\DeterministicTestPaymentProvider;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
 use Throwable;
@@ -35,7 +36,7 @@ final class SaleOnlinePaymentService
             throw new SalePaymentException('sale.online_payment_order_not_pending');
         }
         $provider = $this->providers->contract($providerKey);
-        if ($provider->version() !== PaymentProviderContractV1::VERSION || !($provider->capabilities()['online'] ?? false)) {
+        if ($provider->version() !== PaymentProviderContractV1::VERSION || !($provider->capabilities()['create_payment_session'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_contract_unsupported');
         }
         $returnUrl = $this->safeRedirectUrl($options['return_url'] ?? null);
@@ -72,6 +73,9 @@ final class SaleOnlinePaymentService
                 'intent_id' => (int) $intent['id'], 'order_id' => $orderId,
                 'amount_minor' => (int) $order['grand_total_minor'], 'currency' => (string) $order['currency'],
                 'return_url' => $returnUrl, 'cancel_url' => $cancelUrl,
+                'idempotency_key' => $options['idempotency_key'] ?? null,
+                'scenario' => trim((string) ($options['scenario'] ?? '')) ?: null,
+                'provider_config' => is_array($options['provider_config'] ?? null) ? $options['provider_config'] : [],
             ]);
         } catch (Throwable $e) {
             $this->db()->transaction(function () use ($intent, $order, $e): void {
@@ -90,17 +94,37 @@ final class SaleOnlinePaymentService
         }
         return $this->db()->transaction(function () use ($order, $provider, $intent, $result, $language): array {
             $status = (string) ($result['status'] ?? 'requires_action');
+            $action = array_filter([
+                'instructions' => is_array($result['instructions'] ?? null) ? $result['instructions'] : null,
+                'test_mode' => ($result['test_mode'] ?? false) === true,
+                'scenario' => $result['scenario'] ?? null,
+            ], static fn(mixed $value): bool => $value !== null && $value !== false);
             $this->db()->run(
-                'UPDATE sale_payment_intents SET intent_reference=?,status=?,checkout_url=?,last_provider_status=?,provider_synced_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?',
-                [$result['provider_reference'] ?? null, $status, $result['checkout_url'] ?? null, $status, (int) $intent['id']]
+                'UPDATE sale_payment_intents SET intent_reference=?,status=?,checkout_url=?,public_action_json=?,last_provider_status=?,provider_synced_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?',
+                [$result['provider_reference'] ?? null, $status, $result['checkout_url'] ?? null, $this->json($action), $status, (int) $intent['id']]
             );
+            $attemptStatus = match ($status) { 'captured' => 'succeeded', 'failed' => 'failed', 'cancelled' => 'cancelled', 'expired' => 'timed_out', default => ($result['checkout_url'] ?? null) ? 'redirected' : 'pending' };
             $this->db()->run(
-                "UPDATE sale_payment_attempts SET status='redirected',provider_reference=? WHERE payment_intent_id=? AND attempt_number=1",
-                [$result['provider_reference'] ?? null, (int) $intent['id']]
+                'UPDATE sale_payment_attempts SET status=?,provider_reference=?,finished_at=CASE WHEN ? IN (\'succeeded\',\'failed\',\'cancelled\',\'timed_out\') THEN CURRENT_TIMESTAMP ELSE NULL END WHERE payment_intent_id=? AND attempt_number=1',
+                [$attemptStatus, $result['provider_reference'] ?? null, $attemptStatus, (int) $intent['id']]
             );
             $this->metric((int) $order['site_id'], 'payment.intent.created', 'info', (int) $intent['id'], ['provider' => $provider->key()]);
             $fresh = $this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $intent;
-            return $this->publicIntent($fresh, isset($result['sandbox_token']) ? (string) $result['sandbox_token'] : null, false, $language);
+            $eventType = trim((string) ($result['event_type'] ?? ''));
+            if ($eventType !== '') {
+                $this->applyProviderEvent($fresh, [
+                    'event_id' => 'provider_create_' . (int) $intent['id'] . '_' . $status,
+                    'type' => $eventType, 'provider_reference' => (string) ($result['provider_reference'] ?? ''),
+                    'occurred_at' => gmdate('Y-m-d\TH:i:s\Z'), 'amount_minor' => in_array($status, ['authorized','captured'], true) ? (int) $intent['amount_minor'] : 0,
+                    'currency' => (string) $intent['currency'], 'provider_transaction_id' => (string) ($result['provider_transaction_id'] ?? 'provider_create_' . (int) $intent['id']),
+                    'data' => ['status' => $status, 'captured_minor' => $status === 'captured' ? (int) $intent['amount_minor'] : 0],
+                ]);
+                $fresh = $this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $fresh;
+            }
+            $token = isset($result['sandbox_token']) ? (string) $result['sandbox_token'] : (isset($result['test_token']) ? (string) $result['test_token'] : null);
+            $public = $this->publicIntent($fresh, $token, false, $language);
+            if (isset($result['test_token'])) $public['test_token'] = (string) $result['test_token'];
+            return $public;
         });
     }
 
@@ -187,6 +211,27 @@ final class SaleOnlinePaymentService
             'webhook' => $webhook,
             'return_url' => '/api/v1/sale/payments/return?provider=sandbox&reference=' . rawurlencode($reference),
         ];
+    }
+
+    /** @return array<string,mixed> */
+    public function simulateDeterministicTest(string $reference, string $token, string $outcome, bool $deliverWebhook): array
+    {
+        $provider = $this->providers->get('test');
+        if (!$provider instanceof DeterministicTestPaymentProvider) throw new SalePaymentException('sale.payment_test_provider_unavailable');
+        $generated = $provider->simulate($reference,$token,$outcome);
+        $deliver = $deliverWebhook && $generated['deliver_webhook'];
+        $webhook = null;
+        if ($deliver) {
+            if ($outcome === 'out_of_order_webhook') {
+                $newer = $provider->simulate($reference, $token, 'authorize');
+                $this->processWebhook('test', $newer['body'], ['x-sale-signature' => $newer['signature']]);
+            }
+            $webhook = $this->processWebhook('test',$generated['body'],['x-sale-signature'=>$generated['signature']]);
+            if ($outcome === 'duplicate_webhook') {
+                $webhook['duplicate_delivery'] = $this->processWebhook('test',$generated['body'],['x-sale-signature'=>$generated['signature']]);
+            }
+        }
+        return ['test_mode'=>true,'provider_status'=>$generated['event']['data']['status']??'unknown','webhook_delivered'=>$deliver,'webhook'=>$webhook];
     }
 
     /** @return array<string,mixed> */
@@ -353,8 +398,9 @@ final class SaleOnlinePaymentService
         } elseif (in_array($type, ['payment.failed','payment.cancelled','payment.expired'], true)) {
             $status = match ($type) { 'payment.cancelled' => 'cancelled', 'payment.expired' => 'expired', default => 'failed' };
             $this->setIntent((int) $intent['id'], $status, $providerStatus, (string) $event['occurred_at']);
-            $this->db()->run("UPDATE sale_orders SET payment_status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?", [(int) $order['id']]);
-            if ((int) $order['paid_total_minor'] === 0 && (string) $order['status'] === 'pending_payment') {
+            $retryable = $type === 'payment.failed';
+            $this->db()->run("UPDATE sale_orders SET payment_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [$retryable ? 'pending' : 'failed', (int) $order['id']]);
+            if (!$retryable && (int) $order['paid_total_minor'] === 0 && (string) $order['status'] === 'pending_payment') {
                 if ($order['source_cart_id'] !== null) {
                     $this->inventory->releaseCartReservations((int) $order['source_cart_id'], 'online payment ' . $status);
                 }
@@ -398,6 +444,8 @@ final class SaleOnlinePaymentService
             'expires_at' => $intent['expires_at'] ?? null, 'replayed' => $replayed,
             'state' => $this->statePresentation((string) $intent['status'], $language),
         ];
+        $action = json_decode((string) ($intent['public_action_json'] ?? '{}'), true);
+        if (is_array($action)) $result += $action;
         if ($sandboxToken !== null) { $result['sandbox_token'] = $sandboxToken; }
         return $result;
     }
@@ -406,6 +454,8 @@ final class SaleOnlinePaymentService
     private function adminSessionPayload(array $session, string $language): array
     {
         $customer = json_decode((string) ($session['customer_snapshot_json'] ?? '{}'), true);
+        $action = json_decode((string) ($session['public_action_json'] ?? '{}'), true);
+        $action = is_array($action) ? $action : [];
         return [
             'id' => (int) $session['id'], 'order_id' => (int) $session['order_id'], 'order_number' => (string) $session['order_number'],
             'amount_minor' => (int) $session['amount_minor'], 'currency' => (string) $session['currency'],
@@ -415,6 +465,9 @@ final class SaleOnlinePaymentService
             'order_status' => (string) $session['order_status'], 'order_payment_status' => (string) $session['order_payment_status'],
             'customer' => is_array($customer) ? ['name' => trim((string) (($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''))), 'email' => $customer['email'] ?? null] : [],
             'created_at' => $session['created_at'], 'expires_at' => $session['expires_at'],
+            'instructions' => is_array($action['instructions'] ?? null) ? $action['instructions'] : null,
+            'test_mode' => ($action['test_mode'] ?? false) === true,
+            'scenario' => $action['scenario'] ?? null,
         ];
     }
 

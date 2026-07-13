@@ -558,6 +558,7 @@ CREATE TABLE IF NOT EXISTS sale_payment_intents (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    public_action_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(public_action_json)),
     version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     UNIQUE(provider_key, intent_reference),
     UNIQUE(site_id, idempotency_key),
@@ -612,6 +613,21 @@ CREATE TABLE IF NOT EXISTS sale_sandbox_payment_states (
     CHECK(authorized_minor <= amount_minor),
     CHECK(captured_minor <= amount_minor),
     CHECK(refunded_minor <= captured_minor)
+);
+
+CREATE TABLE IF NOT EXISTS sale_test_payment_states (
+    provider_reference TEXT PRIMARY KEY,
+    payment_intent_id INTEGER NOT NULL UNIQUE,
+    scenario TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('requires_action','authorized','captured','failed','cancelled','expired')),
+    amount_minor INTEGER NOT NULL CHECK(amount_minor >= 0),
+    authorized_minor INTEGER NOT NULL DEFAULT 0 CHECK(authorized_minor >= 0),
+    captured_minor INTEGER NOT NULL DEFAULT 0 CHECK(captured_minor >= 0),
+    refunded_minor INTEGER NOT NULL DEFAULT 0 CHECK(refunded_minor >= 0),
+    currency TEXT NOT NULL CHECK(length(currency)=3 AND currency=upper(currency)),
+    action_token_hash TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(payment_intent_id) REFERENCES sale_payment_intents(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS sale_payment_webhook_events (
@@ -1320,7 +1336,7 @@ CREATE TABLE IF NOT EXISTS sale_idempotency_keys (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
     key_hash TEXT NOT NULL,
-    scope TEXT NOT NULL CHECK(scope IN ('cart.add_line','checkout.place_order','payment.capture','pos.complete_sale','refund.create')),
+    scope TEXT NOT NULL CHECK(scope IN ('cart.add_line','checkout.place_order','payment.capture','payment.confirm','pos.complete_sale','refund.create')),
     request_hash TEXT NOT NULL,
     response_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(response_json)),
     status TEXT NOT NULL DEFAULT 'processing' CHECK(status IN ('processing','completed','failed','expired')),
@@ -1346,6 +1362,7 @@ CREATE TABLE IF NOT EXISTS sale_events (
         'sale.order.confirmed',
         'sale.order.cancelled',
         'sale.payment.recorded',
+        'sale.payment.confirmed',
         'sale.payment.failed',
         'sale.fulfillment.completed',
         'sale.return.created',
@@ -1450,15 +1467,21 @@ CROSS JOIN (
     SELECT 'bank_transfer' AS code,'Virement bancaire' AS name,'Virement bancaire' AS label_fr,'Bank transfer' AS label_en,
            'Les instructions sont affichées après la commande.' AS description_fr,'Instructions are shown after the order.' AS description_en,
            'bank_transfer' AS provider_key,'bank_transfer' AS method_type,10 AS sort_order,
-           '{"public_mode":"offline","next_action":"display_instructions","recoverable":true}' AS config_json
+           '{"public_mode":"offline","next_action":"display_instructions","recoverable":true,"create_session":true,"defer_order_until_payment":true,"beneficiary":"Marchand de démonstration","iban":"CH00 0000 0000 0000 0000 0","expected_delay":"1–2 jours ouvrés","allow_partial":true,"ttl_seconds":172800}' AS config_json
     UNION ALL SELECT 'manual','Paiement à confirmer','Paiement à confirmer','Payment to confirm',
            'La commande est enregistrée puis confirmée par le marchand.','The order is recorded and then confirmed by the merchant.',
-           'manual_card','manual_card',20,'{"public_mode":"manual","next_action":"await_confirmation","recoverable":true}'
+           'manual_card','manual_card',20,'{"public_mode":"manual","next_action":"await_confirmation","recoverable":true,"create_session":true,"defer_order_until_payment":true,"allow_partial":true,"ttl_seconds":604800}'
     UNION ALL SELECT 'sandbox_online','Paiement sandbox','Paiement en ligne (sandbox)','Online payment (sandbox)',
            'Environnement de démonstration sans saisie de carte.','Demo environment without card entry.',
            'sandbox','online_provider',90,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"test_mode":true}'
 ) m
 WHERE c.channel_kind='storefront' AND c.status='active';
+
+INSERT OR IGNORE INTO sale_payment_methods(site_id,channel_id,code,name,label_fr,label_en,description_fr,description_en,provider_key,method_type,status,is_public,currency,min_amount_minor,sort_order,config_json)
+SELECT c.site_id,c.id,'test_deterministic','Paiement déterministe','Paiement déterministe — MODE TEST','Deterministic payment — TEST MODE',
+       'Scénarios reproductibles réservés au développement.','Reproducible scenarios for development only.','test','test','active',1,c.currency,1,999,
+       '{"public_mode":"developer","next_action":"run_test_scenario","recoverable":true,"create_session":true,"defer_order_until_payment":true,"test_mode":true,"scenarios":["success_immediate","authorize_then_capture","refused","temporary_error","timeout","cancelled","duplicate_webhook","out_of_order_webhook","reconciliation_divergence"]}'
+FROM sale_channels c WHERE c.channel_kind='storefront' AND c.status='active';
 
 INSERT OR IGNORE INTO sale_fulfillment_zones(site_id,code,name,country_codes_json,status)
 SELECT DISTINCT site_id,'ch','Suisse','["CH"]','active' FROM sale_channels;

@@ -1,0 +1,12 @@
+{
+  "contract": "public.sale.payment.test.simulate.v1",
+  "kind": "schema",
+  "summary": "Exécuter un scénario de paiement déterministe hors production.",
+  "description": "Endpoint développeur absent fonctionnellement en production car le provider test n'y est jamais enregistré.",
+  "method": "POST",
+  "path": "/api/v1/sale/payments/test/{reference}/simulate",
+  "security": "Non-production only; requires the opaque test token returned for the payment session.",
+  "request": {"content_type": "application/json", "schema": {"type": "object", "required": ["data"], "properties": {"data": {"type": "object", "required": ["test_token", "outcome"], "properties": {"test_token": {"type": "string"}, "outcome": {"type": "string"}, "deliver_webhook": {"type": "boolean"}}, "additionalProperties": false}}, "additionalProperties": false}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {"data": {"type": "object", "required": ["test_mode", "provider_status", "webhook_delivered"], "additionalProperties": true}, "meta": {"type": "object", "additionalProperties": true}}, "additionalProperties": false}},
+  "errors": [{"code": "SALE_PAYMENT_ERROR", "status": 422, "description": "Provider indisponible, jeton ou scénario invalide."}]
+}

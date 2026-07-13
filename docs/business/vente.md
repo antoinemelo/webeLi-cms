@@ -34,6 +34,8 @@ Les permissions principales sont :
 - `sale.pos.sessions.open` et `sale.pos.sessions.close` pour ouvrir et fermer une session de caisse ;
 - `sale.pos.cash.correct`, `sale.pos.discounts.manage`, `sale.pos.refunds.manage` et `sale.pos.receipts.reprint` pour les actions POS sensibles ;
 - `sale.payments.read` et `sale.payments.manage` pour consulter ou enregistrer des paiements ;
+- `sale.payments.confirm` pour confirmer un paiement manuel ou rapprocher un virement ;
+- `sale.payments.test` pour les scénarios déterministes, disponibles uniquement hors production ;
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
 - `sale.reports.read` pour consulter rapports et exports ;
@@ -67,7 +69,11 @@ Au moment du checkout, Vente copie le SKU, le nom produit, le nom variante, les 
 
 ## Encaisser
 
-Les paiements v1 sont locaux : cash, carte manuelle, terminal externe, virement ou provider de test. Ils ne declenchent pas encore de paiement online complet. Un paiement ne peut pas depasser le total restant de la commande.
+L'onglet **Paiements** regroupe les sessions et leur prochaine action. Le formulaire guidé préremplit le solde, montre l'impact et accepte une référence, un commentaire ou une preuve facultative. Un paiement ne peut pas dépasser le total restant.
+
+Le paiement manuel et le virement restent explicitement en attente tant qu'un opérateur autorisé ne les confirme pas. Un paiement partiel conserve la session ouverte. Le bouton **Virements à rapprocher** affiche la file par ancienneté. Les instructions client permettent de copier, imprimer ou télécharger bénéficiaire, montant, devise et référence.
+
+Le provider déterministe est réservé au développement et signalé par un badge `MODE TEST`. Il n'est ni enregistré ni activable lorsque l'environnement est `production`.
 
 Pour le POS, une session de caisse ouverte par l'opérateur est requise. La clôture calcule le cash attendu, le montant compté et l'écart, avec justification obligatoire si l'écart est non nul.
 

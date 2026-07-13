@@ -13,9 +13,9 @@ final class PaymentProviderRegistry
     private array $providers = [];
 
     /** @param list<PaymentProvider>|null $providers */
-    public function __construct(?array $providers = null, ?Database $database = null, ?string $sandboxSecret = null)
+    public function __construct(?array $providers = null, ?Database $database = null, ?string $sandboxSecret = null, ?string $environment = null)
     {
-        foreach ($providers ?? $this->defaultProviders($database, $sandboxSecret) as $provider) {
+        foreach ($providers ?? $this->defaultProviders($database, $sandboxSecret, $environment) as $provider) {
             $this->providers[$provider->key()] = $provider;
         }
     }
@@ -61,18 +61,19 @@ final class PaymentProviderRegistry
     }
 
     /** @return list<PaymentProvider> */
-    private function defaultProviders(?Database $database, ?string $sandboxSecret): array
+    private function defaultProviders(?Database $database, ?string $sandboxSecret, ?string $environment): array
     {
         $providers = [
             new LocalPaymentProvider('cash'),
-            new LocalPaymentProvider('manual_card'),
+            new ManualPaymentProvider(),
             new LocalPaymentProvider('external_terminal'),
-            new LocalPaymentProvider('bank_transfer'),
-            new LocalPaymentProvider('test'),
+            new BankTransferPaymentProvider(),
         ];
-        if ($database !== null) {
+        $environment = strtolower(trim((string) ($environment ?? (function_exists('env') ? env('APP_ENV', 'production') : 'production'))));
+        if ($database !== null && !in_array($environment, ['production','prod'], true)) {
             $secret = trim((string) ($sandboxSecret ?? getenv('SALE_SANDBOX_WEBHOOK_SECRET') ?: 'sandbox-development-secret-change-me'));
             $providers[] = new SandboxPaymentProvider($database, $secret);
+            $providers[] = new DeterministicTestPaymentProvider($database, hash('sha256', $secret . '|deterministic-test'));
         }
         return $providers;
     }

@@ -1,0 +1,12 @@
+{
+  "contract": "public.sale.payment.retry.v1",
+  "kind": "schema",
+  "summary": "Relancer un paiement public conservé.",
+  "description": "Relance une session échouée depuis le jeton opaque du panier converti, avec un moyen encore disponible.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/cart/{token}/payment-retry",
+  "security": "Public endpoint protected by the opaque cart token and idempotency key.",
+  "request": {"content_type": "application/json", "schema": {"type": "object", "required": ["data"], "properties": {"data": {"type": "object", "required": ["payment"], "properties": {"payment": {"type": "object", "required": ["code"], "additionalProperties": true}, "idempotency_key": {"type": "string"}}, "additionalProperties": true}}, "additionalProperties": false}},
+  "response": {"status": 201, "schema": {"type": "object", "required": ["data", "meta"], "properties": {"data": {"type": "object", "required": ["order", "payment"], "additionalProperties": true}, "meta": {"type": "object", "additionalProperties": true}}, "additionalProperties": false}},
+  "errors": [{"code": "SALE_VALIDATION_ERROR", "status": 422, "description": "Relance indisponible ou moyen invalide."}]
+}
