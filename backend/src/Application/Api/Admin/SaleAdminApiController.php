@@ -968,6 +968,16 @@ final class SaleAdminApiController
                     }
                 }
                 $paid['order'] = $this->orders->requireOrder((int) $order['id']);
+                $this->events->emit((int) $site['id'], 'sale.pos.order.completed', 'order', (int) $order['id'], [
+                    'site_id' => (int) $site['id'],
+                    'order_id' => (int) $order['id'],
+                    'order_number' => (string) $paid['order']['order_number'],
+                    'grand_total_minor' => (int) $paid['order']['grand_total_minor'],
+                    'currency' => (string) $paid['order']['currency'],
+                    'payment_status' => (string) $paid['order']['payment_status'],
+                    'source' => 'pos',
+                    'iam_user_id' => $this->actorId(),
+                ], $this->actorId(), $paid['order']['correlation_id'] ?? null);
                 return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receipt()->issue((int) $order['id'], (string) $context['locale'], $this->actorId()), 'pos_context' => $context];
             });
             return $this->ok($data, 'admin.sale.pos.checkout.v1', $site, $languageCode, 201);
@@ -1648,7 +1658,7 @@ final class SaleAdminApiController
 
     private function returnsService(): SaleReturnService
     {
-        return $this->returnService ?? new SaleReturnService($this->sale, new SaleStateMachineService($this->db()), $this->inventory);
+        return $this->returnService ?? new SaleReturnService($this->sale, new SaleStateMachineService($this->db(), $this->events), $this->inventory, $this->events);
     }
 
     private function timeline(): SaleOrderTimelineService

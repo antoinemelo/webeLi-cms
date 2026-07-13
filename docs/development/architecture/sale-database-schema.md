@@ -80,7 +80,7 @@ La contrainte unique `(site_id, scope, key_hash)` empeche deux executions concur
 
 ## Events et outbox
 
-`sale_events` accepte les topics metier declares par le module Vente, notamment commande placee, paiement enregistre, paiement echoue, session POS ouverte/fermee et stock reserve/consomme/libere. Chaque event cree une entree `sale_outbox` avec le meme topic. Les consommateurs CRM, CMS ou IA doivent traiter l'outbox sans bloquer le workflow source.
+`sale_events` accepte les topics metier declares par le module Vente, notamment commande placee/confirmée/annulée, paiement capturé ou échoué, livraison terminée, retour, remboursement, vente POS et stock réservé/consommé/libéré. Chaque événement crée une entrée `sale_outbox` avec le même topic. Les consommateurs CRM, CMS ou IA traitent l'outbox sans bloquer le workflow source et doivent être idempotents. La projection CRM est décrite dans [crm-sale-activity-projection.md](crm-sale-activity-projection.md).
 
 ## Seeds
 

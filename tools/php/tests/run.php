@@ -34,6 +34,7 @@ $tests = [
     'unit/sale_module_contracts_test.php',
     'unit/sale_snapshot_services_test.php',
     'unit/sale_pricing_service_test.php',
+    'unit/sale_crm_activity_projection_test.php',
     'unit/sale_fulfillment_tax_test.php',
     'unit/sales_channel_contract_test.php',
     'unit/storefront_projection_test.php',

@@ -11,7 +11,8 @@ final class SaleReturnService
     public function __construct(
         private readonly SaleDatabaseConnection $connection,
         private readonly SaleStateMachineService $states,
-        private readonly SaleInventoryService $inventory
+        private readonly SaleInventoryService $inventory,
+        private readonly ?SaleEventService $events = null
     ) {}
 
     /** @param list<array{order_line_id:int,quantity:int,restock?:bool,reason?:string}> $lines @return array<string,mixed> */
@@ -31,7 +32,7 @@ final class SaleReturnService
                 return $this->withLines((int) $existing['id']) + ['replayed' => true];
             }
         }
-        return $db->transaction(function () use ($orderId, $lines, $reason, $actorId, $idempotencyKey, $requestHash, $db): array {
+        $result = $db->transaction(function () use ($orderId, $lines, $reason, $actorId, $idempotencyKey, $requestHash, $db): array {
             $order = $db->one('SELECT * FROM sale_orders WHERE id=?', [$orderId]);
             if ($order === null || (string) $order['status'] === 'cancelled') {
                 throw new SaleValidationException('sale.return_order_invalid');
@@ -55,8 +56,16 @@ final class SaleReturnService
             }
             $correlationId = SaleStateMachineService::correlationId();
             $this->states->recordInitial((int) $order['site_id'], 'return', $returnId, 'requested', $correlationId, $actorId, $reason);
-            return $this->withLines($returnId) + ['replayed' => false, 'correlation_id' => $correlationId];
+            $result = $this->withLines($returnId) + ['replayed' => false, 'correlation_id' => $correlationId];
+            if ($this->events !== null) {
+                $this->events->emit((int) $order['site_id'], 'sale.return.created', 'return', $returnId, [
+                    'site_id' => (int) $order['site_id'], 'order_id' => $orderId, 'return_id' => $returnId,
+                    'return_number' => (string) $result['return_number'], 'reason' => $reason, 'iam_user_id' => $actorId,
+                ], $actorId, $correlationId);
+            }
+            return $result;
         });
+        return $result;
     }
 
     /** @return array<string,mixed> */

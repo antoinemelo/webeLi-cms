@@ -436,6 +436,7 @@ function activityKindLabel(kind: string, action: string): string {
   if (kind === 'comment') return 'Commentaire';
   if (kind === 'share') return 'Partage';
   if (kind === 'message') return 'Message';
+  if (kind === 'sale') return 'Vente';
   if (action.includes('archived')) return 'Archivage';
   if (action.includes('updated')) return 'Modification';
   if (action.includes('created')) return 'Création';
@@ -447,6 +448,7 @@ function activityDetail(item: BusinessActivity): string {
   const bits = [
     typeof metadata.channel === 'string' ? metadata.channel : '',
     typeof metadata.status === 'string' ? metadata.status : '',
+    typeof metadata.source_reference === 'string' ? metadata.source_reference : '',
     typeof metadata.body_excerpt === 'string' ? metadata.body_excerpt : '',
     typeof metadata.comment_excerpt === 'string' ? metadata.comment_excerpt : '',
     typeof metadata.share_type === 'string' ? metadata.share_type : '',

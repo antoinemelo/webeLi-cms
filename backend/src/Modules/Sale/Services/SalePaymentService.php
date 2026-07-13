@@ -209,6 +209,16 @@ final class SalePaymentService
             'reason' => $reason,
             'iam_user_id' => $iamUserId,
         ], $iamUserId, $correlationId);
+        $this->events->emit((int) $tx['site_id'], 'sale.refund.completed', 'order', (int) $tx['order_id'], [
+            'site_id' => (int) $tx['site_id'],
+            'order_id' => (int) $tx['order_id'],
+            'refund_id' => (int) $refund['id'],
+            'transaction_id' => (int) $refundTransaction['id'],
+            'amount_minor' => $amountMinor,
+            'currency' => (string) $tx['currency'],
+            'reason' => $reason,
+            'iam_user_id' => $iamUserId,
+        ], $iamUserId, $correlationId);
         return ['order' => $order, 'refund' => $refund, 'transaction' => $refundTransaction];
     }
 

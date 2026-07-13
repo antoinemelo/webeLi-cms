@@ -164,6 +164,7 @@ generated: true
 | `GET` | `/admin/api/business/relations/{type}/{id}/comments` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/sale-activities/unlinked` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/schema` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/search` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
@@ -408,6 +409,8 @@ generated: true
 | `POST` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/restore` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/sale-activities/reconcile` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/sale-activities/{id}/link` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/capabilities/{key}/apply` | API administrative | `backend/routes/api.php` |

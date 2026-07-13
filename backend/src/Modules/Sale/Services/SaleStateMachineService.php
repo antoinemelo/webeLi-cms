@@ -60,7 +60,7 @@ final class SaleStateMachineService
         'refund' => ['table' => 'sale_refunds', 'site' => null],
     ];
 
-    public function __construct(private readonly Database $db) {}
+    public function __construct(private readonly Database $db, private readonly ?SaleEventService $events = null) {}
 
     public static function correlationId(?string $value = null): string
     {
@@ -87,7 +87,7 @@ final class SaleStateMachineService
             throw new SaleValidationException('sale.state.aggregate_type_invalid');
         }
         $correlationId = self::correlationId($correlationId);
-        return $this->db->transaction(function () use ($type, $id, $toStatus, $actorId, $reason, $correlationId, $expectedVersion): array {
+        $result = $this->db->transaction(function () use ($type, $id, $toStatus, $actorId, $reason, $correlationId, $expectedVersion): array {
             $row = $this->requireAggregate($type, $id);
             $from = (string) $row['status'];
             if (!in_array($toStatus, self::TRANSITIONS[$type][$from] ?? [], true)) {
@@ -119,8 +119,17 @@ final class SaleStateMachineService
             if ($type === 'fulfillment') {
                 $this->syncOrderFulfillmentStatus((int) $row['order_id'], $id, $toStatus);
             }
-            return $this->requireAggregate($type, $id) + ['correlation_id' => $correlationId];
+            $result = $this->requireAggregate($type, $id) + ['correlation_id' => $correlationId];
+            if ($type === 'fulfillment' && $toStatus === 'delivered' && $this->events !== null) {
+                $order = $this->db->one('SELECT site_id,order_number FROM sale_orders WHERE id=?', [(int) $result['order_id']]) ?? [];
+                $this->events->emit((int) ($order['site_id'] ?? 0), 'sale.fulfillment.completed', 'fulfillment', $id, [
+                    'site_id' => (int) ($order['site_id'] ?? 0), 'order_id' => (int) $result['order_id'],
+                'order_number' => (string) ($order['order_number'] ?? ''), 'fulfillment_id' => $id, 'iam_user_id' => $actorId,
+                ], $actorId, $correlationId);
+            }
+            return $result;
         });
+        return $result;
     }
 
     public function recordInitial(int $siteId, string $type, int $id, string $status, string $correlationId, ?int $actorId = null, ?string $reason = null): void

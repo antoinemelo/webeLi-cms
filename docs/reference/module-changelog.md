@@ -36,3 +36,10 @@ Cette page centralise le suivi lisible des changements module par module. Les ve
 ## Règle de release
 
 Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de preuve dans [Scénarios vérifiables](../getting-started/verified-scenarios.md), un test automatisé ou une procédure reproductible.
+# 2026-07-13 — CRM × Vente : timeline commerciale v1
+
+- projection idempotente des événements Vente web et POS dans la timeline CRM ;
+- ventes anonymes conservées sans création de contact, avec rattachement tardif audité ;
+- réconciliation des activités manquantes ou dupliquées ;
+- contrat Pricing en lecture seule avec segments et état du consentement marketing ;
+- schémas canoniques uniquement, sans migration.

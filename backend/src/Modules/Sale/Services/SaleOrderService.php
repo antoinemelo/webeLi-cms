@@ -41,7 +41,14 @@ final class SaleOrderService
     /** @return array<string,mixed> */
     public function confirmOrder(int $orderId, ?int $iamUserId = null, ?string $reason = null): array
     {
-        return ($this->states ?? new SaleStateMachineService($this->orders->rawDatabase()))->transition('order', $orderId, 'confirmed', $iamUserId, $reason);
+        return $this->orders->rawDatabase()->transaction(function () use ($orderId, $iamUserId, $reason): array {
+            $order = ($this->states ?? new SaleStateMachineService($this->orders->rawDatabase()))->transition('order', $orderId, 'confirmed', $iamUserId, $reason);
+            $this->events->emit((int) $order['site_id'], 'sale.order.confirmed', 'order', $orderId, [
+                'site_id' => (int) $order['site_id'], 'order_id' => $orderId,
+                'order_number' => (string) $order['order_number'], 'source' => (string) $order['source'], 'iam_user_id' => $iamUserId,
+            ], $iamUserId, $order['correlation_id'] ?? null);
+            return $order;
+        });
     }
 
     /** @return array<string,mixed> */

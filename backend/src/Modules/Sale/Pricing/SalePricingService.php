@@ -8,6 +8,16 @@ use App\Modules\Sale\Exceptions\SaleValidationException;
 
 final class SalePricingService
 {
+    public function customerContext(
+        CustomerPricingContextProvider $provider,
+        int $siteId,
+        ?int $contactId = null,
+        ?int $companyId = null,
+        ?int $iamUserId = null
+    ): CustomerPricingContext {
+        return $provider->context($siteId, $contactId, $companyId, $iamUserId);
+    }
+
     /** @param array<string,mixed> $snapshot @return array<string,int|bool|string> */
     public function lineAmounts(array $snapshot): array
     {

@@ -86,6 +86,8 @@ final class SaleCheckoutService
                     'currency' => (string) $order['currency'],
                     'cart_id' => $cartId,
                     'customer_ref_id' => $order['customer_contact_id'] ?? $order['customer_company_id'] ?? null,
+                    'customer_contact_id' => $order['customer_contact_id'] ?? null,
+                    'customer_company_id' => $order['customer_company_id'] ?? null,
                     'payment_status' => (string) $order['payment_status'],
                     'source' => (string) $order['source'],
                     'iam_user_id' => $payload['iam_user_id'] ?? null,

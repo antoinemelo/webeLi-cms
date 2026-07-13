@@ -142,6 +142,7 @@ use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessDatabaseConnection;
 use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
 use App\Modules\Business\Services\BusinessMailingService;
@@ -859,7 +860,8 @@ final class ServiceFactory
     public function saleStateMachines(): SaleStateMachineService
     {
         return $this->once('sale_state_machines', fn() => new SaleStateMachineService(
-            $this->saleDatabaseConnection()->database() ?? throw new \RuntimeException('sale.database_unavailable')
+            $this->saleDatabaseConnection()->database() ?? throw new \RuntimeException('sale.database_unavailable'),
+            $this->saleEvents()
         ));
     }
 
@@ -870,7 +872,7 @@ final class ServiceFactory
 
     public function saleReturnService(): SaleReturnService
     {
-        return $this->once('sale_return_service', fn() => new SaleReturnService($this->saleDatabaseConnection(), $this->saleStateMachines(), $this->saleInventory()));
+        return $this->once('sale_return_service', fn() => new SaleReturnService($this->saleDatabaseConnection(), $this->saleStateMachines(), $this->saleInventory(), $this->saleEvents()));
     }
 
     public function saleOrderTimeline(): SaleOrderTimelineService
@@ -966,6 +968,14 @@ final class ServiceFactory
     public function businessRelationSummary(): BusinessRelationSummaryService
     {
         return $this->once('business_relation_summary', fn() => new BusinessRelationSummaryService($this->businessRelationRead(), $this->businessActivity()));
+    }
+
+    public function saleCrmActivities(): SaleCrmActivityProjectionService
+    {
+        return $this->once('sale_crm_activities', fn() => new SaleCrmActivityProjectionService(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable'),
+            $this->saleDatabaseConnection()
+        ));
     }
 
     public function businessConsentService(): BusinessConsentService

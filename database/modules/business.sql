@@ -1700,6 +1700,84 @@ CREATE INDEX IF NOT EXISTS idx_business_activity_company ON business_activity_lo
 CREATE INDEX IF NOT EXISTS idx_business_activity_contact ON business_activity_log(site_id, related_contact_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_business_activity_entity ON business_activity_log(site_id, entity_type, entity_id, created_at DESC);
 
+-- Rebuildable CRM read model fed exclusively from Sale integration events.
+-- Sale remains the source of truth: this projection must never be used to write
+-- customer or order snapshots back into the Sale database.
+CREATE TABLE IF NOT EXISTS crm_sale_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dto_version INTEGER NOT NULL DEFAULT 1 CHECK(dto_version = 1),
+    site_id INTEGER NOT NULL,
+    activity_type TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('web','pos','admin','unknown')),
+    related_company_id INTEGER,
+    related_contact_id INTEGER,
+    source_event_id INTEGER NOT NULL UNIQUE,
+    source_outbox_id INTEGER NOT NULL,
+    source_event_type TEXT NOT NULL,
+    source_aggregate_type TEXT NOT NULL,
+    source_aggregate_id INTEGER NOT NULL,
+    source_reference TEXT,
+    summary TEXT NOT NULL,
+    status TEXT NOT NULL,
+    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_order','iam_account_link','manual','anonymous')),
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    linked_by_iam_user_id INTEGER,
+    linked_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    CHECK(site_id > 0),
+    CHECK(source_event_id > 0),
+    CHECK(source_outbox_id > 0),
+    CHECK(source_aggregate_id > 0),
+    CHECK(trim(activity_type) <> ''),
+    CHECK(trim(summary) <> ''),
+    CHECK((resolution_strategy = 'anonymous' AND related_company_id IS NULL AND related_contact_id IS NULL)
+       OR resolution_strategy <> 'anonymous')
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_contact ON crm_sale_activities(site_id, related_contact_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_company ON crm_sale_activities(site_id, related_company_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'anonymous';
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_source ON crm_sale_activities(source_event_type, source_aggregate_type, source_aggregate_id);
+
+CREATE TABLE IF NOT EXISTS crm_sale_activity_link_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id INTEGER NOT NULL,
+    previous_company_id INTEGER,
+    previous_contact_id INTEGER,
+    company_id INTEGER,
+    contact_id INTEGER,
+    reason TEXT NOT NULL,
+    linked_by_iam_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(activity_id) REFERENCES crm_sale_activities(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(company_id IS NOT NULL OR contact_id IS NOT NULL),
+    CHECK(linked_by_iam_user_id > 0),
+    CHECK(trim(reason) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activity_link_audit_activity ON crm_sale_activity_link_audit(activity_id, created_at, id);
+
+CREATE TRIGGER IF NOT EXISTS trg_crm_sale_activity_link_audit_no_update
+BEFORE UPDATE ON crm_sale_activity_link_audit BEGIN SELECT RAISE(ABORT, 'CRM sale activity link audit is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_crm_sale_activity_link_audit_no_delete
+BEFORE DELETE ON crm_sale_activity_link_audit BEGIN SELECT RAISE(ABORT, 'CRM sale activity link audit is immutable'); END;
+
+CREATE TABLE IF NOT EXISTS crm_sale_activity_reconciliation_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    supported_events INTEGER NOT NULL DEFAULT 0,
+    projected_events INTEGER NOT NULL DEFAULT 0,
+    missing_events INTEGER NOT NULL DEFAULT 0,
+    duplicate_events INTEGER NOT NULL DEFAULT 0,
+    repaired_events INTEGER NOT NULL DEFAULT 0,
+    report_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(report_json)),
+    run_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0)
+);
+
 INSERT OR IGNORE INTO business_companies (
     site_id,
     name,
