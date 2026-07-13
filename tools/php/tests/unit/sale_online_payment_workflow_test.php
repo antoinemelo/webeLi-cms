@@ -146,6 +146,13 @@ try {
     $h->assertTrue(count($observability['alerts']) > 0, 'duplicate and out-of-order webhook alerts are queryable');
     $h->assertSame(0, (int) ($db->one("SELECT COUNT(*) AS c FROM sale_payment_webhook_events WHERE lower(payload_json) LIKE '%card_number%' OR lower(payload_json) LIKE '%cvc%' OR lower(payload_json) LIKE '%pan%'")['c'] ?? -1), 'webhook storage contains no raw card fields');
     $h->assertSame(1, (int) ($db->one('SELECT COUNT(*) AS c FROM sale_payment_attempts WHERE payment_intent_id=?', [(int) $intent['id']])['c'] ?? 0), 'payment attempt is persisted separately');
+    $adminSessions = $online->adminSessions(1, 'fr', ['q' => 'PAY-UNIT-1']);
+    $h->assertSame('Paiement reçu', $adminSessions[0]['state']['label'] ?? null, 'admin payment list exposes a friendly business status');
+    $h->assertSame('none', $adminSessions[0]['state']['next_action'] ?? null, 'admin payment list exposes the next action');
+    $adminDetail = $online->adminSession(1, (int) $intent['id'], 'fr');
+    $h->assertTrue(count($adminDetail['captures'] ?? []) >= 1, 'admin payment detail exposes captures');
+    $h->assertTrue(count($adminDetail['timeline'] ?? []) >= 3, 'admin payment detail exposes a consolidated timeline');
+    $h->assertSame('sale.payment_provider.v1', $adminDetail['technical']['contract_version'] ?? null, 'technical provider details remain in the secondary panel payload');
 } finally {
     $db = null;
     gc_collect_cycles();

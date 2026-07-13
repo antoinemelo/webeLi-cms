@@ -320,7 +320,7 @@ final class App
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
                 new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles(), $services->storefrontProjections()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
-                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver(), $services->saleOnlinePayments()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver(), $services->saleOnlinePayments(), $services->salePaymentMethods()),
                 new PublicCustomerAccountApiHandler($this->request, $services->sites(), $services->saleCustomerAccounts()),
             ),
             UpdateManifestController::class => new UpdateManifestController(new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),

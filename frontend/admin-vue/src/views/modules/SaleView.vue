@@ -32,6 +32,20 @@ type Order = Row & {
   lines?: Row[];
 };
 type Channel = Row & { id: number; code?: string; name?: string; channel_type?: string; status?: string; is_public?: number; currency?: string; price_tax_included?: number };
+type PaymentTimelineEvent = { kind: string; status: string; at?: string; amount_minor?: number; detail?: string };
+type PaymentSession = Row & {
+  id: number;
+  order_number?: string;
+  amount_minor?: number;
+  currency?: string;
+  authorized_minor?: number;
+  captured_minor?: number;
+  refunded_minor?: number;
+  state?: { label?: string; next_action?: string; next_action_label?: string };
+  customer?: { name?: string; email?: string };
+  timeline?: PaymentTimelineEvent[];
+  technical?: Row;
+};
 type OrderColumnKey = 'number' | 'date' | 'source' | 'total' | 'payment' | 'status';
 type SortDirection = 'asc' | 'desc';
 
@@ -48,6 +62,10 @@ const orders = ref<Order[]>([]);
 const selectedOrder = ref<Order | null>(null);
 const orderPayments = ref<Row[]>([]);
 const orderEvents = ref<Row[]>([]);
+const paymentSessions = ref<PaymentSession[]>([]);
+const selectedPayment = ref<PaymentSession | null>(null);
+const paymentSearch = ref('');
+const paymentFilter = ref({ status: '', provider: '' });
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
 const fulfillmentMethods = ref<Row[]>([]);
@@ -71,6 +89,7 @@ const visibleOrderColumns = ref<Record<OrderColumnKey, boolean>>({
 const tabs = [
   { key: 'dashboard', labelKey: 'sale.tabs.dashboard', path: '/sale' },
   { key: 'orders', labelKey: 'sale.tabs.orders', path: '/sale/orders' },
+  { key: 'payments', labelKey: 'sale.tabs.payments', path: '/sale/payments' },
   { key: 'pos', labelKey: 'sale.tabs.pos', path: '/sale/pos' },
   { key: 'settings', labelKey: 'sale.tabs.settings', path: '/sale/settings' }
 ];
@@ -89,6 +108,7 @@ const orderPaymentStatusOptions = ['unpaid', 'pending', 'partially_paid', 'paid'
 
 const activeTab = computed(() => {
   if (route.path.includes('/sale/orders')) return 'orders';
+  if (route.path.includes('/sale/payments')) return 'payments';
   if (route.path.includes('/sale/pos')) return 'pos';
   if (route.path.includes('/sale/settings')) return 'settings';
   return 'dashboard';
@@ -204,12 +224,36 @@ async function loadSettings(): Promise<void> {
   fulfillmentMethods.value = fulfillmentResponse.data.methods || [];
 }
 
+async function loadPayments(): Promise<void> {
+  const response = await adminApi.get<{ payment_sessions: PaymentSession[] }>('/sale/payments', {
+    q: paymentSearch.value,
+    status: paymentFilter.value.status,
+    provider: paymentFilter.value.provider,
+    limit: 100
+  });
+  paymentSessions.value = response.data.payment_sessions || [];
+  if (selectedPayment.value && !paymentSessions.value.some((payment) => payment.id === selectedPayment.value?.id)) selectedPayment.value = null;
+  if (!selectedPayment.value && paymentSessions.value[0]) await selectPayment(paymentSessions.value[0]);
+}
+
+async function selectPayment(payment: PaymentSession): Promise<void> {
+  try {
+    const response = await adminApi.get<{ payment: PaymentSession }>(`/sale/payments/${payment.id}`);
+    selectedPayment.value = response.data.payment;
+  } catch (err) { error.value = apiErrorMessage(err); }
+}
+
+function applyPaymentFilters(): void { void loadPayments(); }
+function clearPaymentFilters(): void { paymentSearch.value = ''; paymentFilter.value = { status: '', provider: '' }; void loadPayments(); }
+function jsonText(value: unknown): string { return JSON.stringify(value || {}, null, 2); }
+
 async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
     if (activeTab.value === 'dashboard') await loadDashboard();
     if (activeTab.value === 'orders') await loadOrders();
+    if (activeTab.value === 'payments') await loadPayments();
     if (activeTab.value === 'settings') await loadSettings();
   } catch (err) {
     error.value = apiErrorMessage(err);
@@ -666,6 +710,47 @@ onMounted(load);
       </aside>
     </section>
 
+    <section v-if="activeTab === 'payments'" class="sale-admin__panel sale-admin__orders">
+      <section class="sale-admin__section sale-orders-list">
+        <BusinessPageHeader :eyebrow="t('sale.title')" :title="t('sale.payments.title')" />
+        <form class="sale-toolbar" @submit.prevent="applyPaymentFilters">
+          <input v-model="paymentSearch" class="form-control" type="search" :placeholder="t('sale.payments.searchPlaceholder')">
+          <select v-model="paymentFilter.status" class="select">
+            <option value="">{{ t('sale.payments.allStatuses') }}</option>
+            <option v-for="status in ['requires_payment','requires_action','authorized','partially_captured','captured','cancelled','failed','expired']" :key="status" :value="status">{{ statusLabel(status) }}</option>
+          </select>
+          <input v-model="paymentFilter.provider" class="form-control" type="text" :placeholder="t('sale.payments.provider')">
+          <button class="btn btn-primary btn-sm" type="submit">{{ t('common.filters') }}</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" @click="clearPaymentFilters">{{ t('common.reset') }}</button>
+        </form>
+        <div v-if="!paymentSessions.length" class="text-muted">{{ t('sale.empty.payments') }}</div>
+        <button v-for="payment in paymentSessions" :key="String(payment.id)" class="sale-admin__list-row" type="button" @click="selectPayment(payment)">
+          <span>{{ payment.order_number }} <small>{{ payment.customer?.name || payment.customer?.email || '—' }}</small></span>
+          <b>{{ money(payment.amount_minor, payment.currency) }}</b>
+          <small>{{ payment.state?.label }} · {{ payment.state?.next_action_label || payment.state?.next_action }}</small>
+        </button>
+      </section>
+
+      <aside v-if="selectedPayment" class="sale-admin__detail">
+        <div class="sale-admin__section-head">
+          <div><h2>{{ selectedPayment.order_number }}</h2><p>{{ selectedPayment.state?.label }}</p></div>
+          <strong>{{ money(selectedPayment.amount_minor, selectedPayment.currency) }}</strong>
+        </div>
+        <p><b>{{ t('sale.payments.nextAction') }}:</b> {{ selectedPayment.state?.next_action_label || selectedPayment.state?.next_action }}</p>
+        <p><b>{{ t('sale.payments.customer') }}:</b> {{ selectedPayment.customer?.name || '—' }} · {{ selectedPayment.customer?.email || '—' }}</p>
+        <div class="sale-admin__totals">
+          <span>{{ t('sale.payments.authorized') }}</span><strong>{{ money(selectedPayment.authorized_minor, selectedPayment.currency) }}</strong>
+          <span>{{ t('sale.payments.captured') }}</span><strong>{{ money(selectedPayment.captured_minor, selectedPayment.currency) }}</strong>
+          <span>{{ t('sale.payments.refunded') }}</span><strong>{{ money(selectedPayment.refunded_minor, selectedPayment.currency) }}</strong>
+        </div>
+        <h3>{{ t('sale.payments.timeline') }}</h3>
+        <div v-for="(event, index) in selectedPayment.timeline || []" :key="`${event.kind}-${index}`" class="sale-admin__line">
+          <span>{{ statusLabel(event.kind) }} · {{ statusLabel(event.status) }}</span><small>{{ shortDate(event.at) }}</small>
+        </div>
+        <details class="sale-admin__technical"><summary>{{ t('sale.payments.technical') }}</summary><pre>{{ jsonText(selectedPayment.technical) }}</pre></details>
+      </aside>
+    </section>
+
     <section v-if="activeTab === 'pos'" class="sale-admin__panel sale-admin__pos">
       <SalePosView embedded />
     </section>
@@ -729,6 +814,7 @@ onMounted(load);
 .sale-admin__detail h3 {
   margin: 0;
 }
+.sale-admin__technical pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }
 .sale-tabs {
   flex-wrap: wrap;
   overflow-x: visible;

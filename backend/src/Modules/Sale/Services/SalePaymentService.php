@@ -57,8 +57,8 @@ final class SalePaymentService
         if ($newTotal > (int) $order['grand_total_minor']) {
             throw new SalePaymentException('sale.payment_exceeds_order_total');
         }
-        $provider = $this->providerRegistry()->get($providerKey);
-        if (!$provider->supports('record_payment')) {
+        $provider = $this->providerRegistry()->contract($providerKey);
+        if (!($provider->capabilities()['authorize'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_unsupported');
         }
         $intent = $this->payments->createIntent(
@@ -71,7 +71,7 @@ final class SalePaymentService
             $options['idempotency_key'] ?? null,
             ['source' => $options['source'] ?? 'admin']
         );
-        $providerResult = $provider->recordPayment([
+        $providerResult = $provider->authorize([
             'order_id' => $orderId,
             'intent_id' => (int) $intent['id'],
             'amount_minor' => $amountMinor,
@@ -160,8 +160,8 @@ final class SalePaymentService
         if ($alreadyRefunded + $amountMinor > (int) $tx['amount_minor']) {
             throw new SalePaymentException('sale.refund_exceeds_payment');
         }
-        $provider = $this->providerRegistry()->get($providerKey);
-        if (!$provider->supports('refund')) {
+        $provider = $this->providerRegistry()->contract($providerKey);
+        if (!($provider->capabilities()['refund'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_unsupported');
         }
         $providerResult = $provider->refund([

@@ -43,6 +43,7 @@ $tests = [
     'unit/sale_domain_workflows_test.php',
     'unit/sale_internal_sales_test.php',
     'unit/sale_online_payment_workflow_test.php',
+    'unit/sale_payment_provider_contract_test.php',
     'unit/sale_state_machines_snapshots_test.php',
     'unit/sale_admin_api_controller_test.php',
     'unit/sale_public_api_handler_test.php',

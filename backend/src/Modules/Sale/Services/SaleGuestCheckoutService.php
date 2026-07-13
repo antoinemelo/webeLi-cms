@@ -24,6 +24,7 @@ final class SaleGuestCheckoutService
         private readonly SaleInventoryService $inventory,
         private readonly SaleStateMachineService $states,
         ?SaleFulfillmentService $fulfillment = null,
+        private readonly ?SalePaymentMethodService $paymentMethods = null,
     ) { $this->fulfillment = $fulfillment ?? new SaleFulfillmentService($connection); }
 
     /** @param array<string,mixed> $payload @return array{cart:array<string,mixed>,price_changed:bool} */
@@ -73,6 +74,13 @@ final class SaleGuestCheckoutService
             $priceChanged = $this->revalidateLines($cart);
             $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated');
             $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
+            if ($this->paymentMethods !== null) {
+                $freshCart = $this->carts->requireCart($cartId);
+                $paymentMethod = $this->paymentMethods->requireAvailable(
+                    (int) $freshCart['site_id'], (int) $freshCart['channel_id'], (string) ($payload['language'] ?? 'fr'),
+                    (string) $freshCart['currency'], (int) $freshCart['grand_total_minor'], (string) ($paymentMethod['code'] ?? '')
+                );
+            }
             $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
         }
         $saved = $this->carts->saveGuestCheckout(

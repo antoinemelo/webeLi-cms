@@ -10,6 +10,7 @@
   const base = root.dataset.basePath || '';
   const endpoint = `${base}/api/v1/sale/channels/${encodeURIComponent(channel)}`;
   let completed = false;
+  let availablePaymentMethods = [];
 
   const render = (cart) => {
     summary.textContent = '';
@@ -47,6 +48,9 @@
     ]);
     const select = form.elements.shipping_method; select.textContent = '';
     for (const method of bootstrap.data.fulfillment_methods || []) { const option = document.createElement('option'); option.value = method.code; option.textContent = `${method.label}${method.flat_rate_minor ? ` — ${(method.flat_rate_minor / 100).toFixed(2)} ${bootstrap.data.channel.currency}` : ''}`; select.append(option); }
+    availablePaymentMethods = bootstrap.data.payment_methods || [];
+    const paymentSelect = form.elements.payment_method; paymentSelect.textContent = '';
+    for (const method of availablePaymentMethods) { const option = document.createElement('option'); option.value = method.code; option.textContent = method.label; option.dataset.nextAction = method.next_action || ''; paymentSelect.append(option); }
     if (!completed) render(payload.data.cart);
   };
   form.addEventListener('submit', async (event) => {
@@ -64,7 +68,19 @@
     try {
       const key = crypto.randomUUID();
       const payload = await readJson(await fetch(`${endpoint}/checkout?lang=${lang}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body: JSON.stringify({ data }) }));
-      completed = true; localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; form.hidden = true; offerAccount(payload.data.account_creation);
+      completed = true; localStorage.removeItem(`amcms-sale-cart:${channel}`); summary.textContent = '';
+      const title = document.createElement('h3'); title.textContent = `${lang === 'en' ? 'Order' : 'Commande'} ${payload.data.order.order_number}`; summary.append(title);
+      const payment = payload.data.payment;
+      const selectedMethod = availablePaymentMethods.find((method) => method.code === String(values.get('payment_method')));
+      const state = document.createElement('p');
+      state.textContent = payment?.state?.label || selectedMethod?.description || (lang === 'en' ? 'Order recorded.' : 'Commande enregistrée.'); summary.append(state);
+      if (payment?.checkout_url) {
+        const action = document.createElement('a'); action.className = 'checkout-payment-action'; action.href = payment.checkout_url.startsWith('http') ? payment.checkout_url : `${base}${payment.checkout_url}`;
+        action.textContent = lang === 'en' ? 'Continue payment' : 'Continuer le paiement'; summary.append(action);
+      } else if (selectedMethod?.next_action && selectedMethod.next_action !== 'none') {
+        const next = document.createElement('small'); next.textContent = `${lang === 'en' ? 'Next step' : 'Prochaine étape'}: ${selectedMethod.next_action}`; summary.append(next);
+      }
+      form.hidden = true; offerAccount(payload.data.account_creation);
     } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
   });
   load().catch((reason) => { error.textContent = reason instanceof Error ? reason.message : String(reason); });

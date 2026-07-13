@@ -9,7 +9,7 @@ last_verified: 2026-07-13
 source_of_truth: code
 source_paths:
   - database/modules/sale.sql
-  - backend/src/Modules/Sale/Payments/OnlinePaymentProvider.php
+  - backend/src/Modules/Sale/Payments/PaymentProviderContractV1.php
   - backend/src/Modules/Sale/Payments/SandboxPaymentProvider.php
   - backend/src/Modules/Sale/Services/SaleOnlinePaymentService.php
   - tools/php/tests/unit/sale_online_payment_workflow_test.php
@@ -23,9 +23,17 @@ generated: false
 
 ## Contrat provider v1
 
-`OnlinePaymentProvider` porte le contrat `sale.payment_provider.v1` sans casser le port historique des paiements locaux. Il couvre création d'intention, capture, annulation, remboursement, lecture d'état et normalisation d'un webhook vérifié. Une implémentation ne manipule que des références opaques, montants en unité mineure, devise et états normalisés.
+`PaymentProviderContractV1` est l'unique frontière utilisée par les services Sale. Il adapte le port d'extension historique et porte le contrat `sale.payment_provider.v1`. Son vocabulaire canonique est : `createPaymentSession`, `updatePaymentSession`, `authorize`, `capture`, `cancel`, `refund`, `verifyWebhookSignature`, `parseWebhook` et `reconcile`. Les contrôleurs ne choisissent jamais une implémentation et ne contiennent aucune branche propre à un provider.
+
+`PaymentProviderRegistry` publie la version et les capacités de chaque implémentation. Un provider ne manipule que des références opaques, montants en unité mineure, devise et états provider normalisés. Les états métier restent portés par la commande, les transactions et remboursements ; les événements provider bruts restent séparés des événements financiers internes.
 
 Le provider `sandbox` est persistant et testable de bout en bout. Il accepte les résultats `success`, `authorize`, `decline`, `abandon` et `timeout`, ainsi qu'un montant de capture partielle. Son jeton d'action n'est retourné qu'à la création et seule son empreinte SHA-256 est conservée. Il ne présente aucun champ carte.
+
+## Moyens disponibles dans Shop
+
+`SalePaymentMethodService` résout les moyens actifs pour le site, le canal storefront, la langue, la devise et le montant. La réponse publique ne contient pas la clé provider. Elle expose le code stable, le libellé localisé, une description, le mode, les capacités utiles, le caractère récupérable et la prochaine action (`redirect`, `display_instructions`, `await_confirmation`, etc.).
+
+Le checkout résout à nouveau le moyen côté serveur avant de placer la commande. Un moyen désactivé, hors devise ou hors bornes de montant est refusé même si son code est envoyé manuellement. Le provider est ensuite obtenu par le registry à partir de la configuration canonique : aucun branchement provider n'est présent dans le contrôleur public.
 
 ## Workflow commande, stock et paiement
 
@@ -53,6 +61,10 @@ Les payloads persistés passent par une expurgation récursive des clés PAN, nu
 
 `POST /admin/api/sale/payments/expire` termine les intentions arrivées à échéance. `GET /admin/api/sale/payments/observability` expose les compteurs, alertes récentes et résultats de réconciliation. Les événements minimaux suivis incluent création d'intention, webhook traité, doublon, ordre invalide et divergence.
 
+`GET /admin/api/sale/payments` fournit la liste filtrable des sessions en conservant la collection historique `payments` pour compatibilité. `GET /admin/api/sale/payments/{id}` regroupe commande, client, montants autorisé/capturé/remboursé, prochaine action et chronologie. Références provider, tentatives, webhooks et rapprochements restent dans un bloc `technical` secondaire.
+
+Les états publics et administratifs sont présentés sans jargon : action requise, reçu, refusé, annulé ou expiré. Les états non terminaux ou en échec déclarent explicitement une action de reprise ; un refus propose une nouvelle tentative ou un autre moyen, et une expiration demande de redémarrer la session.
+
 ## Scénario sandbox
 
 1. Appeler le checkout public avec `payment.code=sandbox_online` et une clé d'idempotence.
@@ -61,4 +73,4 @@ Les payloads persistés passent par une expurgation récursive des clés PAN, nu
 4. Utiliser `deliver_webhook=false` pour tester un retour navigateur précoce, puis lancer la réconciliation admin.
 5. Vérifier que le retour public reste informatif et que la commande ne converge qu'après preuve fiable.
 
-La base Sale est reconstruite intégralement depuis `database/modules/sale.sql`; aucun historique d'évolution de schéma n'est requis pour ce projet réinitialisable.
+La base Sale est reconstruite intégralement depuis `database/modules/sale.sql`; aucune migration n'est planifiée ni nécessaire pour ce projet réinitialisable.

@@ -498,9 +498,19 @@ CREATE TABLE IF NOT EXISTS sale_payment_methods (
     channel_id INTEGER,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
+    label_fr TEXT,
+    label_en TEXT,
+    description_fr TEXT,
+    description_en TEXT,
     provider_key TEXT,
+    contract_version TEXT NOT NULL DEFAULT 'sale.payment_provider.v1',
     method_type TEXT NOT NULL CHECK(method_type IN ('cash','manual_card','external_terminal','bank_transfer','online_provider','test')),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','archived')),
+    is_public INTEGER NOT NULL DEFAULT 0 CHECK(is_public IN (0,1)),
+    currency TEXT CHECK(currency IS NULL OR (length(currency) = 3 AND currency = upper(currency))),
+    min_amount_minor INTEGER CHECK(min_amount_minor IS NULL OR min_amount_minor >= 0),
+    max_amount_minor INTEGER CHECK(max_amount_minor IS NULL OR max_amount_minor >= 0),
+    sort_order INTEGER NOT NULL DEFAULT 100 CHECK(sort_order >= 0),
     config_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(config_json)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
@@ -510,7 +520,11 @@ CREATE TABLE IF NOT EXISTS sale_payment_methods (
     CHECK(site_id > 0),
     CHECK(code = lower(trim(code)) AND code GLOB '[a-z0-9_-]*'),
     CHECK(trim(name) <> ''),
+    CHECK(label_fr IS NULL OR trim(label_fr) <> ''),
+    CHECK(label_en IS NULL OR trim(label_en) <> ''),
     CHECK(provider_key IS NULL OR (provider_key = lower(trim(provider_key)) AND provider_key GLOB '[a-z0-9_.-]*')),
+    CHECK(contract_version = 'sale.payment_provider.v1'),
+    CHECK(max_amount_minor IS NULL OR min_amount_minor IS NULL OR max_amount_minor >= min_amount_minor),
     CHECK(status <> 'archived' OR archived_at IS NOT NULL)
 );
 
@@ -1424,6 +1438,27 @@ CROSS JOIN (
     UNION ALL SELECT 'external-terminal', 'Terminal externe', 'external_terminal', 'external_terminal'
 ) m
 WHERE c.channel_type IN ('admin','pos');
+
+INSERT OR IGNORE INTO sale_payment_methods(
+    site_id,channel_id,code,name,label_fr,label_en,description_fr,description_en,
+    provider_key,method_type,status,is_public,currency,min_amount_minor,sort_order,config_json
+)
+SELECT c.site_id,c.id,m.code,m.name,m.label_fr,m.label_en,m.description_fr,m.description_en,
+       m.provider_key,m.method_type,'active',1,c.currency,1,m.sort_order,m.config_json
+FROM sale_channels c
+CROSS JOIN (
+    SELECT 'bank_transfer' AS code,'Virement bancaire' AS name,'Virement bancaire' AS label_fr,'Bank transfer' AS label_en,
+           'Les instructions sont affichées après la commande.' AS description_fr,'Instructions are shown after the order.' AS description_en,
+           'bank_transfer' AS provider_key,'bank_transfer' AS method_type,10 AS sort_order,
+           '{"public_mode":"offline","next_action":"display_instructions","recoverable":true}' AS config_json
+    UNION ALL SELECT 'manual','Paiement à confirmer','Paiement à confirmer','Payment to confirm',
+           'La commande est enregistrée puis confirmée par le marchand.','The order is recorded and then confirmed by the merchant.',
+           'manual_card','manual_card',20,'{"public_mode":"manual","next_action":"await_confirmation","recoverable":true}'
+    UNION ALL SELECT 'sandbox_online','Paiement sandbox','Paiement en ligne (sandbox)','Online payment (sandbox)',
+           'Environnement de démonstration sans saisie de carte.','Demo environment without card entry.',
+           'sandbox','online_provider',90,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"test_mode":true}'
+) m
+WHERE c.channel_kind='storefront' AND c.status='active';
 
 INSERT OR IGNORE INTO sale_fulfillment_zones(site_id,code,name,country_codes_json,status)
 SELECT DISTINCT site_id,'ch','Suisse','["CH"]','active' FROM sale_channels;

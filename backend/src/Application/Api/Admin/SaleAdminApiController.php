@@ -547,7 +547,20 @@ final class SaleAdminApiController
             'SELECT t.* FROM sale_payment_transactions t INNER JOIN sale_orders o ON o.id = t.order_id WHERE o.site_id = ? ORDER BY t.id DESC LIMIT ? OFFSET ?',
             [(int) $site['id'], $this->limit(), $this->offset()]
         );
-        return $this->ok(['payments' => $items], 'admin.sale.payments.index.v1', $site, $languageCode);
+        $sessions = $this->onlinePayments?->adminSessions((int) $site['id'], $languageCode, [
+            'q' => $this->request->query['q'] ?? '', 'status' => $this->request->query['status'] ?? '', 'provider' => $this->request->query['provider'] ?? '',
+        ], $this->limit(), $this->offset()) ?? [];
+        return $this->ok(['payments' => $items, 'payment_sessions' => $sessions], 'admin.sale.payments.index.v1', $site, $languageCode);
+    }
+
+    public function showPayment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.payments.read');
+        try {
+            $payment = ($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))
+                ->adminSession((int) $site['id'], $this->id($id), $languageCode);
+            return $this->ok(['payment' => $payment], 'admin.sale.payments.show.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function reconcilePayments(): Response

@@ -196,6 +196,7 @@ use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleReceiptService;
@@ -818,13 +819,22 @@ final class ServiceFactory
             $this->salePricing(),
             $this->saleInventory(),
             $this->saleStateMachines(),
-            $this->saleFulfillment()
+            $this->saleFulfillment(),
+            $this->salePaymentMethods()
         ));
     }
 
     public function saleFulfillment(): SaleFulfillmentService
     {
         return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService($this->saleDatabaseConnection()));
+    }
+
+    public function salePaymentMethods(): SalePaymentMethodService
+    {
+        return $this->once('sale_payment_methods', fn() => new SalePaymentMethodService(
+            $this->saleDatabaseConnection(),
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database())
+        ));
     }
 
     public function salePaymentService(): SalePaymentService

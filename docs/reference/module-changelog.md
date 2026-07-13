@@ -36,6 +36,15 @@ Cette page centralise le suivi lisible des changements module par module. Les ve
 ## Règle de release
 
 Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de preuve dans [Scénarios vérifiables](../getting-started/verified-scenarios.md), un test automatisé ou une procédure reproductible.
+
+# 2026-07-13 — Sale M5 : contrat provider et modèle paiement
+
+- contrat canonique versionné `sale.payment_provider.v1` et registry de capacités ;
+- résolution Shop des moyens par site, canal, langue, devise et montant ;
+- états récupérables et prochaines actions publiques ;
+- liste/détail Paiements dans l'administration, chronologie et panneau technique ;
+- schéma canonique et fixtures reconstruits from scratch, sans migration.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;

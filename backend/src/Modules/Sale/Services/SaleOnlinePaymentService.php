@@ -8,8 +8,8 @@ use App\Core\Database;
 use App\Core\Logger;
 use App\Modules\Sale\Exceptions\SalePaymentException;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
-use App\Modules\Sale\Payments\OnlinePaymentProvider;
 use App\Modules\Sale\Payments\SandboxPaymentProvider;
+use App\Modules\Sale\Payments\PaymentProviderContractV1;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
 use App\Modules\Sale\Repositories\SalePaymentRepository;
 use Throwable;
@@ -29,12 +29,13 @@ final class SaleOnlinePaymentService
     /** @param array<string,mixed> $options @return array<string,mixed> */
     public function createIntentForOrder(int $orderId, string $providerKey, array $options = []): array
     {
+        $language = (string) ($options['language'] ?? 'fr');
         $order = $this->orders->requireOrder($orderId);
         if ((string) $order['status'] !== 'pending_payment' || (string) $order['payment_status'] !== 'pending') {
             throw new SalePaymentException('sale.online_payment_order_not_pending');
         }
-        $provider = $this->providers->get($providerKey);
-        if (!$provider instanceof OnlinePaymentProvider || $provider->contractVersion() !== 'sale.payment_provider.v1' || !$provider->supports('create_intent')) {
+        $provider = $this->providers->contract($providerKey);
+        if ($provider->version() !== PaymentProviderContractV1::VERSION || !($provider->capabilities()['online'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_contract_unsupported');
         }
         $returnUrl = $this->safeRedirectUrl($options['return_url'] ?? null);
@@ -45,7 +46,7 @@ final class SaleOnlinePaymentService
             [$orderId, $provider->key()]
         );
         if ($existing !== null) {
-            return $this->publicIntent($existing, null, true);
+            return $this->publicIntent($existing, null, true, $language);
         }
         $intent = $this->db()->transaction(function () use ($order, $orderId, $provider, $options, $expiresAt, $returnUrl, $cancelUrl): array {
             $created = $this->payments->createIntent(
@@ -56,7 +57,7 @@ final class SaleOnlinePaymentService
             );
             $this->db()->run(
                 'UPDATE sale_payment_intents SET contract_version=?,return_url=?,cancel_url=?,expires_at=? WHERE id=?',
-                [$provider->contractVersion(), $returnUrl, $cancelUrl, $expiresAt, (int) $created['id']]
+                [$provider->version(), $returnUrl, $cancelUrl, $expiresAt, (int) $created['id']]
             );
             $this->db()->run(
                 "INSERT INTO sale_payment_attempts(payment_intent_id,attempt_number,status,metadata_json) VALUES(?,1,'created',?)",
@@ -67,7 +68,7 @@ final class SaleOnlinePaymentService
 
         // L'appel externe ne garde jamais de transaction SQLite ouverte.
         try {
-            $result = $provider->createIntent([
+            $result = $provider->createPaymentSession([
                 'intent_id' => (int) $intent['id'], 'order_id' => $orderId,
                 'amount_minor' => (int) $order['grand_total_minor'], 'currency' => (string) $order['currency'],
                 'return_url' => $returnUrl, 'cancel_url' => $cancelUrl,
@@ -87,7 +88,7 @@ final class SaleOnlinePaymentService
             $this->metric((int) $order['site_id'], 'payment.intent.create_failed', 'critical', (int) $intent['id'], ['provider' => $provider->key()]);
             throw new SalePaymentException('sale.payment_provider_failed');
         }
-        return $this->db()->transaction(function () use ($order, $provider, $intent, $result): array {
+        return $this->db()->transaction(function () use ($order, $provider, $intent, $result, $language): array {
             $status = (string) ($result['status'] ?? 'requires_action');
             $this->db()->run(
                 'UPDATE sale_payment_intents SET intent_reference=?,status=?,checkout_url=?,last_provider_status=?,provider_synced_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?',
@@ -99,7 +100,7 @@ final class SaleOnlinePaymentService
             );
             $this->metric((int) $order['site_id'], 'payment.intent.created', 'info', (int) $intent['id'], ['provider' => $provider->key()]);
             $fresh = $this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $intent;
-            return $this->publicIntent($fresh, isset($result['sandbox_token']) ? (string) $result['sandbox_token'] : null, false);
+            return $this->publicIntent($fresh, isset($result['sandbox_token']) ? (string) $result['sandbox_token'] : null, false, $language);
         });
     }
 
@@ -107,10 +108,8 @@ final class SaleOnlinePaymentService
     public function processWebhook(string $providerKey, string $rawBody, array $headers): array
     {
         try {
-            $provider = $this->providers->get($providerKey);
-            if (!$provider instanceof OnlinePaymentProvider) {
-                throw new SalePaymentException('sale.payment_provider_contract_unsupported');
-            }
+            $provider = $this->providers->contract($providerKey);
+            $provider->verifyWebhookSignature($rawBody, $headers);
             $event = $provider->parseWebhook($rawBody, $headers);
         } catch (Throwable $e) {
             $this->logger?->warning('sale.payment.webhook_rejected', ['provider' => $providerKey, 'reason' => $this->safeError($e->getMessage())]);
@@ -155,15 +154,14 @@ final class SaleOnlinePaymentService
     }
 
     /** @return array<string,mixed> */
-    public function browserReturn(string $providerKey, string $reference): array
+    public function browserReturn(string $providerKey, string $reference, string $language = 'fr'): array
     {
         $intent = $this->requireIntentByReference($providerKey, $reference);
-        $provider = $this->providers->get($providerKey);
-        if (!$provider instanceof OnlinePaymentProvider) { throw new SalePaymentException('sale.payment_provider_contract_unsupported'); }
-        $providerState = $provider->readState(['intent_id' => (int) $intent['id'], 'provider_reference' => $reference]);
+        $provider = $this->providers->contract($providerKey);
+        $providerState = $provider->updatePaymentSession(['intent_id' => (int) $intent['id'], 'provider_reference' => $reference]);
         $this->metric((int) $intent['site_id'], 'payment.browser_return.observed', 'info', (int) $intent['id'], ['provider_status' => (string) $providerState['status']]);
         return [
-            'intent' => $this->publicIntent($intent),
+            'intent' => $this->publicIntent($intent, null, false, $language),
             'provider_status' => (string) $providerState['status'],
             'local_status' => (string) $intent['status'],
             'awaiting_webhook' => !in_array((string) $intent['status'], ['captured','failed','cancelled','expired'], true),
@@ -203,9 +201,8 @@ final class SaleOnlinePaymentService
                 throw new SalePaymentException('sale.payment_intent_not_found');
             }
             try {
-                $provider = $this->providers->get((string) $intent['provider_key']);
-                if (!$provider instanceof OnlinePaymentProvider) { throw new SalePaymentException('sale.payment_provider_contract_unsupported'); }
-                $state = $provider->readState([
+                $provider = $this->providers->contract((string) $intent['provider_key']);
+                $state = $provider->reconcile([
                     'intent_id' => (int) $intent['id'], 'provider_reference' => (string) $intent['intent_reference'],
                 ]);
                 $findings = [];
@@ -274,6 +271,41 @@ final class SaleOnlinePaymentService
             'metrics' => $this->db()->all('SELECT metric_key,severity,COUNT(*) AS count,MAX(created_at) AS last_seen_at FROM sale_payment_observability WHERE site_id=? GROUP BY metric_key,severity ORDER BY metric_key', [$siteId]),
             'alerts' => $this->db()->all("SELECT * FROM sale_payment_observability WHERE site_id=? AND severity IN ('warning','critical') ORDER BY id DESC LIMIT 50", [$siteId]),
             'recent_reconciliations' => $this->db()->all('SELECT * FROM sale_payment_reconciliation_runs WHERE site_id=? ORDER BY id DESC LIMIT 50', [$siteId]),
+        ];
+    }
+
+    /** @param array<string,mixed> $filters @return list<array<string,mixed>> */
+    public function adminSessions(int $siteId, string $language, array $filters = [], int $limit = 100, int $offset = 0): array
+    {
+        return array_map(fn(array $session): array => $this->adminSessionPayload($session, $language), $this->payments->paymentSessions($siteId, $filters, $limit, $offset));
+    }
+
+    /** @return array<string,mixed> */
+    public function adminSession(int $siteId, int $intentId, string $language): array
+    {
+        $session = $this->payments->paymentSessionDetail($siteId, $intentId);
+        $payload = $this->adminSessionPayload($session, $language);
+        $timeline = [];
+        foreach ($session['attempts'] as $item) { $timeline[] = ['kind' => 'attempt', 'status' => $item['status'], 'at' => $item['started_at'], 'detail' => $item['error_code'] ?? null]; }
+        foreach ($session['transactions'] as $item) { $timeline[] = ['kind' => $item['transaction_type'], 'status' => $item['status'], 'at' => $item['created_at'], 'amount_minor' => (int) $item['amount_minor']]; }
+        foreach ($session['refunds'] as $item) { $timeline[] = ['kind' => 'refund', 'status' => $item['status'], 'at' => $item['created_at'], 'amount_minor' => (int) $item['amount_minor']]; }
+        foreach ($session['provider_events'] as $item) { $timeline[] = ['kind' => 'provider_event', 'status' => $item['processing_status'], 'at' => $item['provider_occurred_at'], 'detail' => $item['event_type']]; }
+        foreach ($session['reconciliations'] as $item) { $timeline[] = ['kind' => 'reconciliation', 'status' => $item['status'], 'at' => $item['created_at']]; }
+        usort($timeline, static fn(array $a, array $b): int => strcmp((string) $a['at'], (string) $b['at']));
+        return $payload + [
+            'captures' => array_values(array_filter($session['transactions'], static fn(array $item): bool => in_array((string) $item['transaction_type'], ['payment','capture'], true))),
+            'refunds' => $session['refunds'],
+            'timeline' => $timeline,
+            'technical' => [
+                'contract_version' => (string) $session['contract_version'],
+                'provider_key' => (string) $session['provider_key'],
+                'provider_reference' => $session['intent_reference'],
+                'last_provider_status' => $session['last_provider_status'],
+                'provider_synced_at' => $session['provider_synced_at'],
+                'attempts' => $session['attempts'],
+                'provider_events' => $session['provider_events'],
+                'reconciliations' => $session['reconciliations'],
+            ],
         ];
     }
 
@@ -355,7 +387,7 @@ final class SaleOnlinePaymentService
     }
 
     /** @param array<string,mixed> $intent @return array<string,mixed> */
-    private function publicIntent(array $intent, ?string $sandboxToken = null, bool $replayed = false): array
+    private function publicIntent(array $intent, ?string $sandboxToken = null, bool $replayed = false, string $language = 'fr'): array
     {
         $result = [
             'id' => (int) $intent['id'], 'order_id' => (int) $intent['order_id'], 'provider' => (string) $intent['provider_key'],
@@ -364,9 +396,44 @@ final class SaleOnlinePaymentService
             'authorized_minor' => (int) ($intent['authorized_minor'] ?? 0), 'captured_minor' => (int) ($intent['captured_minor'] ?? 0),
             'refunded_minor' => (int) ($intent['refunded_minor'] ?? 0), 'checkout_url' => $intent['checkout_url'] ?? null,
             'expires_at' => $intent['expires_at'] ?? null, 'replayed' => $replayed,
+            'state' => $this->statePresentation((string) $intent['status'], $language),
         ];
         if ($sandboxToken !== null) { $result['sandbox_token'] = $sandboxToken; }
         return $result;
+    }
+
+    /** @param array<string,mixed> $session @return array<string,mixed> */
+    private function adminSessionPayload(array $session, string $language): array
+    {
+        $customer = json_decode((string) ($session['customer_snapshot_json'] ?? '{}'), true);
+        return [
+            'id' => (int) $session['id'], 'order_id' => (int) $session['order_id'], 'order_number' => (string) $session['order_number'],
+            'amount_minor' => (int) $session['amount_minor'], 'currency' => (string) $session['currency'],
+            'status' => (string) $session['status'], 'state' => $this->statePresentation((string) $session['status'], $language),
+            'provider' => (string) $session['provider_key'], 'reference' => $session['intent_reference'],
+            'authorized_minor' => (int) $session['authorized_minor'], 'captured_minor' => (int) $session['captured_minor'], 'refunded_minor' => (int) $session['refunded_minor'],
+            'order_status' => (string) $session['order_status'], 'order_payment_status' => (string) $session['order_payment_status'],
+            'customer' => is_array($customer) ? ['name' => trim((string) (($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''))), 'email' => $customer['email'] ?? null] : [],
+            'created_at' => $session['created_at'], 'expires_at' => $session['expires_at'],
+        ];
+    }
+
+    /** @return array{code:string,label:string,severity:string,recoverable:bool,next_action:string,next_action_label:string} */
+    private function statePresentation(string $status, string $language): array
+    {
+        $english = str_starts_with(strtolower($language), 'en');
+        $values = [
+            'requires_payment' => ['Paiement à initier','Payment to initiate','info',true,'start_payment','Initier le paiement','Start payment'],
+            'requires_action' => ['Action client requise','Customer action required','warning',true,'resume_payment','Reprendre le paiement','Resume payment'],
+            'authorized' => ['Paiement autorisé','Payment authorized','info',true,'capture','Capturer le paiement','Capture payment'],
+            'partially_captured' => ['Paiement partiel','Partially paid','warning',true,'complete_payment','Compléter le paiement','Complete payment'],
+            'captured' => ['Paiement reçu','Payment received','success',false,'none','Aucune action','No action'],
+            'cancelled' => ['Paiement annulé','Payment cancelled','neutral',true,'choose_another_method','Choisir un autre moyen','Choose another method'],
+            'failed' => ['Paiement refusé','Payment failed','danger',true,'retry_or_choose_another_method','Réessayer ou changer de moyen','Retry or choose another method'],
+            'expired' => ['Session expirée','Session expired','warning',true,'restart_payment','Redémarrer le paiement','Restart payment'],
+        ];
+        $value = $values[$status] ?? [$status, $status, 'neutral', false, 'none', 'Aucune action', 'No action'];
+        return ['code' => $status, 'label' => $english ? $value[1] : $value[0], 'severity' => $value[2], 'recoverable' => $value[3], 'next_action' => $value[4], 'next_action_label' => $english ? $value[6] : $value[5]];
     }
 
     /** @param list<string> $findings */

@@ -19,6 +19,8 @@ use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCheckoutService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
+use App\Modules\Sale\Payments\PaymentProviderRegistry;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
@@ -45,6 +47,7 @@ final class PublicSaleApiHandler
         private readonly ?SaleFulfillmentService $fulfillment = null,
         private readonly ?SalesChannelResolverService $channelResolver = null,
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
+        private readonly ?SalePaymentMethodService $paymentMethods = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -55,11 +58,20 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
 
+            $paymentMethods = $this->paymentMethodResolver()->availableMethods(
+                (int) $site['id'], (int) $channel['id'], $languageCode, (string) $channel['currency'],
+                max(1, (int) ($this->request->query['amount_minor'] ?? 1))
+            );
+            $paymentMethods = array_map(static function (array $method): array {
+                unset($method['provider_key']);
+                return $method;
+            }, $paymentMethods);
             return $this->json([
                 'channel' => $this->channelPayload($channel),
                 'cart' => ['enabled' => true, 'token_transport' => 'opaque_token'],
                 'checkout' => ['enabled' => true, 'idempotency_required' => true],
                 'fulfillment_methods' => $this->fulfillment?->availableMethods((int) $site['id'], $languageCode) ?? [],
+                'payment_methods' => $paymentMethods,
             ], 'public.sale.channels.bootstrap.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
@@ -177,9 +189,14 @@ final class PublicSaleApiHandler
             $idempotencyKey = $this->requiredIdempotencyKey($payload);
             if ((string) $cart['status'] === 'active') {
                 $this->guestCheckout->update((int) $cart['id'], $payload, true);
+                $cart = $this->carts->cartWithLines((int) $cart['id']);
             }
             $paymentCode = strtolower(trim((string) (($payload['payment']['code'] ?? $payload['payment_method']['code'] ?? ''))));
-            $online = $paymentCode === 'sandbox_online';
+            $resolvedPayment = $this->paymentMethodResolver()->requireAvailable(
+                (int) $site['id'], (int) $channel['id'], $languageCode, (string) $cart['currency'],
+                (int) $cart['grand_total_minor'], $paymentCode
+            );
+            $online = (bool) ($resolvedPayment['capabilities']['online'] ?? false);
             $order = $this->checkout->placeOrder((int) $cart['id'], [
                 'idempotency_key' => $idempotencyKey,
                 'source' => 'ecommerce',
@@ -192,10 +209,12 @@ final class PublicSaleApiHandler
                 if ($this->onlinePayments === null) {
                     throw new SalePaymentException('sale.online_payment_unavailable');
                 }
-                $data['payment'] = $this->onlinePayments->createIntentForOrder((int) $order['id'], 'sandbox', [
+                $providerKey = (string) $resolvedPayment['provider_key'];
+                $data['payment'] = $this->onlinePayments->createIntentForOrder((int) $order['id'], $providerKey, [
                     'idempotency_key' => $idempotencyKey,
                     'return_url' => isset($payload['return_url']) ? (string) $payload['return_url'] : null,
                     'cancel_url' => isset($payload['cancel_url']) ? (string) $payload['cancel_url'] : null,
+                    'language' => $languageCode,
                 ]);
             }
             if ($this->customerAccounts !== null) {
@@ -243,7 +262,7 @@ final class PublicSaleApiHandler
         [$site, $languageCode] = $this->context();
         try {
             $service = $this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable');
-            $result = $service->browserReturn((string) ($this->request->query['provider'] ?? ''), (string) ($this->request->query['reference'] ?? ''));
+            $result = $service->browserReturn((string) ($this->request->query['provider'] ?? ''), (string) ($this->request->query['reference'] ?? ''), $languageCode);
             return $this->json($result, 'public.sale.payment.return.v1', $site, $languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }
     }
@@ -322,6 +341,14 @@ final class PublicSaleApiHandler
             throw new SaleValidationException('sale.public_channel_not_found');
         }
         return $channel;
+    }
+
+    private function paymentMethodResolver(): SalePaymentMethodService
+    {
+        return $this->paymentMethods ?? new SalePaymentMethodService(
+            $this->sale,
+            new PaymentProviderRegistry(null, $this->sale->database())
+        );
     }
 
     /** @param array<string,mixed> $channel @return array<string,mixed> */

@@ -183,12 +183,19 @@ une commande placee ne depend plus du prix courant dans Operations.
 
 ## Providers paiement et idempotence
 
-La v1 definit l'interface `PaymentProvider` avec les operations
-`createIntent`, `recordPayment`, `capture`, `refund`, `void` et `supports`.
-`PaymentProviderRegistry` expose les providers locaux `cash`, `manual_card`,
-`external_terminal`, `bank_transfer` et `test`. Ces providers ne declenchent
+La v1 utilise `PaymentProviderContractV1` comme frontière unique avec les opérations
+`createPaymentSession`, `updatePaymentSession`, `authorize`, `capture`, `cancel`,
+`refund`, `verifyWebhookSignature`, `parseWebhook` et `reconcile`. Le port
+`PaymentProvider` historique reste derrière cet adaptateur pour la compatibilité des
+extensions existantes. `PaymentProviderRegistry` expose version et capacités des
+providers locaux `cash`, `manual_card`, `external_terminal`, `bank_transfer`, `test`
+et `sandbox`. Ces providers ne declenchent
 aucun envoi externe : ils produisent une reference deterministe et marquent le
 payload provider avec `external_call=false`.
+
+Les moyens proposés par Shop proviennent de `sale_payment_methods` et sont filtrés
+par site, canal, langue, devise et montant. Le checkout les revalide côté serveur ;
+aucune logique propre à un provider ne réside dans un contrôleur.
 
 Chaque encaissement cree d'abord une entree `sale_payment_intents`, puis une
 transaction `sale_payment_transactions`. Les transactions reussies de type

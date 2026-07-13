@@ -114,6 +114,10 @@ try {
     $h->assertSame(200, $bootstrap->status(), 'active public ecommerce channel can bootstrap');
     $bootstrapPayload = json_decode($bootstrap->body(), true);
     $h->assertSame('web-main', $bootstrapPayload['data']['channel']['code'] ?? null, 'bootstrap exposes public channel code');
+    $publicPaymentMethods = array_column($bootstrapPayload['data']['payment_methods'] ?? [], null, 'code');
+    $h->assertSame('Virement bancaire', $publicPaymentMethods['bank_transfer']['label'] ?? null, 'bootstrap exposes localized payment methods');
+    $h->assertSame('redirect', $publicPaymentMethods['sandbox_online']['next_action'] ?? null, 'bootstrap explains the next payment action');
+    $h->assertTrue(!array_key_exists('provider_key', $publicPaymentMethods['sandbox_online'] ?? []), 'bootstrap does not expose provider implementation details');
 
     $cartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');
     $h->assertSame(201, $cartResponse->status(), 'public ecommerce cart can be created');

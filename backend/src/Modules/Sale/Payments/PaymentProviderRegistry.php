@@ -29,6 +29,20 @@ final class PaymentProviderRegistry
         return $this->providers[$key];
     }
 
+    public function contract(string $key): PaymentProviderContractV1
+    {
+        return new PaymentProviderContractV1($this->get($key));
+    }
+
+    /** @return list<array{key:string,contract_version:string,capabilities:array<string,bool>}> */
+    public function descriptors(): array
+    {
+        return array_map(function (string $key): array {
+            $contract = $this->contract($key);
+            return ['key' => $key, 'contract_version' => $contract->version(), 'capabilities' => $contract->capabilities()];
+        }, $this->keys());
+    }
+
     /** @return list<string> */
     public function keys(): array
     {

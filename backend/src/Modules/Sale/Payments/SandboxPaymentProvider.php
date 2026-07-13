@@ -116,23 +116,6 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
 
     public function parseWebhook(string $rawBody, array $headers): array
     {
-        $signatureHeader = trim((string) ($headers['x-sale-signature'] ?? $headers['X-Sale-Signature'] ?? ''));
-        $parts = [];
-        foreach (explode(',', $signatureHeader) as $part) {
-            if (str_contains($part, '=')) {
-                [$name, $value] = explode('=', trim($part), 2);
-                $parts[$name] = $value;
-            }
-        }
-        $timestamp = (int) ($parts['t'] ?? 0);
-        $signature = strtolower((string) ($parts['v1'] ?? ''));
-        if ($timestamp < 1 || abs(time() - $timestamp) > $this->toleranceSeconds || preg_match('/^[a-f0-9]{64}$/', $signature) !== 1) {
-            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
-        }
-        $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $this->secret);
-        if (!hash_equals($expected, $signature)) {
-            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
-        }
         $event = json_decode($rawBody, true);
         if (!is_array($event)) {
             throw new SalePaymentException('sale.payment_webhook_payload_invalid');
@@ -156,6 +139,27 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
             'provider_transaction_id' => (string) ($event['provider_transaction_id'] ?? $event['id']),
             'data' => is_array($event['data'] ?? null) ? $event['data'] : [],
         ];
+    }
+
+    public function verifyWebhookSignature(string $rawBody, array $headers): void
+    {
+        $signatureHeader = trim((string) ($headers['x-sale-signature'] ?? $headers['X-Sale-Signature'] ?? ''));
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $part) {
+            if (str_contains($part, '=')) {
+                [$name, $value] = explode('=', trim($part), 2);
+                $parts[$name] = $value;
+            }
+        }
+        $timestamp = (int) ($parts['t'] ?? 0);
+        $signature = strtolower((string) ($parts['v1'] ?? ''));
+        if ($timestamp < 1 || abs(time() - $timestamp) > $this->toleranceSeconds || preg_match('/^[a-f0-9]{64}$/', $signature) !== 1) {
+            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
+        }
+        $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $this->secret);
+        if (!hash_equals($expected, $signature)) {
+            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
+        }
     }
 
     /** @return array{body:string,signature:string,event:array<string,mixed>} */
