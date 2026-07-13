@@ -643,6 +643,7 @@ CREATE TABLE IF NOT EXISTS sale_payment_webhook_events (
     payload_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(payload_json)),
     error_code TEXT,
     received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retain_until TEXT NOT NULL DEFAULT (datetime('now','+30 days')),
     processed_at TEXT,
     UNIQUE(provider_key, provider_event_id),
     CHECK(site_id > 0)
@@ -1185,6 +1186,8 @@ BEFORE DELETE ON sale_payment_transactions BEGIN SELECT RAISE(ABORT, 'sale finan
 CREATE TRIGGER IF NOT EXISTS trg_sale_payment_webhooks_no_update
 BEFORE UPDATE ON sale_payment_webhook_events
 WHEN OLD.processing_status IN ('processed','ignored_out_of_order','rejected')
+ AND NOT (NEW.payload_json='{}' AND OLD.retain_until<=CURRENT_TIMESTAMP
+          AND NEW.processing_status=OLD.processing_status AND NEW.provider_event_id=OLD.provider_event_id)
 BEGIN SELECT RAISE(ABORT, 'sale processed payment webhooks are immutable'); END;
 CREATE TRIGGER IF NOT EXISTS trg_sale_payment_webhooks_no_delete
 BEFORE DELETE ON sale_payment_webhook_events BEGIN SELECT RAISE(ABORT, 'sale payment webhooks are immutable'); END;
@@ -1474,6 +1477,9 @@ CROSS JOIN (
     UNION ALL SELECT 'sandbox_online','Paiement sandbox','Paiement en ligne (sandbox)','Online payment (sandbox)',
            'Environnement de démonstration sans saisie de carte.','Demo environment without card entry.',
            'sandbox','online_provider',90,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"test_mode":true}'
+    UNION ALL SELECT 'stripe_checkout','Stripe','Paiement sécurisé','Secure payment',
+           'Vous serez redirigé vers la page de paiement sécurisée Stripe.','You will be redirected to Stripe secure checkout.',
+           'stripe_checkout','online_provider',40,'{"public_mode":"redirect","next_action":"redirect","recoverable":true,"create_session":true,"defer_order_until_payment":true,"display_name":"Paiement sécurisé","logo":"stripe"}'
 ) m
 WHERE c.channel_kind='storefront' AND c.status='active';
 

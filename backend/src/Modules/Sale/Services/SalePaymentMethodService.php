@@ -56,6 +56,9 @@ final class SalePaymentMethodService
         $this->providers->contract((string) ($payload['provider_key'] ?? ''));
     }
 
+    /** @return array<string,mixed> */
+    public function providerStatus(): array { return $this->providers->realProviderStatus(); }
+
     /** @param array<string,mixed> $row @param array<string,bool> $capabilities @return array<string,mixed> */
     private function payload(array $row, string $language, array $capabilities): array
     {

@@ -7259,17 +7259,26 @@
       "post": {
         "operationId": "post_public_sale_payment_webhook_v1",
         "summary": "Recevoir un webhook de paiement provider.",
-        "description": "Endpoint serveur-à-serveur. Vérifie HMAC SHA-256, timestamp (tolérance 5 minutes), identifiant d'événement et ordre avant toute transition locale.",
+        "description": "Endpoint serveur-à-serveur. Le provider Stripe vérifie Stripe-Signature sur le corps brut avec le SDK officiel et une tolérance de 5 minutes avant toute transition locale.",
         "tags": [
           "Headless v1"
         ],
         "security": [],
         "parameters": [
           {
+            "name": "Stripe-Signature",
+            "in": "header",
+            "required": false,
+            "description": "Signature Stripe officielle t=<unix>,v1=<signature>. Obligatoire pour stripe_checkout.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "X-Sale-Signature",
             "in": "header",
-            "required": true,
-            "description": "t=<unix>,v1=<HMAC_SHA256(timestamp.raw_body)>",
+            "required": false,
+            "description": "Signature du provider sandbox uniquement.",
             "schema": {
               "type": "string"
             }

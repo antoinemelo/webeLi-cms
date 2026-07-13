@@ -65,6 +65,7 @@
   form.addEventListener('submit', async (event) => {
     event.preventDefault(); error.textContent = '';
     if (!form.reportValidity()) return;
+    const submit=form.querySelector('button[type="submit"]'); if(submit?.disabled)return; if(submit){submit.disabled=true;submit.setAttribute('aria-busy','true');}
     const values = new FormData(form);
     const data = {
       cart_token: token,
@@ -104,6 +105,7 @@
       if (payment?.state?.recoverable && payment.status === 'failed') { const retry=document.createElement('button'); retry.type='button'; retry.textContent=lang==='en'?'Try again or choose another method':'Réessayer ou choisir un autre moyen'; retry.addEventListener('click',()=>{retryPayment=true;completed=false;form.hidden=false;summary.textContent='';}); summary.append(retry); }
       form.hidden = true; offerAccount(payload.data.account_creation);
     } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
+    finally { if(submit&&!completed){submit.disabled=false;submit.removeAttribute('aria-busy');} }
   });
   load().catch((reason) => { error.textContent = reason instanceof Error ? reason.message : String(reason); });
 })();

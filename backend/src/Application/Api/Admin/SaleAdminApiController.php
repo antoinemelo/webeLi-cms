@@ -594,10 +594,17 @@ final class SaleAdminApiController
         } catch (Throwable $e) { return $this->domainError($e); }
     }
 
+    public function retryPaymentWebhook(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.payments.manage');
+        try{return $this->ok(($this->onlinePayments??throw new SalePaymentException('sale.online_payment_unavailable'))->retryWebhook((int)$site['id'],$this->id($id)),'admin.sale.payment_webhooks.retry.v1',$site,$languageCode);}
+        catch(Throwable $e){return $this->domainError($e);}
+    }
+
     public function paymentMethods(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.payments.read');
-        return $this->ok(['payment_methods' => $this->payments->methods((int) $site['id'])], 'admin.sale.payment_methods.index.v1', $site, $languageCode);
+        return $this->ok(['payment_methods' => $this->payments->methods((int) $site['id']), 'provider_status'=>$this->paymentMethodsService?->providerStatus()], 'admin.sale.payment_methods.index.v1', $site, $languageCode);
     }
 
     public function storePaymentMethod(): Response

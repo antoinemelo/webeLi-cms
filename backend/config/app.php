@@ -81,6 +81,8 @@ return [
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
+            '#^/api/v1/sale/payments/webhooks/stripe_checkout$#',
+            '#^/api/v1/sale/payments/return$#',
             '#^/api/v1/customer(?:/|$)#',
             '#^/api/v1/media$#',
         ],
@@ -115,6 +117,11 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
+            '#^/api/v1/sale/payments/webhooks/stripe_checkout$#' => [
+                'limit' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_MAX', 180),
+                'window' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_WINDOW', 60),
+                'group' => '/api/v1/sale/payments/webhooks/stripe_checkout',
+            ],
             '#^/api/v1/customer/(?:login|accounts/register)$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX', 10),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW', 900),
@@ -140,6 +147,22 @@ return [
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_SALE_WINDOW', 60),
                 'group' => '/api/v1/sale',
             ],
+        ],
+    ],
+
+    'payments' => [
+        'real_provider' => strtolower((string) env('PAYMENT_REAL_PROVIDER', '')),
+        'public_base_url' => (string) env('APP_PUBLIC_BASE_URL', ''),
+        'stripe' => [
+            'enabled' => $boolEnv('PAYMENT_STRIPE_ENABLED', false),
+            'environment' => strtolower((string) env('PAYMENT_STRIPE_ENV', 'test')),
+            'secret_key' => (string) env('STRIPE_SECRET_KEY', ''),
+            'webhook_secrets' => array_values(array_filter([
+                (string) env('STRIPE_WEBHOOK_SECRET', ''),
+                (string) env('STRIPE_WEBHOOK_SECRET_PREVIOUS', ''),
+            ])),
+            'signature_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
+            'api_version' => (string) env('STRIPE_API_VERSION', ''),
         ],
     ],
 

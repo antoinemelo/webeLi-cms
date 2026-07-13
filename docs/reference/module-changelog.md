@@ -53,6 +53,14 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - badge `MODE TEST`, scénarios développeur et verrou absolu en production ;
 - fixtures fictives dans le schéma canonique, sans migration.
 
+# 2026-07-13 — Sale M5.3 : Stripe Checkout réel
+
+- Stripe Checkout derrière le contrat provider v1 et le SDK PHP officiel ;
+- sélection par configuration de site/canal, page de retour Shop récupérable ;
+- signature du corps brut avec tolérance temporelle, rotation et déduplication ;
+- rate-limit webhook, payload expurgé, métriques et reprise idempotente ;
+- secrets exclusivement hors base et aucune donnée de carte persistée.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;

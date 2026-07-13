@@ -81,13 +81,9 @@ final class SaleOnlinePaymentService
             $this->db()->transaction(function () use ($intent, $order, $e): void {
                 $this->db()->run("UPDATE sale_payment_intents SET status='failed',last_provider_status='create_failed',updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?", [(int) $intent['id']]);
                 $this->db()->run("UPDATE sale_payment_attempts SET status='failed',error_code='provider_create_failed',error_message=?,finished_at=CURRENT_TIMESTAMP WHERE payment_intent_id=? AND attempt_number=1", [$this->safeError($e->getMessage()), (int) $intent['id']]);
-                $this->db()->run("UPDATE sale_orders SET payment_status='failed',updated_at=CURRENT_TIMESTAMP WHERE id=?", [(int) $order['id']]);
-                if ($order['source_cart_id'] !== null) {
-                    $this->inventory->releaseCartReservations((int) $order['source_cart_id'], 'online payment provider creation failed');
-                }
-                if ((string) $order['status'] === 'pending_payment') {
-                    $this->states->transition('order', (int) $order['id'], 'cancelled', null, 'online payment provider creation failed');
-                }
+                // Une panne réseau à la création reste récupérable : la commande,
+                // les données de checkout et la réservation sont conservées.
+                $this->db()->run("UPDATE sale_orders SET payment_status='pending',updated_at=CURRENT_TIMESTAMP WHERE id=?", [(int) $order['id']]);
             });
             $this->metric((int) $order['site_id'], 'payment.intent.create_failed', 'critical', (int) $intent['id'], ['provider' => $provider->key()]);
             throw new SalePaymentException('sale.payment_provider_failed');
@@ -306,6 +302,7 @@ final class SaleOnlinePaymentService
                 'amount_minor' => 0, 'currency' => (string) $intent['currency'], 'provider_transaction_id' => '', 'data' => ['status' => 'expired'],
             ]));
         }
+        $this->db()->run("UPDATE sale_payment_webhook_events SET payload_json='{}' WHERE retain_until<=CURRENT_TIMESTAMP AND payload_json<>'{}'");
         return count($intents);
     }
 
@@ -316,7 +313,24 @@ final class SaleOnlinePaymentService
             'metrics' => $this->db()->all('SELECT metric_key,severity,COUNT(*) AS count,MAX(created_at) AS last_seen_at FROM sale_payment_observability WHERE site_id=? GROUP BY metric_key,severity ORDER BY metric_key', [$siteId]),
             'alerts' => $this->db()->all("SELECT * FROM sale_payment_observability WHERE site_id=? AND severity IN ('warning','critical') ORDER BY id DESC LIMIT 50", [$siteId]),
             'recent_reconciliations' => $this->db()->all('SELECT * FROM sale_payment_reconciliation_runs WHERE site_id=? ORDER BY id DESC LIMIT 50', [$siteId]),
+            'webhook_events' => $this->db()->all("SELECT w.id,w.provider_key,w.provider_event_id,w.event_type,w.processing_status,w.error_code,w.received_at,w.processed_at,w.retain_until,w.payload_json,
+                CAST((julianday('now')-julianday(w.received_at))*86400 AS INTEGER) AS age_seconds,i.id AS payment_intent_id,o.order_number
+                FROM sale_payment_webhook_events w LEFT JOIN sale_payment_intents i ON i.provider_key=w.provider_key AND i.intent_reference=w.provider_reference
+                LEFT JOIN sale_orders o ON o.id=i.order_id WHERE w.site_id=? ORDER BY w.id DESC LIMIT 100",[$siteId]),
         ];
+    }
+
+    /** @return array<string,mixed> */
+    public function retryWebhook(int $siteId, int $eventId): array
+    {
+        $row=$this->db()->one('SELECT w.*,i.id AS intent_id FROM sale_payment_webhook_events w LEFT JOIN sale_payment_intents i ON i.provider_key=w.provider_key AND i.intent_reference=w.provider_reference WHERE w.site_id=? AND w.id=?',[$siteId,$eventId]);
+        if($row===null||$row['intent_id']===null) throw new SalePaymentException('sale.payment_webhook_intent_not_found');
+        if(in_array((string)$row['processing_status'],['processed','ignored_out_of_order'],true)) return ['processed'=>true,'replayed'=>true,'event_id'=>$row['provider_event_id']];
+        $event=json_decode((string)$row['payload_json'],true); if(!is_array($event)||$event===[]) throw new SalePaymentException('sale.payment_webhook_payload_unavailable');
+        $intent=$this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?',[(int)$row['intent_id']])??throw new SalePaymentException('sale.payment_intent_not_found');
+        $result=$this->db()->transaction(function()use($event,$intent,$eventId){$result=$this->applyProviderEvent($intent,$event);$this->db()->run("UPDATE sale_payment_webhook_events SET processing_status='processed',error_code=NULL,processed_at=CURRENT_TIMESTAMP WHERE id=?",[$eventId]);return $result;});
+        $this->metric($siteId,'payment.webhook.retried','info',(int)$intent['id'],['event_id'=>$row['provider_event_id']]);
+        return ['processed'=>true,'replayed'=>false,'event_id'=>$row['provider_event_id']]+$result;
     }
 
     /** @param array<string,mixed> $filters @return list<array<string,mixed>> */

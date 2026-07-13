@@ -332,6 +332,7 @@ final class PublicSaleApiHandler
             $service = $this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable');
             $result = $service->processWebhook(strtolower(trim($provider)), $this->request->rawBody(), [
                 'x-sale-signature' => (string) ($this->request->header('X-Sale-Signature') ?? ''),
+                'stripe-signature' => (string) ($this->request->header('Stripe-Signature') ?? ''),
             ]);
             return $this->json($result, 'public.sale.payment.webhook.v1', $site, $languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }

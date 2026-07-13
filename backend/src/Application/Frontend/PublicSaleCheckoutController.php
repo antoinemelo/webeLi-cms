@@ -49,6 +49,19 @@ final class PublicSaleCheckoutController
         return Response::html($html, 200, ['Cache-Control' => 'no-store, private', 'X-Robots-Tag' => 'noindex,nofollow']);
     }
 
+    public function confirmation(): Response
+    {
+        $provider = preg_match('/^[a-z0-9_-]+$/', (string)($this->request->query['provider'] ?? '')) === 1 ? (string)$this->request->query['provider'] : '';
+        $reference = preg_match('/^[A-Za-z0-9_-]{6,255}$/', (string)($this->request->query['reference'] ?? '')) === 1 ? (string)$this->request->query['reference'] : '';
+        $lang = strtolower((string)($this->request->query['lang'] ?? 'fr')) === 'en' ? 'en' : 'fr';
+        $basePath = rtrim((string)\app_base_path(), '/');
+        $e = static fn(string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $title = $lang === 'en' ? 'Payment confirmation' : 'Confirmation du paiement';
+        $waiting = $lang === 'en' ? 'Checking the server confirmation…' : 'Vérification de la confirmation serveur…';
+        $html='<!doctype html><html lang="'.$lang.'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'.$e($title).'</title><link rel="stylesheet" href="'.$e($basePath.'/frontend/theme-default/assets/css/checkout.css').'"></head><body><main class="guest-checkout" data-payment-return data-base-path="'.$e($basePath).'" data-provider="'.$e($provider).'" data-reference="'.$e($reference).'" data-lang="'.$lang.'"><h1>'.$e($title).'</h1><p aria-live="polite" role="status" data-payment-return-state>'.$e($waiting).'</p><a href="'.$e($basePath.'/shop').'">'.($lang==='en'?'Back to shop':'Retour à la boutique').'</a></main><script src="'.$e($basePath.'/frontend/theme-default/assets/js/payment-return.js').'" defer></script></body></html>';
+        return Response::html($html,200,['Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex,nofollow']);
+    }
+
     private function input(string $name, string $label, bool $required = false, string $type = 'text', string $value = ''): string
     {
         $e = static fn(string $text): string => htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

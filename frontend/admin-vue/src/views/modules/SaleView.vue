@@ -66,6 +66,7 @@ const selectedOrder = ref<Order | null>(null);
 const orderPayments = ref<Row[]>([]);
 const orderEvents = ref<Row[]>([]);
 const paymentSessions = ref<PaymentSession[]>([]);
+const paymentWebhookEvents = ref<Row[]>([]);
 const selectedPayment = ref<PaymentSession | null>(null);
 const paymentSearch = ref('');
 const paymentFilter = ref({ status: '', provider: '' });
@@ -77,6 +78,7 @@ const proofAssetId = ref<number | null>(null);
 const manualProvider = ref('manual_card');
 const channels = ref<Channel[]>([]);
 const paymentMethods = ref<Row[]>([]);
+const providerStatus = ref<Row | null>(null);
 const fulfillmentMethods = ref<Row[]>([]);
 const sessions = ref<Row[]>([]);
 const paymentAmount = ref(0);
@@ -223,25 +225,27 @@ async function loadOrders(): Promise<void> {
 async function loadSettings(): Promise<void> {
   const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse] = await Promise.all([
     adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
-    adminApi.get<{ payment_methods: Row[] }>('/sale/payment-methods'),
+    adminApi.get<{ payment_methods: Row[]; provider_status?: Row }>('/sale/payment-methods'),
     adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions'),
     adminApi.get<{ methods: Row[] }>('/sale/fulfillment')
   ]);
   channels.value = channelResponse.data.channels || [];
   paymentMethods.value = methodResponse.data.payment_methods || [];
+  providerStatus.value = methodResponse.data.provider_status || null;
   sessions.value = sessionResponse.data.sessions || [];
   fulfillmentMethods.value = fulfillmentResponse.data.methods || [];
 }
 
 async function loadPayments(): Promise<void> {
-  const response = await adminApi.get<{ payment_sessions: PaymentSession[] }>('/sale/payments', {
+  const [response, observability] = await Promise.all([adminApi.get<{ payment_sessions: PaymentSession[] }>('/sale/payments', {
     q: paymentSearch.value,
     status: paymentFilter.value.status,
     provider: paymentFilter.value.provider,
     sort: paymentSort.value,
     limit: 100
-  });
+  }), adminApi.get<{ webhook_events?: Row[] }>('/sale/payments/observability')]);
   paymentSessions.value = response.data.payment_sessions || [];
+  paymentWebhookEvents.value = observability.data.webhook_events || [];
   if (selectedPayment.value && !paymentSessions.value.some((payment) => payment.id === selectedPayment.value?.id)) selectedPayment.value = null;
   if (!selectedPayment.value && paymentSessions.value[0]) await selectPayment(paymentSessions.value[0]);
 }
@@ -257,6 +261,7 @@ async function selectPayment(payment: PaymentSession): Promise<void> {
 function applyPaymentFilters(): void { void loadPayments(); }
 function clearPaymentFilters(): void { paymentSearch.value = ''; paymentFilter.value = { status: '', provider: '' }; paymentSort.value = ''; void loadPayments(); }
 function showBankQueue(): void { paymentFilter.value = { status: 'requires_payment', provider: 'bank_transfer' }; paymentSort.value = 'oldest'; void loadPayments(); }
+async function retryWebhook(event: Row): Promise<void> { saving.value=true;error.value='';try{await adminApi.post(`/sale/payment-webhooks/${event.id}/retry`,{});await loadPayments();}catch(err){error.value=apiErrorMessage(err);}finally{saving.value=false;} }
 async function confirmSelectedPayment(): Promise<void> {
   if (!selectedPayment.value?.id || confirmAmount.value < 1) return;
   saving.value = true; error.value = ''; notice.value = '';
@@ -733,6 +738,17 @@ onMounted(load);
           <small>{{ shortDate(event.created_at) }}</small>
         </div>
       </aside>
+      <section class="sale-admin__section">
+        <h2>{{ t('sale.payments.webhookQueue') }}</h2>
+        <div v-if="!paymentWebhookEvents.length" class="text-muted">{{ t('common.none') }}</div>
+        <div v-for="event in paymentWebhookEvents" :key="String(event.id)" class="sale-admin__list-row">
+          <span>{{ event.provider_key }} · {{ event.event_type }} <small>{{ event.order_number || '—' }}</small></span>
+          <b>{{ statusLabel(String(event.processing_status)) }}</b>
+          <small>{{ Math.max(0, Number(event.age_seconds || 0)) }} s · {{ event.error_code || '—' }}</small>
+          <button v-if="['failed','received'].includes(String(event.processing_status))" class="btn btn-sm btn-outline-primary" type="button" :disabled="saving" @click="retryWebhook(event)">{{ t('sale.payments.retryWebhook') }}</button>
+          <details><summary>{{ t('sale.payments.technical') }}</summary><pre>{{ jsonText(event.payload_json ? JSON.parse(String(event.payload_json)) : {}) }}</pre></details>
+        </div>
+      </section>
     </section>
 
     <section v-if="activeTab === 'payments'" class="sale-admin__panel sale-admin__orders">
@@ -805,6 +821,12 @@ onMounted(load);
         </section>
         <section class="sale-admin__section">
           <h2>{{ t('sale.settings.paymentMethods') }}</h2>
+          <div v-if="providerStatus" class="alert" :class="providerStatus.connected ? 'alert-success' : 'alert-warning'">
+            <b>Stripe Checkout · {{ String(providerStatus.environment).toUpperCase() }}</b>
+            <p>{{ providerStatus.connected ? t('sale.payments.providerConnected') : t('sale.payments.providerNotConnected') }}</p>
+            <small>{{ t('sale.payments.webhookUrl') }}: <code>{{ providerStatus.webhook_url }}</code></small>
+            <p><small>{{ t('sale.payments.secretMasked') }} · {{ t('sale.payments.lastVerification') }}: {{ providerStatus.last_verified_at || '—' }}</small></p>
+          </div>
           <div v-for="method in paymentMethods" :key="String(method.id)" class="sale-admin__list-row">
             <span>{{ method.name }}</span>
             <b>{{ method.method_type }}</b>

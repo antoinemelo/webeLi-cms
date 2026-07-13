@@ -11,11 +11,14 @@ final class PaymentProviderRegistry
 {
     /** @var array<string,PaymentProvider> */
     private array $providers = [];
+    /** @var array<string,mixed> */
+    private array $paymentConfig = [];
 
     /** @param list<PaymentProvider>|null $providers */
-    public function __construct(?array $providers = null, ?Database $database = null, ?string $sandboxSecret = null, ?string $environment = null)
+    public function __construct(?array $providers = null, ?Database $database = null, ?string $sandboxSecret = null, ?string $environment = null, array $paymentConfig = [])
     {
-        foreach ($providers ?? $this->defaultProviders($database, $sandboxSecret, $environment) as $provider) {
+        $this->paymentConfig = $paymentConfig;
+        foreach ($providers ?? $this->defaultProviders($database, $sandboxSecret, $environment, $paymentConfig) as $provider) {
             $this->providers[$provider->key()] = $provider;
         }
     }
@@ -49,6 +52,17 @@ final class PaymentProviderRegistry
         return array_keys($this->providers);
     }
 
+    /** @return array<string,mixed> */
+    public function realProviderStatus(): array
+    {
+        $stripe=is_array($this->paymentConfig['stripe']??null)?$this->paymentConfig['stripe']:[];
+        $selected=($this->paymentConfig['real_provider']??'')==='stripe_checkout';
+        return ['provider'=>'stripe_checkout','selected'=>$selected,'environment'=>(string)($stripe['environment']??'test'),
+            'connected'=>in_array('stripe_checkout',$this->keys(),true),'sdk_available'=>class_exists(\Stripe\StripeClient::class),
+            'secret_configured'=>trim((string)($stripe['secret_key']??''))!=='','webhook_secret_configured'=>($stripe['webhook_secrets']??[])!==[],
+            'last_verified_at'=>null,'webhook_url'=>rtrim((string)($this->paymentConfig['public_base_url']??''),'/').'/api/v1/sale/payments/webhooks/stripe_checkout'];
+    }
+
     public function normalize(string $key): string
     {
         $key = strtolower(trim($key));
@@ -61,7 +75,7 @@ final class PaymentProviderRegistry
     }
 
     /** @return list<PaymentProvider> */
-    private function defaultProviders(?Database $database, ?string $sandboxSecret, ?string $environment): array
+    private function defaultProviders(?Database $database, ?string $sandboxSecret, ?string $environment, array $paymentConfig): array
     {
         $providers = [
             new LocalPaymentProvider('cash'),
@@ -74,6 +88,17 @@ final class PaymentProviderRegistry
             $secret = trim((string) ($sandboxSecret ?? getenv('SALE_SANDBOX_WEBHOOK_SECRET') ?: 'sandbox-development-secret-change-me'));
             $providers[] = new SandboxPaymentProvider($database, $secret);
             $providers[] = new DeterministicTestPaymentProvider($database, hash('sha256', $secret . '|deterministic-test'));
+        }
+        $stripe = is_array($paymentConfig['stripe'] ?? null) ? $paymentConfig['stripe'] : [];
+        if (($paymentConfig['real_provider'] ?? '') === 'stripe_checkout' && ($stripe['enabled'] ?? false) === true
+            && trim((string)($stripe['secret_key'] ?? '')) !== '' && ($stripe['webhook_secrets'] ?? []) !== []
+            && trim((string)($paymentConfig['public_base_url']??'')) !== ''
+            && class_exists(\Stripe\StripeClient::class)) {
+            $providers[] = new StripeCheckoutPaymentProvider(
+                new OfficialStripeGateway((string)$stripe['secret_key']), array_values(array_map('strval',$stripe['webhook_secrets'])),
+                (string)($paymentConfig['public_base_url']??''), (string)($stripe['environment']??'test'),
+                max(1,(int)($stripe['signature_tolerance']??300)), (string)($stripe['api_version']??'')
+            );
         }
         return $providers;
     }
