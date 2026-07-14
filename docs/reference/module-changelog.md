@@ -142,3 +142,12 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - retours orientés vers le stock vendable, la quarantaine ou le non-vendable ;
 - file Opérations responsive et suivi client Shop des retraits, colis et fulfillments partiels ;
 - schéma canonique reconstruit from scratch uniquement, sans aucune migration.
+
+# 2026-07-14 — Sale M6.5 : reconstruction et réconciliation du stock
+
+- diagnostic dry-run par défaut comparant caches, journal, réservations, fulfillments, retours, transferts et projection Business/Shop ;
+- rapport persistant avec sévérité, causes probables, impact, références et aperçu avant/après ;
+- réparation jamais automatique, permission et motif obligatoires, sauvegarde Sale/Business avant écriture et preuve par correction ;
+- comptage physique externe traduit en mouvement correctif, sans modification du journal immuable ;
+- administration autonome avec téléchargement du rapport, progression, historique et reprise ciblée des échecs ;
+- scénario complet et gate M6.5 machine-readable, base vide et restauration vérifiées depuis les schémas canoniques actuels, sans migration.

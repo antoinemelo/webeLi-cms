@@ -7,7 +7,7 @@ require_once __DIR__ . '/../bootstrap/runtime.php';
 $config = require __DIR__ . '/../bootstrap/config.php';
 $cmd = $argv[1] ?? 'help';
 
-$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:reservations [site_id] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
+$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | inventory:reconcile [--site=1] [--repair --reason=<texte>] [--only=1,2] [--correction=id:quantite] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:reservations [site_id] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
 if (in_array($cmd, ['help', '--help', '-h'], true)) {
     echo $commandList . "\n";
     exit(0);
@@ -153,6 +153,23 @@ switch ($cmd) {
         $siteId = max(1, (int) ($argv[2] ?? 1));
         echo json_encode($services->saleOnlinePayments()->reconcile($siteId, null, null, 'scheduled'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
         break;
+
+    case 'inventory:reconcile':
+        $options=['site'=>1,'repair'=>false,'reason'=>null,'only'=>[],'corrections'=>[],'output'=>null];
+        foreach(array_slice($argv,2) as $arg){
+            if($arg==='--repair'){$options['repair']=true;continue;}
+            if(str_starts_with($arg,'--site=')){$options['site']=max(1,(int)substr($arg,7));continue;}
+            if(str_starts_with($arg,'--reason=')){$options['reason']=substr($arg,9);continue;}
+            if(str_starts_with($arg,'--only=')){$options['only']=array_values(array_filter(array_map('intval',explode(',',substr($arg,7)))));continue;}
+            if(str_starts_with($arg,'--correction=')){[$itemId,$target]=array_pad(explode(':',substr($arg,13),2),2,null);$options['corrections'][]=['inventory_item_id'=>(int)$itemId,'target_on_hand_quantity'=>(int)$target];continue;}
+            if(str_starts_with($arg,'--output=')){$options['output']=substr($arg,9);continue;}
+            fwrite(STDERR,"Option inconnue pour inventory:reconcile: {$arg}\n");exit(2);
+        }
+        if(!$options['repair']&&($options['reason']!==null||$options['corrections']!==[])){fwrite(STDERR,"--reason et --correction exigent --repair\n");exit(2);}
+        $report=$services->saleInventoryReconciliation()->run($options['site'],$options['repair'],null,$options['reason'],$options['corrections'],$options['only']);
+        $json=json_encode($report,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";
+        if($options['output']!==null){$directory=dirname((string)$options['output']);if(!is_dir($directory)&&!mkdir($directory,0770,true)&&!is_dir($directory)){fwrite(STDERR,"Impossible de créer {$directory}\n");exit(1);}file_put_contents((string)$options['output'],$json);echo "Rapport: {$options['output']}\n";}else{echo $json;}
+        exit(($report['remaining_differences_count']??0)>0?1:0);
 
     case 'payments:retry':
         App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);

@@ -1276,13 +1276,25 @@ final class SaleAdminApiController
 
     public function reconcileInventory(): Response
     {
-        [$site,$languageCode]=$this->authorize('sale.stock.manage');
+        [$site,$languageCode]=$this->authorize('sale.stock.read');
         try {
             if ($this->inventoryReconciliation===null) throw new SaleBusinessException('sale.inventory_reconciliation_unavailable');
             $payload=$this->payload();
-            $report=$this->inventoryReconciliation->run((int)$site['id'],($payload['repair_derived']??true)===true,$this->actorId());
+            $report=$this->inventoryReconciliation->run((int)$site['id'],false,$this->actorId(),null,[],is_array($payload['only_inventory_item_ids']??null)?$payload['only_inventory_item_ids']:[]);
             return $this->ok(['reconciliation'=>$report],'admin.sale.stock.reconciliation.v1',$site,$languageCode,201);
         } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function inventoryReconciliationHistory():Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.stock.read');
+        return $this->ok(['runs'=>$this->inventoryReconciliation?->history((int)$site['id'],(int)($this->request->query['limit']??20))??[]],'admin.sale.stock.reconciliation.history.v1',$site,$languageCode);
+    }
+
+    public function repairInventoryReconciliation():Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.inventory.repair');
+        try{$payload=$this->payload();if($this->inventoryReconciliation===null)throw new SaleBusinessException('sale.inventory_reconciliation_unavailable');$report=$this->inventoryReconciliation->run((int)$site['id'],true,$this->actorId(),(string)($payload['reason']??''),is_array($payload['corrections']??null)?$payload['corrections']:[],is_array($payload['only_inventory_item_ids']??null)?$payload['only_inventory_item_ids']:[]);return $this->ok(['reconciliation'=>$report],'admin.sale.stock.reconciliation.repair.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function returns(): Response

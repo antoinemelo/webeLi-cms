@@ -68,7 +68,7 @@ try {
         'sale.pos.use', 'sale.pos.manage', 'sale.cash.manage',
         'sale.pos.sessions.open', 'sale.pos.sessions.close', 'sale.pos.discounts.manage',
         'sale.pos.refunds.manage', 'sale.pos.cash.correct', 'sale.pos.receipts.reprint',
-        'sale.stock.read', 'sale.stock.manage', 'sale.reports.read', 'sale.settings.manage',
+        'sale.stock.read', 'sale.stock.manage', 'sale.inventory.repair', 'sale.reports.read', 'sale.settings.manage',
     ];
     foreach ($permissions as $index => $permission) {
         $iam->run('INSERT INTO iam_permissions(id, permission_key, name) VALUES(?, ?, ?)', [$index + 1, $permission, $permission]);
@@ -86,7 +86,7 @@ try {
     $payments = new SalePaymentRepository($saleConnection);
     $inventoryRepository = new SaleInventoryRepository($saleConnection);
     $inventory = new SaleInventoryService($inventoryRepository);
-    $inventoryReconciliation = new SaleInventoryReconciliationService($saleConnection, new BusinessDatabaseConnection($businessPath));
+    $inventoryReconciliation = new SaleInventoryReconciliationService($saleConnection, new BusinessDatabaseConnection($businessPath), $inventory, $saleDir.'/reconciliation-backups');
     $events = new SaleEventService(new SaleEventRepository($saleConnection));
     $idempotency = new SaleIdempotencyService(new SaleIdempotencyRepository($saleConnection));
     $catalogSnapshots = new SaleCatalogSnapshotService($saleConnection, new BusinessSellableCatalogAdapter($sellables));
@@ -178,6 +178,8 @@ try {
         ['GET', '/admin/api/sale/stock/items'],
         ['POST', '/admin/api/sale/stock/transfers'],
         ['POST', '/admin/api/sale/stock/reconciliation'],
+        ['GET', '/admin/api/sale/stock/reconciliation'],
+        ['POST', '/admin/api/sale/stock/reconciliation/repair'],
         ['GET', '/admin/api/sale/reports/daily'],
         ['GET', '/admin/api/sale/reports/channels'],
         ['GET', '/admin/api/sale/reports/payment-methods'],
@@ -332,7 +334,14 @@ try {
     $reconciliationResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reconciliation', [], ['repair_derived' => true])->reconcileInventory();
     $h->assertSame(201, $reconciliationResponse->status(), 'sale admin can run inventory reconciliation');
     $reconciliationPayload = json_decode($reconciliationResponse->body(), true);
-    $h->assertSame('sale.sqlite', $reconciliationPayload['data']['reconciliation']['source_of_truth'] ?? null, 'inventory reconciliation identifies the transactional source');
+    $h->assertSame('sale_stock_movements', $reconciliationPayload['data']['reconciliation']['source_of_truth'] ?? null, 'inventory reconciliation identifies the immutable transactional source');
+    $h->assertSame('dry_run', $reconciliationPayload['data']['reconciliation']['mode'] ?? null, 'legacy repair input cannot bypass the dry-run endpoint');
+    $historyResponse=$controllerFor(1,'GET','/admin/api/sale/stock/reconciliation',['limit'=>5])->inventoryReconciliationHistory();
+    $h->assertSame(200,$historyResponse->status(),'sale admin can review reconciliation history without database access');
+    $repairResponse=$controllerFor(1,'POST','/admin/api/sale/stock/reconciliation/repair',[],['reason'=>'API controlled reconstruction'])->repairInventoryReconciliation();
+    $h->assertSame(201,$repairResponse->status(),'separately authorized repair creates its backup and proof');
+    $repairPayload=json_decode($repairResponse->body(),true);
+    $h->assertSame(0,(int)($repairPayload['data']['reconciliation']['remaining_differences_count']??-1),'API repair converges all remaining differences');
 
     $posBootstrapResponse = $controllerFor(1, 'GET', '/admin/api/sale/pos/bootstrap')->posBootstrap();
     $h->assertSame(200, $posBootstrapResponse->status(), 'sale POS bootstrap is available');

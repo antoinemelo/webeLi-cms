@@ -1173,11 +1173,19 @@ BEFORE DELETE ON sale_stock_movements BEGIN SELECT RAISE(ABORT,'sale.stock_movem
 
 CREATE TABLE IF NOT EXISTS sale_inventory_reconciliation_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('running','clean','differences','failed')),
+    mode TEXT NOT NULL DEFAULT 'dry_run' CHECK(mode IN ('dry_run','repair')),
+    status TEXT NOT NULL CHECK(status IN ('running','clean','differences','repaired','partially_repaired','failed')),
     items_checked INTEGER NOT NULL DEFAULT 0, differences_count INTEGER NOT NULL DEFAULT 0,
-    repaired_count INTEGER NOT NULL DEFAULT 0, report_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(report_json)),
+    remaining_differences_count INTEGER NOT NULL DEFAULT 0,
+    repaired_count INTEGER NOT NULL DEFAULT 0,
+    reason TEXT,
+    backup_path TEXT,
+    report_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(report_json)),
     started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT,
-    created_by_iam_user_id INTEGER, CHECK(site_id>0)
+    created_by_iam_user_id INTEGER,
+    CHECK(site_id>0),
+    CHECK(mode='dry_run' OR trim(COALESCE(reason,''))<>''),
+    CHECK(mode='dry_run' OR trim(COALESCE(backup_path,''))<>'')
 );
 CREATE INDEX IF NOT EXISTS idx_sale_inventory_reconciliation_runs_site ON sale_inventory_reconciliation_runs(site_id,started_at DESC);
 

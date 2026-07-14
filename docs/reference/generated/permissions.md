@@ -120,6 +120,8 @@ generated: true
 | `sale.cash.manage` |
 | `sale.channels.manage` |
 | `sale.customer_accounts.manage` |
+| `sale.fulfillment.manage` |
+| `sale.inventory.approve` |
 | `sale.manage` |
 | `sale.orders.manage` |
 | `sale.orders.read` |
@@ -137,6 +139,7 @@ generated: true
 | `sale.stock.export` |
 | `sale.stock.manage` |
 | `sale.stock.read` |
+| `sale.transfers.manage` |
 | `search.keyword.create` |
 | `search.section.create` |
 | `security.cors.manage` |

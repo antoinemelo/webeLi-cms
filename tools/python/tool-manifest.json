@@ -68,6 +68,7 @@
         "docs/development/architecture/business-module-plan.md",
         "docs/development/architecture/business-pim-lite-final-review.md",
         "docs/development/architecture/sale-internal-payments-returns-timeline.md",
+        "docs/development/architecture/sale-inventory-availability.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
         "docs/development/architecture/sale-state-machines-snapshots.md",
@@ -96,6 +97,7 @@
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/evidence-index.md",
         "docs/evaluation/machine-readable/cms-evaluation-manifest.json",
+        "docs/evaluation/machine-readable/sale-stock-reconstruction-m6.json",
         "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/machine-readable/validators.json",
         "docs/evaluation/release-audit-policy.md",
@@ -198,6 +200,7 @@
         "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/reservation_availability_gate.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
         "tools/python/tests/test_business_module_smoke.py",
@@ -407,6 +410,7 @@
         "tools/python/commands/export.py",
         "tools/python/commands/init.py",
         "tools/python/commands/instance.py",
+        "tools/python/commands/inventory.py",
         "tools/python/commands/migrate.py",
         "tools/python/commands/outbox.py",
         "tools/python/commands/qualify.py",
@@ -595,6 +599,31 @@
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
       "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/inventory.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.release.txt",
+        "TREE.txt",
+        "docs/development/architecture/business-module-plan.md",
+        "docs/development/python-tooling/cli.md",
+        "docs/evaluation/business-crm-review.md",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/existing-database-update.md",
+        "docs/operations/local-update.md",
+        "docs/operations/module-migrations.md",
+        "tools/python/archive/consolidation_inventory.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -1863,7 +1892,8 @@
         "docs/evaluation/bundle-stock-strategies.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_bundle_stock_strategy_gate.py"
+        "tools/python/tests/test_bundle_stock_strategy_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2010,6 +2040,23 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/stock_reconstruction_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_stock_reconstruction_gate.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/__init__.py",
       "category": "test",
       "public": false,
@@ -2116,7 +2163,8 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
-        "docs/evaluation/machine-readable/tests.json"
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
@@ -2502,6 +2550,20 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_stock_reconstruction_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_test_suite_structure.py",
       "category": "test",
       "public": false,
@@ -2801,6 +2863,7 @@
         "docs/operations/module-migrations.md",
         "docs/reference/generated/validators.md",
         "tools/python/archive/consolidation_inventory.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],

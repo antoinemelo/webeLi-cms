@@ -15,6 +15,7 @@ source_paths:
   - backend/src/Modules/Sale/Services/SaleInventoryReconciliationService.php
   - tools/php/tests/unit/sale_inventory_service_test.php
   - tools/php/tests/unit/sale_inventory_reconciliation_test.php
+  - tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php
 owners:
   - sale
   - business
@@ -65,6 +66,18 @@ Pour un paiement en ligne, la commande `pending_payment` conserve la réservatio
 
 ## Projection et réconciliation
 
-`SaleInventoryReconciliationService` compare pour chaque item le réservé stocké avec les réservations actives et le physique avec la somme du journal. Il peut réparer uniquement les valeurs dérivées, publie un rapport persistant dans `sale_inventory_reconciliation_runs`, reconstruit la projection Business puis invalide les projections Storefront concernées.
+`SaleInventoryReconciliationService` compare pour chaque item le cache matérialisé, la somme du journal, sa chaîne de soldes, toutes les réservations et leur part active, les fulfillments, retours et transferts, puis la projection Business utilisée par Shop. Le diagnostic est toujours un **dry-run par défaut** : il publie un rapport persistant dans `sale_inventory_reconciliation_runs`, mais ne modifie ni stock ni projection.
 
-L'API `POST /admin/api/sale/stock/reconciliation` exécute cette tâche. `POST /admin/api/sale/stock/transfers` réalise un transfert idempotent. Une seconde réconciliation sans mutation doit produire zéro écart.
+Une réparation exige la permission distincte `sale.inventory.repair`, un motif opérateur et une sauvegarde préalable de `sale.sqlite` et `business.sqlite`. Elle reconstruit les caches dérivés depuis le journal immuable et les réservations actives. Si un comptage physique externe impose une autre quantité, elle écrit un mouvement `correction` traçable ; elle ne réécrit jamais le journal. Chaque correction produit une preuve avant/après et le service relance l'analyse pour exposer les écarts restants.
+
+Les commandes reproductibles sont :
+
+```bash
+python3 tools/cms.py inventory reconcile --site 1
+python3 tools/cms.py inventory reconcile --site 1 --repair --reason "Inventaire physique validé"
+python3 tools/cms.py inventory reconcile --site 1 --repair --reason "Comptage validé" --correction 42:17
+```
+
+L'API de diagnostic est `POST /admin/api/sale/stock/reconciliation`; l'historique est accessible en `GET` sur le même chemin. La réparation contrôlée utilise `POST /admin/api/sale/stock/reconciliation/repair`. L'administration présente les sévérités, causes probables, valeurs avant/après, liens opérationnels, téléchargement JSON et reprise ciblée des seuls items encore en échec.
+
+La preuve M6.5 reconstruit une base vide depuis les schémas canoniques actuels, déroule stock initial, réservation, paiement, vente, fulfillment partiel, retour, correction, transfert et expiration, puis restaure les sauvegardes dans de nouveaux fichiers SQLite. Aucune migration n'est requise ni planifiée.

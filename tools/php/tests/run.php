@@ -43,6 +43,7 @@ $tests = [
     'unit/sale_inventory_service_test.php',
     'unit/sale_reservation_lifecycle_test.php',
     'unit/sale_inventory_reconciliation_test.php',
+    'unit/sale_stock_reconstruction_scenario_test.php',
     'unit/sale_domain_workflows_test.php',
     'unit/sale_internal_sales_test.php',
     'unit/sale_online_payment_workflow_test.php',

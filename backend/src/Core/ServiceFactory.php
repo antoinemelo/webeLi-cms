@@ -772,7 +772,8 @@ final class ServiceFactory
     {
         return $this->once('sale_inventory_reconciliation', fn() => new SaleInventoryReconciliationService(
             $this->saleDatabaseConnection(),
-            $this->businessDatabaseConnection()
+            $this->businessDatabaseConnection(),
+            $this->saleInventory(),
         ));
     }
 

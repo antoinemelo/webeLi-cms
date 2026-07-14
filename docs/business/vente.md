@@ -38,6 +38,7 @@ Les permissions principales sont :
 - `sale.payments.test` pour les scénarios déterministes, disponibles uniquement hors production ;
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
+- `sale.inventory.repair` pour appliquer une reconstruction contrôlée après diagnostic et sauvegarde ;
 - `sale.fulfillment.manage` pour préparer, expédier et remettre une commande ;
 - `sale.transfers.manage` pour piloter un transfert entre emplacements ;
 - `sale.inventory.count` pour saisir un comptage et `sale.inventory.approve` pour valider ses écarts ;
@@ -99,6 +100,8 @@ L’onglet **Opérations** regroupe trois files adaptées au mobile :
 - **Inventaires** : session par emplacement, comptage progressif ou à l’aveugle, sauvegarde ligne par ligne, revue des écarts, puis validation séparée. La validation produit un mouvement `inventory_adjustment` par écart motivé.
 
 Le stock réservé est consommé une seule fois lors de la confirmation commerciale de la commande. La préparation physique ne le débite jamais une seconde fois. Les retours peuvent être remis en stock vendable, en quarantaine ou dans un emplacement non vendable.
+
+Dans **Opérations > Inventaires**, le diagnostic de reconstruction compare le stock affiché au journal immuable, aux réservations, aux opérations logistiques et à la projection Shop. **Lancer l'aperçu** est sans effet de bord. En cas d'écart, l'écran montre sa gravité, sa cause probable, l'impact public et les valeurs avant/après. La réparation n'est proposée qu'à un opérateur autorisé ; elle exige un motif, crée automatiquement une sauvegarde Sale et Business, puis fournit une preuve téléchargeable. Une quantité physique constatée différente devient un mouvement correctif explicite et non une modification silencieuse du total.
 
 Dans le compte Shop, le client retrouve le statut métier, les fulfillments partiels, le lieu et le code de retrait, ainsi que la référence de suivi disponible.
 

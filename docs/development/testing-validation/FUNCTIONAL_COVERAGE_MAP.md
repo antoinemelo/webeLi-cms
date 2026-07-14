@@ -35,6 +35,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Ledger de stock | quantités Business/Sale dispersées | ledger Sale + gate PHP/Python/Playwright | mouvements immuables, reconstruction, seed d’ouverture, contrat Shop, recherche scanner, assistant, erreurs et mobile | ajouté pour M6.1 |
 | Réservations et disponibilité | réservation implicite sans politique de canal | concurrence PHP + gate Python + API/Playwright | déclencheurs configurables, TTL borné, expiration idempotente, backorder explicite, reprise Shop et libération opérateur auditée | ajouté pour M6.2 |
 | Bundles et stock composé | modes historiques ambigus et stock du parent | tests Business/Sale + gate Python + UX opérateur | trois stratégies, ratios imbriqués, facteur limitant, cycles, concurrence, multi-location, consommation et retours | ajouté pour M6.3 |
+| Reconstruction du stock | réparation historique implicite et comparaison partielle | scénario PHP + gate Python + UX opérateur | dry-run, journal/cache/réservations/logistique/Shop, sauvegarde-restauration, correction prouvée et reprise ciblée | ajouté pour M6.5 |
 
 ## Tests ajoutés
 
@@ -58,6 +59,9 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/php/tests/unit/sale_inventory_service_test.php` (scénarios bundle)
 - `tools/php/tests/unit/sale_internal_sales_test.php` (retours bundle)
 - `tools/python/tests/test_bundle_stock_strategy_gate.py`
+- `tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php`
+- `tools/python/tests/test_stock_reconstruction_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-stock-reconstruction.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

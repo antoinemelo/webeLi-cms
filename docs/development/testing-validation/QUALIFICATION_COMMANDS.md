@@ -68,6 +68,7 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Smoke HTTP / E2E | Playwright isolé et installation neuve | `tools/cms.py smoke` |
 | Gate omnicanale storefront/POS | Playwright isolé, preuve JSON validée | commande ciblée disponible depuis le dépôt source |
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
+| Reconstruction et réconciliation stock M6.5 | `stock-reconstruction-gate` + scénario PHP + sauvegarde/restauration | `tools/python/qualification/stock_reconstruction_gate.py` et diagnostic CLI |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
 | Dépendances | `composer audit --locked`, `npm audit --audit-level=high` | audit externe à l’archive |
@@ -111,6 +112,17 @@ python3 tools/cms.py e2e --use-built-assets --omnichannel-only
 ```
 
 Le détail des deux parcours, des comparaisons croisées et des mutations négatives est documenté dans [Gate E2E omnicanale storefront et POS](OMNICHANNEL_E2E_GATE.md).
+
+## Gate M6.5 reconstruction du stock
+
+La porte vérifie le dry-run par défaut, les équations du ledger, les relations réservations/fulfillments/retours/transferts, la cohérence de la projection Business/Shop et la réparation obligatoirement motivée après sauvegarde :
+
+```bash
+python3 tools/python/qualification/stock_reconstruction_gate.py
+python3 tools/cms.py inventory reconcile --site 1
+```
+
+Un diagnostic avec écarts retourne un code non nul afin de bloquer une automatisation. L'option `--repair` n'est jamais implicite et exige `--reason`. Les tests utilisent uniquement des bases temporaires reconstruites depuis `database/modules/*.sql`, puis copient et rouvrent les sauvegardes pour prouver leur restauration sans migration.
 
 ## Cache local
 
