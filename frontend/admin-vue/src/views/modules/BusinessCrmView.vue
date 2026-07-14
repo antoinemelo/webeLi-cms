@@ -5,9 +5,11 @@ import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import { useI18n } from '@/i18n';
 import { useAdminContextStore } from '@/stores/adminContext';
 import BusinessCatalogView from './BusinessCatalogView.vue';
 import BusinessRelationsView from './BusinessRelationsView.vue';
+import BusinessSegmentsPanel from './business/BusinessSegmentsPanel.vue';
 import RelationHeader from './business/RelationHeader.vue';
 import RelationInfoCard from './business/RelationInfoCard.vue';
 import RelationLinkedEntities from './business/RelationLinkedEntities.vue';
@@ -19,7 +21,7 @@ import QuickCreateMemoDrawer from './business/QuickCreateMemoDrawer.vue';
 import QuickCreateRelationDrawer from './business/QuickCreateRelationDrawer.vue';
 import SendMessageDrawer from './business/SendMessageDrawer.vue';
 
-type BusinessTab = 'dashboard' | 'relations' | 'messages' | 'products' | 'offers' | 'settings';
+type BusinessTab = 'dashboard' | 'relations' | 'segments' | 'messages' | 'products' | 'offers' | 'settings';
 type LegacyBusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging';
 type RelationsPanel = 'main' | 'memos';
 type BusinessModal = '' | 'relation' | 'memo' | 'import' | 'export' | 'message' | 'consent' | 'archive' | 'delete';
@@ -33,6 +35,8 @@ type Memo = Record<string, unknown> & { id: number; company_id?: number | null; 
 type MemoShare = Record<string, unknown> & { id: number; share_type?: string; public_label?: string | null; shared_with_iam_user_id?: number | null; expires_at?: string | null; revoked_at?: string | null };
 type MemoComment = Record<string, unknown> & { id: number; author_iam_user_id?: number | null; body: string; created_at?: string };
 type Consent = Record<string, unknown> & { channel: string; consent_status?: string };
+type ConsentEvent = Record<string, unknown> & { id: number; channel: string; consent_status: string; event_type: string; source: string; evidence?: string | null; occurred_at?: string | null; purpose?: string; scope_type?: string; scope_id?: number };
+type ContactPreference = Record<string, unknown> & { preferred_channel?: string | null; contact_window?: string | null; do_not_contact?: boolean; source?: string; note?: string | null };
 type ChannelRow = Record<string, unknown> & { channel: string; channel_value?: string; is_primary?: boolean; is_verified?: boolean };
 type MailingList = Record<string, unknown> & { id: number; name: string; list_key?: string; channel?: string; status?: string; description?: string };
 type MailingMember = Record<string, unknown> & { contact_id: number; display_name?: string; email?: string | null; mobile?: string | null; status?: string };
@@ -62,9 +66,10 @@ const props = withDefaults(defineProps<{
 });
 
 const context = useAdminContextStore();
+const { t } = useI18n();
 const normalizeBusinessTab = (tab?: BusinessTab | LegacyBusinessTab): BusinessTab => {
   if (tab === 'dashboard') return 'dashboard';
-  if (tab === 'products' || tab === 'offers' || tab === 'settings') return tab;
+  if (tab === 'segments' || tab === 'products' || tab === 'offers' || tab === 'settings') return tab;
   if (tab === 'mailing') return 'messages';
   if (tab === 'messaging') return 'messages';
   return 'relations';
@@ -101,6 +106,9 @@ const catalogDashboardMetrics = ref<CatalogDashboardMetric[]>([]);
 
 const canCrmRead = computed(() => context.can('business.crm.read'));
 const canCrmManage = computed(() => context.can('business.crm.manage'));
+const canSegmentRead = computed(() => context.can('business.segment.read'));
+const canConsentRead = computed(() => context.can('business.consent.read'));
+const canConsentManage = computed(() => context.can('business.consent.manage'));
 const canMemoRead = computed(() => context.can('business.memo.read'));
 const canMemoManage = computed(() => context.can('business.memo.manage'));
 const canMemoShare = computed(() => context.can('business.memo.share'));
@@ -111,9 +119,10 @@ const canMessagingAdmin = computed(() => context.can('business.messaging.admin')
 const canCatalogRead = computed(() => context.can('business.catalog.read'));
 const canMessagesAccess = computed(() => canMailingRead.value || canMessagingAdmin.value);
 
-const tabs: Array<{ key: BusinessTab; label: string; permission: () => boolean }> = [
+const tabs: Array<{ key: BusinessTab; label: string; labelKey?: string; permission: () => boolean }> = [
   { key: 'dashboard', label: 'Tableau de bord', permission: () => canCrmRead.value },
   { key: 'relations', label: 'Relations', permission: () => canCrmRead.value || canMemoRead.value },
+  { key: 'segments', label: 'Segments', labelKey: 'business.segments.tab', permission: () => canSegmentRead.value },
   { key: 'products', label: 'Produits', permission: () => canCatalogRead.value },
   { key: 'offers', label: 'Offres', permission: () => canCatalogRead.value },
   { key: 'settings', label: 'Réglages', permission: () => canMessagingAdmin.value },
@@ -134,6 +143,8 @@ const memoComments = ref<MemoComment[]>([]);
 const memoShares = ref<MemoShare[]>([]);
 const contactChannels = ref<ChannelRow[]>([]);
 const contactConsents = ref<Consent[]>([]);
+const consentHistory = ref<ConsentEvent[]>([]);
+const contactPreference = ref<ContactPreference | null>(null);
 const mailingLists = ref<MailingList[]>([]);
 const mailingMembers = ref<MailingMember[]>([]);
 const campaigns = ref<Campaign[]>([]);
@@ -161,6 +172,7 @@ const companyForm = reactive({ id: 0, name: '', status: 'prospect', email: '', p
 const contactForm = reactive({ id: 0, company_id: '', iam_user_id: '', first_name: '', last_name: '', display_name: '', status: 'prospect', preferred_language: '', email: '', phone: '', mobile: '', job_title: '', notes: '' });
 const memoForm = reactive({ id: 0, company_id: '', contact_id: '', title: '', body: '', visibility: 'private', comment: '', share_iam_user_ids: '', public_label: '', public_expires_at: '' });
 const consentForm = reactive<Record<string, { value: string; consent_status: string; evidence: string; is_verified: boolean }>>({});
+const preferenceForm = reactive({ preferred_channel: '', contact_window: '', do_not_contact: false, note: '' });
 const mailingListForm = reactive({ id: 0, name: '', list_key: '', channel: 'email', description: '', status: 'active', member_contact_id: '' });
 const campaignForm = reactive({ id: 0, list_id: '', name: '', channel: 'email', subject: '', body_text: '', scheduled_at: '' });
 const messageTestForm = reactive({ channel: 'email', provider_key: 'email', recipient_value: 'runtime@example.test', subject: 'Test messaging Opérations', body_text: 'Message de test Opérations.', confirm_external_test: false });
@@ -467,6 +479,9 @@ function activityDetail(item: BusinessActivity): string {
     typeof metadata.body_excerpt === 'string' ? metadata.body_excerpt : '',
     typeof metadata.comment_excerpt === 'string' ? metadata.comment_excerpt : '',
     typeof metadata.share_type === 'string' ? metadata.share_type : '',
+    typeof metadata.purpose === 'string' ? metadata.purpose : '',
+    typeof metadata.source === 'string' ? metadata.source : '',
+    typeof metadata.evidence === 'string' ? metadata.evidence : '',
   ].filter(Boolean);
   return bits.join(' · ');
 }
@@ -488,6 +503,9 @@ function resetContactForm(): void {
   Object.assign(contactForm, { id: 0, company_id: '', iam_user_id: '', first_name: '', last_name: '', display_name: '', status: 'prospect', preferred_language: '', email: '', phone: '', mobile: '', job_title: '', notes: '' });
   contactChannels.value = [];
   contactConsents.value = [];
+  consentHistory.value = [];
+  contactPreference.value = null;
+  Object.assign(preferenceForm, { preferred_channel: '', contact_window: '', do_not_contact: false, note: '' });
   Object.keys(consentForm).forEach((key) => delete consentForm[key]);
   Object.assign(quickRelation, { inline_company_name: '', tags: '' });
 }
@@ -1130,7 +1148,7 @@ function openRelationMemos(relation: BusinessRelation): void {
 }
 
 async function openRelationConsent(relation: BusinessRelation): Promise<void> {
-  if (relation.type !== 'contact') return;
+  if (relation.type !== 'contact' || !canConsentRead.value) return;
   await editRelationContact(relation);
   activeModal.value = 'consent';
 }
@@ -1426,11 +1444,17 @@ async function archiveContact(contact: Contact): Promise<void> {
 }
 
 async function loadContactConsents(contactId: number): Promise<void> {
-  if (!canCrmRead.value) return;
+  if (!canConsentRead.value) return;
   try {
-    const response = await adminApi.get<{ channels: ChannelRow[]; consents: Consent[] }>(`/business/contacts/${contactId}/consents`);
+    const response = await adminApi.get<{ channels: ChannelRow[]; consents: Consent[]; history: ConsentEvent[]; preference: ContactPreference | null }>(`/business/contacts/${contactId}/consents`);
     contactChannels.value = response.data.channels || [];
     contactConsents.value = response.data.consents || [];
+    consentHistory.value = response.data.history || [];
+    contactPreference.value = response.data.preference || null;
+    preferenceForm.preferred_channel = valueText(contactPreference.value?.preferred_channel);
+    preferenceForm.contact_window = valueText(contactPreference.value?.contact_window);
+    preferenceForm.do_not_contact = Boolean(contactPreference.value?.do_not_contact);
+    preferenceForm.note = valueText(contactPreference.value?.note);
     channels.forEach((channel) => {
       const channelRow = contactChannels.value.find((row) => row.channel === channel);
       const consent = contactConsents.value.find((row) => row.channel === channel);
@@ -1447,7 +1471,7 @@ async function loadContactConsents(contactId: number): Promise<void> {
 }
 
 async function saveConsent(channel: string): Promise<void> {
-  if (!contactForm.id || !canCrmManage.value) return;
+  if (!contactForm.id || !canConsentManage.value) return;
   busy.value = `consent.${channel}`;
   try {
     const payload = consentForm[channel] || { value: '', consent_status: 'unknown', evidence: '', is_verified: false };
@@ -1458,11 +1482,26 @@ async function saveConsent(channel: string): Promise<void> {
       evidence: payload.evidence,
       is_primary: true,
       is_verified: payload.is_verified,
+      purpose: 'marketing',
     });
     await Promise.all([loadContactConsents(contactForm.id), reloadRelationsView()]);
     setNotice(`Consentement ${channel} enregistré.`);
   } catch (err) {
     setError(err, 'Enregistrement consentement impossible.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function saveContactPreference(): Promise<void> {
+  if (!contactForm.id || !canConsentManage.value) return;
+  busy.value = 'preference';
+  try {
+    await adminApi.patch(`/business/contacts/${contactForm.id}/preference`, { ...preferenceForm, source: 'manual' });
+    await loadContactConsents(contactForm.id);
+    setNotice('Préférence enregistrée sans modifier le consentement marketing.');
+  } catch (err) {
+    setError(err, 'Enregistrement de la préférence impossible.');
   } finally {
     busy.value = '';
   }
@@ -1894,7 +1933,7 @@ onBeforeUnmount(() => {
 
     <nav class="editor-tabs business-tabs" aria-label="Sections Opérations">
       <button v-for="tab in tabs" :key="tab.key" type="button" :class="['editor-tab', { active: activeTab === tab.key }]" :disabled="!tab.permission()" @click="activeTab = tab.key">
-        {{ tab.label }}
+        {{ tab.labelKey ? t(tab.labelKey) : tab.label }}
       </button>
     </nav>
 
@@ -2031,6 +2070,10 @@ onBeforeUnmount(() => {
         @delete-company="deleteRelationCompany"
         @delete-contact="deleteRelationContact"
       />
+    </section>
+
+    <section v-if="activeTab === 'segments'">
+      <BusinessSegmentsPanel />
     </section>
 
 
@@ -2309,16 +2352,36 @@ onBeforeUnmount(() => {
           <template v-else-if="activeModal === 'consent'">
             <p v-if="!contactForm.id" class="business-empty">Ouvrez un contact pour gérer ses consentements.</p>
             <div v-else class="business-consents">
+              <p class="business-consent-notice"><strong>Finalité : marketing.</strong> Un achat, une nécessité transactionnelle ou une création de compte ne vaut jamais consentement marketing.</p>
               <form v-for="channel in channels" :key="channel" class="business-consent-row" @submit.prevent="saveConsent(channel)">
                 <strong>{{ channel }}</strong>
-                <input v-model="consentForm[channel].value" type="text" :placeholder="channel === 'email' ? 'adresse@example.test' : 'identifiant ou numéro'" :disabled="!canCrmManage">
-                <select v-model="consentForm[channel].consent_status" :disabled="!canCrmManage">
+                <input v-model="consentForm[channel].value" type="text" :placeholder="channel === 'email' ? 'adresse@example.test' : 'identifiant ou numéro'" :disabled="!canConsentManage">
+                <select v-model="consentForm[channel].consent_status" :disabled="!canConsentManage" :aria-label="`État du consentement marketing ${channel}`">
                   <option v-for="status in consentStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
                 </select>
-                <input v-model="consentForm[channel].evidence" type="text" placeholder="preuve / source" :disabled="!canCrmManage">
-                <label class="business-check"><input v-model="consentForm[channel].is_verified" type="checkbox" :disabled="!canCrmManage"> Vérifié</label>
-                <button v-if="canCrmManage" class="btn small" type="submit" :disabled="busy === `consent.${channel}`">OK</button>
+                <input v-model="consentForm[channel].evidence" type="text" placeholder="Preuve précise (formulaire, document, référence…)" :disabled="!canConsentManage">
+                <label class="business-check"><input v-model="consentForm[channel].is_verified" type="checkbox" :disabled="!canConsentManage"> Coordonnée vérifiée</label>
+                <button v-if="canConsentManage" class="btn small" type="submit" :disabled="busy === `consent.${channel}`">Enregistrer</button>
               </form>
+              <form class="business-preference-form" @submit.prevent="saveContactPreference">
+                <h3>Préférence de contact — distincte du consentement</h3>
+                <label>Canal préféré<select v-model="preferenceForm.preferred_channel" :disabled="!canConsentManage"><option value="">Aucun</option><option v-for="channel in channels" :key="channel" :value="channel">{{ channel }}</option></select></label>
+                <label>Plage souhaitée<input v-model="preferenceForm.contact_window" type="text" maxlength="120" placeholder="Par ex. après 17 h" :disabled="!canConsentManage"></label>
+                <label class="business-check"><input v-model="preferenceForm.do_not_contact" type="checkbox" :disabled="!canConsentManage"> Ne pas contacter</label>
+                <label>Note<input v-model="preferenceForm.note" type="text" maxlength="500" :disabled="!canConsentManage"></label>
+                <button v-if="canConsentManage" class="btn small" type="submit" :disabled="busy === 'preference'">Enregistrer la préférence</button>
+              </form>
+              <section class="business-consent-history">
+                <h3>Historique conservé</h3>
+                <p v-if="!consentHistory.length" class="business-empty">Aucun événement de consentement.</p>
+                <ol v-else>
+                  <li v-for="event in consentHistory" :key="event.id">
+                    <strong>{{ event.channel }} · {{ statusLabel(event.consent_status) }}</strong>
+                    <span>{{ event.purpose || 'marketing' }} · {{ event.scope_type || 'site' }}:{{ event.scope_id || context.siteId }} · {{ event.source }}</span>
+                    <small>{{ event.occurred_at || '—' }} · {{ event.evidence || 'preuve non renseignée' }}</small>
+                  </li>
+                </ol>
+              </section>
             </div>
           </template>
 
@@ -3364,12 +3427,24 @@ onBeforeUnmount(() => {
 }
 
 .business-consent-row input,
-.business-consent-row select {
+.business-consent-row select,
+.business-preference-form input,
+.business-preference-form select {
   border: 1px solid var(--business-border);
   border-radius: 6px;
   min-height: 2.25rem;
   padding: .4rem .55rem;
 }
+
+.business-consent-notice { padding: .7rem; border-radius: 7px; background: #fffaeb; color: #7a2e0e; }
+.business-preference-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: .6rem; padding: .8rem; border: 1px solid var(--business-border); border-radius: 8px; }
+.business-preference-form h3 { grid-column: 1 / -1; margin: 0; font-size: .95rem; }
+.business-preference-form label:not(.business-check) { display: grid; gap: .25rem; font-size: .82rem; color: #475467; }
+.business-consent-history { margin-top: .6rem; }
+.business-consent-history h3 { margin: 0 0 .5rem; font-size: .95rem; }
+.business-consent-history ol { display: grid; gap: .45rem; margin: 0; padding-left: 1.2rem; }
+.business-consent-history li { display: grid; gap: .1rem; }
+.business-consent-history span, .business-consent-history small { color: var(--business-muted); }
 
 .business-check {
   display: inline-flex;
@@ -3633,5 +3708,7 @@ onBeforeUnmount(() => {
   .business-consent-row {
     align-items: stretch;
   }
+
+  .business-preference-form { grid-template-columns: 1fr; }
 }
 </style>

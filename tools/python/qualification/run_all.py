@@ -177,6 +177,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "gate M6.5 reconstruction et réconciliation", "source_steps": ["stock-reconstruction-gate", "backup-restore", "browser-e2e"], "release_commands": ["tools/python/qualification/stock_reconstruction_gate.py", "tools/cms.py inventory reconcile"]},
         {"requirement": "gate M7.1 identité client et dédoublonnage", "source_steps": ["customer-identity-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/customer_identity_gate.py"]},
         {"requirement": "gate M7.2 activités CRM par événements", "source_steps": ["crm-event-activity-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/crm_event_activity_gate.py"]},
+        {"requirement": "gate M7.3 segmentation et consentements", "source_steps": ["crm-segmentation-consent-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/crm_segmentation_consent_gate.py"]},
         {"requirement": "gate M6.2 réservations et disponibilité", "source_steps": ["reservation-availability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/reservation_availability_gate.py", "backend/bin/console worker:reservations"]},
         {"requirement": "gate M6.3 bundles et stock composé", "source_steps": ["bundle-stock-strategy-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/bundle_stock_strategy_gate.py"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
@@ -321,6 +322,14 @@ def steps() -> tuple[Step, ...]:
             ("complete", "release"),
             (py, "tools/python/qualification/crm_event_activity_gate.py"),
             files=("docs/evaluation/machine-readable/crm-event-activities-m7.json","tools/python/qualification/crm_event_activity_gate.py","tools/php/tests/unit/sale_crm_activity_projection_test.php","frontend/admin-vue/src/views/modules/business/RelationTimeline.vue","frontend/admin-vue/tests/e2e/business-crm-smoke.spec.ts"),
+            timeout=60,
+        ),
+        Step(
+            "crm-segmentation-consent-gate",
+            "Gate M7.3 segmentation et consentements",
+            ("complete", "release"),
+            (py, "tools/python/qualification/crm_segmentation_consent_gate.py"),
+            files=("docs/evaluation/machine-readable/crm-segmentation-consents-m7.json","tools/python/qualification/crm_segmentation_consent_gate.py","tools/php/tests/unit/business_segmentation_consent_test.php","frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue","frontend/admin-vue/tests/e2e/business-crm-smoke.spec.ts"),
             timeout=60,
         ),
         Step(

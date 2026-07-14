@@ -142,6 +142,7 @@ use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessDatabaseConnection;
 use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\BusinessSegmentationService;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
@@ -1007,6 +1008,13 @@ final class ServiceFactory
     public function businessConsentService(): BusinessConsentService
     {
         return $this->once('business_consent_service', fn() => new BusinessConsentService($this->businessConsents()));
+    }
+
+    public function businessSegmentation(): BusinessSegmentationService
+    {
+        return $this->once('business_segmentation', fn() => new BusinessSegmentationService(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable')
+        ));
     }
 
     public function businessMessagingOutbox(): BusinessMessagingOutboxService

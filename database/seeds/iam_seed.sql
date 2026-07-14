@@ -77,6 +77,10 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('imports_exports.manage', 'Gérer les imports et exports', 'Inclut les opérations d’écriture et permet de supprimer ou nettoyer les releases.'),
 ('business.crm.read', 'Lire le CRM Business', 'Lire les entreprises, contacts, tags, consentements et données CRM autorisées.'),
 ('business.crm.manage', 'Gérer le CRM Business', 'Créer, modifier et archiver entreprises, contacts, tags et consentements.'),
+('business.segment.read', 'Lire les segments CRM', 'Consulter règles, calculs et membres des segments CRM.'),
+('business.segment.manage', 'Gérer les segments CRM', 'Créer, modifier et recalculer les segments CRM.'),
+('business.consent.read', 'Lire les consentements CRM', 'Consulter consentements marketing, preuves et historique.'),
+('business.consent.manage', 'Gérer les consentements CRM', 'Enregistrer et retirer les consentements marketing, séparément des préférences.'),
 ('business.memo.read', 'Lire les mémos CRM', 'Consulter les mémos CRM accessibles et leurs partages internes.'),
 ('business.memo.manage', 'Gérer les mémos CRM', 'Créer, modifier, commenter et archiver les mémos CRM.'),
 ('business.memo.share', 'Partager les mémos CRM', 'Créer ou révoquer des partages internes et liens publics de mémos.'),
@@ -98,7 +102,7 @@ SELECT r.id, p.id FROM iam_roles r JOIN iam_permissions p ON p.permission_key IN
 
 INSERT OR IGNORE INTO iam_role_permissions(role_id, permission_id)
 SELECT r.id, p.id FROM iam_roles r JOIN iam_permissions p ON p.permission_key IN (
-'business.crm.read','business.crm.manage',
+'business.crm.read','business.crm.manage','business.segment.read','business.segment.manage','business.consent.read','business.consent.manage',
 'business.memo.read','business.memo.manage','business.memo.share',
 'business.mailing.read','business.mailing.manage',
 'business.messaging.send','business.messaging.admin'

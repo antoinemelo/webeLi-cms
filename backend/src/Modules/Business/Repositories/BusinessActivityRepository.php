@@ -58,6 +58,7 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             $this->commentActivity($siteId, $type, $id),
             $this->shareActivity($siteId, $type, $id),
             $this->messageActivity($siteId, $type, $id),
+            $this->consentActivity($siteId, $type, $id),
             $this->saleActivity($siteId, $type, $id)
         );
         usort($items, static fn(array $a, array $b): int => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')) ?: strcmp((string) $b['id'], (string) $a['id']));
@@ -163,6 +164,29 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             ['site_id' => $siteId, 'id' => $id]
         );
         return array_map(fn(array $row): array => $this->activityRow($row, 'message'), $rows);
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function consentActivity(int $siteId, string $type, int $id): array
+    {
+        if (!$this->database()->tableExists('crm_consent_events')) return [];
+        $where = $type === 'company'
+            ? 'ce.contact_id IN (SELECT c.id FROM business_contacts c WHERE c.site_id=ce.site_id AND c.company_id=:id AND c.archived_at IS NULL)'
+            : 'ce.contact_id=:id';
+        $rows = $this->database()->all(
+            "SELECT ce.id,ce.site_id,ce.actor_iam_user_id,
+                    'crm_consent_event' AS entity_type,ce.id AS entity_id,
+                    c.company_id AS related_company_id,ce.contact_id AS related_contact_id,
+                    'business.consent.' || ce.event_type AS action,
+                    CASE ce.event_type WHEN 'granted' THEN 'Consentement marketing accordé' WHEN 'withdrawn' THEN 'Consentement marketing retiré' ELSE 'Consentement marketing enregistré' END || ' · ' || upper(ce.channel) AS summary,
+                    json_object('channel',ce.channel,'purpose',ce.purpose,'scope',ce.scope_type || ':' || ce.scope_id,'status',ce.consent_status,'source',ce.source,'evidence',ce.evidence,'retention_until',ce.retention_until) AS metadata_json,
+                    ce.occurred_at AS created_at
+             FROM crm_consent_events ce JOIN business_contacts c ON c.id=ce.contact_id
+             WHERE ce.site_id=:site_id AND {$where}
+             ORDER BY ce.occurred_at DESC,ce.id DESC LIMIT 200",
+            ['site_id' => $siteId, 'id' => $id]
+        );
+        return array_map(fn(array $row): array => $this->activityRow($row, 'consent'), $rows);
     }
 
     /** @return list<array<string,mixed>> */

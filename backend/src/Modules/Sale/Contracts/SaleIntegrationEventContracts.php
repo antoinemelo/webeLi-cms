@@ -58,7 +58,7 @@ final class SaleIntegrationEventContracts
             self::ORDER_PLACED => [
                 'entity' => 'order',
                 'required' => ['site_id', 'order_id', 'order_number', 'grand_total_minor', 'currency'],
-                'optional' => ['cart_id', 'channel_id', 'language_code', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id'],
+                'optional' => ['cart_id', 'channel_id', 'language_code', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id', 'product_ids', 'category_ids'],
             ],
             self::ORDER_CONFIRMED => [
                 'entity' => 'order', 'required' => ['site_id', 'order_id'], 'optional' => ['order_number', 'source', 'iam_user_id'],

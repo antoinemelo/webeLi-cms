@@ -51,8 +51,8 @@ try {
     $iam = new Database($iamPath, 1000);
     $iam->run("INSERT INTO iam_users(id,email,email_normalized,password_hash,is_active,login_mode) VALUES(1,'business-admin@example.test','business-admin@example.test','x',1,'password'),(2,'business-viewer@example.test','business-viewer@example.test','x',1,'password')");
     $iam->run("INSERT INTO iam_roles(id,role_key,name) VALUES(1,'business_admin','Business admin'),(2,'business_empty','Business empty')");
-    $iam->run("INSERT INTO iam_permissions(id,permission_key,name) VALUES(1,'business.crm.read','Read Business CRM'),(2,'business.crm.manage','Manage Business CRM'),(3,'business.memo.read','Read memos'),(4,'business.memo.manage','Manage memos'),(5,'business.memo.share','Share memos')");
-    $iam->run("INSERT INTO iam_role_permissions(role_id,permission_id) VALUES(1,1),(1,2),(1,3),(1,4),(1,5)");
+    $iam->run("INSERT INTO iam_permissions(id,permission_key,name) VALUES(1,'business.crm.read','Read Business CRM'),(2,'business.crm.manage','Manage Business CRM'),(3,'business.memo.read','Read memos'),(4,'business.memo.manage','Manage memos'),(5,'business.memo.share','Share memos'),(6,'business.segment.read','Read segments'),(7,'business.segment.manage','Manage segments'),(8,'business.consent.read','Read consents'),(9,'business.consent.manage','Manage consents')");
+    $iam->run("INSERT INTO iam_role_permissions(role_id,permission_id) VALUES(1,1),(1,2),(1,3),(1,4),(1,5),(1,6),(1,7),(1,8),(1,9)");
     $iam->run("INSERT INTO iam_user_site_roles(user_id,site_id,role_id) VALUES(1,1,1),(2,1,2)");
 
     $business = $businessDb;

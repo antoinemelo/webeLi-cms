@@ -232,6 +232,25 @@
     "confidence": "high",
     "discovered_test_functions": 4,
     "evidence": [
+      "tools/python/tests/test_crm_segmentation_consent_gate.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-crm-segmentation-consent-gate-py-d666fe7fa3",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_crm_segmentation_consent_gate",
+    "source": [
+      "tools/python/tests/test_crm_segmentation_consent_gate.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
+    "discovered_test_functions": 4,
+    "evidence": [
       "tools/python/tests/test_customer_identity_gate.py"
     ],
     "execution_result": null,

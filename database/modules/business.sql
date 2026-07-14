@@ -1493,6 +1493,107 @@ CREATE TABLE IF NOT EXISTS crm_consents (
 CREATE INDEX IF NOT EXISTS idx_crm_consents_channel_status ON crm_consents(channel, consent_status);
 CREATE INDEX IF NOT EXISTS idx_crm_consents_contact ON crm_consents(contact_id);
 
+-- Marketing consent is deliberately distinct from contact preferences,
+-- transactional necessity, account creation and purchases. The current state
+-- remains convenient to query in crm_consents while this ledger is append-only.
+CREATE TABLE IF NOT EXISTS crm_consent_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    consent_id INTEGER,
+    site_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('email','whatsapp','telegram')),
+    purpose TEXT NOT NULL DEFAULT 'marketing' CHECK(purpose = 'marketing'),
+    scope_type TEXT NOT NULL DEFAULT 'site' CHECK(scope_type = 'site'),
+    scope_id INTEGER NOT NULL,
+    consent_status TEXT NOT NULL CHECK(consent_status IN ('unknown','opt_in','opt_out')),
+    event_type TEXT NOT NULL CHECK(event_type IN ('recorded','granted','withdrawn')),
+    source TEXT NOT NULL CHECK(source IN ('manual','form','import','unsubscribe','api')),
+    evidence TEXT,
+    proof_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(proof_json)),
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retention_until TEXT,
+    actor_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(consent_id) REFERENCES crm_consents(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(site_id > 0 AND scope_id = site_id),
+    CHECK((consent_status = 'opt_in' AND event_type = 'granted')
+       OR (consent_status = 'opt_out' AND event_type = 'withdrawn')
+       OR (consent_status = 'unknown' AND event_type = 'recorded'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_consent_events_contact ON crm_consent_events(site_id, contact_id, occurred_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_consent_events_retention ON crm_consent_events(retention_until);
+
+CREATE TABLE IF NOT EXISTS crm_contact_preferences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    preferred_channel TEXT CHECK(preferred_channel IS NULL OR preferred_channel IN ('email','whatsapp','telegram')),
+    contact_window TEXT,
+    do_not_contact INTEGER NOT NULL DEFAULT 0 CHECK(do_not_contact IN (0,1)),
+    source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('manual','form','import','api')),
+    note TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id, contact_id),
+    CHECK(site_id > 0),
+    CHECK(contact_window IS NULL OR length(contact_window) <= 120),
+    CHECK(note IS NULL OR length(note) <= 500)
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_contact_preferences_channel ON crm_contact_preferences(site_id, preferred_channel, do_not_contact);
+
+CREATE TABLE IF NOT EXISTS crm_segments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    segment_kind TEXT NOT NULL CHECK(segment_kind IN ('calculated','manual')),
+    criterion TEXT,
+    operator TEXT,
+    value_json TEXT NOT NULL DEFAULT 'null' CHECK(json_valid(value_json)),
+    rule_version INTEGER NOT NULL DEFAULT 1 CHECK(rule_version > 0),
+    explanation TEXT NOT NULL DEFAULT '',
+    advanced_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(advanced_json)),
+    retention_days INTEGER NOT NULL DEFAULT 730 CHECK(retention_days BETWEEN 30 AND 3650),
+    result_count INTEGER NOT NULL DEFAULT 0 CHECK(result_count >= 0),
+    last_source_activity_id INTEGER NOT NULL DEFAULT 0 CHECK(last_source_activity_id >= 0),
+    last_calculated_at TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived')),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    archived_at TEXT,
+    UNIQUE(site_id, name),
+    CHECK(site_id > 0 AND trim(name) <> ''),
+    CHECK((segment_kind = 'manual' AND criterion IS NULL AND operator IS NULL)
+       OR (segment_kind = 'calculated' AND trim(criterion) <> '' AND trim(operator) <> ''))
+);
+
+CREATE TABLE IF NOT EXISTS crm_segment_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    membership_kind TEXT NOT NULL CHECK(membership_kind IN ('calculated','manual')),
+    rule_version INTEGER NOT NULL CHECK(rule_version > 0),
+    explanation_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(explanation_json)),
+    matched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT,
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(segment_id, contact_id),
+    FOREIGN KEY(segment_id) REFERENCES crm_segments(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_segments_site_kind ON crm_segments(site_id, segment_kind, status, name);
+CREATE INDEX IF NOT EXISTS idx_crm_segment_members_contact ON crm_segment_members(contact_id, expires_at);
+
 CREATE TABLE IF NOT EXISTS crm_mailing_lists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,

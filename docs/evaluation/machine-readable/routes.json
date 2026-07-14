@@ -2075,6 +2075,24 @@
     "evidence": [
       "backend/routes/api.php"
     ],
+    "id": "route-patch-admin-api-business-contacts-id-preference-backend-routes-api-php-8eb5e657fb",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/contacts/{id}/preference",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
     "id": "route-get-admin-api-business-dashboard-backend-routes-api-php-060969bc73",
     "last_verified": "2026-07-14",
     "limitations": [
@@ -4332,6 +4350,150 @@
     ],
     "method": "GET",
     "path": "/admin/api/business/search",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-segments-backend-routes-api-php-a873cca9a1",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/segments",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-segments-backend-routes-api-php-fcf4b77740",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/segments",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-segments-preview-backend-routes-api-php-578bd3adbe",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/segments/preview",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-get-admin-api-business-segments-id-backend-routes-api-php-bd04ad44f8",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "GET",
+    "path": "/admin/api/business/segments/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-patch-admin-api-business-segments-id-backend-routes-api-php-b4e439fe7f",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "PATCH",
+    "path": "/admin/api/business/segments/{id}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-segments-id-members-backend-routes-api-php-7881c87dd7",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/segments/{id}/members",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-delete-admin-api-business-segments-id-members-contactid-backend-routes-api-php-56962ea34e",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "DELETE",
+    "path": "/admin/api/business/segments/{id}/members/{contactId}",
+    "source": [
+      "backend/routes/api.php"
+    ],
+    "status": "internal"
+  },
+  {
+    "audience": "administrative-internal",
+    "confidence": "high",
+    "evidence": [
+      "backend/routes/api.php"
+    ],
+    "id": "route-post-admin-api-business-segments-id-recalculate-backend-routes-api-php-bbdfc92b3c",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "A route declaration does not prove successful end-to-end execution."
+    ],
+    "method": "POST",
+    "path": "/admin/api/business/segments/{id}/recalculate",
     "source": [
       "backend/routes/api.php"
     ],

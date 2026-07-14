@@ -296,4 +296,31 @@ test.describe('business CRM UX smoke', () => {
     const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
     expect(horizontalOverflow, 'mobile CRM viewport has no page-level horizontal overflow').toBeFalsy();
   });
+
+  test('creates an explainable segment, handles an empty rule and stays localized FR/EN', async ({ page }) => {
+    const context = await jsonEnvelope<AdminContextData>(await page.request.get(cmsPath('/admin/api/context')), 'admin.context.v1', 'admin context');
+    expect(context.data.capabilities['business.segment.read']).toBeTruthy();
+    expect(context.data.capabilities['business.segment.manage']).toBeTruthy();
+    await page.goto(cmsPath('/admin/app/business'));
+    await page.getByRole('button', { name: 'Segments' }).click();
+    const panel = page.getByTestId('crm-segments-panel');
+    await expect(panel.getByRole('heading', { name: 'Segmentation CRM' })).toBeVisible();
+
+    await panel.getByRole('button', { name: 'Aperçu' }).click();
+    await expect(panel).toContainText('Choisissez un critère, un opérateur et une valeur.');
+    await panel.getByLabel('Nom du segment').fill(`E2E Segment ${Date.now()}`);
+    await panel.getByLabel('Critère').selectOption('product_id');
+    await panel.getByLabel('Opérateur').selectOption('contains');
+    await panel.getByLabel('Valeur').fill('999999999');
+    await panel.getByRole('button', { name: 'Aperçu' }).click();
+    await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.');
+    await panel.getByRole('button', { name: 'Créer le segment' }).click();
+    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Segment' }).first()).toBeVisible();
+
+    await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
+    await page.reload();
+    await page.getByRole('button', { name: 'Segments' }).click();
+    await expect(page.getByRole('heading', { name: 'CRM segmentation' })).toBeVisible();
+    await expect(page.getByText('Create explainable groups from projected activities without changing consent.')).toBeVisible();
+  });
 });

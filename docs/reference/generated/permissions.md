@@ -64,6 +64,8 @@ generated: true
 | `business.catalog.read` |
 | `business.catalog.stock.write` |
 | `business.catalog.write` |
+| `business.consent.manage` |
+| `business.consent.read` |
 | `business.crm.manage` |
 | `business.crm.read` |
 | `business.mailing.manage` |
@@ -71,9 +73,13 @@ generated: true
 | `business.memo.manage` |
 | `business.memo.read` |
 | `business.messaging.admin` |
+| `business.segment.manage` |
+| `business.segment.read` |
+| `business.segments.create` |
 | `catalog.product.read` |
 | `common.create` |
 | `common.delete` |
+| `contacts.consents.update` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |

@@ -1218,6 +1218,52 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "id": "permission-business-consent-manage-0b1307baa3",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.consent.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue"
+    ],
+    "id": "permission-business-consent-read-ee35355e34",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.consent.read",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
@@ -1410,6 +1456,68 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
+    ],
+    "id": "permission-business-segment-manage-af1ded06e2",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.segment.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "id": "permission-business-segment-read-a46bd73b8b",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.segment.read",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
+    ],
+    "id": "permission-business-segments-create-62b76c46f8",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.segments.create",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Capability/CapabilityRegistry.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
@@ -1482,6 +1590,22 @@
     "source": [
       "frontend/admin-vue/src/i18n/messages.ts",
       "frontend/admin-vue/src/views/system/BlueprintsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
+    ],
+    "id": "permission-contacts-consents-update-ebeb970502",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "contacts.consents.update",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
     ],
     "status": "supported"
   },

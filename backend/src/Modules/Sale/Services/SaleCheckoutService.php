@@ -93,9 +93,24 @@ final class SaleCheckoutService
                     'payment_status' => (string) $order['payment_status'],
                     'source' => (string) $order['source'],
                     'iam_user_id' => $payload['iam_user_id'] ?? null,
+                    'product_ids' => array_values(array_unique(array_map(static fn(array $line): int => (int) ($line['business_product_id'] ?? 0), $lines))),
+                    'category_ids' => $this->categoryIds($lines),
                 ], $payload['iam_user_id'] ?? null, $correlationId);
                 return $order;
             });
         });
+    }
+
+    /** @param list<array<string,mixed>> $lines @return list<int> */
+    private function categoryIds(array $lines): array
+    {
+        $ids = [];
+        foreach ($lines as $line) {
+            $snapshot = json_decode((string) ($line['metadata_json'] ?? $line['snapshot_json'] ?? '{}'), true);
+            if (!is_array($snapshot)) continue;
+            $candidates = array_merge((array) ($snapshot['category_ids'] ?? []), isset($snapshot['category_id']) ? [$snapshot['category_id']] : []);
+            foreach ($candidates as $id) if ((int) $id > 0) $ids[(int) $id] = true;
+        }
+        return array_map('intval', array_keys($ids));
     }
 }

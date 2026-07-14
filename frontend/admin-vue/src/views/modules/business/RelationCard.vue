@@ -27,6 +27,7 @@ defineProps<{
   companyLabel: string;
   phoneLabel: string;
   consentLabel?: string;
+  canConsent?: boolean;
 }>();
 
 defineEmits<{
@@ -81,7 +82,7 @@ defineEmits<{
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="$emit('message')">Message</button>
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="$emit('email')">Email</button>
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="$emit('whatsapp')">WhatsApp</button>
-        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
+        <button v-if="canConsent" class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
         <button class="btn ghost small" type="button" :aria-label="`Archiver ${relation.display_name}`" @click="$emit('archive')">Archiver</button>
       </template>
     </div>

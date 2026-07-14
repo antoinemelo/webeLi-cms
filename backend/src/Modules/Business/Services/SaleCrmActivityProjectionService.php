@@ -276,6 +276,8 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
             'amount_minor' => $amount,
             'currency' => $currency ?: null,
             'payment_status' => $payload['payment_status'] ?? null,
+            'product_ids' => ($productIds = $this->positiveIds($payload['product_ids'] ?? [])) !== [] ? $productIds : null,
+            'category_ids' => ($categoryIds = $this->positiveIds($payload['category_ids'] ?? [])) !== [] ? $categoryIds : null,
             'marketing_communication_allowed' => ($payload['marketing_consent'] ?? false) === true,
         ], static fn(mixed $value): bool => $value !== null);
         return new CrmActivityV2(
@@ -420,5 +422,13 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
     private function json(array $value): string
     {
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    /** @return list<int> */
+    private function positiveIds(mixed $value): array
+    {
+        $ids = [];
+        foreach (is_array($value) ? $value : [] as $id) if ((int) $id > 0) $ids[(int) $id] = true;
+        return array_map('intval', array_keys($ids));
     }
 }

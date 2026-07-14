@@ -19,6 +19,15 @@ owners:
 document_type: reference
 generated: false
 ---
+
+# 2026-07-14 — Business M7.3 : segmentation, préférences et consentements
+
+- ajout de segments CRM manuels ou calculés, avec règles simples explicables et versionnées ;
+- calcul complet/incrémental depuis `crm_sale_activities`, sans lecture des tables transactionnelles Sale ;
+- ajout d’un aperçu anonymisé, d’une rétention configurable et d’un constructeur admin FR/EN ;
+- ajout du registre append-only des consentements marketing et du retrait sans perte d’historique ;
+- séparation des préférences de contact, achats, comptes et nécessités transactionnelles ;
+- ajout des permissions dédiées, tests PHP/E2E et de la gate de qualification M7.3.
 # Changelog par module
 
 # 2026-07-14 — Sale M6.1 : ledger de stock et source de vérité unique

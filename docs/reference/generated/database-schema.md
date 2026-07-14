@@ -84,8 +84,10 @@ generated: true
 | `business_tags` | id, site_id, tag_key, label, color, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_tax_classes` | id, site_id, code, name, rate, country, is_default, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `business_variant_attribute_values` | id, variant_id, attribute_id, language, value_text, value_number, value_json, updated_by_iam_user_id, updated_at |
+| `crm_consent_events` | id, consent_id, site_id, contact_id, channel, purpose, scope_type, scope_id, consent_status, event_type, source, evidence, proof_json, occurred_at, retention_until, actor_iam_user_id, created_at |
 | `crm_consents` | id, contact_id, channel, consent_status, source, evidence, granted_at, revoked_at, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `crm_contact_channels` | id, contact_id, channel, channel_value, normalized_value, provider_ref, is_primary, is_verified, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `crm_contact_preferences` | id, site_id, contact_id, preferred_channel, contact_window, do_not_contact, source, note, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `crm_mailing_list_members` | id, list_id, contact_id, status, subscribed_at, unsubscribed_at, unsubscribe_token_hash, created_by_iam_user_id, updated_by_iam_user_id, updated_at |
 | `crm_mailing_lists` | id, site_id, list_key, name, description, channel, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `crm_mailing_recipients` | id, mailing_id, contact_id, channel_id, status, unsubscribe_token_hash, queued_at, sent_at, failed_at, skipped_reason, message_outbox_id, created_at, updated_at |
@@ -100,6 +102,8 @@ generated: true
 | `crm_sale_activities` | id, dto_version, contract_version, site_id, activity_type, occurred_at, channel, channel_id, language_code, related_company_id, related_contact_id, source_event_id, source_outbox_id, source_type, source_id, source_event_type, source_aggregate_type, source_aggregate_id, source_reference, summary, status, resolution_strategy, provenance_json, metadata_json, retention_until, linked_by_iam_user_id, linked_at, created_at, updated_at |
 | `crm_sale_activity_link_audit` | id, activity_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, linked_by_iam_user_id, created_at |
 | `crm_sale_activity_reconciliation_runs` | id, site_id, supported_events, projected_events, missing_events, duplicate_events, repaired_events, report_json, run_by_iam_user_id, created_at |
+| `crm_segment_members` | id, segment_id, contact_id, membership_kind, rule_version, explanation_json, matched_at, expires_at, created_by_iam_user_id, created_at, updated_at |
+| `crm_segments` | id, site_id, name, segment_kind, criterion, operator, value_json, rule_version, explanation, advanced_json, retention_days, result_count, last_source_activity_id, last_calculated_at, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
 | `schema_migrations` | id, migration, migrated_at |
 
 ## `cookies.sqlite`

@@ -110,6 +110,8 @@ L’onglet **Identités** rassemble les commandes invitées susceptibles d’êt
 
 La chronologie CRM reçoit commandes, paiements, retours, remboursements, bons cadeaux et comptes par outbox. Elle reste filtrable et lisible comme une histoire client. Les événements sans identité restent en attente et peuvent être rattachés ultérieurement sans bloquer Vente.
 
+Les segments Commerce sont calculés depuis cette chronologie projetée. Ils peuvent qualifier nouveau/récurrent, fréquence, montant, canal, produit/catégorie, retour ou bon cadeau, mais ne pilotent pas le classement public du shop. Un achat ou une création de compte ne crée jamais un consentement marketing ; préférences, consentements et nécessité transactionnelle restent distincts.
+
 ## Rapports, imports et exports
 
 Les rapports v1 couvrent :

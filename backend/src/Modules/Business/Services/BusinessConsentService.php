@@ -17,9 +17,12 @@ final class BusinessConsentService
         return $this->consents->upsertChannel($contactId, $channel, $value, $normalized, $isPrimary, $isVerified, $actorId);
     }
 
-    public function setConsent(int $contactId, string $channel, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null): array
+    public function setConsent(int $contactId, string $channel, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null, string $purpose = 'marketing', int $retentionDays = 2190): array
     {
-        return $this->consents->upsertConsent($contactId, $channel, $status, $source, $evidence, $actorId);
+        if (in_array($source, ['checkout', 'purchase', 'account', 'transactional'], true)) {
+            throw new InvalidArgumentException('business.consent_transactional_source_forbidden');
+        }
+        return $this->consents->upsertConsent($contactId, $channel, $status, $source, $evidence, $actorId, $purpose, $retentionDays);
     }
 
     public function hasConsent(int $contactId, string $channel): bool

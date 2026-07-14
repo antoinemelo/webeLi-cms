@@ -27,6 +27,7 @@ $tests = [
     'unit/business_crm_blueprints_test.php',
     'unit/business_pim_lite_blueprints_test.php',
     'unit/business_crm_service_test.php',
+    'unit/business_segmentation_consent_test.php',
     'unit/business_csv_service_test.php',
     'unit/business_crm_api_controller_test.php',
     'unit/business_messaging_provider_test.php',

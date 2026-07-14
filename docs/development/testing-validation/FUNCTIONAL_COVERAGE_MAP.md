@@ -38,6 +38,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Reconstruction du stock | réparation historique implicite et comparaison partielle | scénario PHP + gate Python + UX opérateur | dry-run, journal/cache/réservations/logistique/Shop, sauvegarde-restauration, correction prouvée et reprise ciblée | ajouté pour M6.5 |
 | Identité client | bridges nuls et fusion opaque | scénario IAM/CRM/Sale + gate Python + Playwright | invité, token post-achat, provenance, scores, doublons, multisite, aperçu, fusion et séparation sans toucher aux snapshots | ajouté pour M7.1 |
 | Activités CRM événementielles | projection partielle relisant les commandes | scénario outbox + gate Python + chronologie Vue | DTO v2, désordre, panne CRM, attente/rattachement, confidentialité, rejeu et réconciliation | ajouté pour M7.2 |
+| Segmentation, préférences et consentements CRM | tags et état courant sans historique | scénario métier + gate Python + E2E Business | règles explicables, calcul complet/incrémental, résultat nul, retrait conservé, permissions et FR/EN | ajouté pour M7.3 |
 
 ## Tests ajoutés
 

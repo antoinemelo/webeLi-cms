@@ -363,6 +363,7 @@ final class App
                 $services->businessRelationSummary(),
                 $services->iamAdmin(),
                 $services->saleCrmActivities(),
+                $services->businessSegmentation(),
             ),
             BusinessCatalogApiController::class => new BusinessCatalogApiController(
                 $this->request,

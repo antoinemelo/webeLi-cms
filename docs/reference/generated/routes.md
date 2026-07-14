@@ -49,6 +49,7 @@ generated: true
 | `DELETE` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/segments/{id}/members/{contactId}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/tags/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/cookies/bindings/{id}` | API administrative | `backend/routes/api.php` |
@@ -167,6 +168,8 @@ generated: true
 | `GET` | `/admin/api/business/sale-activities/unlinked` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/schema` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/search` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/segments` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/segments/{id}` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/capabilities` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/configuration` | API administrative | `backend/routes/api.php` |
@@ -292,6 +295,7 @@ generated: true
 | `PATCH` | `/admin/api/business/consents/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}/consents/{channel}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/contacts/{id}/preference` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/mailing/campaigns/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/mailing/lists/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/memos/{id}` | API administrative | `backend/routes/api.php` |
@@ -306,6 +310,7 @@ generated: true
 | `PATCH` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/segments/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/tags/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/configuration` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/cookies/bindings/{id}` | API administrative | `backend/routes/api.php` |
@@ -412,6 +417,10 @@ generated: true
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/reconcile` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/{id}/link` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/preview` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/{id}/members` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/{id}/recalculate` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/capabilities/{key}/apply` | API administrative | `backend/routes/api.php` |

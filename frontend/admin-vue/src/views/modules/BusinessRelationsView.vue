@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import { useAdminContextStore } from '@/stores/adminContext';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 import BusinessQuickSearch from './business/BusinessQuickSearch.vue';
 import EmptyState from './business/EmptyState.vue';
@@ -71,6 +72,8 @@ const emit = defineEmits<{
   'delete-company': [relation: Relation];
   'delete-contact': [relation: Relation];
 }>();
+const context = useAdminContextStore();
+const canConsentRead = computed(() => context.can('business.consent.read'));
 
 const loading = ref(false);
 const searchLoading = ref(false);
@@ -646,7 +649,7 @@ onBeforeUnmount(() => {
                     <button type="button" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="emit('new-message', relation)">Nouveau message</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="emit('new-message', relation, 'email')">Email</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="emit('new-message', relation, 'whatsapp')">WhatsApp</button>
-                    <button type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
+                    <button v-if="canConsentRead" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
                     <button type="button" :aria-label="`Archiver ${relation.display_name}`" @click="archive(relation)">Archiver</button>
                   </template>
                 </div>
@@ -680,6 +683,7 @@ onBeforeUnmount(() => {
         :company-label="companyLabel(relation)"
         :phone-label="phoneLabel(relation)"
         :consent-label="emailConsentLabel(relation)"
+        :can-consent="canConsentRead"
         @view="edit(relation)"
         @memo="emit('new-memo', relation)"
         @message="emit('new-message', relation)"

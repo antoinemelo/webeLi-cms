@@ -1103,8 +1103,10 @@
       "business_tags",
       "business_tax_classes",
       "business_variant_attribute_values",
+      "crm_consent_events",
       "crm_consents",
       "crm_contact_channels",
+      "crm_contact_preferences",
       "crm_mailing_list_members",
       "crm_mailing_lists",
       "crm_mailing_recipients",
@@ -1118,7 +1120,9 @@
       "crm_messaging_providers",
       "crm_sale_activities",
       "crm_sale_activity_link_audit",
-      "crm_sale_activity_reconciliation_runs"
+      "crm_sale_activity_reconciliation_runs",
+      "crm_segment_members",
+      "crm_segments"
     ],
     "views": []
   },
