@@ -275,6 +275,32 @@ try {
 
     $stockResponse = $controllerFor(1, 'GET', '/admin/api/sale/stock/items')->stockItems();
     $h->assertSame(200, $stockResponse->status(), 'sale admin can list stock items');
+    $stockPayload = json_decode($stockResponse->body(), true);
+    $h->assertTrue(isset($stockPayload['data']['summary']['on_hand_quantity']), 'stock workspace distinguishes physical quantity');
+    $h->assertTrue(isset($stockPayload['data']['summary']['reserved_quantity']), 'stock workspace distinguishes reserved quantity');
+    $h->assertTrue(isset($stockPayload['data']['summary']['available_quantity']), 'stock workspace distinguishes available quantity');
+    $h->assertTrue(count($stockPayload['data']['locations'] ?? []) > 0, 'stock workspace exposes active location filters');
+    $stockItem = ($stockPayload['data']['items'] ?? [])[0] ?? [];
+    $invalidAdjustment = $controllerFor(1, 'POST', '/admin/api/sale/stock/adjustments', [], [
+        'sellable_id' => (int) ($stockItem['sellable_id'] ?? $variant['id']),
+        'location_id' => (int) ($stockItem['stock_location_id'] ?? 0),
+        'movement_type' => 'receipt',
+        'quantity_delta' => 1,
+    ])->stockAdjustments();
+    $h->assertSame(422, $invalidAdjustment->status(), 'manual stock movement requires an audit reason');
+    $adjustmentKey = 'manual-stock:test-admin-ledger';
+    $validAdjustment = $controllerFor(1, 'POST', '/admin/api/sale/stock/adjustments', [], [
+        'sellable_id' => (int) ($stockItem['sellable_id'] ?? $variant['id']),
+        'location_id' => (int) ($stockItem['stock_location_id'] ?? 0),
+        'movement_type' => 'receipt',
+        'quantity_delta' => 1,
+        'reason' => 'Réception contrôlée par test',
+        'idempotency_key' => $adjustmentKey,
+    ])->stockAdjustments();
+    $h->assertSame(201, $validAdjustment->status(), 'guided stock movement creates an audited ledger row');
+    $adjustmentMovement = $saleDb->one('SELECT * FROM sale_stock_movements WHERE idempotency_key=?', [$adjustmentKey]);
+    $h->assertSame($adjustmentKey, $adjustmentMovement['correlation_id'] ?? null, 'manual movement keeps its correlation id');
+    $h->assertTrue((int) ($adjustmentMovement['stock_location_id'] ?? 0) > 0, 'manual movement keeps its location');
     $reconciliationResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reconciliation', [], ['repair_derived' => true])->reconcileInventory();
     $h->assertSame(201, $reconciliationResponse->status(), 'sale admin can run inventory reconciliation');
     $reconciliationPayload = json_decode($reconciliationResponse->body(), true);

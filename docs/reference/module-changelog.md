@@ -7,7 +7,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 source_of_truth: manual
 source_paths:
   - backend/src/Modules
@@ -20,6 +20,16 @@ document_type: reference
 generated: false
 ---
 # Changelog par module
+
+# 2026-07-14 — Sale M6.1 : ledger de stock et source de vérité unique
+
+- ledger Sale immuable enrichi de l’emplacement, la corrélation et du solde résultant ;
+- état physique, réservé et disponible reconstructible et réparable depuis mouvements et réservations ;
+- stocks from scratch initialisés exclusivement par mouvements d’ouverture idempotents, sans migration ;
+- écritures transactionnelles Business désactivées au profit de Sale et projection Business conservée ;
+- contrat Shop `sale.inventory.availability.v1` limité à quatre statuts et `last_available`, sans quantité brute ;
+- vue Vente > Stock avec recherche scanner, filtres persistants, alertes, détail, export et assistant en cinq étapes ;
+- gate M6 statique, tests PHP/Python/Playwright et preuve machine-readable.
 
 Cette page centralise le suivi lisible des changements module par module. Les versions installées et attendues sont inventoriées dans **Maintenance** ; les sources techniques restent les manifests et schémas canoniques des modules.
 

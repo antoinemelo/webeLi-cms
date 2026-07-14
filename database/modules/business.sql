@@ -421,7 +421,7 @@ CREATE INDEX IF NOT EXISTS idx_business_storefront_invalidations_pending ON busi
 CREATE TABLE IF NOT EXISTS business_inventory_availability_projections (
     sellable_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, tracked INTEGER NOT NULL CHECK(tracked IN (0,1)),
     on_hand_quantity INTEGER NOT NULL, reserved_quantity INTEGER NOT NULL, available_quantity INTEGER NOT NULL,
-    availability_status TEXT NOT NULL CHECK(availability_status IN ('available','backorder','unavailable','not_tracked')),
+    availability_status TEXT NOT NULL CHECK(availability_status IN ('in_stock','deliverable','backorder','unavailable')),
     source_version INTEGER NOT NULL DEFAULT 0, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(sellable_id) REFERENCES business_sellables(sellable_id) ON DELETE CASCADE,
     CHECK(site_id>0), CHECK(available_quantity=on_hand_quantity-reserved_quantity)

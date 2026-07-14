@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "60c5c936e047dd9f4f40de8df197808c13a15d4a",
+  "commit": "983dab5945720164efc280aa20e91f5c1535db25",
   "confidence": "high",
   "databases": [
     "core",
@@ -40,10 +40,12 @@
     "docs/evaluation/feature-matrix.md",
     "docs/evaluation/latest-release-audit.md",
     "docs/evaluation/limitations.md",
+    "docs/evaluation/payment-provider-ux-comparison.md",
     "docs/evaluation/product-scope.md",
     "docs/evaluation/release-audit-policy.md",
     "docs/evaluation/reproducible-checks.md",
     "docs/evaluation/rm1-gap-analysis.md",
+    "docs/evaluation/sale-inventory-ledger.md",
     "docs/evaluation/sale-module-review.md",
     "docs/evaluation/visual-editor.md"
   ],
@@ -54,9 +56,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-07-13",
+  "generated_at": "2026-07-14",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-07-13",
+  "last_verified": "2026-07-14",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],
@@ -70,6 +72,8 @@
     "permissions.json",
     "release-contents.json",
     "routes.json",
+    "sale-inventory-ledger.json",
+    "sale-payment-provider-interchangeability.json",
     "tests.json",
     "validators.json"
   ],

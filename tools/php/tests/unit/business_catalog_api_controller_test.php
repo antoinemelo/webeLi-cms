@@ -337,15 +337,14 @@ try {
         'reference_type' => 'manual',
         'reference_id' => 1001,
     ])->storeStockMovement($variantId);
-    $h->assertSame(201, $movementResponse->status(), 'catalog admin can create stock movement');
+    $h->assertSame(422, $movementResponse->status(), 'Business API rejects stock movement creation in favor of Sale');
     $movementPayload = json_decode($movementResponse->body(), true);
-    $h->assertSame(12, (int) ($movementPayload['data']['stock']['stock_quantity'] ?? 0), 'stock movement updates current quantity');
-    $h->assertSame('manual', $movementPayload['data']['movement']['reference_type'] ?? null, 'stock movement keeps reference type');
+    $h->assertSame('VALIDATION_FAILED', $movementPayload['error']['code'] ?? null, 'Business stock write rejection keeps the validation contract');
 
     $movementsResponse = $controllerFor(1, 'GET', '/admin/api/business/catalog/stock-movements', ['variant_id' => $variantId])->stockMovements();
     $h->assertSame(200, $movementsResponse->status(), 'catalog admin can list stock movements');
     $movementsPayload = json_decode($movementsResponse->body(), true);
-    $h->assertSame(1, count($movementsPayload['data']['movements'] ?? []), 'stock movement history is filterable by variant');
+    $h->assertSame(0, count($movementsPayload['data']['movements'] ?? []), 'deprecated Business stock history remains empty');
 
     $adjustResponse = $controllerFor(1, 'PUT', '/admin/api/business/catalog/variants/' . $variantId . '/price-adjustments', [], [
         'purchase_adjustment_type' => 'amount_delta',

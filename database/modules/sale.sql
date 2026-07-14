@@ -924,6 +924,9 @@ CREATE TABLE IF NOT EXISTS sale_inventory_items (
     sku TEXT,
     tracked INTEGER NOT NULL DEFAULT 1 CHECK(tracked IN (0,1)),
     allow_negative INTEGER NOT NULL DEFAULT 0 CHECK(allow_negative IN (0,1)),
+    allow_backorder INTEGER NOT NULL DEFAULT 0 CHECK(allow_backorder IN (0,1)),
+    backorder_delivery_days INTEGER CHECK(backorder_delivery_days IS NULL OR backorder_delivery_days > 0),
+    low_stock_threshold INTEGER NOT NULL DEFAULT 2 CHECK(low_stock_threshold >= 0),
     on_hand_quantity INTEGER NOT NULL DEFAULT 0,
     reserved_quantity INTEGER NOT NULL DEFAULT 0 CHECK(reserved_quantity >= 0),
     available_quantity INTEGER NOT NULL DEFAULT 0,
@@ -984,22 +987,27 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_order
 CREATE TABLE IF NOT EXISTS sale_stock_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     inventory_item_id INTEGER NOT NULL,
-    movement_type TEXT NOT NULL CHECK(movement_type IN ('initial','receipt','issue','adjustment','correction','return','transfer_in','transfer_out','reservation','release','consumption')),
+    stock_location_id INTEGER NOT NULL,
+    movement_type TEXT NOT NULL CHECK(movement_type IN ('initial','receipt','sale','issue','adjustment','inventory_adjustment','correction','return','transfer_in','transfer_out','reservation','release','consumption','bundle_consumption')),
     quantity INTEGER NOT NULL,
+    balance_after_quantity INTEGER NOT NULL,
     idempotency_key TEXT,
     transfer_key TEXT,
     reference_type TEXT,
     reference_id INTEGER,
+    correlation_id TEXT NOT NULL,
     reason TEXT,
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(inventory_item_id) REFERENCES sale_inventory_items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     UNIQUE(idempotency_key),
     CHECK(quantity <> 0),
     CHECK(reference_type IS NULL OR (reference_type = lower(trim(reference_type)) AND reference_type GLOB '[a-z0-9_.:-]*')),
     CHECK(reference_id IS NULL OR reference_id > 0),
     CHECK(idempotency_key IS NULL OR (idempotency_key=lower(trim(idempotency_key)) AND idempotency_key GLOB '[a-z0-9_.:-]*')),
     CHECK(transfer_key IS NULL OR trim(transfer_key)<>''),
+    CHECK(trim(correlation_id)<>''),
     CHECK(created_by_iam_user_id IS NULL OR created_by_iam_user_id > 0)
 );
 
@@ -1007,6 +1015,10 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_item
     ON sale_stock_movements(inventory_item_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_reference
     ON sale_stock_movements(reference_type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_location
+    ON sale_stock_movements(stock_location_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_movements_correlation
+    ON sale_stock_movements(correlation_id, id);
 CREATE TRIGGER IF NOT EXISTS trg_sale_stock_movements_immutable_update
 BEFORE UPDATE ON sale_stock_movements BEGIN SELECT RAISE(ABORT,'sale.stock_movement_immutable'); END;
 CREATE TRIGGER IF NOT EXISTS trg_sale_stock_movements_immutable_delete

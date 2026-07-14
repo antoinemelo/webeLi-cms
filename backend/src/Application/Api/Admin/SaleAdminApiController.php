@@ -1157,8 +1157,20 @@ final class SaleAdminApiController
     public function stockItems(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.stock.read');
-        $result = $this->inventory->listItems((int) $site['id'], $this->limit(), $this->offset());
-        return $this->ok(['items' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.stock.items.v1', $site, $languageCode);
+        $siteId = (int) $site['id'];
+        $result = $this->inventory->listItems($siteId, $this->limit(), $this->offset(), $this->request->query);
+        $locations = $this->db()->all("SELECT id,code,name,location_type,status FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY name,id", [$siteId]);
+        $summary = $this->db()->one(
+            'SELECT COUNT(*) AS item_count,
+                    COALESCE(SUM(CASE WHEN tracked=1 AND available_quantity<=0 THEN 1 ELSE 0 END),0) AS out_of_stock_count,
+                    COALESCE(SUM(CASE WHEN tracked=1 AND available_quantity>0 AND available_quantity<=low_stock_threshold THEN 1 ELSE 0 END),0) AS low_stock_count,
+                    COALESCE(SUM(on_hand_quantity),0) AS on_hand_quantity,
+                    COALESCE(SUM(reserved_quantity),0) AS reserved_quantity,
+                    COALESCE(SUM(available_quantity),0) AS available_quantity
+             FROM sale_inventory_items WHERE site_id=?',
+            [$siteId]
+        ) ?? [];
+        return $this->ok(['items' => $result['items'], 'locations' => $locations, 'summary' => $summary, 'pagination' => $this->pagination($result)], 'admin.sale.stock.items.v1', $site, $languageCode);
     }
 
     public function stockAdjustments(): Response
@@ -1180,7 +1192,7 @@ final class SaleAdminApiController
     public function stockMovements(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.stock.read');
-        $result = $this->inventory->movements((int) $site['id'], $this->limit(), $this->offset());
+        $result = $this->inventory->movements((int) $site['id'], $this->limit(), $this->offset(), $this->request->query);
         return $this->ok(['movements' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.stock.movements.v1', $site, $languageCode);
     }
 

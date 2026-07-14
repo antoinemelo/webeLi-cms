@@ -134,6 +134,7 @@ generated: true
 | `sale.returns.manage` |
 | `sale.settings.manage` |
 | `sale.status.admin` |
+| `sale.stock.export` |
 | `sale.stock.manage` |
 | `sale.stock.read` |
 | `search.keyword.create` |

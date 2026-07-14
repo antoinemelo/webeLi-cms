@@ -218,9 +218,9 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
       headers: adminHeaders(csrf),
     }), 'stock movements');
     const movements: any[] = stockPayload.data.movements || [];
-    const webConsumptions = movements.filter((movement: any) => movement.movement_type === 'consumption'
+    const webConsumptions = movements.filter((movement: any) => movement.movement_type === 'sale'
       && movement.reference_type === 'order' && Number(movement.reference_id) === webOrderId);
-    const posConsumptions = movements.filter((movement: any) => movement.movement_type === 'consumption'
+    const posConsumptions = movements.filter((movement: any) => movement.movement_type === 'sale'
       && movement.reference_type === 'order' && Number(movement.reference_id) === posOrderId);
     expect(webConsumptions.length).toBeGreaterThan(0);
     expect(posConsumptions.length).toBeGreaterThan(0);

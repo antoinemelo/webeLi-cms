@@ -25,6 +25,10 @@ try {
     $repository->adjust(1, $variantId, 5, 'DEMO-GOURDE-BLEU', 'initial receipt retry', 1, null, 'receipt', 'receipt:test:1');
     $h->assertSame(5, (int) ($saleDb->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE sellable_id=?', [$variantId])['on_hand_quantity'] ?? 0), 'movement idempotency prevents a duplicate receipt');
     $h->assertSame(1, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_movements WHERE idempotency_key='receipt:test:1'")['count'] ?? 0), 'movement idempotency key is unique');
+    $movement = $saleDb->one("SELECT * FROM sale_stock_movements WHERE idempotency_key='receipt:test:1'");
+    $h->assertSame((int) $movement['stock_location_id'], (int) ($saleDb->one('SELECT stock_location_id FROM sale_inventory_items WHERE sellable_id=?', [$variantId])['stock_location_id'] ?? 0), 'movement stores its location explicitly');
+    $h->assertSame('receipt:test:1', $movement['correlation_id'] ?? null, 'movement stores a stable correlation id');
+    $h->assertSame(5, (int) ($movement['balance_after_quantity'] ?? 0), 'movement stores the resulting physical balance');
 
     $saleDb->run('UPDATE sale_inventory_items SET reserved_quantity=2,available_quantity=on_hand_quantity-2 WHERE sellable_id=?', [$variantId]);
     $reconciliation = new SaleInventoryReconciliationService(
@@ -47,6 +51,11 @@ try {
     $snapshot = $sellables->getSellableVariantSnapshot(1, $variantId, ['channel' => 'ecommerce']);
     $h->assertSame(5.0, (float) ($snapshot['metadata']['available_quantity'] ?? 0), 'Business sellable reads the Sale availability projection');
     $h->assertSame('sale_projection', $snapshot['metadata']['inventory_source'] ?? null, 'projection exposes its non-transactional source explicitly');
+    $saleDb->run('UPDATE sale_inventory_items SET on_hand_quantity=9,available_quantity=9 WHERE sellable_id=?', [$variantId]);
+    $physicalRepair = $reconciliation->run(1, true, 1);
+    $h->assertSame(1, (int) $physicalRepair['differences_count'], 'reconciliation detects direct physical cache drift');
+    $h->assertSame(1, (int) $physicalRepair['repaired_count'], 'reconciliation repairs physical cache from the immutable ledger');
+    $h->assertSame(5, (int) ($saleDb->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE sellable_id=?', [$variantId])['on_hand_quantity'] ?? 0), 'physical quantity is reconstructed from movements');
     $h->assertSame(0, (int) $reconciliation->run(1, true, 1)['differences_count'], 'a second reconciliation is clean');
 
     $movementId = (int) ($saleDb->one("SELECT id FROM sale_stock_movements WHERE idempotency_key='receipt:test:1'")['id'] ?? 0);

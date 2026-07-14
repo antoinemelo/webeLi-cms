@@ -236,9 +236,11 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
                 $this->enumField('status', 'Statut', ['active', 'disabled', 'archived'], 'identity', true, 'status'),
             ], ['read' => 'sale.stock.read', 'create' => 'sale.stock.manage', 'update' => 'sale.stock.manage']),
             $this->blueprint('stock_movement', 'Mouvement stock', 'Journal immuable des changements de stock Vente.', 'sale_stock_movements', [
-                $this->enumField('movement_type', 'Type', ['initial', 'receipt', 'issue', 'adjustment', 'correction', 'return', 'transfer_in', 'transfer_out', 'reservation', 'release', 'consumption'], 'identity', true, 'movement_type'),
+                $this->enumField('movement_type', 'Type', ['initial', 'receipt', 'sale', 'issue', 'adjustment', 'inventory_adjustment', 'correction', 'return', 'transfer_in', 'transfer_out', 'reservation', 'release', 'consumption', 'bundle_consumption'], 'identity', true, 'movement_type'),
                 $this->field('quantity', 'Quantite', 'number', 'quantity', true, 'quantity'),
+                $this->field('stock_location_id', 'Emplacement', 'relation', 'location', true, 'stock_location_id'),
                 $this->field('reference_type', 'Reference', 'text', 'reference', false, 'reference_type'),
+                $this->field('correlation_id', 'Correlation', 'text', 'audit', true, 'correlation_id', ['system' => true]),
                 $this->field('created_at', 'Cree le', 'datetime', 'audit', false, 'created_at', ['system' => true]),
             ], ['read' => 'sale.stock.read', 'create' => 'sale.stock.manage']),
         ];

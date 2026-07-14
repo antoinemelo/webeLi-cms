@@ -303,20 +303,23 @@ final class PublicCatalogApiHandler
         }
         return $variants === []
             ? $this->availabilityPayload(true, false, 0.0, (int) ($product['backorder_delivery_days'] ?? 7))
-            : ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+            : $this->availabilityPayload(true, false, 0.0, (int) ($product['backorder_delivery_days'] ?? 7));
     }
 
     /** @return array<string,mixed> */
     private function availabilityPayload(bool $trackStock, bool $allowBackorder, float $availableQuantity, int $backorderDeliveryDays): array
     {
-        if (!$trackStock || $availableQuantity > 0.0) {
-            return ['available' => true, 'backorder_allowed' => false, 'status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null];
+        if (!$trackStock) {
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => false, 'status' => 'deliverable', 'label' => 'Livrable', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => false];
+        }
+        if ($availableQuantity > 0.0) {
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => false, 'status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => $availableQuantity === 1.0];
         }
         if ($allowBackorder) {
             $days = max(1, $backorderDeliveryDays);
-            return ['available' => true, 'backorder_allowed' => true, 'status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days];
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => true, 'status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days, 'last_available' => false];
         }
-        return ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+        return ['contract' => 'sale.inventory.availability.v1', 'available' => false, 'backorder_allowed' => false, 'status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false, 'delivery_lead_time_days' => null, 'last_available' => false];
     }
 
     /** @param array<string,mixed> $summary @param array<string,mixed> $fallback @return array<string,mixed> */
@@ -327,7 +330,7 @@ final class PublicCatalogApiHandler
         }
         return match ((string) ($summary['bundle_availability_status'] ?? 'in_stock')) {
             'backorder' => $this->availabilityPayload(true, true, 0.0, max(1, (int) ($summary['bundle_backorder_delivery_days'] ?? $fallback['delivery_lead_time_days'] ?? 7))),
-            'contact_us' => $this->availabilityPayload(true, false, 0.0, 7),
+            'contact_us', 'unavailable' => $this->availabilityPayload(true, false, 0.0, 7),
             default => $this->availabilityPayload(false, false, 1.0, 7),
         };
     }

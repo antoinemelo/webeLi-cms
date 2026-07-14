@@ -34,23 +34,32 @@ final class SaleInventoryReconciliationService
                     [(int) $item['id']]
                 )['quantity'] ?? 0);
                 $ledger = (int) ($sale->one(
-                    "SELECT COALESCE(SUM(quantity),0) AS quantity FROM sale_stock_movements WHERE inventory_item_id=? AND movement_type IN ('initial','receipt','issue','adjustment','correction','return','transfer_in','transfer_out','consumption')",
+                    "SELECT COALESCE(SUM(quantity),0) AS quantity FROM sale_stock_movements WHERE inventory_item_id=? AND movement_type NOT IN ('reservation','release')",
                     [(int) $item['id']]
                 )['quantity'] ?? 0);
+                $needsRepair = false;
                 if ($activeReserved !== (int) $item['reserved_quantity']) {
                     $differences[] = ['inventory_item_id' => (int) $item['id'], 'kind' => 'reserved_quantity', 'stored' => (int) $item['reserved_quantity'], 'expected' => $activeReserved];
-                    if ($repairDerived) {
-                        $sale->run('UPDATE sale_inventory_items SET reserved_quantity=?,available_quantity=on_hand_quantity-?,version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=?', [$activeReserved, $activeReserved, (int) $item['id']]);
-                        $repaired++;
-                    }
+                    $needsRepair = true;
                 }
                 if ($ledger !== (int) $item['on_hand_quantity']) {
                     $differences[] = ['inventory_item_id' => (int) $item['id'], 'kind' => 'physical_ledger', 'stored' => (int) $item['on_hand_quantity'], 'expected' => $ledger];
+                    $needsRepair = true;
+                }
+                if ($repairDerived && $needsRepair) {
+                    if ((int) $item['allow_negative'] !== 1 && ($ledger < 0 || $ledger - $activeReserved < 0)) {
+                        throw new SaleInventoryException('sale.inventory_reconciliation_negative_derived_state');
+                    }
+                    $sale->run(
+                        'UPDATE sale_inventory_items SET on_hand_quantity=?,reserved_quantity=?,available_quantity=?,version=version+1,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                        [$ledger, $activeReserved, $ledger - $activeReserved, (int) $item['id']]
+                    );
+                    $repaired++;
                 }
             }
 
             $projectionRows = $sale->all(
-                'SELECT sellable_id,MAX(tracked) AS tracked,SUM(on_hand_quantity) AS on_hand_quantity,SUM(reserved_quantity) AS reserved_quantity,SUM(available_quantity) AS available_quantity,MAX(version) AS source_version
+                'SELECT sellable_id,MAX(tracked) AS tracked,MAX(allow_backorder) AS allow_backorder,SUM(on_hand_quantity) AS on_hand_quantity,SUM(reserved_quantity) AS reserved_quantity,SUM(available_quantity) AS available_quantity,MAX(version) AS source_version
                  FROM sale_inventory_items WHERE site_id=? GROUP BY sellable_id',
                 [$siteId]
             );
@@ -62,7 +71,7 @@ final class SaleInventoryReconciliationService
                     $business->run(
                         'INSERT INTO business_inventory_availability_projections(sellable_id,site_id,tracked,on_hand_quantity,reserved_quantity,available_quantity,availability_status,source_version)
                          VALUES(?,?,?,?,?,?,?,?)',
-                        [(int) $row['sellable_id'], $siteId, $tracked, (int) $row['on_hand_quantity'], (int) $row['reserved_quantity'], $available, $tracked === 0 ? 'not_tracked' : ($available > 0 ? 'available' : 'unavailable'), (int) $row['source_version']]
+                        [(int) $row['sellable_id'], $siteId, $tracked, (int) $row['on_hand_quantity'], (int) $row['reserved_quantity'], $available, $tracked === 0 ? 'deliverable' : ($available > 0 ? 'in_stock' : ((int) $row['allow_backorder'] === 1 ? 'backorder' : 'unavailable')), (int) $row['source_version']]
                     );
                     $business->run(
                         "INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT site_id,product_id,'availability' FROM business_sellables WHERE sellable_id=?",

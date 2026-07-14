@@ -57,6 +57,9 @@ try {
 
     $public = $saleCatalog->publicPayload($snapshot);
     $h->assertTrue(!array_key_exists('unit_purchase_price_minor', $public), 'public sellable payload hides purchase price');
+    $h->assertTrue(!array_key_exists('stock_quantity', $public) && !array_key_exists('available_quantity', $public), 'public sellable payload hides internal stock totals');
+    $h->assertTrue(!array_key_exists('stock_quantity', $public['metadata'] ?? []) && !array_key_exists('available_quantity', $public['metadata'] ?? []), 'public metadata hides internal stock totals');
+    $h->assertSame('sale.inventory.availability.v1', $public['availability']['contract'] ?? null, 'public availability is explicitly versioned');
     $h->assertSame(2400, $public['unit_price_minor'], 'public sellable payload keeps final sale price');
     $visibility = new CatalogVisibilityService();
     $visiblePayload = $visibility->publicPayload($snapshot);
@@ -81,6 +84,13 @@ try {
     $stockSearch = $saleCatalog->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-GOURDE-BLEU']);
     $h->assertSame(5, (int) ($stockSearch['items'][0]['available_quantity'] ?? -1), 'sale catalog search overlays transaction stock availability');
     $h->assertSame(5, (int) ($stockSearch['items'][0]['metadata']['available_quantity'] ?? -1), 'sale catalog search overlays transaction stock metadata');
+    $stockPublic = $saleCatalog->publicPayload($stockSearch['items'][0]);
+    $h->assertSame('in_stock', $stockPublic['availability']['status'] ?? null, 'Shop receives the normalized in-stock state');
+    $h->assertSame(false, $stockPublic['availability']['last_available'] ?? null, 'Shop does not mark multiple units as last available');
+    $saleDb->run('UPDATE sale_inventory_items SET on_hand_quantity=1,reserved_quantity=0,available_quantity=1 WHERE business_variant_id=?', [$variantId]);
+    $lastSearch = $saleCatalog->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-GOURDE-BLEU']);
+    $lastPublic = $saleCatalog->publicPayload($lastSearch['items'][0]);
+    $h->assertSame(true, $lastPublic['availability']['last_available'] ?? null, 'Shop may expose the last-available indicator without a raw quantity');
     $barcodeSearch = $sellables->searchSellableVariants(1, ['channel' => 'pos', 'barcode' => '7610000000100']);
     $h->assertSame('DEMO-GOURDE-BLEU', $barcodeSearch['items'][0]['sku'] ?? null, 'sellable search finds by barcode');
     $serviceSearch = $sellables->searchSellableVariants(1, ['channel' => 'pos', 'sku' => 'DEMO-VOL-CLASSIC-20']);

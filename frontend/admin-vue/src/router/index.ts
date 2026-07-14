@@ -85,6 +85,7 @@ export const router = createRouter({
     { path: '/sale', name: 'sale', component: SaleView },
     { path: '/sale/orders', name: 'sale-orders', component: SaleView },
     { path: '/sale/payments', name: 'sale-payments', component: SaleView },
+    { path: '/sale/stock', name: 'sale-stock', component: SaleView },
     { path: '/sale/pos', name: 'sale-pos', component: SaleView },
     { path: '/sale/settings', name: 'sale-settings', component: SaleView },
     { path: '/modules/:moduleKey', name: 'module-detail', component: ModulesView, props: true },

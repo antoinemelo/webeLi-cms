@@ -7,6 +7,7 @@ import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 import SalePosView from './SalePosView.vue';
+import SaleStockView from './SaleStockView.vue';
 
 type Row = Record<string, unknown>;
 type Dashboard = {
@@ -123,6 +124,7 @@ const tabs = [
   { key: 'dashboard', labelKey: 'sale.tabs.dashboard', path: '/sale' },
   { key: 'orders', labelKey: 'sale.tabs.orders', path: '/sale/orders' },
   { key: 'payments', labelKey: 'sale.tabs.payments', path: '/sale/payments' },
+  { key: 'stock', labelKey: 'sale.tabs.stock', path: '/sale/stock' },
   { key: 'pos', labelKey: 'sale.tabs.pos', path: '/sale/pos' },
   { key: 'settings', labelKey: 'sale.tabs.settings', path: '/sale/settings' }
 ];
@@ -142,6 +144,7 @@ const orderPaymentStatusOptions = ['unpaid', 'pending', 'partially_paid', 'paid'
 const activeTab = computed(() => {
   if (route.path.includes('/sale/orders')) return 'orders';
   if (route.path.includes('/sale/payments')) return 'payments';
+  if (route.path.includes('/sale/stock')) return 'stock';
   if (route.path.includes('/sale/pos')) return 'pos';
   if (route.path.includes('/sale/settings')) return 'settings';
   return 'dashboard';
@@ -884,6 +887,10 @@ onMounted(load);
 
     <section v-if="activeTab === 'pos'" class="sale-admin__panel sale-admin__pos">
       <SalePosView embedded />
+    </section>
+
+    <section v-if="activeTab === 'stock'" class="sale-admin__panel sale-admin__stock">
+      <SaleStockView />
     </section>
 
     <section v-if="activeTab === 'settings'" class="sale-admin__panel">

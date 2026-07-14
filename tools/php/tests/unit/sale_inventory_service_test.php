@@ -104,7 +104,7 @@ try {
     $item = $saleDb->one('SELECT * FROM sale_inventory_items WHERE business_variant_id = 9002 LIMIT 1');
     $h->assertSame(3, (int) ($item['on_hand_quantity'] ?? 0), 'checkout sale movement decreases on-hand stock');
     $h->assertSame(0, (int) ($item['reserved_quantity'] ?? 0), 'checkout clears consumed reserved stock');
-    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "consumption" AND quantity = -2 AND reference_id = ?', [$orderId])['count'] ?? 0), 'checkout consumption is historized as immutable movement');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_movements WHERE movement_type = "sale" AND quantity = -2 AND reference_id = ?', [$orderId])['count'] ?? 0), 'checkout sale is historized as immutable movement');
     $inventory->consumeCartReservations($checkoutCartId, $orderId);
     $h->assertSame(3, (int) ($saleDb->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=9002')['on_hand_quantity'] ?? 0), 'checkout retry cannot consume stock twice');
     $stockConsumed = $saleDb->one('SELECT payload_json FROM sale_outbox WHERE topic = "sale.stock.consumed" ORDER BY id DESC LIMIT 1');

@@ -4163,7 +4163,7 @@ onBeforeUnmount(() => {
               <label class="field">Nom<input v-model="variantForm.name" class="input" :disabled="!canWrite || !selectedProductId"></label>
               <label class="field wide">Commentaire Vente / POS<textarea v-model="variantForm.sales_note" class="input" rows="2" :disabled="!canWrite || !selectedProductId"></textarea></label>
               <label class="field">Statut<select v-model="variantForm.status" class="select" :disabled="!canWrite || !selectedProductId"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
-              <label class="field">Stock initial<input v-model="variantForm.stock_quantity" class="input" :disabled="!canWrite || !selectedProductId"></label>
+              <label class="field">Stock initial<input v-model="variantForm.stock_quantity" class="input" :disabled="!canWrite || !selectedProductId || !!selectedVariant"><small>Amorçage à la création ; ensuite géré dans Vente › Stock.</small></label>
               <label class="checkbox-inline"><input v-model="variantForm.track_stock" type="checkbox" :disabled="!canWrite || !selectedProductId"> Suivi stock</label>
               <label class="checkbox-inline"><input v-model="variantForm.allow_backorder" type="checkbox" :disabled="!canWrite || !selectedProductId"> Livraison différée</label>
               <label class="field">Délai hors stock<input v-model="variantForm.backorder_delivery_days" class="input" type="number" min="1" step="1" :disabled="!canWrite || !selectedProductId || !variantForm.allow_backorder" placeholder="Hérite du produit"></label>
@@ -4186,14 +4186,8 @@ onBeforeUnmount(() => {
                   <span>{{ variantStock?.stock_quantity ?? selectedVariant.stock_quantity ?? 0 }} en stock</span>
                   <span>{{ variantStock?.stock_reserved ?? selectedVariant.stock_reserved ?? 0 }} réservé</span>
                 </div>
-                <div class="catalog-form-grid">
-                  <label class="field">Mouvement<select v-model="stockForm.movement_type" class="select" :disabled="!canStockWrite"><option v-for="type in movementTypes" :key="type" :value="type">{{ type }}</option></select></label>
-                  <label class="field">Quantité<input v-model="stockForm.quantity" class="input" :disabled="!canStockWrite"></label>
-                  <label class="field wide">Raison<input v-model="stockForm.reason" class="input" :disabled="!canStockWrite"></label>
-                  <label class="field">Référence<input v-model="stockForm.reference_type" class="input" :disabled="!canStockWrite"></label>
-                  <label class="field">ID référence<input v-model="stockForm.reference_id" class="input" :disabled="!canStockWrite"></label>
-                  <button class="btn primary" type="button" :disabled="!canStockWrite || busy === 'stock'" @click="createStockMovement">Enregistrer mouvement</button>
-                </div>
+                <p class="muted">Projection en lecture seule depuis le ledger transactionnel Sale.</p>
+                <RouterLink class="btn primary" to="/sale/stock">Ouvrir Vente › Stock</RouterLink>
                 <div class="history-list">
                   <div v-for="movement in stockMovements" :key="movement.id as number" class="history-row">
                     <strong>{{ movement.movement_type }}</strong>

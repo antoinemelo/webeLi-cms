@@ -18,6 +18,7 @@ import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
@@ -28,6 +29,7 @@ from tools.python.cms.runtime import resolve_php_binary
 from tools.python.lib.processes import cms_subprocess_env
 CORE_DB = BASE / "storage" / "database" / "core.sqlite"
 BUSINESS_DB = BASE / "storage" / "database" / "business.sqlite"
+SALE_DB = BASE / "storage" / "database" / "sale.sqlite"
 IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
 FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
 COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
@@ -71,7 +73,7 @@ def hash_pw(_password: str) -> str:
 
 
 def ensure_databases_exist() -> None:
-    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB) if not path.exists()]
+    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB, SALE_DB) if not path.exists()]
     if missing:
         raise RuntimeError(
             "Base(s) SQLite introuvable(s): "
@@ -175,6 +177,109 @@ def rebuild_seed_product_content_projections() -> None:
                 ),
             )
         core.commit()
+
+
+def seed_sale_opening_inventory() -> None:
+    """Initialise Sale exclusivement par des mouvements d'ouverture traçables."""
+    with connect_sqlite(BUSINESS_DB) as business, connect_sqlite(SALE_DB) as sale:
+        business.row_factory = sqlite3.Row
+        sale.row_factory = sqlite3.Row
+        rows = business.execute(
+            """
+            SELECT s.sellable_id,p.site_id,p.id AS product_id,p.name AS product_name,p.type AS product_type,
+                   v.id AS variant_id,v.sku,v.barcode,v.name AS variant_name,v.stock_quantity,
+                   COALESCE(v.track_stock,p.track_stock,0) AS tracked,
+                   COALESCE(v.allow_backorder,p.allow_backorder,0) AS allow_backorder,
+                   COALESCE(v.backorder_delivery_days,p.backorder_delivery_days,7) AS backorder_delivery_days
+            FROM business_sellables s
+            INNER JOIN business_product_variants v ON v.id=s.variant_id
+            INNER JOIN business_products p ON p.id=v.product_id AND p.site_id=s.site_id
+            WHERE s.status='active' AND v.archived_at IS NULL AND p.archived_at IS NULL
+            ORDER BY p.site_id,s.sellable_id
+            """
+        ).fetchall()
+        for row in rows:
+            site_id = int(row["site_id"])
+            location = sale.execute(
+                "SELECT id FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY code='channel-default' DESC,id LIMIT 1",
+                (site_id,),
+            ).fetchone()
+            if location is None:
+                sale.execute(
+                    "INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(?,'channel-default','Stock principal','main','active')",
+                    (site_id,),
+                )
+                location_id = int(sale.execute("SELECT last_insert_rowid()").fetchone()[0])
+            else:
+                location_id = int(location[0])
+            sale.execute(
+                """
+                INSERT INTO sale_catalog_variant_refs(
+                    site_id,business_product_id,business_variant_id,sellable_id,sku,barcode,
+                    product_name,variant_name,product_type,track_stock,last_snapshot_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id,business_variant_id) DO UPDATE SET
+                    sellable_id=excluded.sellable_id,sku=excluded.sku,barcode=excluded.barcode,
+                    product_name=excluded.product_name,variant_name=excluded.variant_name,
+                    product_type=excluded.product_type,track_stock=excluded.track_stock,
+                    last_snapshot_json=excluded.last_snapshot_json,synced_at=CURRENT_TIMESTAMP,archived_at=NULL
+                """,
+                (
+                    site_id,int(row["product_id"]),int(row["variant_id"]),int(row["sellable_id"]),
+                    row["sku"],row["barcode"],row["product_name"],row["variant_name"],row["product_type"],
+                    int(row["tracked"]),json.dumps({"source": "business.seed", "sellable_id": int(row["sellable_id"])}, separators=(",", ":")),
+                ),
+            )
+            existing = sale.execute(
+                "SELECT id FROM sale_inventory_items WHERE site_id=? AND sellable_id=? AND stock_location_id=?",
+                (site_id, int(row["sellable_id"]), location_id),
+            ).fetchone()
+            if existing is not None:
+                continue
+            opening = max(0, int(Decimal(str(row["stock_quantity"] or 0)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)))
+            sale.execute(
+                """
+                INSERT INTO sale_inventory_items(
+                    site_id,business_variant_id,sellable_id,stock_location_id,sku,tracked,
+                    allow_backorder,backorder_delivery_days,on_hand_quantity,reserved_quantity,available_quantity
+                ) VALUES(?,?,?,?,?,?,?,?,0,0,0)
+                """,
+                (
+                    site_id,int(row["variant_id"]),int(row["sellable_id"]),location_id,row["sku"],int(row["tracked"]),
+                    int(row["allow_backorder"]),max(1,int(row["backorder_delivery_days"] or 7)),
+                ),
+            )
+            item_id = int(sale.execute("SELECT last_insert_rowid()").fetchone()[0])
+            if opening > 0:
+                key = f"opening:site:{site_id}:sellable:{int(row['sellable_id'])}:location:{location_id}"
+                sale.execute(
+                    """
+                    INSERT INTO sale_stock_movements(
+                        inventory_item_id,stock_location_id,movement_type,quantity,balance_after_quantity,
+                        idempotency_key,reference_type,reference_id,correlation_id,reason
+                    ) VALUES(?,?,'initial',?,?,?,?,? ,?,'Seed from scratch — stock d ouverture')
+                    """,
+                    (item_id,location_id,opening,opening,key,"catalog_seed",int(row["variant_id"]),key),
+                )
+                sale.execute(
+                    "UPDATE sale_inventory_items SET on_hand_quantity=?,available_quantity=?,version=1,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (opening,opening,item_id),
+                )
+            status = "deliverable" if int(row["tracked"]) == 0 else ("in_stock" if opening > 0 else ("backorder" if int(row["allow_backorder"]) == 1 else "unavailable"))
+            business.execute(
+                """
+                INSERT INTO business_inventory_availability_projections(
+                    sellable_id,site_id,tracked,on_hand_quantity,reserved_quantity,available_quantity,availability_status,source_version
+                ) VALUES(?,?,?,?,0,?,?,?)
+                ON CONFLICT(sellable_id) DO UPDATE SET
+                    tracked=excluded.tracked,on_hand_quantity=excluded.on_hand_quantity,reserved_quantity=0,
+                    available_quantity=excluded.available_quantity,availability_status=excluded.availability_status,
+                    source_version=excluded.source_version,projected_at=CURRENT_TIMESTAMP
+                """,
+                (int(row["sellable_id"]),site_id,int(row["tracked"]),opening,opening,status,1 if opening > 0 else 0),
+            )
+        sale.commit()
+        business.commit()
 
 def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
     """Synchronise la politique IAM native des modules.
@@ -2098,6 +2203,7 @@ def main() -> int:
     args = parse_args()
     try:
         seed()
+        seed_sale_opening_inventory()
         rebuild_seed_product_content_projections()
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR seed: {exc}", file=sys.stderr)

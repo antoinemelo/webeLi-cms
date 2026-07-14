@@ -48,54 +48,8 @@ final class CatalogStockRepository extends BusinessRepositoryBase
     /** @return array{variant:array<string,mixed>,movement:array<string,mixed>} */
     public function createMovement(int $siteId, int $variantId, string $movementType, float $quantity, ?string $reason = null, ?string $referenceType = null, ?int $referenceId = null, ?int $actorId = null): array
     {
-        if ($this->hasInventoryProjectionTable() && $this->database()->one('SELECT sellable_id FROM business_inventory_availability_projections WHERE site_id=? AND sellable_id=?', [$siteId, $variantId]) !== null) {
-            throw new \InvalidArgumentException('business.catalog.stock_transactional_source_sale');
-        }
-        if ($quantity <= 0 && $movementType !== 'adjustment') {
-            throw new \InvalidArgumentException('business.catalog.stock_quantity_invalid');
-        }
-        if ($quantity == 0.0) {
-            throw new \InvalidArgumentException('business.catalog.stock_quantity_invalid');
-        }
-        $variant = $this->variantForSite($siteId, $variantId);
-        $stock = (float) $variant['stock_quantity'];
-        $reserved = (float) $variant['stock_reserved'];
-        $allowBackorder = $this->allowBackorder($variant);
-        $trackStock = $this->trackStock($variant);
-
-        if (!in_array($movementType, ['initial', 'purchase', 'sale', 'adjustment', 'return', 'reservation', 'release'], true)) {
-            throw new \InvalidArgumentException('business.catalog.stock_movement_type_invalid');
-        }
-
-        if ($trackStock) {
-            match ($movementType) {
-                'initial', 'purchase', 'return' => $stock += $quantity,
-                'sale' => $stock -= $quantity,
-                'adjustment' => $stock += $quantity,
-                'reservation' => $reserved += $quantity,
-                'release' => $reserved -= $quantity,
-                default => null,
-            };
-            if ($reserved < 0) {
-                throw new \InvalidArgumentException('business.catalog.stock_reserved_negative');
-            }
-            if (!$allowBackorder && ($stock < 0 || $reserved > $stock)) {
-                throw new \InvalidArgumentException('business.catalog.stock_negative');
-            }
-        }
-
-        $this->database()->run(
-            'INSERT INTO business_stock_movements(variant_id, movement_type, quantity, reason, reference_type, reference_id, created_by_iam_user_id) VALUES(?, ?, ?, ?, ?, ?, ?)',
-            [$variantId, $movementType, round($quantity, 2), $this->nullableText($reason, 'reason', 500), $this->nullableText($referenceType, 'reference_type', 80), $referenceId, $actorId]
-        );
-        $movementId = $this->database()->lastInsertId();
-        if ($trackStock) {
-            $this->database()->run(
-                'UPDATE business_product_variants SET stock_quantity = ?, stock_reserved = ?, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-                [round($stock, 2), round($reserved, 2), $actorId, $variantId]
-            );
-        }
-        return ['variant' => $this->variant($variantId), 'movement' => $this->movement($movementId)];
+        $this->variantForSite($siteId, $variantId);
+        throw new \InvalidArgumentException('business.catalog.stock_transactional_source_sale');
     }
 
     /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int} */

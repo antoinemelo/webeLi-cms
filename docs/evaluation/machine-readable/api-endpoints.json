@@ -6,7 +6,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-backend-routes-api-php-81afa0862a",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -24,7 +24,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-catalog-brands-backend-routes-api-php-fd0bcb02d8",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -42,7 +42,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-catalog-categories-backend-routes-api-php-9f3013f390",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -60,7 +60,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-catalog-products-backend-routes-api-php-f79cb52dbe",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -78,7 +78,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-catalog-products-slug-backend-routes-api-php-f4c767d199",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -96,7 +96,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-catalog-variants-id-backend-routes-api-php-d9c5f0e35b",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -114,7 +114,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-content-backend-routes-api-php-cb254965a8",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -132,7 +132,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-content-by-path-backend-routes-api-php-5b4087df1d",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -150,7 +150,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-content-type-backend-routes-api-php-514f18cfff",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -168,7 +168,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-content-type-slug-backend-routes-api-php-63251d0dab",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -186,7 +186,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-cookies-config-backend-routes-api-php-4a476574d2",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -204,7 +204,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-post-api-v1-cookies-consent-backend-routes-api-php-8e2fed81dd",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -222,7 +222,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-forms-key-backend-routes-api-php-f35b6603dc",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -240,7 +240,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-post-api-v1-forms-key-submit-backend-routes-api-php-1a0fd0f7af",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -258,7 +258,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-health-backend-routes-api-php-65a2e2a777",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -276,7 +276,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-languages-backend-routes-api-php-a54920cd6f",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -294,7 +294,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-media-backend-routes-api-php-321299913a",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -312,7 +312,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-media-id-backend-routes-api-php-35becaf5cc",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -330,7 +330,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-menus-backend-routes-api-php-a6d4e65a3a",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -348,7 +348,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-menus-key-backend-routes-api-php-a2b06fdc0f",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -366,7 +366,7 @@
       "backend/src/Modules/Forms/FormsModuleProvider.php"
     ],
     "id": "api-endpoint-get-api-v1-modules-forms-forms-schema-backend-src-modules-forms-formsmoduleprovider-php-a92ee0910e",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -384,7 +384,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-modules-module-resource-schema-backend-routes-api-php-232215eec5",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -402,7 +402,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-openapi-json-backend-routes-api-php-19c1f57f54",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -420,7 +420,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-openapi-yaml-backend-routes-api-php-61ece22421",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -438,7 +438,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-pos-catalog-bootstrap-backend-routes-api-php-ec544fb213",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -456,7 +456,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-pos-catalog-brands-backend-routes-api-php-5073d10f3f",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -474,7 +474,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-pos-catalog-categories-backend-routes-api-php-a63effd590",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -492,7 +492,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-pos-catalog-products-backend-routes-api-php-e27ec729ff",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -510,7 +510,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-pos-catalog-variants-backend-routes-api-php-f597499ecb",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -528,7 +528,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-route-backend-routes-api-php-05c3dfe817",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -546,7 +546,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-routes-backend-routes-api-php-25da575144",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -564,7 +564,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-search-backend-routes-api-php-efb8975230",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -582,7 +582,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-storefront-collections-backend-routes-api-php-081fb05149",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -600,7 +600,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-storefront-products-backend-routes-api-php-ea55c9df24",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -618,7 +618,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-storefront-products-slug-backend-routes-api-php-ba86a844d6",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -636,7 +636,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-taxonomies-backend-routes-api-php-61170b60f3",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],
@@ -654,7 +654,7 @@
       "backend/routes/api.php"
     ],
     "id": "api-endpoint-get-api-v1-taxonomies-taxonomy-backend-routes-api-php-8ec24436ab",
-    "last_verified": "2026-07-13",
+    "last_verified": "2026-07-14",
     "limitations": [
       "A route declaration does not prove successful end-to-end execution."
     ],

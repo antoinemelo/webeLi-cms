@@ -87,8 +87,6 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
                 'barcode' => $this->nullableText($payload['barcode'] ?? $current['barcode'] ?? null, 'barcode', 80),
                 'name' => $this->text($payload['name'] ?? $current['name'], 'name', 180),
                 'track_stock' => array_key_exists('track_stock', $payload) ? $this->boolInt($payload['track_stock']) : ($current['track_stock'] ?? null),
-                'stock_quantity' => max(0, (float) ($payload['stock_quantity'] ?? $current['stock_quantity'] ?? 0)),
-                'stock_reserved' => max(0, (float) ($payload['stock_reserved'] ?? $current['stock_reserved'] ?? 0)),
                 'allow_backorder' => array_key_exists('allow_backorder', $payload) ? $this->boolInt($payload['allow_backorder']) : ($current['allow_backorder'] ?? null),
                 'backorder_delivery_days' => array_key_exists('backorder_delivery_days', $payload) || array_key_exists('delivery_lead_time_days', $payload) ? max(0, (int) ($payload['backorder_delivery_days'] ?? $payload['delivery_lead_time_days'] ?? 0)) : ($current['backorder_delivery_days'] ?? null),
                 'weight_grams' => $payload['weight_grams'] ?? $current['weight_grams'] ?? null,
@@ -100,8 +98,8 @@ final class CatalogVariantRepository extends BusinessRepositoryBase
         }
         $this->database()->run(
             'UPDATE business_product_variants
-             SET status = :status, sku = :sku, barcode = :barcode, name = :name, ' . ($hasSalesNoteColumn ? 'sales_note = :sales_note, ' : '') . 'track_stock = :track_stock, stock_quantity = :stock_quantity,
-                 stock_reserved = :stock_reserved, allow_backorder = :allow_backorder, backorder_delivery_days = :backorder_delivery_days, weight_grams = :weight_grams, sort_order = :sort_order,
+             SET status = :status, sku = :sku, barcode = :barcode, name = :name, ' . ($hasSalesNoteColumn ? 'sales_note = :sales_note, ' : '') . 'track_stock = :track_stock,
+                 allow_backorder = :allow_backorder, backorder_delivery_days = :backorder_delivery_days, weight_grams = :weight_grams, sort_order = :sort_order,
                  updated_by_iam_user_id = :actor, updated_at = CURRENT_TIMESTAMP
              WHERE id = :id',
             $params

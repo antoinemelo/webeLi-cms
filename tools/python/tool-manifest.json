@@ -191,6 +191,7 @@
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/inventory_ledger_gate.py",
         "tools/python/qualification/omnichannel_gate.py",
         "tools/python/qualification/payment_provider_gate.py",
         "tools/python/qualification/performance_baseline.py",
@@ -1292,7 +1293,9 @@
         "TREE.txt",
         "database/00-overview.md",
         "docs/evaluation/business-crm-review.md",
+        "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "tools/python/operations/database/a_db_init.py",
+        "tools/python/qualification/inventory_ledger_gate.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/security/pii.py"
       ],
@@ -1848,6 +1851,23 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/inventory_ledger_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_inventory_ledger_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/omnichannel_gate.py",
       "category": "internal",
       "public": false,
@@ -1879,7 +1899,8 @@
         "docs/evaluation/payment-provider-ux-comparison.md",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_payment_provider_gate.py",
-        "tools/python/tests/test_qualification_orchestrator.py"
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2205,6 +2226,20 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_inventory_ledger_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_migrate_plan_readonly.py",
       "category": "test",
       "public": false,
@@ -2259,7 +2294,8 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",

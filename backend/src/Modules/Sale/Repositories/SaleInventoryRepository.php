@@ -9,32 +9,78 @@ use App\Modules\Sale\Exceptions\SaleInventoryException;
 final class SaleInventoryRepository extends SaleRepositoryBase
 {
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
-    public function listItems(int $siteId, int $limit = 50, int $offset = 0): array
+    public function listItems(int $siteId, int $limit = 50, int $offset = 0, array $filters = []): array
     {
-        $total = (int) ($this->rawDatabase()->one('SELECT COUNT(*) AS count FROM sale_inventory_items WHERE site_id = ?', [$siteId])['count'] ?? 0);
+        $where = ['i.site_id=:site_id'];
+        $params = ['site_id' => $siteId];
+        $query = trim((string) ($filters['q'] ?? ''));
+        if ($query !== '') {
+            $where[] = '(i.sku LIKE :query OR r.barcode LIKE :query OR r.product_name LIKE :query OR r.variant_name LIKE :query OR l.code LIKE :query OR l.name LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+        if ((int) ($filters['location_id'] ?? 0) > 0) {
+            $where[] = 'i.stock_location_id=:location_id';
+            $params['location_id'] = (int) $filters['location_id'];
+        }
+        $alert = trim((string) ($filters['alert'] ?? ''));
+        if ($alert === 'out_of_stock') $where[] = 'i.tracked=1 AND i.available_quantity<=0';
+        if ($alert === 'low_stock') $where[] = 'i.tracked=1 AND i.available_quantity>0 AND i.available_quantity<=i.low_stock_threshold';
+        if ($alert === 'inconsistent') {
+            $where[] = '(i.on_hand_quantity<>(SELECT COALESCE(SUM(m.quantity),0) FROM sale_stock_movements m WHERE m.inventory_item_id=i.id AND m.movement_type NOT IN (\'reservation\',\'release\')) OR i.reserved_quantity<>(SELECT COALESCE(SUM(sr.quantity),0) FROM sale_stock_reservations sr WHERE sr.inventory_item_id=i.id AND sr.status IN (\'active\',\'confirmed\')))';
+        }
+        $sqlWhere = implode(' AND ', $where);
+        $joins = ' FROM sale_inventory_items i INNER JOIN sale_stock_locations l ON l.id=i.stock_location_id LEFT JOIN sale_catalog_variant_refs r ON r.site_id=i.site_id AND r.sellable_id=i.sellable_id ';
+        $total = (int) ($this->rawDatabase()->one('SELECT COUNT(*) AS count' . $joins . 'WHERE ' . $sqlWhere, $params)['count'] ?? 0);
         $items = $this->rawDatabase()->all(
-            'SELECT * FROM sale_inventory_items WHERE site_id = ? ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?',
-            [$siteId, max(1, min(100, $limit)), max(0, $offset)]
+            'SELECT i.*,l.code AS location_code,l.name AS location_name,l.location_type,r.product_name,r.variant_name,r.barcode,
+                    (SELECT COALESCE(SUM(m.quantity),0) FROM sale_stock_movements m WHERE m.inventory_item_id=i.id AND m.movement_type NOT IN (\'reservation\',\'release\')) AS ledger_on_hand_quantity,
+                    (SELECT COALESCE(SUM(sr.quantity),0) FROM sale_stock_reservations sr WHERE sr.inventory_item_id=i.id AND sr.status IN (\'active\',\'confirmed\')) AS ledger_reserved_quantity'
+            . $joins . 'WHERE ' . $sqlWhere . '
+             ORDER BY CASE WHEN i.tracked=1 AND i.available_quantity<=0 THEN 0 WHEN i.tracked=1 AND i.available_quantity<=i.low_stock_threshold THEN 1 ELSE 2 END,i.updated_at DESC,i.id DESC
+             LIMIT :limit OFFSET :offset',
+            $params + ['limit' => max(1, min(100, $limit)), 'offset' => max(0, $offset)]
         );
+        foreach ($items as &$item) {
+            $item['inconsistent'] = (int) $item['on_hand_quantity'] !== (int) $item['ledger_on_hand_quantity'] || (int) $item['reserved_quantity'] !== (int) $item['ledger_reserved_quantity'];
+            $item['low_stock'] = (int) $item['tracked'] === 1 && (int) $item['available_quantity'] > 0 && (int) $item['available_quantity'] <= (int) $item['low_stock_threshold'];
+            $item['last_available'] = (int) $item['tracked'] === 1 && (int) $item['available_quantity'] === 1;
+            $item['availability_status'] = $this->publicAvailabilityStatus($item);
+        }
+        unset($item);
         return ['items' => $items, 'limit' => $limit, 'offset' => $offset, 'total' => $total, 'has_more' => ($offset + $limit) < $total];
     }
 
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
-    public function movements(int $siteId, int $limit = 50, int $offset = 0): array
+    public function movements(int $siteId, int $limit = 50, int $offset = 0, array $filters = []): array
     {
         $params = ['site_id' => $siteId];
+        $where = ['i.site_id=:site_id'];
+        foreach (['inventory_item_id', 'stock_location_id', 'reference_id'] as $key) {
+            if ((int) ($filters[$key] ?? 0) > 0) {
+                $where[] = 'm.' . $key . '=:' . $key;
+                $params[$key] = (int) $filters[$key];
+            }
+        }
+        foreach (['movement_type', 'reference_type', 'correlation_id'] as $key) {
+            if (trim((string) ($filters[$key] ?? '')) !== '') {
+                $where[] = 'm.' . $key . '=:' . $key;
+                $params[$key] = trim((string) $filters[$key]);
+            }
+        }
+        $query = trim((string) ($filters['q'] ?? ''));
+        if ($query !== '') {
+            $where[] = '(i.sku LIKE :query OR r.barcode LIKE :query OR r.product_name LIKE :query OR l.code LIKE :query OR m.reason LIKE :query OR m.correlation_id LIKE :query)';
+            $params['query'] = '%' . $query . '%';
+        }
+        $sqlWhere = implode(' AND ', $where);
+        $joins = ' FROM sale_stock_movements m INNER JOIN sale_inventory_items i ON i.id=m.inventory_item_id INNER JOIN sale_stock_locations l ON l.id=m.stock_location_id LEFT JOIN sale_catalog_variant_refs r ON r.site_id=i.site_id AND r.sellable_id=i.sellable_id ';
         $total = (int) ($this->rawDatabase()->one(
-            'SELECT COUNT(*) AS count
-             FROM sale_stock_movements m
-             INNER JOIN sale_inventory_items i ON i.id = m.inventory_item_id
-             WHERE i.site_id = :site_id',
+            'SELECT COUNT(*) AS count' . $joins . 'WHERE ' . $sqlWhere,
             $params
         )['count'] ?? 0);
         $items = $this->rawDatabase()->all(
-            'SELECT m.*, i.business_variant_id, i.sku
-             FROM sale_stock_movements m
-             INNER JOIN sale_inventory_items i ON i.id = m.inventory_item_id
-             WHERE i.site_id = :site_id
+            'SELECT m.*,i.business_variant_id,i.sellable_id,i.sku,l.code AS location_code,l.name AS location_name,r.product_name,r.variant_name,r.barcode'
+            . $joins . 'WHERE ' . $sqlWhere . '
              ORDER BY m.created_at DESC, m.id DESC
              LIMIT :limit OFFSET :offset',
             $params + ['limit' => max(1, min(100, $limit)), 'offset' => max(0, $offset)]
@@ -44,13 +90,22 @@ final class SaleInventoryRepository extends SaleRepositoryBase
 
     public function adjust(int $siteId, int $businessVariantId, int $quantityDelta, ?string $sku = null, ?string $reason = null, ?int $actorId = null, ?int $locationId = null, string $movementType = 'adjustment', ?string $idempotencyKey = null): array
     {
+        if ($businessVariantId < 1) {
+            throw new SaleInventoryException('sale.stock_item_required');
+        }
         if ($quantityDelta === 0) {
             throw new SaleInventoryException('sale.stock_adjustment_zero');
+        }
+        if (trim((string) $reason) === '') {
+            throw new SaleInventoryException('sale.stock_reason_required');
         }
         if (!in_array($movementType, ['receipt', 'issue', 'adjustment', 'correction'], true)) {
             throw new SaleInventoryException('sale.stock_movement_type_invalid');
         }
         $locationId ??= $this->defaultLocationId($siteId);
+        if ($this->rawDatabase()->one("SELECT id FROM sale_stock_locations WHERE id=? AND site_id=? AND status='active'", [$locationId, $siteId]) === null) {
+            throw new SaleInventoryException('sale.stock_location_invalid');
+        }
         return $this->rawDatabase()->transaction(function () use ($siteId, $businessVariantId, $locationId, $sku, $quantityDelta, $movementType, $reason, $actorId, $idempotencyKey): array {
             if ($idempotencyKey !== null) {
                 $existing = $this->rawDatabase()->one('SELECT inventory_item_id FROM sale_stock_movements WHERE idempotency_key=?', [$idempotencyKey]);
@@ -101,9 +156,9 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             [$siteId, $sellableId, $locationId]
         );
         if ($item === null || (int) $item['tracked'] === 0) {
-            return ['tracked' => false, 'on_hand_quantity' => null, 'reserved_quantity' => null, 'available_quantity' => null, 'status' => 'not_tracked'];
+            return ['tracked' => false, 'on_hand_quantity' => null, 'reserved_quantity' => null, 'available_quantity' => null, 'status' => 'deliverable', 'contract' => 'sale.inventory.availability.v1', 'last_available' => false];
         }
-        return $item + ['status' => (int) $item['available_quantity'] > 0 ? 'available' : 'unavailable'];
+        return $item + ['status' => $this->publicAvailabilityStatus($item), 'contract' => 'sale.inventory.availability.v1', 'last_available' => (int) $item['available_quantity'] === 1];
     }
 
     /** @return array{from:array<string,mixed>,to:array<string,mixed>} */
@@ -151,8 +206,9 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'INSERT INTO sale_inventory_items(
                 site_id, business_variant_id, sellable_id, stock_location_id, sku, tracked,
+                allow_backorder, backorder_delivery_days, low_stock_threshold,
                 on_hand_quantity, reserved_quantity, available_quantity
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, 0, ?)',
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
             [
                 $siteId,
                 $variantId,
@@ -160,6 +216,9 @@ final class SaleInventoryRepository extends SaleRepositoryBase
                 $locationId,
                 $snapshot['sku'] ?? null,
                 (int) (bool) ($snapshot['track_stock'] ?? false),
+                (int) (bool) ($snapshot['allow_backorder'] ?? $snapshot['metadata']['allow_backorder'] ?? false),
+                max(1, (int) ($snapshot['backorder_delivery_days'] ?? $snapshot['metadata']['backorder_delivery_days'] ?? 7)),
+                max(0, (int) ($snapshot['low_stock_threshold'] ?? 2)),
                 $onHand,
                 $onHand,
             ]
@@ -282,7 +341,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
                 if ($stock->rowCount() !== 1) {
                     throw new SaleInventoryException('sale.stock_consumption_conflict');
                 }
-                $this->movement($itemId, 'consumption', -$quantity, 'order', $orderId, 'checkout consumption', null, 'consume:reservation:' . (int) $reservation['id']);
+                $this->movement($itemId, 'sale', -$quantity, 'order', $orderId, 'checkout sale', null, 'consume:reservation:' . (int) $reservation['id']);
             }
         });
     }
@@ -489,10 +548,26 @@ final class SaleInventoryRepository extends SaleRepositoryBase
 
     private function movement(int $itemId, string $type, int $quantity, ?string $referenceType, ?int $referenceId, string $reason, ?int $actorId = null, ?string $idempotencyKey = null, ?string $transferKey = null): void
     {
+        $item = $this->rawDatabase()->one('SELECT stock_location_id,on_hand_quantity FROM sale_inventory_items WHERE id=?', [$itemId]);
+        if ($item === null) {
+            throw new SaleInventoryException('sale.stock_item_not_found');
+        }
+        $correlationId = $idempotencyKey !== null && trim($idempotencyKey) !== ''
+            ? strtolower(trim($idempotencyKey))
+            : 'stock:' . bin2hex(random_bytes(12));
         $this->rawDatabase()->run(
-            'INSERT OR IGNORE INTO sale_stock_movements(inventory_item_id, movement_type, quantity, idempotency_key, transfer_key, reference_type, reference_id, reason, created_by_iam_user_id)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [$itemId, $type, $quantity, $idempotencyKey, $transferKey, $referenceType, $referenceId, $reason, $actorId]
+            'INSERT OR IGNORE INTO sale_stock_movements(inventory_item_id,stock_location_id,movement_type,quantity,balance_after_quantity,idempotency_key,transfer_key,reference_type,reference_id,correlation_id,reason,created_by_iam_user_id)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+            [$itemId,(int)$item['stock_location_id'],$type,$quantity,(int)$item['on_hand_quantity'],$idempotencyKey,$transferKey,$referenceType,$referenceId,$correlationId,$reason,$actorId]
         );
+    }
+
+    /** @param array<string,mixed> $item */
+    private function publicAvailabilityStatus(array $item): string
+    {
+        if ((int) ($item['tracked'] ?? 0) === 0) return 'deliverable';
+        if ((int) ($item['available_quantity'] ?? 0) > 0) return 'in_stock';
+        if ((int) ($item['allow_backorder'] ?? 0) === 1) return 'backorder';
+        return 'unavailable';
     }
 }
