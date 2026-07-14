@@ -3454,6 +3454,46 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+    ],
+    "id": "permission-sale-fulfillment-manage-e68cd8bce9",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.fulfillment.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+    ],
+    "id": "permission-sale-inventory-approve-960a12cfa9",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.inventory.approve",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-manage-f299f7db39",
@@ -3788,6 +3828,26 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
       "frontend/admin-vue/src/router/navigation.ts"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+    ],
+    "id": "permission-sale-transfers-manage-d35fde3b17",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.transfers.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
     ],
     "status": "supported"
   },

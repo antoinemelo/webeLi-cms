@@ -36,6 +36,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Réservations et disponibilité | réservation implicite sans politique de canal | concurrence PHP + gate Python + API/Playwright | déclencheurs configurables, TTL borné, expiration idempotente, backorder explicite, reprise Shop et libération opérateur auditée | ajouté pour M6.2 |
 | Bundles et stock composé | modes historiques ambigus et stock du parent | tests Business/Sale + gate Python + UX opérateur | trois stratégies, ratios imbriqués, facteur limitant, cycles, concurrence, multi-location, consommation et retours | ajouté pour M6.3 |
 | Reconstruction du stock | réparation historique implicite et comparaison partielle | scénario PHP + gate Python + UX opérateur | dry-run, journal/cache/réservations/logistique/Shop, sauvegarde-restauration, correction prouvée et reprise ciblée | ajouté pour M6.5 |
+| Identité client | bridges nuls et fusion opaque | scénario IAM/CRM/Sale + gate Python + Playwright | invité, token post-achat, provenance, scores, doublons, multisite, aperçu, fusion et séparation sans toucher aux snapshots | ajouté pour M7.1 |
 
 ## Tests ajoutés
 
@@ -62,6 +63,8 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php`
 - `tools/python/tests/test_stock_reconstruction_gate.py`
 - `frontend/admin-vue/tests/e2e/sale-stock-reconstruction.spec.ts`
+- `tools/python/tests/test_customer_identity_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

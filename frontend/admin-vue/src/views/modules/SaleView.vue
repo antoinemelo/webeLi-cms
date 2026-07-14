@@ -10,6 +10,7 @@ import SalePosView from './SalePosView.vue';
 import SaleStockView from './SaleStockView.vue';
 import SaleReservationsView from './SaleReservationsView.vue';
 import SaleOperationsView from './SaleOperationsView.vue';
+import SaleIdentityReviewView from './SaleIdentityReviewView.vue';
 
 type Row = Record<string, unknown>;
 type Dashboard = {
@@ -129,6 +130,7 @@ const tabs = [
   { key: 'stock', labelKey: 'sale.tabs.stock', path: '/sale/stock' },
   { key: 'reservations', labelKey: 'sale.tabs.reservations', path: '/sale/reservations' },
   { key: 'operations', labelKey: 'sale.tabs.operations', path: '/sale/operations' },
+  { key: 'identities', labelKey: 'sale.tabs.identities', path: '/sale/identities' },
   { key: 'pos', labelKey: 'sale.tabs.pos', path: '/sale/pos' },
   { key: 'settings', labelKey: 'sale.tabs.settings', path: '/sale/settings' }
 ];
@@ -151,6 +153,7 @@ const activeTab = computed(() => {
   if (route.path.includes('/sale/stock')) return 'stock';
   if (route.path.includes('/sale/reservations')) return 'reservations';
   if (route.path.includes('/sale/operations')) return 'operations';
+  if (route.path.includes('/sale/identities')) return 'identities';
   if (route.path.includes('/sale/pos')) return 'pos';
   if (route.path.includes('/sale/settings')) return 'settings';
   return 'dashboard';
@@ -905,6 +908,10 @@ onMounted(load);
 
     <section v-if="activeTab === 'operations'" class="sale-admin__panel sale-admin__stock">
       <SaleOperationsView />
+    </section>
+
+    <section v-if="activeTab === 'identities'" class="sale-admin__panel sale-admin__stock">
+      <SaleIdentityReviewView />
     </section>
 
     <section v-if="activeTab === 'settings'" class="sale-admin__panel">

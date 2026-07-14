@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "gate": "sale.customer-identity-bridges.m7.1.v1",
+  "status": "passed",
+  "identity_types": ["TransactionalCustomer", "CrmContact", "IamAccount", "Organization"],
+  "bridges": {"crm_activity_real": true, "customer_identity_real": true, "null_fallback_test_only": true, "legacy_name_compatible": true},
+  "resolution_strategies": {"explicit_link": true, "post_purchase_token": true, "verified_email": true, "verified_normalized_phone_opt_in": true, "administrative_action": true, "name_only_forbidden": true},
+  "safety": {"guest_checkout_without_fake_contact": true, "automatic_risky_merge": false, "field_conflict_decision_required": true, "sale_snapshots_immutable": true, "cross_database_foreign_keys": false},
+  "provenance_sources": ["checkout", "account", "import", "operator", "event"],
+  "review": {"explainable_score": true, "matching_and_divergent_fields": true, "orders_and_activities": true, "link": true, "do_not_link": true, "merge": true, "postpone": true, "separate": true, "audit_log": true},
+  "tests": {"guest": "passed", "post_purchase_claim": "passed", "duplicates": "passed", "multisite": "passed", "merge_separate": "passed", "browser_recovery": "passed"},
+  "fresh_instance": {"canonical_schema": true, "migration_required": false},
+  "security": {"contains_pii": false, "contains_secret": false},
+  "evidence": {"service": "backend/src/Modules/Sale/Services/SaleCustomerAccountService.php", "crm_bridge": "backend/src/Modules/Business/Services/SaleCrmActivityProjectionService.php", "admin_ui": "frontend/admin-vue/src/views/modules/SaleIdentityReviewView.vue", "unit_test": "tools/php/tests/unit/sale_customer_accounts_test.php", "browser_test": "frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts"}
+}

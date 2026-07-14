@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Modules\Business\Repositories\BusinessActivityRepository;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
+use App\Modules\Sale\Contracts\CrmActivitySink;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleEventRepository;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
@@ -52,6 +53,7 @@ try {
     ], null, 'crm-projection-site2');
 
     $projection = new SaleCrmActivityProjectionService($business, new SaleDatabaseConnection($salePath));
+    $h->assertTrue($projection instanceof CrmActivitySink, 'production CRM projection is the real Sale activity port adapter');
     $first = $projection->consume(1);
     $h->assertSame(3, $first['projected'], 'site-scoped subscriber projects supported web, payment and POS events');
     $h->assertSame(0, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=2')['count'] ?? -1), 'site-scoped subscriber does not leak another site');
@@ -60,6 +62,8 @@ try {
     $h->assertSame(0, $replay['projected'], 'replay does not create a second projection');
     $h->assertSame(3, $replay['replayed'], 'replay recognizes all existing source events');
     $h->assertSame(3, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=1')['count'] ?? 0), 'source event uniqueness prevents duplicate activities');
+    $projection->recordSaleEvent(['site_id'=>1]);
+    $h->assertSame(3, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=1')['count'] ?? 0), 'real activity sink replays idempotently');
 
     $timeline = (new BusinessActivityRepository($business))->relationActivity(1, 'contact', $contactId, 20, 0);
     $saleTimeline = array_values(array_filter($timeline['items'], static fn(array $item): bool => $item['kind'] === 'sale'));

@@ -194,6 +194,7 @@
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/bundle_stock_strategy_gate.py",
+        "tools/python/qualification/customer_identity_gate.py",
         "tools/python/qualification/inventory_ledger_gate.py",
         "tools/python/qualification/omnichannel_gate.py",
         "tools/python/qualification/payment_provider_gate.py",
@@ -1902,6 +1903,23 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/customer_identity_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_customer_identity_gate.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/inventory_ledger_gate.py",
       "category": "internal",
       "public": false,
@@ -2048,7 +2066,8 @@
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_stock_reconstruction_gate.py"
+        "tools/python/tests/test_stock_reconstruction_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2280,6 +2299,20 @@
         "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_customer_identity_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
@@ -2555,7 +2588,8 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",

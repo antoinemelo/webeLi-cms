@@ -69,6 +69,7 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Gate omnicanale storefront/POS | Playwright isolé, preuve JSON validée | commande ciblée disponible depuis le dépôt source |
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
 | Reconstruction et réconciliation stock M6.5 | `stock-reconstruction-gate` + scénario PHP + sauvegarde/restauration | `tools/python/qualification/stock_reconstruction_gate.py` et diagnostic CLI |
+| Identité client M7.1 | `customer-identity-gate` + tests IAM/CRM/Sale + Playwright | `tools/python/qualification/customer_identity_gate.py` |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
 | Dépendances | `composer audit --locked`, `npm audit --audit-level=high` | audit externe à l’archive |

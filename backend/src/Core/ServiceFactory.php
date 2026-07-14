@@ -160,11 +160,11 @@ use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
 use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
-use App\Modules\Sale\Adapters\NullCrmActivitySink;
 use App\Modules\Sale\Adapters\NullCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\UnavailableSellableCatalogAdapter;
 use App\Modules\Sale\Contracts\CmsAccountBridge;
 use App\Modules\Sale\Contracts\CrmActivitySink;
+use App\Modules\Sale\Contracts\CustomerIdentityBridge;
 use App\Modules\Sale\Contracts\CustomerSnapshotPort;
 use App\Modules\Sale\Contracts\SellableCatalogPort;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
@@ -663,10 +663,16 @@ final class ServiceFactory
 
     public function saleCrmActivitySink(): CrmActivitySink
     {
-        return $this->once('sale_crm_activity_sink', fn() => new NullCrmActivitySink());
+        return $this->once('sale_crm_activity_sink', fn() => $this->saleCrmActivities());
     }
 
+    /** @deprecated Use saleCustomerIdentityBridge(). */
     public function saleCmsAccountBridge(): CmsAccountBridge
+    {
+        return $this->saleCustomerAccounts();
+    }
+
+    public function saleCustomerIdentityBridge(): CustomerIdentityBridge
     {
         return $this->saleCustomerAccounts();
     }
@@ -680,6 +686,7 @@ final class ServiceFactory
             $this->businessContacts(),
             $this->businessConsents(),
             $this->saleReturnService(),
+            $this->businessDatabaseConnection()->database(),
         ));
     }
 

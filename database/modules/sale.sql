@@ -1398,9 +1398,48 @@ CREATE TABLE IF NOT EXISTS sale_customer_merge_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, source_iam_user_id INTEGER NOT NULL, target_iam_user_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'applied' CHECK(status IN ('applied','reversed')), reason TEXT NOT NULL,
     before_json TEXT NOT NULL CHECK(json_valid(before_json)), after_json TEXT NOT NULL CHECK(json_valid(after_json)),
+    field_decisions_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(field_decisions_json)),
     actor_iam_user_id INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, reversed_at TEXT,
+    reversed_by_iam_user_id INTEGER, reversal_reason TEXT,
     CHECK(site_id>0), CHECK(source_iam_user_id<>target_iam_user_id), CHECK(trim(reason)<>'')
 );
+CREATE TABLE IF NOT EXISTS sale_identity_review_cases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, order_id INTEGER NOT NULL,
+    candidate_iam_user_id INTEGER, candidate_crm_contact_id INTEGER, candidate_organization_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','linked','not_linked','merged','postponed','separated')),
+    confidence_score INTEGER NOT NULL CHECK(confidence_score BETWEEN 0 AND 100),
+    confidence_level TEXT NOT NULL CHECK(confidence_level IN ('low','medium','high')),
+    signals_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(signals_json)),
+    divergences_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(divergences_json)),
+    profiles_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(profiles_json)),
+    provenance_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(provenance_json)),
+    reviewed_by_iam_user_id INTEGER, decision_reason TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TEXT, updated_at TEXT, FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(site_id>0)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_identity_review_candidate
+    ON sale_identity_review_cases(site_id,order_id,COALESCE(candidate_iam_user_id,0),COALESCE(candidate_crm_contact_id,0));
+CREATE INDEX IF NOT EXISTS idx_sale_identity_review_queue ON sale_identity_review_cases(site_id,status,confidence_score DESC,id);
+CREATE TABLE IF NOT EXISTS sale_identity_resolution_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, review_case_id INTEGER,
+    action TEXT NOT NULL CHECK(action IN ('link','do_not_link','merge','postpone','separate')),
+    reason TEXT NOT NULL, before_json TEXT NOT NULL CHECK(json_valid(before_json)), after_json TEXT NOT NULL CHECK(json_valid(after_json)),
+    field_decisions_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(field_decisions_json)), actor_iam_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(review_case_id) REFERENCES sale_identity_review_cases(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(site_id>0), CHECK(trim(reason)<>''), CHECK(actor_iam_user_id>0)
+);
+CREATE TABLE IF NOT EXISTS sale_identity_field_provenance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL,
+    entity_type TEXT NOT NULL CHECK(entity_type IN ('transactional_customer','crm_contact','iam_account','organization')),
+    entity_id INTEGER NOT NULL, field_name TEXT NOT NULL, field_value_json TEXT NOT NULL CHECK(json_valid(field_value_json)),
+    source_type TEXT NOT NULL CHECK(source_type IN ('checkout','account','import','operator','event')),
+    source_reference TEXT, confidence_score INTEGER NOT NULL DEFAULT 50 CHECK(confidence_score BETWEEN 0 AND 100),
+    is_verified INTEGER NOT NULL DEFAULT 0 CHECK(is_verified IN (0,1)), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id>0), CHECK(entity_id>0)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sale_identity_field_provenance_unique
+    ON sale_identity_field_provenance(site_id,entity_type,entity_id,field_name,source_type,COALESCE(source_reference,''));
 CREATE INDEX IF NOT EXISTS idx_sale_claim_proofs_order ON sale_order_claim_proofs(order_id,status,expires_at);
 CREATE INDEX IF NOT EXISTS idx_sale_customer_order_links_account ON sale_customer_order_links(site_id,iam_user_id,status,linked_at);
 CREATE INDEX IF NOT EXISTS idx_sale_customer_addresses_account ON sale_customer_addresses(site_id,iam_user_id,is_default,archived_at);

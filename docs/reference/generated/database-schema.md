@@ -264,7 +264,7 @@ generated: true
 | `sale_coupons` | id, promotion_id, coupon_code_hash, status, usage_limit, used_count, starts_at, ends_at, created_at |
 | `sale_customer_account_links` | id, site_id, iam_user_id, crm_company_id, crm_contact_id, status, linked_by, merged_into_iam_user_id, created_at, updated_at |
 | `sale_customer_addresses` | id, site_id, iam_user_id, label, address_type, address_json, is_default, created_at, updated_at, archived_at |
-| `sale_customer_merge_audit` | id, site_id, source_iam_user_id, target_iam_user_id, status, reason, before_json, after_json, actor_iam_user_id, created_at, reversed_at |
+| `sale_customer_merge_audit` | id, site_id, source_iam_user_id, target_iam_user_id, status, reason, before_json, after_json, field_decisions_json, actor_iam_user_id, created_at, reversed_at, reversed_by_iam_user_id, reversal_reason |
 | `sale_customer_order_links` | id, site_id, order_id, iam_user_id, claim_proof_id, link_source, status, linked_by_iam_user_id, linked_at, revoked_at |
 | `sale_customer_refs` | id, site_id, company_id, contact_id, display_name, email, phone, billing_address_json, shipping_address_json, created_at, updated_at |
 | `sale_events` | id, site_id, event_type, aggregate_type, aggregate_id, payload_json, correlation_id, created_by_iam_user_id, created_at |
@@ -274,11 +274,14 @@ generated: true
 | `sale_fulfillment_zones` | id, site_id, code, name, country_codes_json, postal_prefixes_json, status, active_from, active_until, created_at, updated_at |
 | `sale_fulfillments` | id, order_id, fulfillment_number, fulfillment_type, stock_location_id, status, shipping_address_snapshot_json, shipping_method_snapshot_json, tracking_reference, pickup_code, due_at, operator_proof_json, problem_json, correlation_id, version, created_by_iam_user_id, created_at, updated_at, shipped_at, ready_at, handed_over_at, delivered_at, cancelled_at |
 | `sale_idempotency_keys` | id, site_id, key_hash, scope, request_hash, response_json, status, locked_until, created_at, updated_at |
+| `sale_identity_field_provenance` | id, site_id, entity_type, entity_id, field_name, field_value_json, source_type, source_reference, confidence_score, is_verified, created_at |
+| `sale_identity_resolution_audit` | id, site_id, review_case_id, action, reason, before_json, after_json, field_decisions_json, actor_iam_user_id, created_at |
+| `sale_identity_review_cases` | id, site_id, order_id, candidate_iam_user_id, candidate_crm_contact_id, candidate_organization_id, status, confidence_score, confidence_level, signals_json, divergences_json, profiles_json, provenance_json, reviewed_by_iam_user_id, decision_reason, created_at, reviewed_at, updated_at |
 | `sale_inventory_channel_configs` | channel_id, site_id, stock_location_id, availability_policy, reservation_policy, reservation_ttl_seconds, reservation_renewal_window_seconds, reservation_max_lifetime_seconds, backorder_policy, show_exact_quantity, status, updated_at |
 | `sale_inventory_count_lines` | id, session_id, inventory_item_id, expected_quantity, counted_quantity, discrepancy_reason, counted_by_iam_user_id, counted_at, updated_at |
 | `sale_inventory_count_sessions` | id, site_id, stock_location_id, session_number, label, status, hide_theoretical, created_by_iam_user_id, approved_by_iam_user_id, created_at, updated_at, started_at, submitted_at, approved_at, cancelled_at, version |
 | `sale_inventory_items` | id, site_id, business_variant_id, sellable_id, stock_location_id, sku, tracked, allow_negative, allow_backorder, backorder_delivery_days, low_stock_threshold, on_hand_quantity, reserved_quantity, available_quantity, version, updated_at |
-| `sale_inventory_reconciliation_runs` | id, site_id, status, items_checked, differences_count, repaired_count, report_json, started_at, completed_at, created_by_iam_user_id |
+| `sale_inventory_reconciliation_runs` | id, site_id, mode, status, items_checked, differences_count, remaining_differences_count, repaired_count, reason, backup_path, report_json, started_at, completed_at, created_by_iam_user_id |
 | `sale_order_adjustments` | id, order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
 | `sale_order_claim_proofs` | id, site_id, order_id, token_hash, email_hash, status, expires_at, consumed_by_iam_user_id, consumed_at, created_at |
 | `sale_order_customer_reconciliations` | id, order_id, previous_company_id, previous_contact_id, company_id, contact_id, reason, correlation_id, linked_by_iam_user_id, created_at |

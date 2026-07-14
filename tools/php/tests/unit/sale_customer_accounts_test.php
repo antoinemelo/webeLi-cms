@@ -26,7 +26,8 @@ try {
     $contacts = new BusinessContactRepository($business);
     $accounts = new SaleCustomerAccountService(
         $iam, $connection, $companies, $contacts, new BusinessConsentRepository($business),
-        new SaleReturnService($connection, new SaleStateMachineService($sale), new SaleInventoryService(new SaleInventoryRepository($connection)))
+        new SaleReturnService($connection, new SaleStateMachineService($sale), new SaleInventoryService(new SaleInventoryRepository($connection))),
+        $business
     );
     $channelId = (int) ($sale->one('SELECT id FROM sale_channels WHERE site_id=1 ORDER BY id LIMIT 1')['id'] ?? 0);
     $insertOrder = static function (int $siteId, int $channel, string $number, string $email) use ($sale): int {
@@ -70,10 +71,32 @@ try {
 
     $order3 = $insertOrder(1, $channelId, 'P13-002', 'bob@example.test');
     $user2 = (int) $accounts->registerWithProof(1, $accounts->issueClaimProof($order3)['token'], 'autre-mot-de-passe')['user']['id'];
-    $audit = $accounts->mergeAccounts(1, $user1, $user2, 99, 'Doublon confirmé par administrateur');
+    $reviewOrder=$insertOrder(1,$channelId,'M7-REVIEW','bob@example.test');$reviewSnapshot=(string)$sale->one('SELECT customer_snapshot_json FROM sale_orders WHERE id=?',[$reviewOrder])['customer_snapshot_json'];
+    $cases=$accounts->reviewIdentities(1);
+    $case=array_values(array_filter($cases,static fn(array $row):bool=>(int)$row['order_id']===$reviewOrder))[0]??[];
+    $h->assertTrue((int)($case['confidence_score']??0)>=80,'verified account and CRM evidence produce an explainable high-confidence candidate');
+    $h->assertSame('TransactionalCustomer',$case['profiles']['transactional_customer']['type']??null,'transactional customer remains a distinct profile');
+    $h->assertSame('IamAccount',$case['profiles']['iam_account']['type']??null,'IAM account remains a distinct profile');
+    $h->assertSame('CrmContact',$case['profiles']['crm_contact']['type']??null,'CRM contact remains a distinct profile');
+    $h->assertTrue(isset($case['provenance']['email']),'field provenance is exposed to the reviewer');
+    $accounts->decideIdentity(1,(int)$case['id'],'link',99,'E-mail vérifié et commande confirmée');
+    $h->assertSame(2,count($accounts->orders(1,$user2)),'explicit review links the order without an automatic merge');
+    $sources=array_column($sale->all('SELECT DISTINCT source_type FROM sale_identity_field_provenance ORDER BY source_type'),'source_type');sort($sources);
+    $h->assertSame(['account','checkout','event','import','operator'],$sources,'checkout, account, import, operator and event provenance are retained');
+    $h->assertSame($reviewSnapshot,(string)$sale->one('SELECT customer_snapshot_json FROM sale_orders WHERE id=?',[$reviewOrder])['customer_snapshot_json'],'identity review never changes the Sale snapshot');
+
+    $preview=$accounts->mergePreview(1,$user1,$user2);
+    $h->assertTrue(count($preview['conflicts'])>0,'merge preview exposes every conflicting field');
+    $h->expectException(fn()=>$accounts->mergeAccounts(1,$user1,$user2,99,'Fusion sans décisions'),SaleValidationException::class,'merge refuses to select conflicting values silently');
+    $decisions=array_fill_keys($preview['conflicts'],'target');
+    $audit = $accounts->mergeAccounts(1, $user1, $user2, 99, 'Doublon confirmé par administrateur',$decisions);
     $h->assertSame('applied', $audit['status'], 'administrator merge writes audit');
-    $h->assertSame(2, count($accounts->orders(1, $user2)), 'controlled merge transfers explicit order links');
+    $h->assertSame(3, count($accounts->orders(1, $user2)), 'controlled merge transfers explicit order links');
     $h->assertSame('merged', $iam->one('SELECT status FROM iam_customer_site_accounts WHERE user_id=? AND site_id=1', [$user1])['status'], 'source site identity is disabled after merge');
+    $separated=$accounts->separateMerge(1,(int)$audit['id'],99,'Fusion réévaluée après contrôle');
+    $h->assertSame('reversed',$separated['status'],'audited separation reverses only links recorded by the merge');
+    $h->assertSame(1,count($accounts->orders(1,$user1)),'separation restores source order ownership');
+    $h->assertSame($snapshotBefore,(string)$sale->one('SELECT customer_snapshot_json FROM sale_orders WHERE id=?',[$order1])['customer_snapshot_json'],'separation also preserves historical snapshots');
 
     $order4 = $insertOrder(1, $channelId, 'P13-DELETE', 'delete@example.test');
     $user3 = (int) $accounts->registerWithProof(1, $accounts->issueClaimProof($order4)['token'], 'suppression-solide')['user']['id'];

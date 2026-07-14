@@ -39,6 +39,7 @@ Les permissions principales sont :
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
 - `sale.inventory.repair` pour appliquer une reconstruction contrôlée après diagnostic et sauvegarde ;
+- `sale.customer_accounts.manage` pour revoir, lier, fusionner ou séparer des identités avec audit ;
 - `sale.fulfillment.manage` pour préparer, expédier et remettre une commande ;
 - `sale.transfers.manage` pour piloter un transfert entre emplacements ;
 - `sale.inventory.count` pour saisir un comptage et `sale.inventory.approve` pour valider ses écarts ;
@@ -104,6 +105,8 @@ Le stock réservé est consommé une seule fois lors de la confirmation commerci
 Dans **Opérations > Inventaires**, le diagnostic de reconstruction compare le stock affiché au journal immuable, aux réservations, aux opérations logistiques et à la projection Shop. **Lancer l'aperçu** est sans effet de bord. En cas d'écart, l'écran montre sa gravité, sa cause probable, l'impact public et les valeurs avant/après. La réparation n'est proposée qu'à un opérateur autorisé ; elle exige un motif, crée automatiquement une sauvegarde Sale et Business, puis fournit une preuve téléchargeable. Une quantité physique constatée différente devient un mouvement correctif explicite et non une modification silencieuse du total.
 
 Dans le compte Shop, le client retrouve le statut métier, les fulfillments partiels, le lieu et le code de retrait, ainsi que la référence de suivi disponible.
+
+L’onglet **Identités** rassemble les commandes invitées susceptibles d’être liées à un compte ou une fiche relation client. Il explique le score et l’origine de chaque valeur. Aucun lien n’est créé sur le nom seul et aucune fusion n’est automatique. L’opérateur peut lier, conserver séparé, reporter, prévisualiser une fusion champ par champ ou annuler une fusion auditée. Le client Shop ne voit jamais cette structure interne.
 
 ## Rapports, imports et exports
 

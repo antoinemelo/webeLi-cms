@@ -213,6 +213,25 @@
     "confidence": "high",
     "discovered_test_functions": 4,
     "evidence": [
+      "tools/python/tests/test_customer_identity_gate.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-customer-identity-gate-py-78ad5c4e09",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_customer_identity_gate",
+    "source": [
+      "tools/python/tests/test_customer_identity_gate.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
+    "discovered_test_functions": 4,
+    "evidence": [
       "tools/python/tests/test_e2e_harness.py"
     ],
     "execution_result": null,
@@ -509,6 +528,25 @@
     "name": "test_static_export_multisite",
     "source": [
       "tools/python/tests/test_static_export_multisite.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
+    "discovered_test_functions": 4,
+    "evidence": [
+      "tools/python/tests/test_stock_reconstruction_gate.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-stock-reconstruction-gate-py-4a3e75d507",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_stock_reconstruction_gate",
+    "source": [
+      "tools/python/tests/test_stock_reconstruction_gate.py"
     ],
     "status": "unverified"
   },

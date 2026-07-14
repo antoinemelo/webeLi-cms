@@ -92,7 +92,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Stock, réservations, mouvements | présent | Tables Sale stock/reservations/movements ; `sale_inventory_service_test.php`. | Synchronisation Business disponibilité <-> Sale stock à formaliser via outbox/projection. | P1 |
 | Disponibilité catalogue calculée vers Business | partiel | Business expose stock, backorder, completeness ; Sale a stock transactionnel. | Projection retour Sale -> Business non industrialisée. | P1 |
 | Accès directs inter-modules | partiel | Ports Sale `SellableCatalogPort`, `CustomerSnapshotPort` et adaptateurs Business ; `DEPENDENCY_BOUNDARIES` OK. | Le validateur est peu profond ; Business routes restent majoritairement centralisées dans `backend/routes/api.php`. | P1 |
-| Adaptateurs nuls CRM/Sale | partiel | `NullCrmActivitySink`, `NullCmsAccountBridge`, `ServiceFactory::saleCrmActivitySink()`, `saleCmsAccountBridge()`. | Activité CRM et comptes clients ne sont pas branchés. | P1 |
+| Adaptateurs nuls CRM/Sale | couvert | `SaleCrmActivityProjectionService`, `CustomerIdentityBridge`, `SaleCustomerAccountService`. Les classes nulles restent des fallbacks de test compatibles. | Gate M7.1 et revue d’identité opérationnelle. | — |
 | Capacités métier actionnables | absent | `CapabilityRegistry` core ; aucun module trouvé avec `ModuleCapabilityProvider`. | RM1 attend des capacités type catalogue/pricing/cart/checkout/payment/fulfillment/CRM. | P1 |
 | PIM produits physiques/services/bundles/variantes | partiel | Business products, variants, bundles, services visibles dans code/tests. | Bons cadeaux et règles avancées non vérifiés. | P2 |
 | Import/export catalogue | présent | `CatalogCsvService`, imports/exports Business et Sale, docs d'administration. | À relier aux critères de release RM1. | P2 |
@@ -160,8 +160,8 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 |---|---|---|
 | Sale -> Business catalogue | sain mais fragile | Sale passe par `SellableCatalogPort` et `BusinessSellableCatalogAdapter`; garder cette règle stricte. |
 | Sale -> Business clients | sain mais incomplet | `CustomerSnapshotPort` existe ; activité CRM post-vente non branchée. |
-| Sale -> CRM activity | incomplet | `NullCrmActivitySink` indique un connecteur volontairement nul. |
-| Sale -> comptes CMS/IAM | incomplet | `NullCmsAccountBridge` indique que comptes publics et historique client ne sont pas branchés. |
+| Sale -> CRM activity | couvert | Le port `CrmActivitySink` est branché sur la projection CRM réelle et rejouable. |
+| Sale -> comptes CMS/IAM | couvert | Le bridge réel IAM–CRM–Sale couvre compte facultatif post-achat, revue, fusion et séparation auditées. |
 | Business routes | fragile | Business expose beaucoup de routes depuis `backend/routes/api.php`; la gouvernance module provider n'est pas homogène avec Sale. |
 | Registry modules | fragile | Tables `module_routes`, `module_api_contracts`, `module_databases` vides malgré modules installés. |
 | Validation frontières | partielle | `DEPENDENCY_BOUNDARIES` passe, mais le validateur contrôle surtout des patterns directs ; il ne prouve pas toutes les dépendances métier. |

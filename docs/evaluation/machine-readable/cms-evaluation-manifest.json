@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "64796b9d4a9de7f4dd9fe40532703ac8e74cc0ab",
+  "commit": "dd743c0694fa3d9815393675daeba38143298830",
   "confidence": "high",
   "databases": [
     "core",
@@ -69,6 +69,7 @@
     "architecture.json",
     "bundle-stock-strategies.json",
     "cms-evaluation-manifest.json",
+    "customer-identity-bridges-m7.json",
     "databases.json",
     "features.json",
     "latest-release-audit.json",
@@ -78,6 +79,7 @@
     "sale-inventory-ledger.json",
     "sale-payment-provider-interchangeability.json",
     "sale-reservations-availability.json",
+    "sale-stock-reconstruction-m6.json",
     "tests.json",
     "validators.json"
   ],

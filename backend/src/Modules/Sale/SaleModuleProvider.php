@@ -424,6 +424,10 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('GET', '/admin/api/sale/reports/taxes', $c . 'taxesReport'),
             $this->route('GET', '/admin/api/sale/reports/fulfillment', $c . 'fulfillmentReport'),
             $this->route('POST', '/admin/api/sale/customer-accounts/merge', $c . 'mergeCustomerAccounts'),
+            $this->route('POST', '/admin/api/sale/customer-accounts/merge-preview', $c . 'previewCustomerAccountMerge'),
+            $this->route('POST', '/admin/api/sale/customer-accounts/merges/{id}/separate', $c . 'separateCustomerAccountMerge'),
+            $this->route('GET', '/admin/api/sale/customer-identities/review', $c . 'customerIdentityReview'),
+            $this->route('POST', '/admin/api/sale/customer-identities/{id}/decision', $c . 'decideCustomerIdentity'),
         ];
     }
 
@@ -597,6 +601,10 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.reports.taxes.v1', 'GET', '/admin/api/sale/reports/taxes', 'sale.reports.read'),
             $this->contract('admin.sale.reports.fulfillment.v1', 'GET', '/admin/api/sale/reports/fulfillment', 'sale.reports.read'),
             $this->contract('admin.sale.customer_accounts.merge.v1', 'POST', '/admin/api/sale/customer-accounts/merge', 'sale.customer_accounts.manage'),
+            $this->contract('admin.sale.customer_accounts.merge_preview.v1', 'POST', '/admin/api/sale/customer-accounts/merge-preview', 'sale.customer_accounts.manage'),
+            $this->contract('admin.sale.customer_accounts.separate.v1', 'POST', '/admin/api/sale/customer-accounts/merges/{id}/separate', 'sale.customer_accounts.manage'),
+            $this->contract('admin.sale.customer_identities.review.v1', 'GET', '/admin/api/sale/customer-identities/review', 'sale.customer_accounts.manage'),
+            $this->contract('admin.sale.customer_identities.decision.v1', 'POST', '/admin/api/sale/customer-identities/{id}/decision', 'sale.customer_accounts.manage'),
             $this->contract('public.sale.channels.bootstrap.v1', 'GET', '/api/v1/sale/channels/{code}/bootstrap', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.store.v1', 'POST', '/api/v1/sale/channels/{code}/cart', 'anonymous', 'headless'),
             $this->contract('public.sale.cart.show.v1', 'GET', '/api/v1/sale/channels/{code}/cart/{token}', 'anonymous', 'headless'),

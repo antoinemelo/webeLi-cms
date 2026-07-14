@@ -1363,12 +1363,33 @@ final class SaleAdminApiController
                 (int) ($payload['source_iam_user_id'] ?? 0),
                 (int) ($payload['target_iam_user_id'] ?? 0),
                 $this->actorId(),
-                (string) ($payload['reason'] ?? '')
+                (string) ($payload['reason'] ?? ''),
+                is_array($payload['field_decisions']??null)?$payload['field_decisions']:[]
             );
             return $this->ok(['merge' => $audit], 'admin.sale.customer_accounts.merge.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function customerIdentityReview():Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['cases'=>$this->customerAccounts->reviewIdentities((int)$site['id'],($this->request->query['allow_verified_phone']??'0')==='1',(int)($this->request->query['limit']??100))],'admin.sale.customer_identities.review.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function decideCustomerIdentity(string|int $id):Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');$case=$this->customerAccounts->decideIdentity((int)$site['id'],$this->id($id),(string)($payload['action']??''),$this->actorId(),(string)($payload['reason']??''),is_array($payload['field_decisions']??null)?$payload['field_decisions']:[]);return $this->ok(['case'=>$case],'admin.sale.customer_identities.decision.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function previewCustomerAccountMerge():Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['preview'=>$this->customerAccounts->mergePreview((int)$site['id'],(int)($payload['source_iam_user_id']??0),(int)($payload['target_iam_user_id']??0))],'admin.sale.customer_accounts.merge_preview.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function separateCustomerAccountMerge(string|int $id):Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['merge'=>$this->customerAccounts->separateMerge((int)$site['id'],$this->id($id),$this->actorId(),(string)($payload['reason']??''))],'admin.sale.customer_accounts.separate.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function dailyReport(): Response

@@ -151,3 +151,12 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - comptage physique externe traduit en mouvement correctif, sans modification du journal immuable ;
 - administration autonome avec téléchargement du rapport, progression, historique et reprise ciblée des échecs ;
 - scénario complet et gate M6.5 machine-readable, base vide et restauration vérifiées depuis les schémas canoniques actuels, sans migration.
+
+# 2026-07-14 — IAM × CRM × Sale M7.1 : identité client et dédoublonnage
+
+- bridges réels pour la projection CRM et les identités clients, avec renommage compatible du bridge historique CMS ;
+- séparation formelle des profils transactionnel, CRM, IAM et organisation, sans FK inter-base ;
+- file de revue avec provenance des champs, concordances, divergences et score de confiance expliqué ;
+- résolution conservative par preuve post-achat, e-mail vérifié, téléphone vérifié explicitement autorisé ou action administrative, jamais sur le nom seul ;
+- fusion prévisualisée champ par champ, journal complet et séparation auditée sans modification rétrospective des commandes ;
+- gate M7.1, tests invité/doublons/multisite et parcours Playwright, sur schémas canoniques from scratch sans migration.

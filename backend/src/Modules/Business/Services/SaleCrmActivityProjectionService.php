@@ -6,12 +6,13 @@ namespace App\Modules\Business\Services;
 
 use App\Core\Database;
 use App\Modules\Business\Contracts\CrmSaleActivityV1;
+use App\Modules\Sale\Contracts\CrmActivitySink;
 use App\Modules\Sale\Pricing\CustomerPricingContext;
 use App\Modules\Sale\Pricing\CustomerPricingContextProvider;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use InvalidArgumentException;
 
-final class SaleCrmActivityProjectionService implements CustomerPricingContextProvider
+final class SaleCrmActivityProjectionService implements CustomerPricingContextProvider, CrmActivitySink
 {
     private const EVENT_MAP = [
         'sale.order.placed' => ['order.placed', 'placed'],
@@ -31,6 +32,12 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         private readonly Database $business,
         private readonly SaleDatabaseConnection $sale,
     ) {}
+
+    public function recordSaleEvent(array $event): void
+    {
+        $siteId = isset($event['site_id']) ? (int) $event['site_id'] : null;
+        $this->consume($siteId !== null && $siteId > 0 ? $siteId : null, 200);
+    }
 
     /** @return array{projected:int,replayed:int,failed:int} */
     public function consume(?int $siteId = null, int $limit = 200): array
