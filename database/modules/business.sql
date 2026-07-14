@@ -564,6 +564,11 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     bundle_variant_id INTEGER,
     pricing_mode TEXT NOT NULL DEFAULT 'fixed' CHECK(pricing_mode IN ('fixed','sum_components','discount_components')),
     stock_mode TEXT NOT NULL DEFAULT 'components' CHECK(stock_mode IN ('components','virtual','none')),
+    stock_strategy TEXT NOT NULL DEFAULT 'COMPONENT_DERIVED' CHECK(stock_strategy IN ('OWN_STOCK','COMPONENT_DERIVED','NON_STOCKED')),
+    partial_availability_policy TEXT NOT NULL DEFAULT 'REQUIRE_ALL' CHECK(partial_availability_policy IN ('REQUIRE_ALL','ALLOW_PARTIAL')),
+    partial_fulfillment_supported INTEGER NOT NULL DEFAULT 0 CHECK(partial_fulfillment_supported IN (0,1)),
+    component_return_policy TEXT NOT NULL DEFAULT 'BUNDLE_ONLY' CHECK(component_return_policy IN ('BUNDLE_ONLY','COMPONENTS_ALLOWED')),
+    components_public INTEGER NOT NULL DEFAULT 1 CHECK(components_public IN (0,1)),
     composition_type TEXT NOT NULL DEFAULT 'bundle' CHECK(composition_type IN ('bundle','kit')),
     unavailable_strategy TEXT NOT NULL DEFAULT 'reject' CHECK(unavailable_strategy IN ('reject','backorder','contact')),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
@@ -576,7 +581,9 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     FOREIGN KEY(bundle_variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(bundle_product_id > 0),
-    CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0)
+    CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0),
+    CHECK((stock_strategy='OWN_STOCK' AND stock_mode='virtual') OR (stock_strategy='COMPONENT_DERIVED' AND stock_mode='components') OR (stock_strategy='NON_STOCKED' AND stock_mode='none')),
+    CHECK(partial_availability_policy<>'ALLOW_PARTIAL' OR partial_fulfillment_supported=1)
 );
 
 CREATE TABLE IF NOT EXISTS business_gift_card_policies (

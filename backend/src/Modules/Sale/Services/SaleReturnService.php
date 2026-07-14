@@ -15,7 +15,7 @@ final class SaleReturnService
         private readonly ?SaleEventService $events = null
     ) {}
 
-    /** @param list<array{order_line_id:int,quantity:int,restock?:bool,reason?:string}> $lines @return array<string,mixed> */
+    /** @param list<array{order_line_id:int,quantity:int,restock?:bool,reason?:string,components?:list<array{business_variant_id:int,quantity:int}>}> $lines @return array<string,mixed> */
     public function request(int $orderId, array $lines, ?string $reason = null, ?int $actorId = null, ?string $idempotencyKey = null): array
     {
         if ($lines === []) {
@@ -50,8 +50,8 @@ final class SaleReturnService
                     throw new SaleValidationException('sale.return_quantity_invalid');
                 }
                 $db->run(
-                    'INSERT INTO sale_return_lines(return_id,order_line_id,quantity,reason,restock) VALUES(?,?,?,?,?)',
-                    [$returnId, (int) $orderLine['id'], $quantity, $line['reason'] ?? null, !array_key_exists('restock', $line) || (bool) $line['restock'] ? 1 : 0]
+                    'INSERT INTO sale_return_lines(return_id,order_line_id,quantity,reason,restock,component_returns_json) VALUES(?,?,?,?,?,?)',
+                    [$returnId, (int) $orderLine['id'], $quantity, $line['reason'] ?? null, !array_key_exists('restock', $line) || (bool) $line['restock'] ? 1 : 0, json_encode(array_values((array) ($line['components'] ?? [])), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]
                 );
             }
             $correlationId = SaleStateMachineService::correlationId();
@@ -78,6 +78,7 @@ final class SaleReturnService
             $this->states->transition('return', $returnId, $status, $actorId, $reason, $correlationId);
             if ($status === 'completed') {
                 $order = $db->one('SELECT * FROM sale_orders WHERE id=?', [(int) $return['order_id']]);
+                $restocks = [];
                 foreach ($return['lines'] as $line) {
                     $orderLine = $db->one('SELECT * FROM sale_order_lines WHERE id=?', [(int) $line['order_line_id']]);
                     if ($orderLine === null) {
@@ -91,8 +92,15 @@ final class SaleReturnService
                         throw new SaleValidationException('sale.return_concurrent_quantity_conflict');
                     }
                     if ((bool) $line['restock']) {
-                        $this->inventory->restockReturn((int) $order['site_id'], (int) $orderLine['business_variant_id'], (int) $line['quantity'], $orderLine['sku'] ?? null, $returnId, $reason, $actorId);
+                        foreach ($this->returnRestocks($orderLine, $line) as $restock) {
+                            $variantId = (int) $restock['business_variant_id'];
+                            $restocks[$variantId] ??= ['quantity' => 0, 'sku' => $restock['sku'] ?? null];
+                            $restocks[$variantId]['quantity'] += (int) $restock['quantity'];
+                        }
                     }
+                }
+                foreach ($restocks as $variantId => $restock) {
+                    $this->inventory->restockReturn((int) $order['site_id'], (int) $variantId, (int) $restock['quantity'], $restock['sku'], $returnId, $reason, $actorId);
                 }
             }
             return $this->withLines($returnId) + ['correlation_id' => $correlationId];
@@ -108,6 +116,41 @@ final class SaleReturnService
         }
         $row['lines'] = $this->db()->all('SELECT * FROM sale_return_lines WHERE return_id=? ORDER BY id', [$returnId]);
         return $row;
+    }
+
+    /** @param array<string,mixed> $orderLine @param array<string,mixed> $returnLine @return list<array{business_variant_id:int,quantity:int,sku:?string}> */
+    private function returnRestocks(array $orderLine, array $returnLine): array
+    {
+        $metadata = json_decode((string) ($orderLine['snapshot_json'] ?? '{}'), true);
+        $snapshot = is_array($metadata) && is_array($metadata['snapshot'] ?? null) ? $metadata['snapshot'] : [];
+        $strategy = (string) ($snapshot['bundle_stock_strategy'] ?? match ((string) ($snapshot['bundle_stock_mode'] ?? '')) { 'components' => 'COMPONENT_DERIVED', 'none' => 'NON_STOCKED', default => 'OWN_STOCK' });
+        if ((string) ($orderLine['product_type'] ?? '') !== 'bundle' || $strategy === 'OWN_STOCK') {
+            return [['business_variant_id' => (int) $orderLine['business_variant_id'], 'quantity' => (int) $returnLine['quantity'], 'sku' => $orderLine['sku'] ?? null]];
+        }
+        if ($strategy === 'NON_STOCKED') return [];
+        $plan = array_values(array_filter((array) ($snapshot['bundle_inventory_plan'] ?? []), 'is_array'));
+        $requestedComponents = json_decode((string) ($returnLine['component_returns_json'] ?? '[]'), true);
+        if (is_array($requestedComponents) && $requestedComponents !== []) {
+            if (($snapshot['bundle_component_return_policy'] ?? 'BUNDLE_ONLY') !== 'COMPONENTS_ALLOWED') {
+                throw new SaleValidationException('sale.bundle_component_return_forbidden');
+            }
+            $allowed = array_fill_keys(array_map(static fn(array $leaf): int => (int) ($leaf['business_variant_id'] ?? 0), $plan), true);
+            $result = [];
+            foreach ($requestedComponents as $component) {
+                $variantId = (int) ($component['business_variant_id'] ?? 0);
+                $quantity = (int) ($component['quantity'] ?? 0);
+                if ($variantId < 1 || $quantity < 1 || !isset($allowed[$variantId])) throw new SaleValidationException('sale.bundle_component_return_invalid');
+                $result[] = ['business_variant_id' => $variantId, 'quantity' => $quantity, 'sku' => null];
+            }
+            return $result;
+        }
+        $result = [];
+        foreach ($plan as $leaf) {
+            if (!((bool) ($leaf['track_stock'] ?? false))) continue;
+            $quantity = (int) ceil((float) ($leaf['quantity_per_bundle'] ?? 1) * (int) $returnLine['quantity']);
+            if ($quantity > 0) $result[] = ['business_variant_id' => (int) $leaf['business_variant_id'], 'quantity' => $quantity, 'sku' => $leaf['sku'] ?? null];
+        }
+        return $result;
     }
 
     private function db(): \App\Core\Database

@@ -126,6 +126,64 @@ try {
     $retryTransfer = $inventory->transfer(1, 9002, 2, (int) $restocked['stock_location_id'], $secondaryLocationId, 'test-transfer-1', 1);
     $h->assertSame(3, (int) $retryTransfer['from']['on_hand_quantity'], 'transfer retry does not move stock twice');
     $h->assertSame(2, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_movements WHERE transfer_key='test-transfer-1'")['count'] ?? 0), 'transfer writes one immutable movement per location');
+
+    $bundleCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
+    $bundleCart = $saleDb->one('SELECT * FROM sale_carts WHERE id=?', [$bundleCartId]);
+    $bundleSnapshot = [
+        'is_bundle' => true,
+        'bundle_stock_strategy' => 'COMPONENT_DERIVED',
+        'bundle_inventory_plan' => [
+            ['business_variant_id' => 9101, 'sellable_id' => 9101, 'sku' => 'BUNDLE-COMP-A', 'quantity_per_bundle' => 2, 'track_stock' => true, 'available_quantity' => 4],
+            ['business_variant_id' => 9102, 'sellable_id' => 9102, 'sku' => 'BUNDLE-COMP-B', 'quantity_per_bundle' => 1, 'track_stock' => true, 'available_quantity' => 3],
+        ],
+    ];
+    $bundleLine = [
+        'business_variant_id' => 9199,
+        'sellable_id' => 9199,
+        'product_type' => 'bundle',
+        'quantity' => 2,
+        'metadata_json' => json_encode(['snapshot' => $bundleSnapshot], JSON_UNESCAPED_SLASHES),
+    ];
+    $bundleReservations = $inventory->prepareCartForCheckout($bundleCart, [$bundleLine], false, 1800, 'payment_capture');
+    $h->assertSame(2, count($bundleReservations), 'derived bundle reserves each flattened tracked component');
+    $h->assertSame(2, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_reservations WHERE cart_id=? AND demand_kind='bundle_component' AND bundle_parent_sellable_id=9199", [$bundleCartId])['count'] ?? 0), 'component reservations retain their parent bundle');
+    $h->assertSame(4, (int) ($saleDb->one('SELECT quantity FROM sale_stock_reservations r INNER JOIN sale_inventory_items i ON i.id=r.inventory_item_id WHERE r.cart_id=? AND i.sellable_id=9101', [$bundleCartId])['quantity'] ?? 0), 'bundle component demand multiplies line quantity by its ratio');
+    $operatorReservations = $inventory->listReservations(1, ['q' => (string) $bundleCartId], 200, 0);
+    $h->assertSame('bundle_component', $operatorReservations['items'][0]['demand_kind'] ?? null, 'operator reservation list explains component demand');
+    $h->assertSame(9199, (int) ($operatorReservations['items'][0]['bundle_parent_sellable_id'] ?? 0), 'operator reservation list links demand to its parent bundle');
+
+    $competingCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
+    $competingCart = $saleDb->one('SELECT * FROM sale_carts WHERE id=?', [$competingCartId]);
+    $h->expectException(
+        fn() => $inventory->prepareCartForCheckout($competingCart, [array_replace($bundleLine, ['quantity' => 1])], false, 1800, 'payment_capture'),
+        SaleInventoryException::class,
+        'concurrent bundle cannot claim a limiting component already reserved by another cart'
+    );
+
+    $bundleOrderId = createSaleInventoryTestOrder($saleDb, (int) $channel['id'], $bundleCartId);
+    $inventory->consumeCartReservations($bundleCartId, $bundleOrderId);
+    $h->assertSame(2, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_movements WHERE reference_id=? AND movement_type='bundle_consumption'", [$bundleOrderId])['count'] ?? 0), 'checkout consumes components with an explicit bundle movement type');
+    $inventory->consumeCartReservations($bundleCartId, $bundleOrderId);
+    $h->assertSame(2, (int) ($saleDb->one("SELECT COUNT(*) AS count FROM sale_stock_movements WHERE reference_id=? AND movement_type='bundle_consumption'", [$bundleOrderId])['count'] ?? 0), 'bundle component consumption is idempotent');
+    $h->assertSame(0, (int) ($saleDb->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE sellable_id=9101')['on_hand_quantity'] ?? -1), 'bundle consumption decrements the limiting component stock');
+
+    $ownCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
+    $ownCart = $saleDb->one('SELECT * FROM sale_carts WHERE id=?', [$ownCartId]);
+    $ownLine = ['business_variant_id' => 9201, 'sellable_id' => 9201, 'product_type' => 'bundle', 'quantity' => 1, 'metadata_json' => json_encode(['snapshot' => ['is_bundle' => true, 'bundle_stock_strategy' => 'OWN_STOCK', 'track_stock' => false, 'sku' => 'OWN-BUNDLE', 'metadata' => ['available_quantity' => 2]]])];
+    $h->assertSame(1, count($inventory->prepareCartForCheckout($ownCart, [$ownLine], false, 1800, 'payment_capture')), 'own-stock bundle reserves its own sellable');
+    $h->assertSame('sellable', $saleDb->one('SELECT demand_kind FROM sale_stock_reservations WHERE cart_id=?', [$ownCartId])['demand_kind'] ?? null, 'own-stock demand is not reported as a component demand');
+
+    $noneCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
+    $noneCart = $saleDb->one('SELECT * FROM sale_carts WHERE id=?', [$noneCartId]);
+    $noneLine = ['business_variant_id' => 9202, 'sellable_id' => 9202, 'product_type' => 'bundle', 'quantity' => 3, 'metadata_json' => json_encode(['snapshot' => ['is_bundle' => true, 'bundle_stock_strategy' => 'NON_STOCKED']])];
+    $h->assertSame([], $inventory->prepareCartForCheckout($noneCart, [$noneLine], false, 1800, 'payment_capture'), 'non-stocked bundle creates no reservation or physical movement');
+
+    $saleDb->run('UPDATE sale_inventory_channel_configs SET stock_location_id=? WHERE channel_id=? AND site_id=1', [$secondaryLocationId, (int) $channel['id']]);
+    $secondaryCartId = createSaleInventoryTestCart($saleDb, (int) $channel['id']);
+    $secondaryCart = $saleDb->one('SELECT * FROM sale_carts WHERE id=?', [$secondaryCartId]);
+    $secondaryLine = ['business_variant_id' => 9300, 'sellable_id' => 9300, 'product_type' => 'bundle', 'quantity' => 1, 'metadata_json' => json_encode(['snapshot' => ['is_bundle' => true, 'bundle_stock_strategy' => 'COMPONENT_DERIVED', 'bundle_inventory_plan' => [['business_variant_id' => 9301, 'sellable_id' => 9301, 'sku' => 'SECONDARY-COMP', 'quantity_per_bundle' => 1, 'track_stock' => true, 'available_quantity' => 2]]]])];
+    $inventory->prepareCartForCheckout($secondaryCart, [$secondaryLine], false, 1800, 'payment_capture');
+    $h->assertSame($secondaryLocationId, (int) ($saleDb->one('SELECT stock_location_id FROM sale_inventory_items WHERE sellable_id=9301')['stock_location_id'] ?? 0), 'bundle components reserve in the location configured for the sales channel');
 } finally {
     $saleDb = null;
     gc_collect_cycles();

@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "7bc5e884c94b85f3e44ad3fa1016049519a65783",
+  "commit": "64796b9d4a9de7f4dd9fe40532703ac8e74cc0ab",
   "confidence": "high",
   "databases": [
     "core",
@@ -35,6 +35,7 @@
     "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",
     "docs/evaluation/audit-evidence-troubleshooting.md",
+    "docs/evaluation/bundle-stock-strategies.md",
     "docs/evaluation/business-crm-review.md",
     "docs/evaluation/evidence-index.md",
     "docs/evaluation/feature-matrix.md",
@@ -66,6 +67,7 @@
   "machine_readable_documents": [
     "api-endpoints.json",
     "architecture.json",
+    "bundle-stock-strategies.json",
     "cms-evaluation-manifest.json",
     "databases.json",
     "features.json",

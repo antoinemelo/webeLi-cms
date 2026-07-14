@@ -163,6 +163,9 @@ try {
     $db->run('INSERT INTO business_product_bundles(site_id, bundle_product_id, pricing_mode, stock_mode, is_active) VALUES(1, ?, "fixed", "components", 1)', [$bundleProductId]);
     $bundleId = (int) $db->lastInsertId();
     $db->run('INSERT INTO business_bundle_components(bundle_id, component_product_id, component_variant_id, quantity, is_required) VALUES(?, ?, ?, 2, 1)', [$bundleId, $componentProductId, $componentVariantId]);
+    $h->assertTrue(str_contains((string) $nativeSchema, "stock_strategy TEXT NOT NULL DEFAULT 'COMPONENT_DERIVED'"), 'canonical bundle schema defaults to an explicit component-derived stock strategy');
+    $h->assertTrue(str_contains((string) $nativeSchema, "partial_availability_policy TEXT NOT NULL DEFAULT 'REQUIRE_ALL'"), 'canonical bundle schema defaults to complete availability');
+    $h->assertTrue(str_contains((string) $nativeSchema, "component_return_policy TEXT NOT NULL DEFAULT 'BUNDLE_ONLY'"), 'canonical bundle schema defaults to whole-bundle returns');
     $bundleComponent = $db->one('SELECT quantity FROM business_bundle_components WHERE bundle_id = ?', [$bundleId]);
     $h->assertSame(2.0, (float) ($bundleComponent['quantity'] ?? 0), 'bundle component stores positive quantity');
     $h->expectException(

@@ -557,20 +557,20 @@ final class PublicSaleApiHandler
             $database = $this->sale->database();
             if ($database !== null) {
                 foreach ($database->all(
-                    "SELECT i.sellable_id,SUM(r.quantity) AS physical_quantity,MIN(r.expires_at) AS expires_at
+                    "SELECT COALESCE(r.bundle_parent_sellable_id,i.sellable_id) AS cart_sellable_id,SUM(r.quantity) AS physical_quantity,MIN(r.expires_at) AS expires_at
                      FROM sale_stock_reservations r INNER JOIN sale_inventory_items i ON i.id=r.inventory_item_id
-                     WHERE r.cart_id=? AND r.status IN ('active','confirmed') GROUP BY i.sellable_id",
+                     WHERE r.cart_id=? AND r.status IN ('active','confirmed') GROUP BY COALESCE(r.bundle_parent_sellable_id,i.sellable_id)",
                     [(int) $cart['id']]
                 ) as $row) {
-                    $reservationBySellable[(int) $row['sellable_id']] = ['physical_quantity' => (int) $row['physical_quantity'], 'backorder_quantity' => 0, 'expires_at' => $row['expires_at']];
+                    $reservationBySellable[(int) $row['cart_sellable_id']] = ['physical_quantity' => (int) $row['physical_quantity'], 'backorder_quantity' => 0, 'expires_at' => $row['expires_at']];
                 }
                 foreach ($database->all(
-                    "SELECT i.sellable_id,SUM(b.quantity) AS backorder_quantity,MAX(b.delivery_lead_time_days) AS delivery_lead_time_days,MIN(b.expires_at) AS expires_at
+                    "SELECT COALESCE(b.bundle_parent_sellable_id,i.sellable_id) AS cart_sellable_id,SUM(b.quantity) AS backorder_quantity,MAX(b.delivery_lead_time_days) AS delivery_lead_time_days,MIN(b.expires_at) AS expires_at
                      FROM sale_stock_backorders b INNER JOIN sale_inventory_items i ON i.id=b.inventory_item_id
-                     WHERE b.cart_id=? AND b.status IN ('active','confirmed') GROUP BY i.sellable_id",
+                     WHERE b.cart_id=? AND b.status IN ('active','confirmed') GROUP BY COALESCE(b.bundle_parent_sellable_id,i.sellable_id)",
                     [(int) $cart['id']]
                 ) as $row) {
-                    $key = (int) $row['sellable_id'];
+                    $key = (int) $row['cart_sellable_id'];
                     $reservationBySellable[$key] ??= ['physical_quantity' => 0, 'backorder_quantity' => 0, 'expires_at' => $row['expires_at']];
                     $reservationBySellable[$key]['backorder_quantity'] = (int) $row['backorder_quantity'];
                     $reservationBySellable[$key]['delivery_lead_time_days'] = (int) $row['delivery_lead_time_days'];

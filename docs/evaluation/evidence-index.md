@@ -28,6 +28,7 @@ generated: false
 | Providers de paiement M5 | [Comparaison UX](payment-provider-ux-comparison.md) | [`machine-readable/sale-payment-provider-interchangeability.json`](machine-readable/sale-payment-provider-interchangeability.json) |
 | Ledger de stock Sale M6 | [Architecture et UX](sale-inventory-ledger.md) | [`machine-readable/sale-inventory-ledger.json`](machine-readable/sale-inventory-ledger.json) |
 | Réservations et disponibilité M6.2 | [Politique, cycle de vie et UX](sale-reservations-availability.md) | [`machine-readable/sale-reservations-availability.json`](machine-readable/sale-reservations-availability.json) |
+| Bundles et stock composé M6.3 | [Stratégies, disponibilité et retours](bundle-stock-strategies.md) | [`machine-readable/bundle-stock-strategies.json`](machine-readable/bundle-stock-strategies.json) |
 | Validations | [Registre généré](../reference/generated/validators.md) | [`machine-readable/validators.json`](machine-readable/validators.json) |
 | Release | [Contenu généré](../reference/generated/release-contents.md) | [`machine-readable/release-contents.json`](machine-readable/release-contents.json) |
 | Audit de release | [Politique d’audit](release-audit-policy.md) | `latest-release-audit.md` et `machine-readable/latest-release-audit.json` après une mineure/majeure |

@@ -200,6 +200,7 @@ try {
     $h->assertSame(200, $setMain->status(), 'catalog admin can set PIM main asset');
     $h->assertSame('main', json_decode($setMain->body(), true)['data']['asset']['role'], 'set-main converts asset to main role');
 
+    $businessDb->run("UPDATE business_products SET type='bundle' WHERE id=?", [$productId]);
     $emptyBundle = $controllerFor(1, 'GET', '/admin/api/business/pim/products/' . $productId . '/bundle')->productBundle($productId);
     $h->assertSame(200, $emptyBundle->status(), 'catalog admin can read empty product bundle');
     $h->assertSame(null, json_decode($emptyBundle->body(), true)['data']['bundle'], 'product without bundle returns null bundle');

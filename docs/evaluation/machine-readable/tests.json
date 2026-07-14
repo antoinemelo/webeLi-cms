@@ -61,6 +61,25 @@
     "confidence": "high",
     "discovered_test_functions": 4,
     "evidence": [
+      "tools/python/tests/test_bundle_stock_strategy_gate.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-bundle-stock-strategy-gate-py-2d2d72841a",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_bundle_stock_strategy_gate",
+    "source": [
+      "tools/python/tests/test_bundle_stock_strategy_gate.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
+    "discovered_test_functions": 4,
+    "evidence": [
       "tools/python/tests/test_business_module_smoke.py"
     ],
     "execution_result": null,

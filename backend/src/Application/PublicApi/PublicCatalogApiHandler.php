@@ -186,6 +186,35 @@ final class PublicCatalogApiHandler
             $payload['main_asset'] = $this->mainAsset($media);
             $payload['gallery_assets'] = $this->galleryAssets($media);
         }
+        if ((string) ($product['type'] ?? '') === 'bundle') {
+            $summary = $this->bundles->bundleSummaryForVariant($siteId, (int) $variant['id']);
+            if ((bool) ($summary['is_bundle'] ?? false)) $payload['bundle'] = $this->publicBundlePayload($summary, $detailed);
+        }
+        return $payload;
+    }
+
+    /** @param array<string,mixed> $summary @return array<string,mixed> */
+    private function publicBundlePayload(array $summary, bool $detailed): array
+    {
+        $status = (string) ($summary['bundle_availability_status'] ?? 'unavailable');
+        $limiting = is_array($summary['bundle_limiting_factor'] ?? null) ? $summary['bundle_limiting_factor'] : null;
+        $payload = [
+            'contract' => 'business.bundle.stock-strategy.v1',
+            'stock_strategy' => (string) ($summary['bundle_stock_strategy'] ?? 'COMPONENT_DERIVED'),
+            'availability_status' => $status,
+            'availability_explanation' => match ($status) { 'in_stock' => 'Bundle disponible', 'deliverable' => 'Bundle disponible sans suivi physique', 'backorder' => 'Bundle disponible sur commande', default => 'Bundle momentanément indisponible' },
+            'limiting_component' => $limiting === null ? null : ['name' => (string) ($limiting['name'] ?? ''), 'sku' => (string) ($limiting['sku'] ?? '')],
+            'return_policy' => (string) ($summary['bundle_component_return_policy'] ?? 'BUNDLE_ONLY'),
+            'partial_availability_policy' => (string) ($summary['bundle_partial_availability_policy'] ?? 'REQUIRE_ALL'),
+        ];
+        if ($detailed && (bool) ($summary['bundle_components_public'] ?? true)) {
+            $payload['included_components'] = array_values(array_map(static fn(array $component): array => [
+                'name' => (string) ($component['component_name'] ?? ''),
+                'variant_name' => (string) ($component['component_variant_name'] ?? ''),
+                'quantity' => (float) ($component['quantity'] ?? 1),
+                'required' => (bool) ($component['is_required'] ?? true),
+            ], array_values(array_filter((array) ($summary['bundle_components'] ?? []), 'is_array'))));
+        }
         return $payload;
     }
 
@@ -331,6 +360,7 @@ final class PublicCatalogApiHandler
         return match ((string) ($summary['bundle_availability_status'] ?? 'in_stock')) {
             'backorder' => $this->availabilityPayload(true, true, 0.0, max(1, (int) ($summary['bundle_backorder_delivery_days'] ?? $fallback['delivery_lead_time_days'] ?? 7))),
             'contact_us', 'unavailable' => $this->availabilityPayload(true, false, 0.0, 7),
+            'in_stock' => $this->availabilityPayload(true, false, max(1.0, (float) ($summary['bundle_available_quantity'] ?? 1)), 7),
             default => $this->availabilityPayload(false, false, 1.0, 7),
         };
     }

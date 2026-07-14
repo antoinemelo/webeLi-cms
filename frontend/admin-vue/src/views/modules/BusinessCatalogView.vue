@@ -6,6 +6,7 @@ import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
 import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductContentCandidate, type ProductContentLink, type ProductDetail } from '@/api/businessCatalog';
 import { useAdminContextStore } from '@/stores/adminContext';
+import { useI18n } from '@/i18n';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 
 type CatalogTab = 'products' | 'offers';
@@ -47,6 +48,7 @@ const props = withDefaults(defineProps<{
 });
 
 const context = useAdminContextStore();
+const { t } = useI18n();
 const activeTab = ref<CatalogTab>(props.fixedTab ?? 'products');
 const activeProductSection = ref<ProductSection>('summary');
 const productModalOpen = ref(false);
@@ -141,6 +143,10 @@ const bundleForm = reactive({
   bundle_variant_id: '',
   pricing_mode: 'fixed',
   stock_mode: 'components',
+  stock_strategy: 'COMPONENT_DERIVED' as 'OWN_STOCK' | 'COMPONENT_DERIVED' | 'NON_STOCKED',
+  partial_availability_policy: 'REQUIRE_ALL' as 'REQUIRE_ALL' | 'ALLOW_PARTIAL',
+  component_return_policy: 'BUNDLE_ONLY' as 'BUNDLE_ONLY' | 'COMPONENTS_ALLOWED',
+  components_public: true,
   is_active: true,
 });
 const bundleIdentityForm = reactive({
@@ -166,6 +172,7 @@ const bundleComponentForm = reactive({
   quantity: '1',
   is_required: true,
 });
+const bundleComponentSearch = ref('');
 
 const productFilter = reactive({ q: '', type: '', brand_id: '', category_id: '', status: '', channel: '', archived: '1', low_stock: false, view: '', image: '', price: '', purchase_price: false });
 const offerFilter = reactive({ q: '', type: '', status: '', channel: '' });
@@ -391,7 +398,12 @@ const selectedProductSignals = computed(() => productData.value ? productSignals
 const bundleProducts = computed(() => bundleProductRows.value);
 const selectedBundleProduct = computed(() => bundleProductRows.value.find((product) => Number(product.id) === selectedBundleProductId.value) || null);
 const selectedBundleProductVariants = computed(() => Number(productData.value?.id || 0) === selectedBundleProductId.value ? selectedVariants.value : []);
-const bundleComponentProducts = computed(() => bundleComponentProductRows.value.filter((product) => Number(product.id) !== selectedBundleProductId.value && product.type !== 'bundle'));
+const bundleComponentProducts = computed(() => {
+  const query = bundleComponentSearch.value.trim().toLocaleLowerCase();
+  return bundleComponentProductRows.value.filter((product) => Number(product.id) !== selectedBundleProductId.value && (!query || `${product.sku_base || ''} ${product.name || ''}`.toLocaleLowerCase().includes(query)));
+});
+const bundleStockEstimate = computed(() => selectedBundle.value?.stock_estimate || null);
+const bundleLimitingFactor = computed(() => bundleStockEstimate.value?.limiting_factor as Record<string, unknown> | null | undefined);
 const selectedBundleDiscounts = computed(() => {
   const productId = selectedBundleProductId.value;
   const variantId = Number(bundleForm.bundle_variant_id || 0);
@@ -1883,10 +1895,15 @@ function fillDiscountForm(discount: CatalogDiscount | null = null): void {
 }
 
 function fillBundleForm(bundle: CatalogProductBundle | null): void {
+  const legacyStrategy = bundle?.stock_mode === 'virtual' ? 'OWN_STOCK' : bundle?.stock_mode === 'none' ? 'NON_STOCKED' : 'COMPONENT_DERIVED';
   Object.assign(bundleForm, {
     bundle_variant_id: text(bundle?.bundle_variant_id),
     pricing_mode: text(bundle?.pricing_mode || 'fixed'),
     stock_mode: text(bundle?.stock_mode || 'components'),
+    stock_strategy: bundle?.stock_strategy || legacyStrategy,
+    partial_availability_policy: bundle?.partial_availability_policy || 'REQUIRE_ALL',
+    component_return_policy: bundle?.component_return_policy || 'BUNDLE_ONLY',
+    components_public: bundle?.components_public !== false,
     is_active: bundle?.is_active !== false,
   });
 }
@@ -1958,8 +1975,8 @@ function bundleProductPayload(): Record<string, unknown> {
     short_description: bundleIdentityForm.short_description,
     description: bundleIdentityForm.description,
     unit: 'unit',
-    track_stock: false,
-    allow_backorder: true,
+    track_stock: bundleForm.stock_strategy === 'OWN_STOCK',
+    allow_backorder: false,
     backorder_delivery_days: 7,
     channels: bundleChannels().length > 0 ? bundleChannels() : ['internal'],
     is_public: bundleIdentityForm.is_public,
@@ -2126,11 +2143,16 @@ async function duplicateBundleOffer(product: CatalogProduct): Promise<void> {
     });
     const copyId = productDetailId(created.data.product);
     if (copyId > 0) {
-      await businessCatalogApi.createVariant(copyId, { sku: copySku, name: 'Standard', status: 'active', stock_quantity: 0, track_stock: false });
       const sourceBundle = bundleResponse.data.bundle;
+      const sourceStrategy = sourceBundle?.stock_strategy || (sourceBundle?.stock_mode === 'virtual' ? 'OWN_STOCK' : sourceBundle?.stock_mode === 'none' ? 'NON_STOCKED' : 'COMPONENT_DERIVED');
+      await businessCatalogApi.createVariant(copyId, { sku: copySku, name: 'Standard', status: 'active', stock_quantity: 0, track_stock: sourceStrategy === 'OWN_STOCK' });
       const copiedBundle = await businessCatalogApi.updateProductBundle(copyId, {
         pricing_mode: sourceBundle?.pricing_mode || 'fixed',
         stock_mode: sourceBundle?.stock_mode || 'components',
+        stock_strategy: sourceBundle?.stock_strategy || 'COMPONENT_DERIVED',
+        partial_availability_policy: sourceBundle?.partial_availability_policy || 'REQUIRE_ALL',
+        component_return_policy: sourceBundle?.component_return_policy || 'BUNDLE_ONLY',
+        components_public: sourceBundle?.components_public !== false,
         is_active: sourceBundle?.is_active !== false,
       });
       for (const component of sourceBundle?.components || []) {
@@ -2177,6 +2199,8 @@ async function saveBundle(): Promise<void> {
     }
     if (productId > 0) {
       await businessCatalogApi.updateProduct(productId, identityPayload);
+      const variants = Array.isArray(selectedProduct.value?.variants) ? selectedProduct.value.variants : [];
+      await Promise.all(variants.map((variant) => businessCatalogApi.updateVariant(Number(variant.id), { track_stock: bundleForm.stock_strategy === 'OWN_STOCK' })));
     } else {
       const created = await businessCatalogApi.createProduct({ ...productPayload, status: 'draft' });
       productId = productDetailId(created.data.product);
@@ -2190,7 +2214,7 @@ async function saveBundle(): Promise<void> {
           name: 'Standard',
           status: 'active',
           stock_quantity: 0,
-          track_stock: false,
+          track_stock: bundleForm.stock_strategy === 'OWN_STOCK',
         });
       }
     }
@@ -2198,6 +2222,11 @@ async function saveBundle(): Promise<void> {
       bundle_variant_id: idOrNull(bundleForm.bundle_variant_id),
       pricing_mode: bundleForm.pricing_mode,
       stock_mode: bundleForm.stock_mode,
+      stock_strategy: bundleForm.stock_strategy,
+      partial_availability_policy: bundleForm.partial_availability_policy,
+      partial_fulfillment_supported: false,
+      component_return_policy: bundleForm.component_return_policy,
+      components_public: bundleForm.components_public,
       is_active: bundleForm.is_active,
     });
     if (canPriceWrite.value) {
@@ -2297,7 +2326,31 @@ function bundlePricingLabel(mode: string | undefined): string {
 }
 
 function bundleStockLabel(mode: string | undefined): string {
-  return ({ components: 'Selon composants', virtual: 'Virtuel', none: 'Sans suivi' } as Record<string, string>)[mode || 'components'] || mode || '—';
+  return ({ COMPONENT_DERIVED: t('business.bundle.strategy.componentDerived'), OWN_STOCK: t('business.bundle.strategy.ownStock'), NON_STOCKED: t('business.bundle.strategy.nonStocked'), components: t('business.bundle.strategy.componentDerived'), virtual: t('business.bundle.strategy.ownStock'), none: t('business.bundle.strategy.nonStocked') } as Record<string, string>)[mode || 'COMPONENT_DERIVED'] || mode || '—';
+}
+
+function bundleAvailabilityLabel(status: unknown): string {
+  return t(`business.bundle.availability.${String(status || 'unavailable')}` as never);
+}
+
+function bundleConfigurationErrorLabel(error: string): string {
+  return t(`business.bundle.error.${error}` as never);
+}
+
+async function moveBundleComponent(component: CatalogBundleComponent, direction: -1 | 1): Promise<void> {
+  const rows = [...(selectedBundle.value?.components || [])];
+  const index = rows.findIndex((row) => Number(row.id) === Number(component.id));
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= rows.length) return;
+  busy.value = `bundle-component-${component.id}`;
+  try {
+    await Promise.all([
+      businessCatalogApi.updateBundleComponent(Number(component.id), { sort_order: (target + 1) * 10 }),
+      businessCatalogApi.updateBundleComponent(Number(rows[target].id), { sort_order: (index + 1) * 10 }),
+    ]);
+    await loadSelectedBundle();
+  } catch (err) { setError(err, t('business.bundle.reorderError')); }
+  finally { busy.value = ''; }
 }
 
 function fillBrandForm(brand: CatalogRecord | null = null): void {
@@ -4466,7 +4519,7 @@ onBeforeUnmount(() => {
               <div><span>SKU</span><strong>{{ bundleIdentityForm.sku_base || '—' }}</strong></div>
               <div><span>Statut</span><strong>{{ productStatusLabel(bundleIdentityForm.status) }}</strong></div>
               <div><span>Prix</span><strong>{{ bundlePriceForm.base_sale_price || '—' }} {{ bundlePriceForm.currency }}</strong></div>
-              <div><span>Disponibilité</span><strong>{{ selectedBundle ? bundleStockLabel(selectedBundle.stock_mode) : '—' }}</strong></div>
+              <div><span>Disponibilité</span><strong>{{ selectedBundle ? bundleStockLabel(selectedBundle.stock_strategy || selectedBundle.stock_mode) : '—' }}</strong></div>
             </div>
             <p class="muted">{{ bundleIdentityForm.short_description || bundleIdentityForm.description || 'Aucun descriptif.' }}</p>
             <div class="catalog-quality-strip">
@@ -4520,12 +4573,16 @@ onBeforeUnmount(() => {
               <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_pos_enabled" type="checkbox" :disabled="!canWrite"> POS</label>
               <label class="checkbox-inline"><input v-model="bundleIdentityForm.is_catalogue_enabled" type="checkbox" :disabled="!canWrite"> Brochure</label>
               <label class="field">Mode de prix<select v-model="bundleForm.pricing_mode" class="select" :disabled="!canWrite"><option value="fixed">Prix fixe</option><option value="sum_components">Somme des composants</option><option value="discount_components">Somme remisée</option></select></label>
-              <label class="field">Mode de disponibilité<select v-model="bundleForm.stock_mode" class="select" :disabled="!canWrite"><option value="components">Selon composants</option><option value="virtual">Virtuel</option><option value="none">Sans suivi</option></select></label>
+              <fieldset class="field wide bundle-strategies"><legend>{{ t('business.bundle.strategy.title') }}</legend><label v-for="strategy in ['OWN_STOCK','COMPONENT_DERIVED','NON_STOCKED']" :key="strategy" class="bundle-strategy"><input v-model="bundleForm.stock_strategy" type="radio" :value="strategy" :disabled="!canWrite"><span><strong>{{ bundleStockLabel(strategy) }}</strong><small>{{ t(`business.bundle.strategy.${strategy === 'OWN_STOCK' ? 'ownStockHelp' : strategy === 'NON_STOCKED' ? 'nonStockedHelp' : 'componentDerivedHelp'}` as never) }}</small></span></label></fieldset>
+              <label v-if="bundleForm.stock_strategy === 'COMPONENT_DERIVED'" class="field">{{ t('business.bundle.partialPolicy') }}<select v-model="bundleForm.partial_availability_policy" class="select" :disabled="!canWrite"><option value="REQUIRE_ALL">{{ t('business.bundle.requireAll') }}</option><option value="ALLOW_PARTIAL" disabled>{{ t('business.bundle.allowPartialUnsupported') }}</option></select></label>
+              <label v-if="bundleForm.stock_strategy === 'COMPONENT_DERIVED'" class="field">{{ t('business.bundle.returnPolicy') }}<select v-model="bundleForm.component_return_policy" class="select" :disabled="!canWrite"><option value="BUNDLE_ONLY">{{ t('business.bundle.returnBundleOnly') }}</option><option value="COMPONENTS_ALLOWED">{{ t('business.bundle.returnComponents') }}</option></select></label>
+              <label v-if="bundleForm.stock_strategy" class="checkbox-inline"><input v-model="bundleForm.components_public" type="checkbox" :disabled="!canWrite"> {{ t('business.bundle.componentsPublic') }}</label>
               <label class="field">Devise<input v-model="bundlePriceForm.currency" class="input" :disabled="!canPriceWrite"></label>
               <label v-if="canPurchaseRead" class="field">Prix d'achat (base TTC)<input v-model="bundlePriceForm.base_purchase_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
               <label class="field">Prix de vente (base TTC)<input v-model="bundlePriceForm.base_sale_price" class="input" inputmode="decimal" :disabled="!canPriceWrite"></label>
               <label class="checkbox-inline"><input v-model="bundleForm.is_active" type="checkbox" :disabled="!canWrite"> Bundle actif</label>
             </div>
+            <aside v-if="selectedBundle" class="bundle-estimate" aria-live="polite"><div><small>{{ t('business.bundle.estimate') }}</small><strong>{{ bundleAvailabilityLabel(bundleStockEstimate?.status) }}</strong><span v-if="bundleStockEstimate?.available_quantity !== null && bundleStockEstimate?.available_quantity !== undefined">{{ bundleStockEstimate.available_quantity }} {{ t('business.bundle.bundleUnits') }}</span></div><p v-if="bundleLimitingFactor"><strong>{{ t('business.bundle.limitingFactor') }}</strong> {{ bundleLimitingFactor.name || bundleLimitingFactor.sku }}</p><ul v-if="selectedBundle.configuration_errors?.length"><li v-for="issue in selectedBundle.configuration_errors" :key="issue">{{ bundleConfigurationErrorLabel(issue) }}</li></ul></aside>
             <div v-if="selectedBundle" class="table-wrap">
               <table class="table">
                 <thead><tr><th>Composant</th><th>Quantité</th><th>Requis</th><th>Actions</th></tr></thead>
@@ -4534,13 +4591,14 @@ onBeforeUnmount(() => {
                     <td><strong>{{ component.component_name }}</strong><small v-if="component.component_sku"> · {{ component.component_sku }}</small></td>
                     <td>{{ component.quantity }}</td>
                     <td>{{ component.is_required ? 'Oui' : 'Non' }}</td>
-                    <td><button class="btn ghost btn-sm" type="button" :disabled="!canWrite || busy === `bundle-component-${component.id}`" @click="removeBundleComponent(component)">Retirer</button></td>
+                    <td><button class="btn ghost btn-sm" type="button" :aria-label="t('business.bundle.moveUp')" :disabled="!canWrite || busy === `bundle-component-${component.id}`" @click="moveBundleComponent(component,-1)">↑</button><button class="btn ghost btn-sm" type="button" :aria-label="t('business.bundle.moveDown')" :disabled="!canWrite || busy === `bundle-component-${component.id}`" @click="moveBundleComponent(component,1)">↓</button><button class="btn ghost btn-sm" type="button" :disabled="!canWrite || busy === `bundle-component-${component.id}`" @click="removeBundleComponent(component)">Retirer</button></td>
                   </tr>
                   <tr v-if="!(selectedBundle.components || []).length"><td colspan="4" class="muted">Aucun composant défini.</td></tr>
                 </tbody>
               </table>
             </div>
             <div v-if="selectedBundle" class="catalog-form-grid catalog-bundle-component-form">
+              <label class="field wide">{{ t('business.bundle.componentSearch') }}<input v-model="bundleComponentSearch" class="input" type="search" :placeholder="t('business.bundle.componentSearchPlaceholder')"></label>
               <label class="field wide">Produit composant<select v-model="bundleComponentForm.component_product_id" class="select" :disabled="!canWrite"><option value="">Sélectionner</option><option v-for="product in bundleComponentProducts" :key="`component-product-${product.id}`" :value="product.id">{{ product.sku_base || '—' }} · {{ product.name }}</option></select></label>
               <label class="field">Quantité<input v-model="bundleComponentForm.quantity" class="input" type="number" min="0.0001" step="0.0001" :disabled="!canWrite"></label>
               <label class="checkbox-inline"><input v-model="bundleComponentForm.is_required" type="checkbox" :disabled="!canWrite"> Requis</label>
@@ -6960,6 +7018,15 @@ onBeforeUnmount(() => {
   min-height: 2.5rem;
 }
 
+.bundle-strategies { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.55rem; border:0; padding:0; }
+.bundle-strategies legend { grid-column:1/-1; font-weight:700; }
+.bundle-strategy { display:flex; gap:.55rem; align-items:flex-start; padding:.7rem; border:1px solid #dbe3ef; border-radius:.75rem; background:#f8fafc; }
+.bundle-strategy span { display:grid; gap:.2rem; }
+.bundle-strategy small { color:#64748b; }
+.bundle-estimate { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:.85rem; border:1px solid #bfdbfe; border-radius:.8rem; background:#eff6ff; }
+.bundle-estimate div { display:grid; }
+.bundle-estimate ul { margin:0; color:#b91c1c; }
+
 @media (max-width: 1120px) {
   .catalog-layout,
   .catalog-layout--offers {
@@ -6982,5 +7049,7 @@ onBeforeUnmount(() => {
   .catalog-content-link-form {
     grid-template-columns: 1fr;
   }
+
+  .bundle-strategies { grid-template-columns:1fr; }
 }
 </style>

@@ -267,8 +267,16 @@ try {
     $h->assertSame('backorder', $bundleItem['availability']['status'] ?? null, 'public bundle inherits backorder availability from components');
     $h->assertSame(6, $bundleItem['availability']['delivery_lead_time_days'] ?? null, 'public bundle exposes component backorder delay');
     $h->assertSame(true, $bundleItem['is_sellable_public'] ?? null, 'public backorder bundle remains sellable');
+    $h->assertSame('business.bundle.stock-strategy.v1', $bundleItem['variants'][0]['bundle']['contract'] ?? null, 'public bundle exposes a versioned stock strategy explanation');
+    $h->assertSame('COMPONENT_DERIVED', $bundleItem['variants'][0]['bundle']['stock_strategy'] ?? null, 'public bundle exposes its business stock strategy');
+    $h->assertSame('REQUIRE_ALL', $bundleItem['variants'][0]['bundle']['partial_availability_policy'] ?? null, 'public bundle exposes complete availability policy');
     $h->assertSame('unavailable', $contactBundleItem['availability']['status'] ?? null, 'public bundle exposes the canonical unavailable status when a required component is not deliverable');
     $h->assertSame(false, $contactBundleItem['is_sellable_public'] ?? null, 'public contact bundle is not directly sellable');
+
+    $bundleShow = $handlerFor([], '/api/v1/catalog/products/public-backorder-pack')->product('public-backorder-pack');
+    $bundleShowPayload = json_decode($bundleShow->body(), true)['data']['product'] ?? [];
+    $h->assertSame('Public Bundle Component', $bundleShowPayload['variants'][0]['bundle']['included_components'][0]['name'] ?? null, 'public bundle detail explains included components when policy allows it');
+    $h->assertTrue(!array_key_exists('available_quantity', $bundleShowPayload['variants'][0]['bundle']['limiting_component'] ?? []), 'public limiting component never exposes exact internal stock');
 
     $show = $handlerFor([], '/api/v1/catalog/products/public-product')->product('public-product');
     $h->assertSame(200, $show->status(), 'public product show works');

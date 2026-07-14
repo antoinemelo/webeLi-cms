@@ -34,6 +34,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Providers de paiement | tests séparés par adapter | contrat commun + gate PHP/Python/Playwright | capacités explicites, succès, refus/reprise, capture/remboursement, signature, doublon, réconciliation et UX Stripe/Revolut | ajouté pour M5.5 |
 | Ledger de stock | quantités Business/Sale dispersées | ledger Sale + gate PHP/Python/Playwright | mouvements immuables, reconstruction, seed d’ouverture, contrat Shop, recherche scanner, assistant, erreurs et mobile | ajouté pour M6.1 |
 | Réservations et disponibilité | réservation implicite sans politique de canal | concurrence PHP + gate Python + API/Playwright | déclencheurs configurables, TTL borné, expiration idempotente, backorder explicite, reprise Shop et libération opérateur auditée | ajouté pour M6.2 |
+| Bundles et stock composé | modes historiques ambigus et stock du parent | tests Business/Sale + gate Python + UX opérateur | trois stratégies, ratios imbriqués, facteur limitant, cycles, concurrence, multi-location, consommation et retours | ajouté pour M6.3 |
 
 ## Tests ajoutés
 
@@ -53,6 +54,10 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/php/tests/unit/sale_reservation_lifecycle_test.php`
 - `tools/python/tests/test_reservation_availability_gate.py`
 - `frontend/admin-vue/tests/e2e/sale-reservations.spec.ts`
+- `tools/php/tests/unit/business_bundle_stock_strategies_test.php`
+- `tools/php/tests/unit/sale_inventory_service_test.php` (scénarios bundle)
+- `tools/php/tests/unit/sale_internal_sales_test.php` (retours bundle)
+- `tools/python/tests/test_bundle_stock_strategy_gate.py`
 
 ## Tests volontairement non automatisés dans ce lot
 

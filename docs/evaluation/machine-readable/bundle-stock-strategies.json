@@ -1,0 +1,60 @@
+{
+  "format_version": 1,
+  "gate": "business.bundle-stock-strategies.m6.3.v1",
+  "status": "passed",
+  "strategies": ["OWN_STOCK", "COMPONENT_DERIVED", "NON_STOCKED"],
+  "partial_availability": {
+    "default": "REQUIRE_ALL",
+    "allow_partial_enabled": false,
+    "reason": "fulfillment_remainder_not_representable_v1"
+  },
+  "derived_plan": {
+    "nested": true,
+    "max_depth": 8,
+    "duplicate_leaves_merged": true,
+    "limiting_factor_exposed": true,
+    "cycles_rejected": true,
+    "non_positive_ratios_rejected": true
+  },
+  "inventory": {
+    "atomic_component_reservation": true,
+    "channel_location": true,
+    "parent_bundle_traceable": true,
+    "component_consumption_movement": "bundle_consumption",
+    "consumption_idempotent": true,
+    "non_stocked_has_physical_movement": false
+  },
+  "returns": {
+    "full_bundle": true,
+    "component_policy": "COMPONENTS_ALLOWED",
+    "historical_snapshot_driven": true,
+    "own_stock_restock_parent": true,
+    "non_stocked_restock": false
+  },
+  "ux": {
+    "component_search": true,
+    "quantity_edit": true,
+    "tree_and_reorder": true,
+    "strategy_explanations": true,
+    "immediate_estimate": true,
+    "inline_configuration_errors": true,
+    "mobile": true,
+    "languages": ["fr", "en"],
+    "operator_component_plan": true
+  },
+  "storefront": {
+    "route": "/shop",
+    "global_availability": true,
+    "public_components_policy": true,
+    "exact_internal_stock_exposed": false
+  },
+  "tests": {
+    "deep_bundle": true,
+    "missing_component": true,
+    "cycle": true,
+    "concurrency": true,
+    "multi_location": true,
+    "full_and_component_returns": true
+  },
+  "security": {"contains_pii": false, "contains_secret": false}
+}

@@ -82,31 +82,43 @@ final class SaleInventoryService
             if (in_array($type, ['service', 'digital', 'gift_card'], true)) {
                 continue;
             }
-            if (($snapshot['is_bundle'] ?? false) && ($snapshot['bundle_stock_mode'] ?? 'components') === 'components') {
-                foreach ((array) ($snapshot['bundle_components'] ?? []) as $component) {
-                    if (!is_array($component) || !((bool) ($component['is_required'] ?? true)) || !((bool) ($component['effective_track_stock'] ?? false))) {
+            $bundleStrategy = (string) ($snapshot['bundle_stock_strategy'] ?? match ((string) ($snapshot['bundle_stock_mode'] ?? 'components')) { 'virtual' => 'OWN_STOCK', 'none' => 'NON_STOCKED', default => 'COMPONENT_DERIVED' });
+            if (($snapshot['is_bundle'] ?? false) && $bundleStrategy === 'COMPONENT_DERIVED') {
+                $plan = (array) ($snapshot['bundle_inventory_plan'] ?? $snapshot['bundle_components'] ?? []);
+                $parentSellableId = (int) ($line['sellable_id'] ?? $line['business_variant_id']);
+                foreach ($plan as $component) {
+                    if (!is_array($component)) continue;
+                    $tracked = (bool) ($component['track_stock'] ?? $component['effective_track_stock'] ?? false);
+                    if (!((bool) ($component['is_required'] ?? true)) || !$tracked) {
                         continue;
                     }
-                    $variantId = (int) ($component['component_variant_id'] ?? 0);
+                    $variantId = (int) ($component['business_variant_id'] ?? $component['component_variant_id'] ?? 0);
                     if ($variantId < 1) {
                         throw new \App\Modules\Sale\Exceptions\SaleInventoryException('sale.bundle_component_variant_required');
                     }
-                    $quantity = (int) ceil((float) ($component['quantity'] ?? 1) * (int) $line['quantity']);
-                    $this->addDemand($demands, $variantId, $quantity, [
+                    $ratio = (float) ($component['quantity_per_bundle'] ?? $component['quantity'] ?? 1);
+                    if ($ratio <= 0) throw new \App\Modules\Sale\Exceptions\SaleInventoryException('sale.bundle_component_ratio_invalid');
+                    $quantity = (int) ceil($ratio * (int) $line['quantity']);
+                    $componentSellableId = (int) ($component['sellable_id'] ?? $variantId);
+                    $this->addDemand($demands, $componentSellableId, $quantity, [
                         'business_variant_id' => $variantId,
-                        'sellable_id' => $variantId,
-                        'sku' => $component['component_sku'] ?? null,
+                        'sellable_id' => $componentSellableId,
+                        'sku' => $component['sku'] ?? $component['component_sku'] ?? null,
                         'track_stock' => true,
-                        'allow_backorder' => (bool) ($component['effective_allow_backorder'] ?? false),
+                        'allow_backorder' => (bool) ($component['allow_backorder'] ?? $component['effective_allow_backorder'] ?? false),
+                        'backorder_delivery_days' => (int) ($component['backorder_delivery_days'] ?? $component['effective_backorder_delivery_days'] ?? 7),
                         'stock_location_id' => $locationId,
-                        'metadata' => ['available_quantity' => max(0, (int) (($component['stock_quantity'] ?? 0) - ($component['stock_reserved'] ?? 0)))],
+                        'bundle_parent_sellable_id' => $parentSellableId,
+                        'demand_kind' => 'bundle_component',
+                        'metadata' => ['available_quantity' => max(0, (int) ($component['available_quantity'] ?? (($component['stock_quantity'] ?? 0) - ($component['stock_reserved'] ?? 0))))],
                     ]);
                 }
                 continue;
             }
-            if (($snapshot['is_bundle'] ?? false) && in_array((string) ($snapshot['bundle_stock_mode'] ?? ''), ['virtual', 'none'], true)) {
+            if (($snapshot['is_bundle'] ?? false) && $bundleStrategy === 'NON_STOCKED') {
                 continue;
             }
+            if (($snapshot['is_bundle'] ?? false) && $bundleStrategy === 'OWN_STOCK') $snapshot['track_stock'] = true;
             if (!((bool) ($snapshot['track_stock'] ?? false))) {
                 continue;
             }
@@ -384,16 +396,17 @@ final class SaleInventoryService
         );
     }
 
-    /** @param array<int,array{quantity:int,snapshot:array<string,mixed>}> $demands @param array<string,mixed> $snapshot */
+    /** @param array<string,array{quantity:int,snapshot:array<string,mixed>}> $demands @param array<string,mixed> $snapshot */
     private function addDemand(array &$demands, int $sellableId, int $quantity, array $snapshot): void
     {
         if ($quantity < 1) {
             return;
         }
-        if (!isset($demands[$sellableId])) {
-            $demands[$sellableId] = ['quantity' => 0, 'snapshot' => $snapshot];
+        $key = $sellableId . ':' . (int) ($snapshot['bundle_parent_sellable_id'] ?? 0);
+        if (!isset($demands[$key])) {
+            $demands[$key] = ['quantity' => 0, 'snapshot' => $snapshot];
         }
-        $demands[$sellableId]['quantity'] += $quantity;
+        $demands[$key]['quantity'] += $quantity;
     }
 
     /** @param array<string,mixed> $reservation */

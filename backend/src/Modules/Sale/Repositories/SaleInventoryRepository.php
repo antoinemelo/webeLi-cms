@@ -275,6 +275,9 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         $allowBackorder = $backorderPolicy === 'enabled' || ($backorderPolicy === 'sellable' && $sellableBackorder);
         $sellableId = (int) ($snapshot['sellable_id'] ?? $snapshot['business_variant_id']);
         $reservationKey = 'cart:' . $cartId . ':sellable:' . $sellableId . ':location:' . (int) $item['stock_location_id'];
+        $demandKind = (string) ($snapshot['demand_kind'] ?? 'sellable');
+        $bundleParentSellableId = (int) ($snapshot['bundle_parent_sellable_id'] ?? 0);
+        if ($demandKind === 'bundle_component' && $bundleParentSellableId > 0) $reservationKey .= ':bundle:' . $bundleParentSellableId;
         $trigger = (string) ($policy['reservation_policy'] ?? 'checkout_start');
         $fulfillmentMode = (string) ($policy['fulfillment_mode'] ?? 'delivery');
         $ttlSeconds = max(60, min(86400, (int) ($policy['reservation_ttl_seconds'] ?? $ttlSeconds)));
@@ -282,7 +285,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         $expiresAt = gmdate('Y-m-d H:i:s', time() + $ttlSeconds);
         $maxExpiresAt = gmdate('Y-m-d H:i:s', time() + $maxLifetime);
         $deliveryDays = max(1, (int) ($snapshot['backorder_delivery_days'] ?? $snapshot['metadata']['backorder_delivery_days'] ?? 7));
-        return $this->rawDatabase()->transaction(function () use ($itemId, $cartId, $quantity, $reservationKey, $expiresAt, $maxExpiresAt, $trigger, $fulfillmentMode, $allowBackorder, $deliveryDays, $sellableId): ?array {
+        return $this->rawDatabase()->transaction(function () use ($itemId, $cartId, $quantity, $reservationKey, $expiresAt, $maxExpiresAt, $trigger, $fulfillmentMode, $allowBackorder, $deliveryDays, $sellableId, $demandKind, $bundleParentSellableId): ?array {
             $existing = $this->rawDatabase()->one(
                 "SELECT * FROM sale_stock_reservations WHERE inventory_item_id=? AND reservation_key=? AND status IN ('active','confirmed') LIMIT 1",
                 [$itemId, $reservationKey]
@@ -326,8 +329,8 @@ final class SaleInventoryRepository extends SaleRepositoryBase
                     throw new SaleInventoryException('sale.stock_insufficient', ['sellable_id' => $sellableId, 'requested_quantity' => $quantity, 'recovery_options' => ['reduce_quantity', 'choose_variant', 'remove_line']]);
                 }
                 $this->rawDatabase()->run(
-                    'INSERT INTO sale_stock_reservations(inventory_item_id,cart_id,reservation_key,quantity,expires_at,max_expires_at,reservation_trigger,fulfillment_mode) VALUES(?,?,?,?,?,?,?,?)',
-                    [$itemId, $cartId, $reservationKey, $physicalQuantity, $expiresAt, $maxExpiresAt, $trigger, $fulfillmentMode]
+                    'INSERT INTO sale_stock_reservations(inventory_item_id,cart_id,reservation_key,quantity,expires_at,max_expires_at,reservation_trigger,fulfillment_mode,demand_kind,bundle_parent_sellable_id) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                    [$itemId, $cartId, $reservationKey, $physicalQuantity, $expiresAt, $maxExpiresAt, $trigger, $fulfillmentMode, $demandKind, $bundleParentSellableId > 0 ? $bundleParentSellableId : null]
                 );
                 $reservationId = (int) $this->rawDatabase()->lastInsertId();
                 $this->movement($itemId, 'reservation', $physicalQuantity, 'cart', $cartId, 'checkout reservation', null, 'reserve:' . $reservationKey);
@@ -335,8 +338,8 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             }
             if ($backorderQuantity > 0) {
                 $this->rawDatabase()->run(
-                    'INSERT INTO sale_stock_backorders(inventory_item_id,cart_id,backorder_key,quantity,delivery_lead_time_days,reservation_trigger,fulfillment_mode,expires_at,max_expires_at) VALUES(?,?,?,?,?,?,?,?,?)',
-                    [$itemId, $cartId, $reservationKey, $backorderQuantity, $deliveryDays, $trigger, $fulfillmentMode, $expiresAt, $maxExpiresAt]
+                    'INSERT INTO sale_stock_backorders(inventory_item_id,cart_id,backorder_key,quantity,delivery_lead_time_days,reservation_trigger,fulfillment_mode,demand_kind,bundle_parent_sellable_id,expires_at,max_expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    [$itemId, $cartId, $reservationKey, $backorderQuantity, $deliveryDays, $trigger, $fulfillmentMode, $demandKind, $bundleParentSellableId > 0 ? $bundleParentSellableId : null, $expiresAt, $maxExpiresAt]
                 );
                 $backorder = $this->rawDatabase()->one('SELECT * FROM sale_stock_backorders WHERE id=?', [(int) $this->rawDatabase()->lastInsertId()]) ?? [];
                 if ($created === null) $created = $backorder;
@@ -410,7 +413,8 @@ final class SaleInventoryRepository extends SaleRepositoryBase
                 if ($stock->rowCount() !== 1) {
                     throw new SaleInventoryException('sale.stock_consumption_conflict');
                 }
-                $this->movement($itemId, 'sale', -$quantity, 'order', $orderId, 'checkout sale', null, 'consume:reservation:' . (int) $reservation['id']);
+                $movementType = ($reservation['demand_kind'] ?? 'sellable') === 'bundle_component' ? 'bundle_consumption' : 'sale';
+                $this->movement($itemId, $movementType, -$quantity, 'order', $orderId, $movementType === 'bundle_consumption' ? 'bundle component consumption' : 'checkout sale', null, 'consume:reservation:' . (int) $reservation['id']);
             }
             $this->rawDatabase()->run(
                 "UPDATE sale_stock_backorders
@@ -583,7 +587,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         }
         $query = trim((string) ($filters['q'] ?? ''));
         if ($query !== '') {
-            $where[] = '(product_name LIKE :query OR variant_name LIKE :query OR sku LIKE :query OR order_number LIKE :query OR CAST(cart_id AS TEXT) LIKE :query)';
+            $where[] = '(product_name LIKE :query OR bundle_product_name LIKE :query OR variant_name LIKE :query OR sku LIKE :query OR order_number LIKE :query OR CAST(cart_id AS TEXT) LIKE :query)';
             $params['query'] = '%' . $query . '%';
         }
         $alert = trim((string) ($filters['alert'] ?? ''));
@@ -591,20 +595,22 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         if ($alert === 'blocked') $where[] = "status IN ('active','confirmed') AND expires_at IS NOT NULL AND expires_at<=CURRENT_TIMESTAMP";
         if ($alert === 'order') $where[] = 'order_id IS NOT NULL';
         $cte = "WITH entries AS (
-            SELECT 'physical' AS reservation_kind,r.id,i.site_id,r.inventory_item_id,r.cart_id,r.order_id,r.quantity,r.status,r.expires_at,r.max_expires_at,r.reservation_trigger,r.fulfillment_mode,r.renewal_count,r.created_at,r.updated_at,
-                   i.sellable_id,i.sku,ref.product_name,ref.variant_name,l.name AS location_name,o.order_number,0 AS backorder_delivery_days
+            SELECT 'physical' AS reservation_kind,r.id,i.site_id,r.inventory_item_id,r.cart_id,r.order_id,r.quantity,r.status,r.expires_at,r.max_expires_at,r.reservation_trigger,r.fulfillment_mode,r.demand_kind,r.bundle_parent_sellable_id,r.renewal_count,r.created_at,r.updated_at,
+                   i.sellable_id,i.sku,ref.product_name,ref.variant_name,parent_ref.product_name AS bundle_product_name,l.name AS location_name,o.order_number,0 AS backorder_delivery_days
             FROM sale_stock_reservations r
             INNER JOIN sale_inventory_items i ON i.id=r.inventory_item_id
             INNER JOIN sale_stock_locations l ON l.id=i.stock_location_id
             LEFT JOIN sale_catalog_variant_refs ref ON ref.site_id=i.site_id AND ref.sellable_id=i.sellable_id
+            LEFT JOIN sale_catalog_variant_refs parent_ref ON parent_ref.site_id=i.site_id AND parent_ref.sellable_id=r.bundle_parent_sellable_id
             LEFT JOIN sale_orders o ON o.id=r.order_id
             UNION ALL
-            SELECT 'backorder',b.id,i.site_id,b.inventory_item_id,b.cart_id,b.order_id,b.quantity,b.status,b.expires_at,b.max_expires_at,b.reservation_trigger,b.fulfillment_mode,b.renewal_count,b.created_at,b.updated_at,
-                   i.sellable_id,i.sku,ref.product_name,ref.variant_name,l.name,o.order_number,b.delivery_lead_time_days
+            SELECT 'backorder',b.id,i.site_id,b.inventory_item_id,b.cart_id,b.order_id,b.quantity,b.status,b.expires_at,b.max_expires_at,b.reservation_trigger,b.fulfillment_mode,b.demand_kind,b.bundle_parent_sellable_id,b.renewal_count,b.created_at,b.updated_at,
+                   i.sellable_id,i.sku,ref.product_name,ref.variant_name,parent_ref.product_name AS bundle_product_name,l.name,o.order_number,b.delivery_lead_time_days
             FROM sale_stock_backorders b
             INNER JOIN sale_inventory_items i ON i.id=b.inventory_item_id
             INNER JOIN sale_stock_locations l ON l.id=i.stock_location_id
             LEFT JOIN sale_catalog_variant_refs ref ON ref.site_id=i.site_id AND ref.sellable_id=i.sellable_id
+            LEFT JOIN sale_catalog_variant_refs parent_ref ON parent_ref.site_id=i.site_id AND parent_ref.sellable_id=b.bundle_parent_sellable_id
             LEFT JOIN sale_orders o ON o.id=b.order_id
         ) ";
         $sqlWhere = implode(' AND ', $where);

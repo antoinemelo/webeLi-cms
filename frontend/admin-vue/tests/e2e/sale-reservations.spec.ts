@@ -31,6 +31,7 @@ async function mockReservations(page: Page) {
           { id: 1, reservation_kind: 'physical', status: 'active', quantity: 1, product_name: 'Dernier sac', sku: 'LAST-ONE', location_name: 'Stock principal', cart_id: 41, expires_at: '2099-01-01 00:05:00', ttl_seconds: 300, expiring_soon: 1, blocked: 0, releasable: true, fulfillment_mode: 'delivery', reservation_trigger: 'checkout_start' },
           { id: 2, reservation_kind: 'backorder', status: 'confirmed', quantity: 2, product_name: 'Veste sur commande', sku: 'BACK-2', location_name: 'Stock principal', order_id: 72, order_number: 'SALE-72', expires_at: '2099-01-01 01:00:00', ttl_seconds: 3600, expiring_soon: 0, blocked: 0, releasable: true, fulfillment_mode: 'delivery', reservation_trigger: 'order_placement', delivery_lead_time_days: 8 },
           { id: 3, reservation_kind: 'physical', status: 'active', quantity: 1, product_name: 'Réservation bloquée', sku: 'BLOCKED', location_name: 'Retrait Lausanne', cart_id: 43, expires_at: '2020-01-01 00:00:00', ttl_seconds: -10, expiring_soon: 1, blocked: 1, releasable: true, fulfillment_mode: 'pickup', reservation_trigger: 'checkout_start' },
+          { id: 4, reservation_kind: 'physical', status: 'active', quantity: 2, product_name: 'Mousqueton', sku: 'KIT-COMP-1', location_name: 'Stock principal', cart_id: 44, expires_at: '2099-01-01 00:30:00', ttl_seconds: 1800, expiring_soon: 0, blocked: 0, releasable: true, fulfillment_mode: 'delivery', reservation_trigger: 'checkout_start', demand_kind: 'bundle_component', bundle_parent_sellable_id: 99, bundle_product_name: 'Kit randonnée' },
         ],
         summary: { active: 3, expiring_soon: 2, blocked: 1, order_linked: 1, backorders: 1 },
         policies: [{ channel_id: 3, channel_name: 'Boutique web principale', channel_code: 'web-main', channel_kind: 'storefront', reservation_policy: 'checkout_start', reservation_ttl_seconds: 1800, reservation_renewal_window_seconds: 300, reservation_max_lifetime_seconds: 7200, backorder_policy: 'sellable', show_exact_quantity: 0 }],
@@ -55,9 +56,11 @@ test.describe('M6 reservations, expiry and backorder UX', () => {
     await expect(page.getByText('Backorder explicite · 2', { exact: true })).toBeVisible();
     await expect(page.getByText('SALE-72')).toBeVisible();
     await expect(page.locator('.reservation-row.blocked').getByText('Expirée', { exact: true })).toBeVisible();
+    await expect(page.getByText('Composant réservé pour le bundle Kit randonnée')).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByText('Dernier sac')).toBeVisible();
     await expect(page.getByText('Réservation bloquée')).toBeVisible();
+    await expect(page.getByText('Composant réservé pour le bundle Kit randonnée')).toBeVisible();
   });
 
   test('requires a release reason and configures the channel policy', async ({ page }) => {

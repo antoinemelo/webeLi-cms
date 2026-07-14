@@ -110,6 +110,14 @@ export type CatalogProductBundle = Record<string, unknown> & {
   bundle_variant_id?: number | null;
   pricing_mode?: string;
   stock_mode?: string;
+  stock_strategy?: 'OWN_STOCK' | 'COMPONENT_DERIVED' | 'NON_STOCKED';
+  partial_availability_policy?: 'REQUIRE_ALL' | 'ALLOW_PARTIAL';
+  partial_fulfillment_supported?: boolean;
+  component_return_policy?: 'BUNDLE_ONLY' | 'COMPONENTS_ALLOWED';
+  components_public?: boolean;
+  stock_estimate?: Record<string, unknown>;
+  inventory_plan?: Array<Record<string, unknown>>;
+  configuration_errors?: string[];
   is_active?: boolean;
   components?: CatalogBundleComponent[];
 };

@@ -22,6 +22,7 @@ $tests = [
     'unit/business_pos_catalog_api_test.php',
     'unit/business_catalog_pricing_service_test.php',
     'unit/business_pricing_offers_bundles_test.php',
+    'unit/business_bundle_stock_strategies_test.php',
     'unit/business_sellable_snapshot_service_test.php',
     'unit/business_crm_blueprints_test.php',
     'unit/business_pim_lite_blueprints_test.php',

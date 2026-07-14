@@ -65,6 +65,7 @@ E2E_INPUTS = (
     "tools/python/qualification/payment_provider_gate.py",
     "tools/python/qualification/inventory_ledger_gate.py",
     "tools/python/qualification/reservation_availability_gate.py",
+    "tools/python/qualification/bundle_stock_strategy_gate.py",
 )
 
 
@@ -152,6 +153,7 @@ def _artifact_hashes() -> dict[str, str]:
         "payment_provider_interchangeability": ROOT / "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
         "inventory_ledger": ROOT / "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "reservation_availability": ROOT / "docs/evaluation/machine-readable/sale-reservations-availability.json",
+        "bundle_stock_strategies": ROOT / "docs/evaluation/machine-readable/bundle-stock-strategies.json",
     }
     latest = _latest_archive()
     if latest is not None:
@@ -170,6 +172,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "gate M5 interchangeabilité providers", "source_steps": ["payment-provider-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/payment_provider_gate.py"]},
         {"requirement": "gate M6 ledger stock Sale", "source_steps": ["inventory-ledger-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/inventory_ledger_gate.py"]},
         {"requirement": "gate M6.2 réservations et disponibilité", "source_steps": ["reservation-availability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/reservation_availability_gate.py", "backend/bin/console worker:reservations"]},
+        {"requirement": "gate M6.3 bundles et stock composé", "source_steps": ["bundle-stock-strategy-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/bundle_stock_strategy_gate.py"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
         {"requirement": "backup/restore et intégrité SQLite", "source_steps": ["backup-restore", "runtime-integrity"], "release_commands": ["tools/cms.py backup", "tools/cms.py backup --restore"]},
         {"requirement": "documentation OpenAPI SDK", "source_steps": ["docs-generate", "docs-check", "validate-core"], "release_commands": ["tools/cms.py docs check"]},
@@ -280,6 +283,20 @@ def steps() -> tuple[Step, ...]:
                 "tools/python/qualification/reservation_availability_gate.py",
                 "tools/php/tests/unit/sale_reservation_lifecycle_test.php",
                 "frontend/admin-vue/tests/e2e/sale-reservations.spec.ts",
+            ),
+            timeout=60,
+        ),
+        Step(
+            "bundle-stock-strategy-gate",
+            "Gate M6.3 bundles et stock composé",
+            ("complete", "release"),
+            (py, "tools/python/qualification/bundle_stock_strategy_gate.py"),
+            files=(
+                "docs/evaluation/machine-readable/bundle-stock-strategies.json",
+                "tools/python/qualification/bundle_stock_strategy_gate.py",
+                "tools/php/tests/unit/business_bundle_stock_strategies_test.php",
+                "tools/php/tests/unit/sale_inventory_service_test.php",
+                "tools/php/tests/unit/sale_internal_sales_test.php",
             ),
             timeout=60,
         ),

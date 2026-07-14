@@ -123,3 +123,12 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - projection reconstruisible des états `deliverable`, `in_stock`, `backorder` et `unavailable` depuis Sale vers Business/Storefront ;
 - récupération Shop sans perte du panier en cas de conflit, vue opérateur dédiée et libération manuelle motivée/auditée ;
 - schémas canoniques reconstruits from scratch uniquement, sans migration.
+
+# 2026-07-14 — Business × Sale M6.3 : bundles et stock composé
+
+- stratégies obligatoires `OWN_STOCK`, `COMPONENT_DERIVED` et `NON_STOCKED`, avec compatibilité déterministe de l'ancien mode ;
+- plan de composants imbriqués aplati, ratios fusionnés, facteur limitant et disponibilité globale Shop ;
+- assistant catalogue avec recherche, quantité, réorganisation, explications et estimation immédiate ;
+- réservation atomique par emplacement, consommation idempotente et rattachement opérateur au bundle parent ;
+- retours de bundle complet ou de composants explicitement autorisés depuis le snapshot historique ;
+- gate M6.3 machine-readable, tests de concurrence/multi-location et schémas canoniques from scratch sans migration.
