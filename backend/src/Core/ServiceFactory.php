@@ -827,7 +827,11 @@ final class ServiceFactory
 
     public function saleFulfillment(): SaleFulfillmentService
     {
-        return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService($this->saleDatabaseConnection()));
+        return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService(
+            $this->saleDatabaseConnection(),
+            $this->saleInventory(),
+            $this->saleStateMachines(),
+        ));
     }
 
     public function salePaymentMethods(): SalePaymentMethodService

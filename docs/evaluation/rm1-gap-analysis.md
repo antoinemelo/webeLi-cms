@@ -98,13 +98,13 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Import/export catalogue | présent | `CatalogCsvService`, imports/exports Business et Sale, docs d'administration. | À relier aux critères de release RM1. | P2 |
 | Checkout public | partiel | `PublicSaleApiHandler`, `SaleModuleProvider::publicHeadlessRoutes()`. | Non publié en OpenAPI/SDK ; pas de parcours CMS complet panier/paiement/livraison. | P0 |
 | Comptes clients | couvert | `SaleCustomerAccountService`, preuve post-achat à usage unique, session IAM client et liens explicites CRM/Sale. | Les téléchargements et cartes cadeaux ne sont exposés que lorsqu’un module métier les fournit. | P3 |
-| Livraison | partiel | Champs shipping address/totals et fulfillment status dans Sale ; docs Sale mentionnent le shipping avancé hors v1. | Méthodes/zones/tarifs/transporteurs et fulfilment complet absents. | P2 |
+| Livraison | couvert hors transporteur | Méthodes/zones, snapshot d’emplacement, fulfillments partiels, préparation, expédition, retrait prouvé et suivi Shop dans Sale M6.4. | Achat d’étiquette et connexion transporteur restent hors périmètre. | P3 |
 | Fiscalité | partiel | `business_tax_classes`, tax rate snapshots, tax lines Sale. | Fiscalité avancée multi-pays/règles légales non prouvée. | P2 |
 | Événements et outbox | partiel | `outbox_events` core, `sale_outbox`, `crm_message_outbox`, attempts/max_attempts côté Business. | Worker générique, dead-letter, retries observables et supervision non formalisés. | P1 |
 | Interface française/anglaise | partiel | UI et docs majoritairement en français ; certains contrats/messages structurés. | Couverture i18n anglaise non auditée et nombreuses chaînes probablement codées en dur. | P2 |
 | Documentation et aide par rôle | partiel | Docs administration, API, architecture, évaluation. | Aide contextuelle par rôle et parcours RM1 client/admin/dev à compléter. | P2 |
 | Reconstruction from scratch | présent | `database/modules/*.sql`, `tools/cms.py validate`, tests smoke Python Business/Sale. | Qualification rebuild complète non rejouée dans ce lot. | P1 |
-| Migrations | partiel | `database/migrations/business`, `database/migrations/sale`, `schema_migrations`. | Nouvelles migrations probables pour liens contenu-produit, comptes, fulfilment, outbox. | P1 |
+| Reconstruction sans migration | présent | Les changements actifs sont portés dans les schémas canoniques `database/modules/*.sql` et qualifiés sur une base recréée. | Les anciens répertoires de migration ne sont pas la voie d’évolution de ce projet. | P3 |
 | Sauvegarde/restauration | partiel | `tools/cms.py backup`, docs `reproducible-checks.md`, validateurs slow disponibles. | Roundtrip backup/restore toutes bases non exécuté dans cet audit. | P1 |
 | Tests HTTP | partiel | Tests publics contenu/media/cookies/catalogue ; tests Sale unitaires et intégration. | Pas de matrice HTTP couvrant toutes les routes admin/module/public, surtout Sale public. | P1 |
 | E2E | partiel | E2E blueprint, CRM, publication, webhook. | Pas d'E2E POS/Sale/checkout public RM1. | P1 |

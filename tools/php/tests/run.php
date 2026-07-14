@@ -52,6 +52,7 @@ $tests = [
     'unit/stripe_checkout_payment_provider_test.php',
     'unit/revolut_checkout_payment_provider_test.php',
     'unit/sale_state_machines_snapshots_test.php',
+    'unit/sale_logistics_workflows_test.php',
     'unit/sale_admin_api_controller_test.php',
     'unit/sale_public_api_handler_test.php',
     'unit/sale_customer_accounts_test.php',

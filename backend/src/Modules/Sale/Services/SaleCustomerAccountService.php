@@ -341,6 +341,16 @@ final class SaleCustomerAccountService implements CmsAccountBridge
     /** @return array<string,mixed> */
     private function publicUser(int $id):array{$u=$this->iam->one('SELECT id,email,first_name,last_name,locale,is_active,email_verified_at FROM iam_users WHERE id=?',[$id]);if($u===null)throw new SaleValidationException('sale.customer.account_not_found');return $u;}
     /** @param array<string,mixed> $row @return array<string,mixed> */
-    private function orderPayload(array $row):array{return ['id'=>(int)$row['id'],'order_number'=>(string)$row['order_number'],'status'=>(string)$row['status'],'payment_status'=>(string)$row['payment_status'],'currency'=>(string)$row['currency'],'grand_total_minor'=>(int)$row['grand_total_minor'],'placed_at'=>$row['placed_at']??null,'lines'=>array_map(static fn(array $l):array=>['id'=>(int)$l['id'],'product_name'=>(string)$l['product_name'],'quantity'=>(int)$l['quantity'],'line_total_minor'=>(int)$l['line_total_minor']],$row['lines']??[])];}
+    private function orderPayload(array $row):array
+    {
+        return ['id'=>(int)$row['id'],'order_number'=>(string)$row['order_number'],'status'=>(string)$row['status'],'payment_status'=>(string)$row['payment_status'],'fulfillment_status'=>(string)$row['fulfillment_status'],'currency'=>(string)$row['currency'],'grand_total_minor'=>(int)$row['grand_total_minor'],'placed_at'=>$row['placed_at']??null,'lines'=>array_map(static fn(array $l):array=>['id'=>(int)$l['id'],'product_name'=>(string)$l['product_name'],'quantity'=>(int)$l['quantity'],'line_total_minor'=>(int)$l['line_total_minor']],$row['lines']??[]),'fulfillments'=>$this->customerFulfillments((int)$row['id'])];
+    }
+    /** @return list<array<string,mixed>> */
+    private function customerFulfillments(int $orderId):array
+    {
+        $rows=$this->saleDb()->all('SELECT f.id,f.fulfillment_number,f.fulfillment_type,f.status,f.tracking_reference,f.pickup_code,f.due_at,f.ready_at,f.shipped_at,f.handed_over_at,f.delivered_at,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE f.order_id=? ORDER BY f.id',[$orderId]);
+        foreach($rows as &$row)$row['lines']=$this->saleDb()->all('SELECT fl.order_line_id,fl.quantity,fl.prepared_quantity,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[(int)$row['id']]);
+        return $rows;
+    }
     private function saleDb():Database{return $this->sale->database()??throw new SaleValidationException('sale.database_unavailable');}
 }

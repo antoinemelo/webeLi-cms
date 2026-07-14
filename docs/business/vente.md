@@ -4,7 +4,7 @@ audience:
   - administrator
   - superadministrator
 status: draft
-last_verified: 2026-07-13
+last_verified: 2026-07-14
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/views/modules/SaleView.vue
@@ -38,6 +38,9 @@ Les permissions principales sont :
 - `sale.payments.test` pour les scénarios déterministes, disponibles uniquement hors production ;
 - `sale.refunds.manage` pour creer un remboursement ;
 - `sale.stock.read` et `sale.stock.manage` pour consulter ou ajuster le stock Vente ;
+- `sale.fulfillment.manage` pour préparer, expédier et remettre une commande ;
+- `sale.transfers.manage` pour piloter un transfert entre emplacements ;
+- `sale.inventory.count` pour saisir un comptage et `sale.inventory.approve` pour valider ses écarts ;
 - `sale.reports.read` pour consulter rapports et exports ;
 - `sale.settings.manage` pour gerer les canaux et reglages.
 
@@ -87,6 +90,18 @@ Annuler une commande change le statut de commande et tente de liberer les reserv
 
 Les statuts de panier, commande, paiement, fulfillment, retour et remboursement suivent des machines distinctes. Chaque transition est historisée avec un identifiant de corrélation. Après validation, les snapshots produit, client, adresses et méthode de livraison sont immuables ; une modification ultérieure du PIM ou du CRM ne réécrit jamais la commande.
 
+## Exécuter la commande
+
+L’onglet **Opérations** regroupe trois files adaptées au mobile :
+
+- **Préparations** : allocation d’un emplacement, progression par ligne et quantité, problème conservé, expédition ou retrait local. Un retrait passe par `prêt`, puis `remis`, avec le code client et une preuve opérateur minimale. Une commande peut avoir plusieurs fulfillments partiels ; les allocations ouvertes ne peuvent jamais dépasser la quantité commandée.
+- **Transferts** : demande, expédition, transit, réception et écarts. La demande ne change aucun stock. L’expédition écrit uniquement la sortie d’origine ; la réception écrit uniquement l’entrée de destination. Une annulation après départ est refusée.
+- **Inventaires** : session par emplacement, comptage progressif ou à l’aveugle, sauvegarde ligne par ligne, revue des écarts, puis validation séparée. La validation produit un mouvement `inventory_adjustment` par écart motivé.
+
+Le stock réservé est consommé une seule fois lors de la confirmation commerciale de la commande. La préparation physique ne le débite jamais une seconde fois. Les retours peuvent être remis en stock vendable, en quarantaine ou dans un emplacement non vendable.
+
+Dans le compte Shop, le client retrouve le statut métier, les fulfillments partiels, le lieu et le code de retrait, ainsi que la référence de suivi disponible.
+
 ## Rapports, imports et exports
 
 Les rapports v1 couvrent :
@@ -105,8 +120,7 @@ L'import v1 concerne le stock : preview obligatoire pour verifier le CSV, puis a
 ## Limites v1
 
 - pas de marketplace ;
-- pas de paiement online complet ;
-- pas de shipping avance ;
+- pas d’achat d’étiquette transporteur ni de calcul de tournée ;
 - pas de POS hors-ligne ;
 - pas de fiscalite multi-pays avancee ;
 - pas de facturation comptable complete ;

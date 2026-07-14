@@ -99,7 +99,7 @@ final class SaleInventoryRepository extends SaleRepositoryBase
         if (trim((string) $reason) === '') {
             throw new SaleInventoryException('sale.stock_reason_required');
         }
-        if (!in_array($movementType, ['receipt', 'issue', 'adjustment', 'correction'], true)) {
+        if (!in_array($movementType, ['receipt', 'issue', 'adjustment', 'inventory_adjustment', 'correction', 'return', 'transfer_in', 'transfer_out'], true)) {
             throw new SaleInventoryException('sale.stock_movement_type_invalid');
         }
         $locationId ??= $this->defaultLocationId($siteId);

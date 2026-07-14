@@ -72,7 +72,7 @@ final class SaleGuestCheckoutService
         $priceChanged = false;
         if (in_array($step, ['review','validated'], true)) {
             $priceChanged = $this->revalidateLines($cart);
-            $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated');
+            $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated', 1800, 'checkout_start', isset($shippingMethod['stock_location_id']) ? (int) $shippingMethod['stock_location_id'] : null);
             $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
             if ($this->paymentMethods !== null) {
                 $freshCart = $this->carts->requireCart($cartId);

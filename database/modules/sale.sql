@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS sale_fulfillment_zones (
 );
 CREATE TABLE IF NOT EXISTS sale_fulfillment_methods (
     id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, zone_id INTEGER, code TEXT NOT NULL,
+    stock_location_id INTEGER,
     label_fr TEXT NOT NULL, label_en TEXT NOT NULL, fulfillment_type TEXT NOT NULL CHECK(fulfillment_type IN ('shipping','pickup','none')),
     flat_rate_minor INTEGER NOT NULL DEFAULT 0 CHECK(flat_rate_minor>=0), free_above_minor INTEGER CHECK(free_above_minor IS NULL OR free_above_minor>=0),
     requires_shipping_address INTEGER NOT NULL DEFAULT 1 CHECK(requires_shipping_address IN (0,1)),
@@ -98,6 +99,7 @@ CREATE TABLE IF NOT EXISTS sale_fulfillment_methods (
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('draft','active','disabled')), active_from TEXT, active_until TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT,
     FOREIGN KEY(zone_id) REFERENCES sale_fulfillment_zones(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     UNIQUE(site_id,code), CHECK(site_id>0), CHECK(trim(code)<>''), CHECK(trim(label_fr)<>''), CHECK(trim(label_en)<>'')
 );
 CREATE INDEX IF NOT EXISTS idx_sale_fulfillment_zones_active ON sale_fulfillment_zones(site_id,status,active_from,active_until);
@@ -892,7 +894,7 @@ CREATE TABLE IF NOT EXISTS sale_stock_locations (
     site_id INTEGER NOT NULL,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
-    location_type TEXT NOT NULL DEFAULT 'main' CHECK(location_type IN ('main','pos','event','external')),
+    location_type TEXT NOT NULL DEFAULT 'main' CHECK(location_type IN ('main','pos','event','external','quarantine','non_sellable')),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled','archived')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
@@ -957,6 +959,89 @@ CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_location
     ON sale_inventory_items(stock_location_id, tracked);
 CREATE INDEX IF NOT EXISTS idx_sale_inventory_items_sku
     ON sale_inventory_items(site_id, sku);
+
+CREATE TABLE IF NOT EXISTS sale_stock_transfers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    transfer_number TEXT NOT NULL,
+    from_location_id INTEGER NOT NULL,
+    to_location_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','requested','in_transit','partially_received','received','discrepancy','cancelled')),
+    reason TEXT NOT NULL,
+    expected_at TEXT,
+    correlation_id TEXT NOT NULL,
+    created_by_iam_user_id INTEGER,
+    shipped_by_iam_user_id INTEGER,
+    received_by_iam_user_id INTEGER,
+    cancelled_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    shipped_at TEXT,
+    received_at TEXT,
+    cancelled_at TEXT,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
+    UNIQUE(site_id, transfer_number),
+    FOREIGN KEY(from_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(to_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(site_id > 0), CHECK(from_location_id <> to_location_id), CHECK(trim(reason) <> ''), CHECK(trim(correlation_id) <> '')
+);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_transfers_queue ON sale_stock_transfers(site_id,status,expected_at,created_at);
+
+CREATE TABLE IF NOT EXISTS sale_stock_transfer_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transfer_id INTEGER NOT NULL,
+    business_variant_id INTEGER NOT NULL,
+    sellable_id INTEGER NOT NULL,
+    sku TEXT,
+    requested_quantity INTEGER NOT NULL CHECK(requested_quantity > 0),
+    shipped_quantity INTEGER NOT NULL DEFAULT 0 CHECK(shipped_quantity >= 0),
+    received_quantity INTEGER NOT NULL DEFAULT 0 CHECK(received_quantity >= 0),
+    discrepancy_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(transfer_id,sellable_id),
+    FOREIGN KEY(transfer_id) REFERENCES sale_stock_transfers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(shipped_quantity <= requested_quantity), CHECK(received_quantity <= shipped_quantity)
+);
+
+CREATE TABLE IF NOT EXISTS sale_inventory_count_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    stock_location_id INTEGER NOT NULL,
+    session_number TEXT NOT NULL,
+    label TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','counting','review','approved','cancelled')),
+    hide_theoretical INTEGER NOT NULL DEFAULT 0 CHECK(hide_theoretical IN (0,1)),
+    created_by_iam_user_id INTEGER,
+    approved_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    started_at TEXT,
+    submitted_at TEXT,
+    approved_at TEXT,
+    cancelled_at TEXT,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
+    UNIQUE(site_id,session_number),
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(site_id > 0), CHECK(trim(label) <> '')
+);
+CREATE INDEX IF NOT EXISTS idx_sale_inventory_count_queue ON sale_inventory_count_sessions(site_id,status,created_at DESC);
+
+CREATE TABLE IF NOT EXISTS sale_inventory_count_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    inventory_item_id INTEGER NOT NULL,
+    expected_quantity INTEGER NOT NULL,
+    counted_quantity INTEGER,
+    discrepancy_reason TEXT,
+    counted_by_iam_user_id INTEGER,
+    counted_at TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(session_id,inventory_item_id),
+    FOREIGN KEY(session_id) REFERENCES sale_inventory_count_sessions(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(inventory_item_id) REFERENCES sale_inventory_items(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(counted_quantity IS NULL OR counted_quantity >= 0)
+);
 
 CREATE TABLE IF NOT EXISTS sale_stock_reservations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1170,6 +1255,7 @@ CREATE TABLE IF NOT EXISTS sale_return_lines (
     quantity INTEGER NOT NULL CHECK(quantity > 0),
     reason TEXT,
     restock INTEGER NOT NULL DEFAULT 1 CHECK(restock IN (0,1)),
+    stock_disposition TEXT NOT NULL DEFAULT 'sellable' CHECK(stock_disposition IN ('sellable','quarantine','non_sellable')),
     component_returns_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(component_returns_json)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(return_id, order_line_id),
@@ -1332,20 +1418,29 @@ CREATE TABLE IF NOT EXISTS sale_fulfillments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
     fulfillment_number TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','preparing','partially_shipped','shipped','delivered','cancelled','returned')),
+    fulfillment_type TEXT NOT NULL DEFAULT 'shipping' CHECK(fulfillment_type IN ('shipping','pickup')),
+    stock_location_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','allocated','preparing','partially_prepared','partially_shipped','ready_for_pickup','shipped','handed_over','delivered','blocked','cancelled','returned')),
     shipping_address_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_snapshot_json)),
     shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
     tracking_reference TEXT,
+    pickup_code TEXT,
+    due_at TEXT,
+    operator_proof_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(operator_proof_json)),
+    problem_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(problem_json)),
     correlation_id TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
     created_by_iam_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT,
     shipped_at TEXT,
+    ready_at TEXT,
+    handed_over_at TEXT,
     delivered_at TEXT,
     cancelled_at TEXT,
     UNIQUE(order_id, fulfillment_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(trim(fulfillment_number) <> ''),
     CHECK(trim(correlation_id) <> ''),
     CHECK(shipped_at IS NULL OR status IN ('shipped','delivered','returned')),
@@ -1361,10 +1456,15 @@ CREATE TABLE IF NOT EXISTS sale_fulfillment_lines (
     fulfillment_id INTEGER NOT NULL,
     order_line_id INTEGER NOT NULL,
     quantity INTEGER NOT NULL CHECK(quantity > 0),
+    prepared_quantity INTEGER NOT NULL DEFAULT 0 CHECK(prepared_quantity >= 0),
+    problem_code TEXT,
+    problem_note TEXT,
+    updated_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(fulfillment_id, order_line_id),
     FOREIGN KEY(fulfillment_id) REFERENCES sale_fulfillments(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY(order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    FOREIGN KEY(order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(prepared_quantity <= quantity)
 );
 
 CREATE TABLE IF NOT EXISTS sale_state_transitions (
@@ -1643,7 +1743,7 @@ SELECT DISTINCT site_id,'ch','Suisse','["CH"]','active' FROM sale_channels;
 INSERT OR IGNORE INTO sale_fulfillment_methods(site_id,zone_id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,free_above_minor,requires_shipping_address,allow_non_physical,status,sort_order)
 SELECT c.site_id,z.id,'standard','Livraison standard','Standard delivery','shipping',900,10000,1,0,'active',10
 FROM (SELECT DISTINCT site_id FROM sale_channels) c JOIN sale_fulfillment_zones z ON z.site_id=c.site_id AND z.code='ch';
-INSERT OR IGNORE INTO sale_fulfillment_methods(site_id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,requires_shipping_address,allow_non_physical,status,sort_order)
-SELECT DISTINCT site_id,'pickup','Retrait local','Local pickup','pickup',0,0,0,'active',20 FROM sale_channels;
+INSERT OR IGNORE INTO sale_fulfillment_methods(site_id,stock_location_id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,requires_shipping_address,allow_non_physical,status,sort_order)
+SELECT DISTINCT c.site_id,l.id,'pickup','Retrait local','Local pickup','pickup',0,0,0,'active',20 FROM sale_channels c JOIN sale_stock_locations l ON l.site_id=c.site_id AND l.code='channel-default';
 INSERT OR IGNORE INTO sale_fulfillment_methods(site_id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,requires_shipping_address,allow_non_physical,status,sort_order)
 SELECT DISTINCT site_id,'none','Aucun fulfillment','No fulfillment','none',0,0,1,'active',30 FROM sale_channels;

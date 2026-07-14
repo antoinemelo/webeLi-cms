@@ -132,3 +132,13 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - réservation atomique par emplacement, consommation idempotente et rattachement opérateur au bundle parent ;
 - retours de bundle complet ou de composants explicitement autorisés depuis le snapshot historique ;
 - gate M6.3 machine-readable, tests de concurrence/multi-location et schémas canoniques from scratch sans migration.
+
+# 2026-07-14 — Sale M6.4 : fulfillment, transferts, retrait et inventaire
+
+- allocations par emplacement et fulfillments partiels sans double consommation du stock ;
+- préparation progressive, problèmes reprenables, expédition et retrait avec code et preuve opérateur ;
+- transferts demandés, expédiés puis reçus avec mouvements séparés et écarts motivés ;
+- inventaires progressifs ou à l’aveugle, revue et validation permissionnée des ajustements ;
+- retours orientés vers le stock vendable, la quarantaine ou le non-vendable ;
+- file Opérations responsive et suivi client Shop des retraits, colis et fulfillments partiels ;
+- schéma canonique reconstruit from scratch uniquement, sans aucune migration.

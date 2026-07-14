@@ -15,7 +15,7 @@ final class SaleReturnService
         private readonly ?SaleEventService $events = null
     ) {}
 
-    /** @param list<array{order_line_id:int,quantity:int,restock?:bool,reason?:string,components?:list<array{business_variant_id:int,quantity:int}>}> $lines @return array<string,mixed> */
+    /** @param list<array{order_line_id:int,quantity:int,restock?:bool,stock_disposition?:string,reason?:string,components?:list<array{business_variant_id:int,quantity:int}>}> $lines @return array<string,mixed> */
     public function request(int $orderId, array $lines, ?string $reason = null, ?int $actorId = null, ?string $idempotencyKey = null): array
     {
         if ($lines === []) {
@@ -49,9 +49,11 @@ final class SaleReturnService
                 if ($orderLine === null || $quantity < 1 || (int) $orderLine['returned_quantity'] + $quantity > (int) $orderLine['quantity']) {
                     throw new SaleValidationException('sale.return_quantity_invalid');
                 }
+                $disposition=(string)($line['stock_disposition']??'sellable');
+                if(!in_array($disposition,['sellable','quarantine','non_sellable'],true)) throw new SaleValidationException('sale.return_stock_disposition_invalid');
                 $db->run(
-                    'INSERT INTO sale_return_lines(return_id,order_line_id,quantity,reason,restock,component_returns_json) VALUES(?,?,?,?,?,?)',
-                    [$returnId, (int) $orderLine['id'], $quantity, $line['reason'] ?? null, !array_key_exists('restock', $line) || (bool) $line['restock'] ? 1 : 0, json_encode(array_values((array) ($line['components'] ?? [])), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]
+                    'INSERT INTO sale_return_lines(return_id,order_line_id,quantity,reason,restock,stock_disposition,component_returns_json) VALUES(?,?,?,?,?,?,?)',
+                    [$returnId, (int) $orderLine['id'], $quantity, $line['reason'] ?? null, !array_key_exists('restock', $line) || (bool) $line['restock'] ? 1 : 0, $disposition, json_encode(array_values((array) ($line['components'] ?? [])), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]
                 );
             }
             $correlationId = SaleStateMachineService::correlationId();
@@ -94,13 +96,16 @@ final class SaleReturnService
                     if ((bool) $line['restock']) {
                         foreach ($this->returnRestocks($orderLine, $line) as $restock) {
                             $variantId = (int) $restock['business_variant_id'];
-                            $restocks[$variantId] ??= ['quantity' => 0, 'sku' => $restock['sku'] ?? null];
-                            $restocks[$variantId]['quantity'] += (int) $restock['quantity'];
+                            $disposition=(string)($line['stock_disposition']??'sellable');$key=$disposition.':'.$variantId;
+                            $restocks[$key] ??= ['business_variant_id'=>$variantId,'quantity' => 0, 'sku' => $restock['sku'] ?? null,'disposition'=>$disposition];
+                            $restocks[$key]['quantity'] += (int) $restock['quantity'];
                         }
                     }
                 }
-                foreach ($restocks as $variantId => $restock) {
-                    $this->inventory->restockReturn((int) $order['site_id'], (int) $variantId, (int) $restock['quantity'], $restock['sku'], $returnId, $reason, $actorId);
+                foreach ($restocks as $restock) {
+                    if($restock['disposition']==='sellable'){$this->inventory->restockReturn((int)$order['site_id'],(int)$restock['business_variant_id'],(int)$restock['quantity'],$restock['sku'],$returnId,$reason,$actorId);continue;}
+                    $locationId=$this->dispositionLocation((int)$order['site_id'],(string)$restock['disposition']);
+                    $this->inventory->adjust((int)$order['site_id'],(int)$restock['business_variant_id'],(int)$restock['quantity'],$restock['sku'],'Return '.$returnId.' to '.$restock['disposition'],$actorId,$locationId,'return','return:'.$returnId.':'.$restock['disposition'].':'.$restock['business_variant_id']);
                 }
             }
             return $this->withLines($returnId) + ['correlation_id' => $correlationId];
@@ -156,5 +161,14 @@ final class SaleReturnService
     private function db(): \App\Core\Database
     {
         return $this->connection->database() ?? throw new SaleValidationException('sale.database_unavailable');
+    }
+
+    private function dispositionLocation(int $siteId,string $disposition):int
+    {
+        $row=$this->db()->one("SELECT id FROM sale_stock_locations WHERE site_id=? AND location_type=? AND status='active' ORDER BY id LIMIT 1",[$siteId,$disposition]);
+        if($row!==null)return (int)$row['id'];
+        $name=$disposition==='quarantine'?'Quarantaine':'Non vendable';
+        $this->db()->run('INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(?,?,?,?,\'active\')',[$siteId,$disposition,$name,$disposition]);
+        return $this->db()->lastInsertId();
     }
 }

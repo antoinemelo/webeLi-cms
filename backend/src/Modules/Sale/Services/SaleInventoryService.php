@@ -64,7 +64,7 @@ final class SaleInventoryService
      * @param list<array<string,mixed>> $lines
      * @return list<array<string,mixed>>
      */
-    public function prepareCartForCheckout(array $cart, array $lines, bool $confirm = false, int $ttlSeconds = 1800, string $trigger = 'checkout_start'): array
+    public function prepareCartForCheckout(array $cart, array $lines, bool $confirm = false, int $ttlSeconds = 1800, string $trigger = 'checkout_start', ?int $locationOverride = null): array
     {
         $policy = $this->inventory->reservationPolicyForCart($cart);
         $ranks = ['checkout_start' => 0, 'order_placement' => 1, 'payment_authorization' => 2, 'payment_capture' => 3];
@@ -73,7 +73,7 @@ final class SaleInventoryService
             return [];
         }
         $ttlSeconds = (int) ($policy['reservation_ttl_seconds'] ?? $ttlSeconds);
-        $locationId = $this->inventory->locationIdForCart($cart);
+        $locationId = $locationOverride ?? $this->inventory->locationIdForCart($cart);
         $demands = [];
         foreach ($lines as $line) {
             $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);

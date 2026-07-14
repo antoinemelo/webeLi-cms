@@ -1254,13 +1254,25 @@ final class SaleAdminApiController
 
     public function transferStock(): Response
     {
-        [$site,$languageCode]=$this->authorize('sale.stock.manage');
+        [$site,$languageCode]=$this->authorize('sale.transfers.manage');
         try {
             $payload=$this->payload();
-            $result=$this->inventory->transfer((int)$site['id'],(int)($payload['sellable_id']??$payload['business_variant_id']??0),(int)($payload['quantity']??0),(int)($payload['from_location_id']??0),(int)($payload['to_location_id']??0),(string)($payload['transfer_key']??$this->idempotencyKey($payload)??''),$this->actorId());
+            if($this->fulfillment===null) throw new SaleBusinessException('sale.fulfillment_unavailable');
+            $result=$this->fulfillment->createTransfer((int)$site['id'],$payload,$this->actorId());
             return $this->ok(['transfer'=>$result],'admin.sale.stock.transfers.v1',$site,$languageCode,201);
         } catch (Throwable $e) { return $this->domainError($e); }
     }
+
+    public function stockTransfers():Response{[$site,$languageCode]=$this->authorize('sale.stock.read');return $this->ok(['transfers'=>$this->fulfillment?->transfers((int)$site['id'])??[]],'admin.sale.stock.transfers.index.v1',$site,$languageCode);}
+    public function shipStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->shipTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.ship.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function receiveStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->receiveTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.receive.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function cancelStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->cancelTransfer((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.stock.transfers.cancel.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+
+    public function inventorySessions():Response{[$site,$languageCode]=$this->authorize('sale.stock.read');return $this->ok(['sessions'=>$this->fulfillment?->inventorySessions((int)$site['id'])??[]],'admin.sale.inventory_sessions.index.v1',$site,$languageCode);}
+    public function storeInventorySession():Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->createInventorySession((int)$site['id'],$this->payload(),$this->actorId())??[]],'admin.sale.inventory_sessions.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
+    public function saveInventoryCount(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{$p=$this->payload();return $this->ok(['session'=>$this->fulfillment?->saveInventoryCount((int)$site['id'],$this->id($id),$this->id($lineId),(int)($p['counted_quantity']??-1),isset($p['discrepancy_reason'])?(string)$p['discrepancy_reason']:null,$this->actorId())??[]],'admin.sale.inventory_sessions.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function submitInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->submitInventorySession((int)$site['id'],$this->id($id))??[]],'admin.sale.inventory_sessions.submit.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function approveInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.inventory.approve');try{return $this->ok(['session'=>$this->fulfillment?->approveInventorySession((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.inventory_sessions.approve.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
 
     public function reconcileInventory(): Response
     {
@@ -1308,6 +1320,11 @@ final class SaleAdminApiController
             return $this->ok(['zone'=>$this->fulfillment->saveZone((int)$site['id'],$this->payload())],'admin.sale.fulfillment.zones.store.v1',$site,$languageCode,201);
         } catch(Throwable $e) { return $this->domainError($e); }
     }
+
+    public function fulfillmentQueue():Response{[$site,$languageCode]=$this->authorize('sale.orders.read');return $this->ok(['fulfillments'=>$this->fulfillment?->workQueue((int)$site['id'],$this->request->query)??[]],'admin.sale.fulfillment.queue.v1',$site,$languageCode);}
+    public function storeFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->createOperation((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
+    public function saveFulfillmentLine(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->savePreparation((int)$site['id'],$this->id($id),$this->id($lineId),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function transitionFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{$p=$this->payload();return $this->ok(['fulfillment'=>$this->fulfillment?->transitionOperation((int)$site['id'],$this->id($id),(string)($p['status']??''),$p,$this->actorId())??[]],'admin.sale.fulfillments.transition.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
 
     public function taxesReport(): Response
     {

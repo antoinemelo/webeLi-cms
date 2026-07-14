@@ -31,11 +31,16 @@ final class SaleStateMachineService
             'captured' => [], 'cancelled' => [], 'failed' => [], 'expired' => [],
         ],
         'fulfillment' => [
-            'pending' => ['preparing', 'cancelled'],
-            'preparing' => ['partially_shipped', 'shipped', 'cancelled'],
-            'partially_shipped' => ['shipped', 'cancelled'],
+            'pending' => ['allocated', 'preparing', 'blocked', 'cancelled'],
+            'allocated' => ['preparing', 'blocked', 'cancelled'],
+            'preparing' => ['allocated', 'partially_prepared', 'partially_shipped', 'ready_for_pickup', 'shipped', 'blocked', 'cancelled'],
+            'partially_prepared' => ['allocated', 'preparing', 'ready_for_pickup', 'shipped', 'blocked', 'cancelled'],
+            'partially_shipped' => ['shipped', 'blocked', 'cancelled'],
+            'ready_for_pickup' => ['handed_over', 'blocked', 'cancelled'],
             'shipped' => ['delivered', 'returned'],
+            'handed_over' => ['returned'],
             'delivered' => ['returned'],
+            'blocked' => ['allocated', 'preparing', 'cancelled'],
             'cancelled' => [], 'returned' => [],
         ],
         'return' => [
@@ -120,7 +125,7 @@ final class SaleStateMachineService
                 $this->syncOrderFulfillmentStatus((int) $row['order_id'], $id, $toStatus);
             }
             $result = $this->requireAggregate($type, $id) + ['correlation_id' => $correlationId];
-            if ($type === 'fulfillment' && $toStatus === 'delivered' && $this->events !== null) {
+            if ($type === 'fulfillment' && in_array($toStatus, ['delivered','handed_over'], true) && $this->events !== null) {
                 $order = $this->db->one('SELECT site_id,order_number FROM sale_orders WHERE id=?', [(int) $result['order_id']]) ?? [];
                 $this->events->emit((int) ($order['site_id'] ?? 0), 'sale.fulfillment.completed', 'fulfillment', $id, [
                     'site_id' => (int) ($order['site_id'] ?? 0), 'order_id' => (int) $result['order_id'],
@@ -179,7 +184,8 @@ final class SaleStateMachineService
             foreach ($lines as $line) {
                 $orderLine = $this->db->one('SELECT id, quantity, fulfilled_quantity FROM sale_order_lines WHERE id = ? AND order_id = ?', [(int) $line['order_line_id'], $orderId]);
                 $quantity = (int) $line['quantity'];
-                if ($orderLine === null || $quantity < 1 || (int) $orderLine['fulfilled_quantity'] + $quantity > (int) $orderLine['quantity']) {
+                $allocated = (int) ($this->db->one("SELECT COALESCE(SUM(fl.quantity),0) AS total FROM sale_fulfillment_lines fl INNER JOIN sale_fulfillments f ON f.id=fl.fulfillment_id WHERE fl.order_line_id=? AND f.status NOT IN ('cancelled','returned')", [(int) $line['order_line_id']])['total'] ?? 0);
+                if ($orderLine === null || $quantity < 1 || (int) $orderLine['fulfilled_quantity'] + $allocated + $quantity > (int) $orderLine['quantity']) {
                     throw new SaleValidationException('sale.fulfillment.quantity_invalid');
                 }
                 $this->db->run('INSERT INTO sale_fulfillment_lines(fulfillment_id, order_line_id, quantity) VALUES(?, ?, ?)', [$id, (int) $orderLine['id'], $quantity]);
@@ -238,6 +244,8 @@ final class SaleStateMachineService
             ['order', 'completed'] => ', completed_at = CURRENT_TIMESTAMP',
             ['order', 'cancelled'] => ', cancelled_at = CURRENT_TIMESTAMP',
             ['fulfillment', 'shipped'] => ', shipped_at = CURRENT_TIMESTAMP',
+            ['fulfillment', 'ready_for_pickup'] => ', ready_at = CURRENT_TIMESTAMP',
+            ['fulfillment', 'handed_over'] => ', handed_over_at = CURRENT_TIMESTAMP',
             ['fulfillment', 'delivered'] => ', delivered_at = CURRENT_TIMESTAMP',
             ['fulfillment', 'cancelled'] => ', cancelled_at = CURRENT_TIMESTAMP',
             ['return', 'completed'] => ', completed_at = CURRENT_TIMESTAMP',
@@ -248,7 +256,7 @@ final class SaleStateMachineService
 
     private function syncOrderFulfillmentStatus(int $orderId, int $fulfillmentId, string $status): void
     {
-        if ($status === 'shipped') {
+        if (in_array($status, ['shipped', 'handed_over'], true)) {
             foreach ($this->db->all('SELECT order_line_id, quantity FROM sale_fulfillment_lines WHERE fulfillment_id = ?', [$fulfillmentId]) as $line) {
                 $this->db->run(
                     'UPDATE sale_order_lines SET fulfilled_quantity = fulfilled_quantity + ? WHERE id = ? AND fulfilled_quantity + ? <= quantity',
@@ -259,12 +267,9 @@ final class SaleStateMachineService
                 }
             }
         }
-        $orderStatus = match ($status) {
-            'partially_shipped' => 'partially_fulfilled',
-            'shipped', 'delivered' => 'fulfilled',
-            'returned' => 'returned',
-            default => 'unfulfilled',
-        };
+        $totals = $this->db->one('SELECT COALESCE(SUM(quantity),0) AS total,COALESCE(SUM(fulfilled_quantity),0) AS fulfilled FROM sale_order_lines WHERE order_id=?', [$orderId]) ?? [];
+        $fulfilled = (int) ($totals['fulfilled'] ?? 0); $total = (int) ($totals['total'] ?? 0);
+        $orderStatus = $status === 'returned' ? 'returned' : ($fulfilled < 1 ? 'unfulfilled' : ($fulfilled < $total ? 'partially_fulfilled' : 'fulfilled'));
         $this->db->run('UPDATE sale_orders SET fulfillment_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$orderStatus, $orderId]);
     }
 
