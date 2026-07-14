@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "dd743c0694fa3d9815393675daeba38143298830",
+  "commit": "d5991f2d1c9598a32863429298e03caeabe3f3fc",
   "confidence": "high",
   "databases": [
     "core",
@@ -69,6 +69,7 @@
     "architecture.json",
     "bundle-stock-strategies.json",
     "cms-evaluation-manifest.json",
+    "crm-event-activities-m7.json",
     "customer-identity-bridges-m7.json",
     "databases.json",
     "features.json",

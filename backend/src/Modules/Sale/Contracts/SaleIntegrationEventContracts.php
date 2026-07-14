@@ -8,6 +8,7 @@ final class SaleIntegrationEventContracts
 {
     public const CART_CREATED = 'sale.cart.created';
     public const CART_LINE_ADDED = 'sale.cart.line_added';
+    public const CART_ABANDONED = 'sale.cart.abandoned';
     public const ORDER_PLACED = 'sale.order.placed';
     public const ORDER_CONFIRMED = 'sale.order.confirmed';
     public const ORDER_CANCELLED = 'sale.order.cancelled';
@@ -29,6 +30,7 @@ final class SaleIntegrationEventContracts
     public const REFUND_DEAD_LETTERED = 'sale.refund.dead_lettered';
     public const GIFT_CARD_ISSUED = 'sale.gift_card.issued';
     public const GIFT_CARD_REDEEMED = 'sale.gift_card.redeemed';
+    public const CUSTOMER_ACCOUNT_CREATED = 'customer.account.created';
     public const STOCK_RESERVED = 'sale.stock.reserved';
     public const STOCK_CONSUMED = 'sale.stock.consumed';
     public const STOCK_RELEASED = 'sale.stock.released';
@@ -48,10 +50,15 @@ final class SaleIntegrationEventContracts
                 'required' => ['site_id', 'cart_id', 'line_id', 'business_variant_id', 'quantity'],
                 'optional' => ['sku', 'unit_price_minor', 'currency', 'iam_user_id'],
             ],
+            self::CART_ABANDONED => [
+                'entity' => 'cart',
+                'required' => ['site_id', 'cart_id', 'channel_id', 'abandoned_after_seconds', 'lawful_basis', 'retention_until'],
+                'optional' => ['customer_contact_id', 'customer_company_id', 'iam_user_id', 'language_code'],
+            ],
             self::ORDER_PLACED => [
                 'entity' => 'order',
                 'required' => ['site_id', 'order_id', 'order_number', 'grand_total_minor', 'currency'],
-                'optional' => ['cart_id', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id'],
+                'optional' => ['cart_id', 'channel_id', 'language_code', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id'],
             ],
             self::ORDER_CONFIRMED => [
                 'entity' => 'order', 'required' => ['site_id', 'order_id'], 'optional' => ['order_number', 'source', 'iam_user_id'],
@@ -131,6 +138,11 @@ final class SaleIntegrationEventContracts
             ],
             self::GIFT_CARD_REDEEMED => [
                 'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+            ],
+            self::CUSTOMER_ACCOUNT_CREATED => [
+                'entity' => 'customer_account',
+                'required' => ['site_id', 'iam_user_id'],
+                'optional' => ['customer_contact_id', 'customer_company_id', 'language_code'],
             ],
             self::STOCK_RESERVED => [
                 'entity' => 'stock',

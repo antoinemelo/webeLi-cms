@@ -21,6 +21,7 @@ final class SaleCustomerAccountService implements CmsAccountBridge
         private readonly BusinessConsentRepository $consents,
         private readonly SaleReturnService $returns,
         private readonly ?Database $business = null,
+        private readonly ?SaleEventService $events = null,
     ) {}
 
     /** @return array{token:string,expires_at:string} */
@@ -91,6 +92,15 @@ final class SaleCustomerAccountService implements CmsAccountBridge
             $this->linkOrder($siteId, $userId, (int) $order['id'], (int) $proof['id'], $contact, 'post_purchase_proof');
             $this->saveOrderAddresses($siteId, $userId, $order);
             $this->saleDb()->run("UPDATE sale_order_claim_proofs SET status='consumed',consumed_by_iam_user_id=?,consumed_at=CURRENT_TIMESTAMP WHERE id=?", [$userId, (int) $proof['id']]);
+            if ($createdUser || $createdSiteAccount) {
+                $this->events?->emit($siteId, 'customer.account.created', 'customer_account', $userId, [
+                    'site_id' => $siteId,
+                    'iam_user_id' => $userId,
+                    'customer_contact_id' => isset($contact['id']) ? (int) $contact['id'] : null,
+                    'customer_company_id' => isset($contact['company_id']) ? (int) $contact['company_id'] : null,
+                    'language_code' => (string) ($identity['locale'] ?? 'fr-CH'),
+                ], $userId, 'customer-account:' . $siteId . ':' . $userId);
+            }
         } catch (\Throwable $e) {
             if ($createdSiteAccount) {
                 $this->iam->run('DELETE FROM iam_customer_site_accounts WHERE user_id=? AND site_id=?', [$userId, $siteId]);

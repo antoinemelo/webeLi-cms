@@ -41,7 +41,7 @@ type MessageRow = Record<string, unknown> & { id: number; channel?: string; reci
 type MessagingProvider = Record<string, unknown> & { id?: number; key?: string; provider_key?: string; name?: string; channel?: string; provider_type?: string; config?: Record<string, unknown>; secret_ref?: string | null; is_enabled?: boolean; is_default?: boolean; enabled?: boolean; errors?: string[] };
 type MessagePreview = Record<string, unknown> & { channel?: string; recipient_value?: string | null; has_channel?: boolean; consent_status?: string; has_consent?: boolean; can_send?: boolean; reason?: string | null };
 type IamUserOption = { id: number; email: string; name?: string; is_active?: boolean };
-type BusinessActivity = { id: number; kind: string; action: string; summary: string; created_at?: string | null; metadata?: Record<string, unknown> };
+type BusinessActivity = { id: number; kind: string; site_id?: number; action: string; summary: string; created_at?: string | null; metadata?: Record<string, unknown> };
 type DashboardAlert = Record<string, unknown> & { level?: string; code?: string; message?: string; channel?: string; count?: number };
 type DashboardSearchItem = Record<string, unknown> & { group?: string; type?: string; id: number; title?: string; subtitle?: string | null; excerpt?: string | null; status?: string | null; company_id?: number | null; contact_id?: number | null };
 type CatalogDashboardProduct = Record<string, unknown> & { status?: string; archived_at?: string | null; stock_quantity_total?: number | string | null; stock_reserved_total?: number | string | null; purchase_price_min?: number | string | null; completeness_score?: number | null; image_count?: number };
@@ -93,6 +93,7 @@ const relationMemoFilter = ref<RelationMemoFilter | null>(null);
 const linkedRelationContacts = ref<BusinessRelation[]>([]);
 const iamUsers = ref<IamUserOption[]>([]);
 const relationActivity = ref<BusinessActivity[]>([]);
+const pendingSaleActivityCount = ref(0);
 const dashboard = ref<BusinessDashboard | null>(null);
 const dashboardSearch = reactive({ q: '' });
 const dashboardSearchResults = ref<DashboardSearchItem[]>([]);
@@ -256,11 +257,25 @@ const relationTimelineItems = computed(() => {
         title: item.summary,
         detail: activityDetail(item),
         date: item.created_at || null,
+        action: item.action,
+        channel: typeof item.metadata?.channel === 'string' ? item.metadata.channel : '',
+        siteId: item.site_id,
+        groupKey: typeof item.metadata?.source_reference === 'string' ? item.metadata.source_reference : '',
+        link: activityLink(item),
+        technical: item.kind === 'sale' ? [item.metadata?.contract_version, item.metadata?.source_type, item.metadata?.source_id].filter(Boolean).join(' · ') : '',
       }))
     : (relationDraftType.value === 'company' ? linkedCompanyMemos.value : linkedContactMemos.value)
         .map((memo) => ({ id: `memo-${memo.id}`, kind: 'Mémo', title: memo.title, detail: valueText(memo.body), date: memo.created_at || null }));
-  return items.slice(0, 7);
+  return items;
 });
+
+function activityLink(item: BusinessActivity): string {
+  if (item.kind !== 'sale') return '';
+  if (context.can('sale.orders.read') && Number(item.metadata?.order_id || 0) > 0) return '/sale/orders';
+  if (context.can('sale.payments.read') && String(item.action).includes('payment')) return '/sale/payments';
+  if (context.can('users.manage') && Number(item.metadata?.iam_user_id || 0) > 0) return '/iam/users';
+  return '';
+}
 const linkedRelationEntities = computed(() => linkedRelationContacts.value.map((relation) => ({
   id: relation.id,
   label: relation.display_name,
@@ -1026,13 +1041,21 @@ async function loadRelationDetail(type: 'contact' | 'company', id: number): Prom
 async function loadRelationActivity(type: 'contact' | 'company', id: number): Promise<void> {
   if (!id) {
     relationActivity.value = [];
+    pendingSaleActivityCount.value = 0;
     return;
   }
   try {
     const response = await adminApi.get<{ activity: BusinessActivity[] }>(`/business/relations/${type}/${id}/activity`, { limit: 100 });
     relationActivity.value = response.data.activity || [];
+    try {
+      const pending = await adminApi.get<{ activities: BusinessActivity[]; pagination?: { total?: number } }>('/business/sale-activities/unlinked', { limit: 1 });
+      pendingSaleActivityCount.value = Number(pending.data.pagination?.total || 0);
+    } catch (_) {
+      pendingSaleActivityCount.value = 0;
+    }
   } catch (_) {
     relationActivity.value = [];
+    pendingSaleActivityCount.value = 0;
   }
 }
 
@@ -2097,6 +2120,7 @@ onBeforeUnmount(() => {
                 title="Derniers mémos et activité"
                 empty-label="Aucune activité récente pour cette relation."
                 :items="relationTimelineItems"
+                :pending-count="pendingSaleActivityCount"
                 :can-add-memo="Boolean(currentRelation.id) && canMemoRead"
                 action-label="Voir tous les mémos"
                 @add-memo="openRelationMemos(currentRelation)"

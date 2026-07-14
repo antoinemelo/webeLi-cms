@@ -219,7 +219,11 @@ final class BusinessCrmApiController
         [$site, $languageCode] = $this->authorize('business.crm.read');
         try {
             $this->saleActivities?->consume((int) $site['id']);
-            $result = $this->activity->relationActivity((int) $site['id'], $type, $this->id($id), $this->limit(), $this->offset());
+            $result = $this->activity->relationActivity((int) $site['id'], $type, $this->id($id), $this->limit(), $this->offset(), [
+                'q' => $this->q(),
+                'kind' => $this->queryString('kind'),
+                'channel' => $this->queryString('channel'),
+            ]);
             return Response::success(['activity' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.relations.activity.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $e->getMessage() === 'business.relation_not_found' ? $this->notFound('Relation introuvable.', $id) : $this->validation($e);
@@ -263,7 +267,9 @@ final class BusinessCrmApiController
         try {
             $payload = $this->payload();
             $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
-            $report = $projection->reconcile((int) $site['id'], $this->actorId(), ($payload['repair'] ?? true) !== false);
+            $report = ($payload['mode'] ?? 'reconcile') === 'rebuild'
+                ? $projection->rebuild((int) $site['id'], $this->actorId())
+                : $projection->reconcile((int) $site['id'], $this->actorId(), ($payload['repair'] ?? true) !== false);
             return Response::success(['reconciliation' => $report], 'admin.business.sale_activities.reconcile.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);

@@ -1638,6 +1638,7 @@ CREATE TABLE IF NOT EXISTS sale_events (
     event_type TEXT NOT NULL CHECK(event_type IN (
         'sale.cart.created',
         'sale.cart.line_added',
+        'sale.cart.abandoned',
         'sale.order.placed',
         'sale.order.confirmed',
         'sale.order.cancelled',
@@ -1660,6 +1661,7 @@ CREATE TABLE IF NOT EXISTS sale_events (
         'sale.refund.dead_lettered',
         'sale.gift_card.issued',
         'sale.gift_card.redeemed',
+        'customer.account.created',
         'sale.invoice.sent',
         'sale.stock.reserved',
         'sale.stock.consumed',

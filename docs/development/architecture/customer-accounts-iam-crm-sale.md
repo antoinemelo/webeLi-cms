@@ -44,4 +44,6 @@ La vue `/account`, servie avec `Cache-Control: no-store, private`, consomme ces 
 
 `CustomerIdentityBridge` remplace le nom historique ambigu `CmsAccountBridge`, conservé uniquement comme alias de compatibilité. `SaleCustomerAccountService` est l’adaptateur réel IAM–CRM–Sale. `NullCustomerIdentityBridge` et l’ancien `NullCmsAccountBridge` ne sont que des fallbacks de test. Le port `CrmActivitySink` est branché sur `SaleCrmActivityProjectionService`, et non plus sur le sink nul.
 
+La projection d’activités suit le contrat non sensible `crm.activity.v2`, documenté dans [Activités CRM alimentées par événements](crm-event-activities.md). Elle consomme l’outbox, conserve les événements sans identité puis les rattache par corrélation ou décision auditée, sans lecture continue des tables transactionnelles.
+
 Les schémas sont canoniques et reconstruits from scratch. Aucune migration n’est requise ni planifiée.

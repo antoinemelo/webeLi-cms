@@ -35,7 +35,7 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
     }
 
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int} */
-    public function relationActivity(int $siteId, string $type, int $id, int $limit = 50, int $offset = 0): array
+    public function relationActivity(int $siteId, string $type, int $id, int $limit = 50, int $offset = 0, array $filters = []): array
     {
         $siteId = $this->requireSiteId($siteId);
         if (!in_array($type, ['contact', 'company'], true) || $id < 1) {
@@ -61,6 +61,15 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             $this->saleActivity($siteId, $type, $id)
         );
         usort($items, static fn(array $a, array $b): int => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')) ?: strcmp((string) $b['id'], (string) $a['id']));
+        $q = strtolower(trim((string) ($filters['q'] ?? '')));
+        $kind = trim((string) ($filters['kind'] ?? ''));
+        $channel = trim((string) ($filters['channel'] ?? ''));
+        $items = array_values(array_filter($items, static function (array $item) use ($q, $kind, $channel): bool {
+            if ($kind !== '' && (string) ($item['kind'] ?? '') !== $kind) return false;
+            if ($channel !== '' && (string) ($item['metadata']['channel'] ?? '') !== $channel) return false;
+            if ($q !== '' && !str_contains(strtolower((string) ($item['summary'] ?? '') . ' ' . (string) ($item['action'] ?? '') . ' ' . (string) ($item['metadata']['source_reference'] ?? '')), $q)) return false;
+            return true;
+        }));
         $total = count($items);
         return ['items' => array_slice($items, $offset, $limit), 'limit' => $limit, 'offset' => $offset, 'total' => $total];
     }
@@ -167,7 +176,7 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             "SELECT id,site_id,linked_by_iam_user_id AS actor_iam_user_id,
                     'crm_sale_activity' AS entity_type,source_aggregate_id AS entity_id,
                     related_company_id,related_contact_id,'business.sale.' || activity_type AS action,summary,
-                    json_object('channel',channel,'status',status,'source_reference',source_reference,'source_event_type',source_event_type,'resolution_strategy',resolution_strategy) AS metadata_json,
+                    json_patch(metadata_json,json_object('channel',channel,'channel_id',channel_id,'language_code',language_code,'status',status,'source_reference',source_reference,'source_event_type',source_event_type,'source_type',source_type,'source_id',source_id,'contract_version',contract_version,'resolution_strategy',resolution_strategy)) AS metadata_json,
                     occurred_at AS created_at
              FROM crm_sale_activities WHERE site_id=:site_id AND {$where}
              ORDER BY occurred_at DESC,id DESC LIMIT 200",

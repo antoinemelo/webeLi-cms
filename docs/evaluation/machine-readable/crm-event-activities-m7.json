@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "gate": "business.crm-event-activities.m7.2.v1",
+  "status": "passed",
+  "contract": {"name": "crm.activity.v2", "versioned": true, "channel_id": true, "provenance": true, "non_sensitive_summary": true},
+  "events": ["sale.cart.abandoned", "sale.order.placed", "sale.payment.recorded", "sale.payment.capture.completed", "sale.order.cancelled", "sale.return.created", "sale.refund.completed", "sale.gift_card.issued", "sale.gift_card.redeemed", "customer.account.created"],
+  "delivery": {"outbox": true, "idempotent": true, "source_uniqueness": true, "crm_failure_non_blocking": true, "replay": true, "rebuild": true, "reconciliation": true},
+  "identity": {"pending_preserved": true, "late_event_correlation": true, "manual_link_audited": true, "no_fake_contact": true},
+  "privacy": {"full_transaction_payload_stored": false, "cart_address_stored": false, "product_payload_stored": false, "abandoned_cart_lawful_basis_required": true, "abandoned_cart_retention_limited_days": 180, "marketing_without_consent": false},
+  "experience": {"business_labels": true, "order_grouping": true, "search": true, "type_filter": true, "channel_filter": true, "pagination": true, "pending_notice": true, "permission_aware_links": true, "technical_details_secondary": true},
+  "fresh_instance": {"canonical_schema": true, "migration_required": false},
+  "security": {"contains_pii": false, "contains_secret": false},
+  "evidence": {"dto": "backend/src/Modules/Business/Contracts/CrmActivityV2.php", "projection": "backend/src/Modules/Business/Services/SaleCrmActivityProjectionService.php", "schema": "database/modules/business.sql", "timeline": "frontend/admin-vue/src/views/modules/business/RelationTimeline.vue", "unit_test": "tools/php/tests/unit/sale_crm_activity_projection_test.php"}
+}

@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Modules\Business\Repositories\BusinessActivityRepository;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
+use App\Core\Database;
 use App\Modules\Sale\Contracts\CrmActivitySink;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleEventRepository;
@@ -37,7 +38,8 @@ try {
     $events = new SaleEventService(new SaleEventRepository(new SaleDatabaseConnection($salePath)));
     $events->emit(1, 'sale.order.placed', 'order', $webOrderId, [
         'site_id' => 1, 'order_id' => $webOrderId, 'order_number' => 'WEB-2101',
-        'grand_total_minor' => 12900, 'currency' => 'CHF', 'source' => 'ecommerce', 'iam_user_id' => 77,
+        'grand_total_minor' => 12900, 'currency' => 'CHF', 'source' => 'ecommerce', 'channel_id' => $webChannelId,
+        'language_code' => 'fr-CH', 'customer_company_id' => $companyId, 'customer_contact_id' => $contactId, 'iam_user_id' => 77,
     ], 77, 'crm-projection-web');
     $events->emit(1, 'sale.payment.failed', 'order', $webOrderId, [
         'site_id' => 1, 'order_id' => $webOrderId, 'transaction_id' => 91,
@@ -65,14 +67,23 @@ try {
     $projection->recordSaleEvent(['site_id'=>1]);
     $h->assertSame(3, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=1')['count'] ?? 0), 'real activity sink replays idempotently');
 
+    $failureDir = sys_get_temp_dir() . '/dec-crm-failure-' . bin2hex(random_bytes(4));
+    $brokenBusiness = new Database($failureDir . '/business.sqlite');
+    $failedProjection = new SaleCrmActivityProjectionService($brokenBusiness, new SaleDatabaseConnection($salePath));
+    $failed = $failedProjection->consume(1);
+    $h->assertSame(3, $failed['failed'], 'CRM outage is isolated and every source event remains replayable');
+    $h->assertSame(3, (int) ($sale->one('SELECT COUNT(*) AS count FROM sale_outbox o JOIN sale_events e ON e.id=o.event_id WHERE e.site_id=1')['count'] ?? 0), 'CRM outage never removes Sale outbox events');
+    $brokenBusiness = null;
+    test_remove_tree($failureDir);
+
     $timeline = (new BusinessActivityRepository($business))->relationActivity(1, 'contact', $contactId, 20, 0);
     $saleTimeline = array_values(array_filter($timeline['items'], static fn(array $item): bool => $item['kind'] === 'sale'));
     $h->assertSame(2, count($saleTimeline), 'web order and payment are visible in the CRM contact timeline');
     $h->assertSame('web', $saleTimeline[0]['metadata']['channel'] ?? null, 'timeline exposes the commercial channel');
 
     $unlinked = $projection->unlinked(1);
-    $h->assertSame(1, $unlinked['total'], 'anonymous POS sale remains unlinked');
-    $h->assertSame(null, $unlinked['items'][0]['related_contact_id'] ?? null, 'anonymous sale does not force a fake contact');
+    $h->assertSame(1, $unlinked['total'], 'unresolved POS sale remains pending');
+    $h->assertSame(null, $unlinked['items'][0]['related_contact_id'] ?? null, 'pending sale does not force a fake contact');
     $h->assertSame(1, (int) ($business->one("SELECT COUNT(*) AS count FROM business_contacts WHERE email='client@example.test'")['count'] ?? 0), 'projection never creates a contact from an email');
 
     $saleBefore = $sale->one('SELECT customer_company_id,customer_contact_id,customer_snapshot_json FROM sale_orders WHERE id=?', [$posOrderId]);
@@ -82,6 +93,56 @@ try {
     $h->assertSame($contactId, $linked['related_contact_id'], 'late CRM link targets the selected contact');
     $h->assertSame($saleBefore, $saleAfter, 'late CRM link never mutates Sale identity or customer snapshot');
     $h->assertSame(1, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activity_link_audit')['count'] ?? 0), 'late link is recorded in immutable audit');
+
+    $outOfOrderId = 99001;
+    $events->emit(1, 'sale.payment.failed', 'order', $outOfOrderId, [
+        'site_id'=>1, 'order_id'=>$outOfOrderId, 'transaction_id'=>992, 'amount_minor'=>3300,
+        'currency'=>'CHF', 'provider_key'=>'test', 'error_code'=>'declined',
+    ], null, 'crm-out-of-order-payment');
+    $projection->consume(1);
+    $pendingPayment = $business->one("SELECT * FROM crm_sale_activities WHERE source_event_type='sale.payment.failed' AND source_aggregate_id=?", [$outOfOrderId]);
+    $h->assertSame('pending', $pendingPayment['resolution_strategy'] ?? null, 'event received before identity resolution is retained as pending');
+    $events->emit(1, 'sale.order.placed', 'order', $outOfOrderId, [
+        'site_id'=>1, 'order_id'=>$outOfOrderId, 'order_number'=>'WEB-99001', 'grand_total_minor'=>3300,
+        'currency'=>'CHF', 'source'=>'ecommerce', 'channel_id'=>$webChannelId, 'language_code'=>'fr-CH',
+        'customer_company_id'=>$companyId, 'customer_contact_id'=>$contactId,
+    ], 77, 'crm-out-of-order-order');
+    $projection->consume(1);
+    $resolvedPayment = $business->one('SELECT * FROM crm_sale_activities WHERE id=?', [(int) $pendingPayment['id']]);
+    $h->assertSame('event_correlation', $resolvedPayment['resolution_strategy'] ?? null, 'later order event resolves prior payment without loss');
+    $h->assertSame($contactId, (int) ($resolvedPayment['related_contact_id'] ?? 0), 'out-of-order resolution uses event projection, not Sale tables');
+    $h->assertSame(null, $sale->one('SELECT id FROM sale_orders WHERE id=?', [$outOfOrderId]), 'synthetic event proves CRM projection does not require a transactional order row');
+
+    $events->emit(1, 'customer.account.created', 'customer_account', 77, [
+        'site_id'=>1, 'iam_user_id'=>77, 'customer_company_id'=>$companyId,
+        'customer_contact_id'=>$contactId, 'language_code'=>'fr-CH',
+    ], 77, 'crm-account-created');
+    $events->emit(1, 'sale.cart.abandoned', 'cart', 99002, [
+        'site_id'=>1, 'cart_id'=>99002, 'channel_id'=>$webChannelId, 'language_code'=>'fr-CH',
+        'customer_company_id'=>$companyId, 'customer_contact_id'=>$contactId,
+        'abandoned_after_seconds'=>7200, 'lawful_basis'=>'consent', 'marketing_consent'=>true,
+        'retention_until'=>gmdate('Y-m-d H:i:s', time()+86400*90),
+    ], 77, 'crm-cart-abandoned');
+    $extra = $projection->consume(1);
+    $h->assertSame(2, $extra['projected'], 'account and eligible abandoned cart events are projected');
+    $cartActivity = $business->one("SELECT * FROM crm_sale_activities WHERE activity_type='cart.abandoned'");
+    $h->assertSame('crm.activity.v2', $cartActivity['contract_version'] ?? null, 'versioned DTO contract is persisted');
+    $h->assertSame($webChannelId, (int) ($cartActivity['channel_id'] ?? 0), 'DTO preserves channel identifier');
+    $h->assertTrue(!str_contains((string) $cartActivity['metadata_json'], 'address') && !str_contains((string) $cartActivity['metadata_json'], 'product'), 'CRM activity stores only allow-listed non-sensitive metadata');
+    $filteredTimeline = (new BusinessActivityRepository($business))->relationActivity(1, 'contact', $contactId, 20, 0, ['q'=>'WEB-99001','kind'=>'sale','channel'=>'web']);
+    $h->assertSame(2, $filteredTimeline['total'], 'long CRM timelines support combined search, type and channel filters');
+    $rebuilt = $projection->rebuild(1, 9);
+    $h->assertSame(0, (int) $rebuilt['reconciliation']['missing_events'], 'non-destructive rebuild replays every available event');
+    $manualAfterRebuild = $business->one('SELECT * FROM crm_sale_activities WHERE id=?', [(int) $linked['id']]);
+    $h->assertSame('manual', $manualAfterRebuild['resolution_strategy'] ?? null, 'rebuild preserves audited manual identity links');
+
+    $events->emit(3, 'sale.cart.abandoned', 'cart', 99003, [
+        'site_id'=>3, 'cart_id'=>99003, 'channel_id'=>1, 'abandoned_after_seconds'=>120,
+        'lawful_basis'=>'', 'retention_until'=>gmdate('Y-m-d H:i:s', time()+86400*365),
+    ], null, 'crm-cart-ineligible');
+    $ineligible = $projection->consume(3);
+    $h->assertSame(1, $ineligible['failed'], 'ineligible abandoned cart is rejected without creating a CRM activity');
+    $h->assertSame(0, (int) ($business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=3')['count'] ?? -1), 'abandoned cart safeguards prevent excess retention or missing lawful basis');
 
     $business->run("INSERT INTO business_tags(site_id,tag_key,label) VALUES(1,'vip','VIP')");
     $tagId = $business->lastInsertId();
@@ -109,6 +170,7 @@ try {
         'cross-site CRM link is rejected'
     );
 } finally {
+    $brokenBusiness = null;
     $business = null;
     $sale = null;
     gc_collect_cycles();

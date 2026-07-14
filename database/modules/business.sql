@@ -1712,23 +1712,30 @@ CREATE INDEX IF NOT EXISTS idx_business_activity_entity ON business_activity_log
 -- customer or order snapshots back into the Sale database.
 CREATE TABLE IF NOT EXISTS crm_sale_activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dto_version INTEGER NOT NULL DEFAULT 1 CHECK(dto_version = 1),
+    dto_version INTEGER NOT NULL DEFAULT 2 CHECK(dto_version = 2),
+    contract_version TEXT NOT NULL DEFAULT 'crm.activity.v2' CHECK(contract_version = 'crm.activity.v2'),
     site_id INTEGER NOT NULL,
     activity_type TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
     channel TEXT NOT NULL CHECK(channel IN ('web','pos','admin','unknown')),
+    channel_id INTEGER,
+    language_code TEXT,
     related_company_id INTEGER,
     related_contact_id INTEGER,
-    source_event_id INTEGER NOT NULL UNIQUE,
+    source_event_id INTEGER NOT NULL,
     source_outbox_id INTEGER NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'sale_event',
+    source_id TEXT NOT NULL,
     source_event_type TEXT NOT NULL,
     source_aggregate_type TEXT NOT NULL,
     source_aggregate_id INTEGER NOT NULL,
     source_reference TEXT,
     summary TEXT NOT NULL,
     status TEXT NOT NULL,
-    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_order','iam_account_link','manual','anonymous')),
+    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_event','event_correlation','manual','pending')),
+    provenance_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(provenance_json)),
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    retention_until TEXT,
     linked_by_iam_user_id INTEGER,
     linked_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1739,13 +1746,14 @@ CREATE TABLE IF NOT EXISTS crm_sale_activities (
     CHECK(source_aggregate_id > 0),
     CHECK(trim(activity_type) <> ''),
     CHECK(trim(summary) <> ''),
-    CHECK((resolution_strategy = 'anonymous' AND related_company_id IS NULL AND related_contact_id IS NULL)
-       OR resolution_strategy <> 'anonymous')
+    UNIQUE(source_type, source_id, contract_version),
+    CHECK((resolution_strategy = 'pending' AND related_company_id IS NULL AND related_contact_id IS NULL)
+       OR resolution_strategy <> 'pending')
 );
 
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_contact ON crm_sale_activities(site_id, related_contact_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_company ON crm_sale_activities(site_id, related_company_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'anonymous';
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'pending';
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_source ON crm_sale_activities(source_event_type, source_aggregate_type, source_aggregate_id);
 
 CREATE TABLE IF NOT EXISTS crm_sale_activity_link_audit (

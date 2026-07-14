@@ -9,9 +9,11 @@ use App\Modules\Business\Repositories\BusinessConsentRepository;
 use App\Modules\Business\Repositories\BusinessContactRepository;
 use App\Modules\Sale\Exceptions\SaleValidationException;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
+use App\Modules\Sale\Repositories\SaleEventRepository;
 use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 
@@ -27,7 +29,8 @@ try {
     $accounts = new SaleCustomerAccountService(
         $iam, $connection, $companies, $contacts, new BusinessConsentRepository($business),
         new SaleReturnService($connection, new SaleStateMachineService($sale), new SaleInventoryService(new SaleInventoryRepository($connection))),
-        $business
+        $business,
+        new SaleEventService(new SaleEventRepository($connection))
     );
     $channelId = (int) ($sale->one('SELECT id FROM sale_channels WHERE site_id=1 ORDER BY id LIMIT 1')['id'] ?? 0);
     $insertOrder = static function (int $siteId, int $channel, string $number, string $email) use ($sale): int {
@@ -48,6 +51,9 @@ try {
     $registered = $accounts->registerWithProof(1, $proof1['token'], 'mot-de-passe-solide');
     $user1 = (int) $registered['user']['id'];
     $h->assertTrue($user1 > 0, 'post-purchase proof creates IAM account');
+    $accountEvent = $sale->one("SELECT * FROM sale_events WHERE event_type='customer.account.created' AND site_id=1 AND aggregate_id=?", [$user1]);
+    $h->assertTrue($accountEvent !== null, 'customer account creation is published through the transactional outbox');
+    $h->assertTrue(!str_contains((string) ($accountEvent['payload_json'] ?? ''), 'alice@example.test'), 'account event contains references but no customer email');
     $h->assertSame(3, (int) $business->one("SELECT COUNT(*) AS c FROM business_contacts WHERE site_id=1 AND email='alice@example.test'")['c'], 'unverified CRM duplicates remain distinct');
     $h->assertSame(0, (int) $business->one('SELECT COUNT(*) AS c FROM crm_consents')['c'], 'account creation never manufactures CRM consent');
     $h->assertSame(1, count($accounts->orders(1, $user1)), 'customer sees only explicitly linked orders');

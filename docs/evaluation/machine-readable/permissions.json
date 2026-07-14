@@ -1250,7 +1250,8 @@
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-business-crm-read-8aabb8e3ea",
     "last_verified": "2026-07-14",
@@ -1265,7 +1266,8 @@
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3531,7 +3533,8 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/Contracts/SaleAiContextContracts.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-sale-orders-read-438f3d0656",
     "last_verified": "2026-07-14",
@@ -3543,7 +3546,8 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/Contracts/SaleAiContextContracts.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },
@@ -3570,7 +3574,8 @@
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-sale-payments-read-444856a7d6",
     "last_verified": "2026-07-14",
@@ -3581,7 +3586,8 @@
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },
@@ -4813,7 +4819,8 @@
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/App.vue",
       "frontend/admin-vue/src/components/layout/AdminShell.vue",
-      "frontend/admin-vue/src/views/iam/IamUsersView.vue"
+      "frontend/admin-vue/src/views/iam/IamUsersView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-users-manage-9bb74f9425",
     "last_verified": "2026-07-14",
@@ -4829,7 +4836,8 @@
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/App.vue",
       "frontend/admin-vue/src/components/layout/AdminShell.vue",
-      "frontend/admin-vue/src/views/iam/IamUsersView.vue"
+      "frontend/admin-vue/src/views/iam/IamUsersView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },

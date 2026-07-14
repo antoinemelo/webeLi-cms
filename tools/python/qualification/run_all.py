@@ -154,6 +154,7 @@ def _artifact_hashes() -> dict[str, str]:
         "inventory_ledger": ROOT / "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "stock_reconstruction_m6": ROOT / "docs/evaluation/machine-readable/sale-stock-reconstruction-m6.json",
         "customer_identity_m7": ROOT / "docs/evaluation/machine-readable/customer-identity-bridges-m7.json",
+        "crm_event_activities_m7": ROOT / "docs/evaluation/machine-readable/crm-event-activities-m7.json",
         "reservation_availability": ROOT / "docs/evaluation/machine-readable/sale-reservations-availability.json",
         "bundle_stock_strategies": ROOT / "docs/evaluation/machine-readable/bundle-stock-strategies.json",
     }
@@ -175,6 +176,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "gate M6 ledger stock Sale", "source_steps": ["inventory-ledger-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/inventory_ledger_gate.py"]},
         {"requirement": "gate M6.5 reconstruction et réconciliation", "source_steps": ["stock-reconstruction-gate", "backup-restore", "browser-e2e"], "release_commands": ["tools/python/qualification/stock_reconstruction_gate.py", "tools/cms.py inventory reconcile"]},
         {"requirement": "gate M7.1 identité client et dédoublonnage", "source_steps": ["customer-identity-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/customer_identity_gate.py"]},
+        {"requirement": "gate M7.2 activités CRM par événements", "source_steps": ["crm-event-activity-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/crm_event_activity_gate.py"]},
         {"requirement": "gate M6.2 réservations et disponibilité", "source_steps": ["reservation-availability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/reservation_availability_gate.py", "backend/bin/console worker:reservations"]},
         {"requirement": "gate M6.3 bundles et stock composé", "source_steps": ["bundle-stock-strategy-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/bundle_stock_strategy_gate.py"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
@@ -311,6 +313,14 @@ def steps() -> tuple[Step, ...]:
             ("complete", "release"),
             (py, "tools/python/qualification/customer_identity_gate.py"),
             files=("docs/evaluation/machine-readable/customer-identity-bridges-m7.json","tools/python/qualification/customer_identity_gate.py","tools/php/tests/unit/sale_customer_accounts_test.php","frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts"),
+            timeout=60,
+        ),
+        Step(
+            "crm-event-activity-gate",
+            "Gate M7.2 activités CRM par événements",
+            ("complete", "release"),
+            (py, "tools/python/qualification/crm_event_activity_gate.py"),
+            files=("docs/evaluation/machine-readable/crm-event-activities-m7.json","tools/python/qualification/crm_event_activity_gate.py","tools/php/tests/unit/sale_crm_activity_projection_test.php","frontend/admin-vue/src/views/modules/business/RelationTimeline.vue","frontend/admin-vue/tests/e2e/business-crm-smoke.spec.ts"),
             timeout=60,
         ),
         Step(

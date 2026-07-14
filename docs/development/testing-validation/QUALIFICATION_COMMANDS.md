@@ -70,6 +70,7 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
 | Reconstruction et réconciliation stock M6.5 | `stock-reconstruction-gate` + scénario PHP + sauvegarde/restauration | `tools/python/qualification/stock_reconstruction_gate.py` et diagnostic CLI |
 | Identité client M7.1 | `customer-identity-gate` + tests IAM/CRM/Sale + Playwright | `tools/python/qualification/customer_identity_gate.py` |
+| Activités CRM par événements M7.2 | `crm-event-activity-gate` + tests de projection et chronologie | `tools/python/qualification/crm_event_activity_gate.py` |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
 | Dépendances | `composer audit --locked`, `npm audit --audit-level=high` | audit externe à l’archive |

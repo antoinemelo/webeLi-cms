@@ -108,6 +108,8 @@ Dans le compte Shop, le client retrouve le statut métier, les fulfillments part
 
 L’onglet **Identités** rassemble les commandes invitées susceptibles d’être liées à un compte ou une fiche relation client. Il explique le score et l’origine de chaque valeur. Aucun lien n’est créé sur le nom seul et aucune fusion n’est automatique. L’opérateur peut lier, conserver séparé, reporter, prévisualiser une fusion champ par champ ou annuler une fusion auditée. Le client Shop ne voit jamais cette structure interne.
 
+La chronologie CRM reçoit commandes, paiements, retours, remboursements, bons cadeaux et comptes par outbox. Elle reste filtrable et lisible comme une histoire client. Les événements sans identité restent en attente et peuvent être rattachés ultérieurement sans bloquer Vente.
+
 ## Rapports, imports et exports
 
 Les rapports v1 couvrent :

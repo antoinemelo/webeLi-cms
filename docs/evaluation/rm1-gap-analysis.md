@@ -84,7 +84,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Endpoints documentés sans 500 | non vérifié | `API_SPEC` passe, tests publics existants pour contenu/media/cookies/catalogue. | Pas de test HTTP complet sur toutes les routes documentées, notamment Sale public absent de l'OpenAPI. | P1 |
 | Propriété CMS/Core contenu, blocs, routes, SEO | présent | Tables core `content_entries`, `layout_blocks`, `routes`, `seo_metadata`; validateurs content/projections OK. | À préserver lors du lien produit-contenu. | P1 |
 | Propriété IAM | présent | Tables IAM et validateurs permissions ; docs générées permissions. | Pas d'écart RM1 identifié dans ce lot. | P2 |
-| Propriété CRM Business | présent | `business.sqlite`, `backend/src/Modules/Business`, docs CRM, tests Business CRM. | Connecteur activité Sale -> CRM reste nul/incomplet. | P1 |
+| Propriété CRM Business | couvert | `business.sqlite`, `CrmActivityV2`, projection outbox et chronologie filtrable. | Connecteurs externes dépendants de leur configuration. | — |
 | Propriété PIM Business | présent | `business_products`, variantes, attributs, assets, tax classes ; docs Business/PIM ; tests catalogue. | Pas de lien canonique CMS content <-> product trouvé. | P1 |
 | Prix et catalogues par canal | partiel | `BusinessCatalogPricingRepository`, `BusinessCatalogSellableReadService`, routes catalog/POS. | Listes de prix avancées par segment/client/date/priorité non prouvées dans cet audit. | P2 |
 | Panier, commande, historique transactionnel | présent | `sale.sqlite`, `SaleCartService`, `SaleCheckoutService`, `SaleOrderRepository`, tests Sale. | Besoin de tests HTTP/E2E publics et critères de non-régression checkout. | P1 |
@@ -159,7 +159,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Frontière | État | Commentaire |
 |---|---|---|
 | Sale -> Business catalogue | sain mais fragile | Sale passe par `SellableCatalogPort` et `BusinessSellableCatalogAdapter`; garder cette règle stricte. |
-| Sale -> Business clients | sain mais incomplet | `CustomerSnapshotPort` existe ; activité CRM post-vente non branchée. |
+| Sale -> Business clients | sain et couvert | `CustomerSnapshotPort`, `CrmActivitySink` réel, outbox idempotente, attente/rattachement et réconciliation M7.2. |
 | Sale -> CRM activity | couvert | Le port `CrmActivitySink` est branché sur la projection CRM réelle et rejouable. |
 | Sale -> comptes CMS/IAM | couvert | Le bridge réel IAM–CRM–Sale couvre compte facultatif post-achat, revue, fusion et séparation auditées. |
 | Business routes | fragile | Business expose beaucoup de routes depuis `backend/routes/api.php`; la gouvernance module provider n'est pas homogène avec Sale. |

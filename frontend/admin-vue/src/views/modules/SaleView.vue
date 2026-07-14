@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import { hasTranslation, useI18n } from '@/i18n';
+import { useAdminContextStore } from '@/stores/adminContext';
 import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
@@ -73,6 +74,7 @@ type SortDirection = 'asc' | 'desc';
 
 const route = useRoute();
 const router = useRouter();
+const context = useAdminContextStore();
 const { languageCode, t, money: formatMoney, dateTime } = useI18n();
 
 const loading = ref(false);
@@ -753,6 +755,10 @@ onMounted(load);
           <span>{{ t('sale.status.paid') }}</span>
           <strong>{{ money(selectedOrder.paid_total_minor, selectedOrder.currency) }}</strong>
         </div>
+
+        <router-link v-if="context.can('business.crm.read') && (Number(selectedOrder.customer_contact_id || 0) > 0 || Number(selectedOrder.customer_company_id || 0) > 0)" class="btn btn-outline-secondary btn-sm" to="/business">
+          Ouvrir la relation CRM · contact #{{ selectedOrder.customer_contact_id || '—' }} · organisation #{{ selectedOrder.customer_company_id || '—' }}
+        </router-link>
 
         <h3>{{ t('sale.orders.lines') }}</h3>
         <div v-for="line in selectedOrder.lines || []" :key="String(line.id)" class="sale-admin__line">

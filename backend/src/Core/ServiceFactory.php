@@ -687,6 +687,7 @@ final class ServiceFactory
             $this->businessConsents(),
             $this->saleReturnService(),
             $this->businessDatabaseConnection()->database(),
+            $this->saleEvents(),
         ));
     }
 
@@ -829,7 +830,8 @@ final class ServiceFactory
             $this->saleInventory(),
             $this->saleStateMachines(),
             $this->saleFulfillment(),
-            $this->salePaymentMethods()
+            $this->salePaymentMethods(),
+            $this->saleEvents()
         ));
     }
 

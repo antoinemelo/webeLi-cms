@@ -160,3 +160,12 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - résolution conservative par preuve post-achat, e-mail vérifié, téléphone vérifié explicitement autorisé ou action administrative, jamais sur le nom seul ;
 - fusion prévisualisée champ par champ, journal complet et séparation auditée sans modification rétrospective des commandes ;
 - gate M7.1, tests invité/doublons/multisite et parcours Playwright, sur schémas canoniques from scratch sans migration.
+
+# 2026-07-14 — Business × Sale M7.2 : activités CRM par événements
+
+- contrat non sensible `crm.activity.v2` avec canal, source stable et provenance ;
+- projection outbox sans lecture continue des tables transactionnelles ;
+- conservation et rattachement ultérieur des événements sans identité ;
+- relecture, rebuild non destructif et réconciliation des manquants/doublons ;
+- garde-fous de durée, base licite et rétention pour les paniers abandonnés ;
+- chronologie CRM recherchable, filtrable, paginée et liée à Vente selon permissions.

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 type TimelineItem = {
   id: string | number;
@@ -7,6 +7,12 @@ type TimelineItem = {
   title: string;
   detail?: string;
   date?: string | null;
+  action?: string;
+  channel?: string;
+  siteId?: number;
+  groupKey?: string;
+  link?: string;
+  technical?: string;
 };
 
 const props = defineProps<{
@@ -15,14 +21,32 @@ const props = defineProps<{
   items: TimelineItem[];
   canAddMemo?: boolean;
   actionLabel?: string;
+  pendingCount?: number;
 }>();
 
 defineEmits<{ addMemo: [] }>();
 
+const search = ref('');
+const kind = ref('');
+const channel = ref('');
+const page = ref(1);
+const pageSize = 10;
+const kinds = computed(() => [...new Set(props.items.map((item) => item.kind).filter(Boolean))]);
+const channels = computed(() => [...new Set(props.items.map((item) => item.channel || '').filter(Boolean))]);
+const filtered = computed(() => props.items.filter((item) => {
+  const q = search.value.trim().toLocaleLowerCase();
+  if (kind.value && item.kind !== kind.value) return false;
+  if (channel.value && item.channel !== channel.value) return false;
+  return !q || `${item.title} ${item.detail || ''} ${item.action || ''}`.toLocaleLowerCase().includes(q);
+}));
+const pages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)));
+const visible = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize));
+watch([search, kind, channel], () => { page.value = 1; });
 const groups = computed(() => {
   const map = new Map<string, TimelineItem[]>();
-  for (const item of props.items) {
-    const key = String(item.date || '').slice(0, 10) || 'Sans date';
+  for (const item of visible.value) {
+    const date = String(item.date || '').slice(0, 10) || 'Sans date';
+    const key = item.groupKey ? `${item.groupKey} · ${date}` : date;
     map.set(key, [...(map.get(key) || []), item]);
   }
   return [...map.entries()].map(([date, items]) => ({ date, items }));
@@ -35,7 +59,14 @@ const groups = computed(() => {
       <h3>{{ title }}</h3>
       <button v-if="canAddMemo" class="btn small" type="button" @click="$emit('addMemo')">{{ actionLabel || 'Ajouter mémo' }}</button>
     </header>
+    <p v-if="pendingCount" class="pending-note"><b>{{ pendingCount }}</b> événement(s) attendent un rattachement d’identité. <router-link to="/sale/identities">Les examiner</router-link></p>
+    <div v-if="items.length" class="timeline-filters">
+      <label>Rechercher<input v-model="search" type="search" placeholder="Commande, paiement, statut…"></label>
+      <label>Type<select v-model="kind"><option value="">Tous</option><option v-for="value in kinds" :key="value" :value="value">{{ value }}</option></select></label>
+      <label>Canal<select v-model="channel"><option value="">Tous</option><option v-for="value in channels" :key="value" :value="value">{{ value }}</option></select></label>
+    </div>
     <p v-if="!items.length" class="relation-empty">{{ emptyLabel }}</p>
+    <p v-else-if="!filtered.length" class="relation-empty">Aucune activité ne correspond aux filtres.</p>
     <div v-else class="relation-timeline-groups">
       <section v-for="group in groups" :key="group.date">
         <h4>{{ group.date }}</h4>
@@ -45,10 +76,13 @@ const groups = computed(() => {
             <strong>{{ item.title }}</strong>
             <small>{{ item.date || '—' }}</small>
             <p v-if="item.detail">{{ item.detail }}</p>
+            <router-link v-if="item.link" :to="item.link">Ouvrir l’élément lié</router-link>
+            <details v-if="item.technical"><summary>Détails techniques</summary><small>{{ item.technical }}</small></details>
           </li>
         </ol>
       </section>
     </div>
+    <footer v-if="pages > 1" class="timeline-pagination"><button type="button" :disabled="page === 1" @click="page--">Précédent</button><span>Page {{ page }} / {{ pages }}</span><button type="button" :disabled="page === pages" @click="page++">Suivant</button></footer>
   </section>
 </template>
 
@@ -108,4 +142,13 @@ const groups = computed(() => {
   margin: 0;
   color: #475467;
 }
+
+.pending-note { padding: .65rem; border-radius: 6px; background: #fff7e6; color: #8a4b08 !important; }
+.timeline-filters { display: grid; grid-template-columns: minmax(12rem, 2fr) 1fr 1fr; gap: .55rem; margin-bottom: .8rem; }
+.timeline-filters label { display: grid; gap: .2rem; color: #475467; font-size: .8rem; }
+.timeline-filters input, .timeline-filters select { min-height: 2.2rem; border: 1px solid #d0d5dd; border-radius: 6px; padding: .35rem .5rem; }
+.timeline-pagination { display: flex; justify-content: center; align-items: center; gap: .75rem; margin-top: .75rem; }
+.timeline-pagination button { border: 1px solid #d0d5dd; border-radius: 6px; background: white; padding: .35rem .6rem; }
+.relation-timeline details { color: #667085; }
+@media (max-width: 720px) { .timeline-filters { grid-template-columns: 1fr; } }
 </style>

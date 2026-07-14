@@ -238,6 +238,16 @@ test.describe('business CRM UX smoke', () => {
     await expect(relationModal.getByLabel('Email')).toHaveValue(contactEmail);
     await closeBusinessModal(page);
 
+    const viewContactRow = page.locator('.relations-table tbody tr').filter({ hasText: contactName }).first();
+    await viewContactRow.getByRole('button', { name: `Voir ${contactName}` }).click();
+    await expect(relationModal.getByLabel('Rechercher')).toBeVisible();
+    await expect(relationModal.getByLabel('Type')).toBeVisible();
+    await expect(relationModal.getByLabel('Canal')).toBeVisible();
+    await relationModal.getByLabel('Rechercher').fill('activité absente e2e');
+    await expect(relationModal.getByText('Aucune activité ne correspond aux filtres.')).toBeVisible();
+    await relationModal.getByLabel('Rechercher').fill('');
+    await closeBusinessModal(page);
+
     await freshContactRow.getByRole('button', { name: `Ajouter un mémo pour ${contactName}` }).click();
     await expect(relationModal.getByRole('heading', { name: 'Nouveau mémo' })).toBeVisible();
     await expect(relationModal.getByLabel('Contact')).toHaveValue(String(contactId));

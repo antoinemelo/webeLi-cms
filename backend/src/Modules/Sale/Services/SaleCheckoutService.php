@@ -85,6 +85,8 @@ final class SaleCheckoutService
                     'grand_total_minor' => (int) $order['grand_total_minor'],
                     'currency' => (string) $order['currency'],
                     'cart_id' => $cartId,
+                    'channel_id' => (int) $cart['channel_id'],
+                    'language_code' => (string) ($cart['locale'] ?? ''),
                     'customer_ref_id' => $order['customer_contact_id'] ?? $order['customer_company_id'] ?? null,
                     'customer_contact_id' => $order['customer_contact_id'] ?? null,
                     'customer_company_id' => $order['customer_company_id'] ?? null,
