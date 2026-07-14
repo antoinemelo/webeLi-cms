@@ -109,7 +109,7 @@ Le rapport détaillé est écrit dans `storage/qualification/performance/latest.
 
 ## Gate omnicanale storefront/POS
 
-Le profil `release` exige une preuve JSON valide sous `storage/qualification/omnichannel/latest.json`. Une exécution ciblée est disponible pour diagnostiquer uniquement ce contrat :
+Le profil `release` exige la preuve JSON omnicanale M5/M6/M7 au format 2 sous `storage/qualification/omnichannel/latest.json`. Elle couvre checkout UI, paiement, ledger/réservations, fulfillment, CRM, POS, rapprochements, régressions et empreintes du paquet d’audit. Une exécution ciblée est disponible pour diagnostiquer uniquement ce contrat :
 
 ```bash
 python3 tools/cms.py e2e --use-built-assets --omnichannel-only
