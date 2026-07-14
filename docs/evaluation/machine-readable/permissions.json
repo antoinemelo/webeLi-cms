@@ -1218,6 +1218,7 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1230,6 +1231,7 @@
     ],
     "permission": "business.consent.manage",
     "source": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1240,6 +1242,7 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1253,6 +1256,7 @@
     ],
     "permission": "business.consent.read",
     "source": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1456,6 +1460,7 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1468,6 +1473,7 @@
     ],
     "permission": "business.segment.manage",
     "source": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1478,6 +1484,7 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1490,6 +1497,7 @@
     ],
     "permission": "business.segment.read",
     "source": [
+      "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",

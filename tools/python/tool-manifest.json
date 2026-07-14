@@ -195,6 +195,7 @@
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/bundle_stock_strategy_gate.py",
         "tools/python/qualification/crm_event_activity_gate.py",
+        "tools/python/qualification/crm_guest_order_gate.py",
         "tools/python/qualification/crm_segmentation_consent_gate.py",
         "tools/python/qualification/customer_identity_gate.py",
         "tools/python/qualification/inventory_ledger_gate.py",
@@ -1923,14 +1924,34 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/crm_guest_order_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/CRM_GUEST_ORDER_GATE.md",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_crm_guest_order_gate.py"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/crm_segmentation_consent_gate.py",
       "category": "internal",
       "public": false,
       "entrypoint": false,
       "called_by": [
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_crm_segmentation_consent_gate.py"
+        "tools/python/tests/test_crm_segmentation_consent_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2361,11 +2382,28 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_crm_guest_order_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_crm_segmentation_consent_gate.py",
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,

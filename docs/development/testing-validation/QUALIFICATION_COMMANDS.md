@@ -72,6 +72,7 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Identité client M7.1 | `customer-identity-gate` + tests IAM/CRM/Sale + Playwright | `tools/python/qualification/customer_identity_gate.py` |
 | Activités CRM par événements M7.2 | `crm-event-activity-gate` + tests de projection et chronologie | `tools/python/qualification/crm_event_activity_gate.py` |
 | Segmentation et consentements M7.3 | `crm-segmentation-consent-gate` + tests métier et UX | `tools/python/qualification/crm_segmentation_consent_gate.py` |
+| Commande invitée et CRM M7.4 | `crm-guest-order-gate` + checkout, identité, projection, consentements et Playwright | `tools/python/qualification/crm_guest_order_gate.py` |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
 | Dépendances | `composer audit --locked`, `npm audit --audit-level=high` | audit externe à l’archive |
@@ -126,6 +127,16 @@ python3 tools/cms.py inventory reconcile --site 1
 ```
 
 Un diagnostic avec écarts retourne un code non nul afin de bloquer une automatisation. L'option `--repair` n'est jamais implicite et exige `--reason`. Les tests utilisent uniquement des bases temporaires reconstruites depuis `database/modules/*.sql`, puis copient et rouvrent les sauvegardes pour prouver leur restauration sans migration.
+
+## Gate M7.4 commande invitée et CRM
+
+La gate consolide les douze scénarios de commande invitée, rapprochement prudent, rejeu, panne CRM, retrait de consentement et panier abandonné :
+
+```bash
+python3 tools/python/qualification/crm_guest_order_gate.py
+```
+
+Le rapport machine-readable détaille identités avant/après, règles, décisions, événements, activités, consentements, doublons évités et métriques du parcours opérateur. Voir [Gate M7.4 commande invitée et CRM](CRM_GUEST_ORDER_GATE.md).
 
 ## Cache local
 

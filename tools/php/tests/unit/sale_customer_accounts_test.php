@@ -26,8 +26,9 @@ try {
     $connection = new SaleDatabaseConnection($salePath);
     $companies = new BusinessCompanyRepository($business);
     $contacts = new BusinessContactRepository($business);
+    $consents = new BusinessConsentRepository($business);
     $accounts = new SaleCustomerAccountService(
-        $iam, $connection, $companies, $contacts, new BusinessConsentRepository($business),
+        $iam, $connection, $companies, $contacts, $consents,
         new SaleReturnService($connection, new SaleStateMachineService($sale), new SaleInventoryService(new SaleInventoryRepository($connection))),
         $business,
         new SaleEventService(new SaleEventRepository($connection))
@@ -45,6 +46,15 @@ try {
     $individuals = $companies->ensureSystemIndividualsCompany(1);
     $contacts->create(1, ['company_id' => $individuals['id'], 'first_name' => 'Doublon', 'last_name' => 'Un', 'email' => 'alice@example.test']);
     $contacts->create(1, ['company_id' => $individuals['id'], 'first_name' => 'Doublon', 'last_name' => 'Deux', 'email' => 'alice@example.test']);
+
+    $verifiedContact = $contacts->create(1, ['company_id' => $individuals['id'], 'first_name' => 'Vérifiée', 'last_name' => 'Unique', 'email' => 'verified@example.test']);
+    $consents->upsertChannel((int) $verifiedContact['id'], 'email', 'verified@example.test', 'verified@example.test', true, true, 99);
+    $verifiedOrder = $insertOrder(1, $channelId, 'M7-VERIFIED', 'verified@example.test');
+    $verifiedRegistration = $accounts->registerWithProof(1, $accounts->issueClaimProof($verifiedOrder)['token'], 'verified-password');
+    $h->assertSame((int) $verifiedContact['id'], (int) $verifiedRegistration['crm_contact_id'], 'unique verified CRM email enriches the existing relation after guest checkout');
+    $h->assertSame(1, (int) $business->one("SELECT COUNT(*) AS c FROM business_contacts WHERE site_id=1 AND email='verified@example.test'")['c'], 'verified relation matching avoids an abusive duplicate');
+    $h->assertSame((int) $verifiedRegistration['user']['id'], (int) $business->one('SELECT iam_user_id FROM business_contacts WHERE id=?', [(int) $verifiedContact['id']])['iam_user_id'], 'verified relation is linked to the post-purchase IAM account');
+    $h->assertSame(0, (int) $business->one('SELECT COUNT(*) AS c FROM crm_consents WHERE contact_id=?', [(int) $verifiedContact['id']])['c'], 'verified identity matching never creates marketing consent');
 
     $order1 = $insertOrder(1, $channelId, 'P13-001', 'alice@example.test');
     $proof1 = $accounts->issueClaimProof($order1);

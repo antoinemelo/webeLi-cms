@@ -39,6 +39,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Identité client | bridges nuls et fusion opaque | scénario IAM/CRM/Sale + gate Python + Playwright | invité, token post-achat, provenance, scores, doublons, multisite, aperçu, fusion et séparation sans toucher aux snapshots | ajouté pour M7.1 |
 | Activités CRM événementielles | projection partielle relisant les commandes | scénario outbox + gate Python + chronologie Vue | DTO v2, désordre, panne CRM, attente/rattachement, confidentialité, rejeu et réconciliation | ajouté pour M7.2 |
 | Segmentation, préférences et consentements CRM | tags et état courant sans historique | scénario métier + gate Python + E2E Business | règles explicables, calcul complet/incrémental, résultat nul, retrait conservé, permissions et FR/EN | ajouté pour M7.3 |
+| Commande invitée vers CRM | preuves M7 dispersées | gate M7.4 + PHP + deux parcours Playwright | 12 scénarios, e-mail vérifié unique, ambiguïtés en revue, panne/rejeu, consentement et mesure UX | ajouté pour M7.4 |
 
 ## Tests ajoutés
 
@@ -67,6 +68,8 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `frontend/admin-vue/tests/e2e/sale-stock-reconstruction.spec.ts`
 - `tools/python/tests/test_customer_identity_gate.py`
 - `frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts`
+- `tools/python/tests/test_crm_guest_order_gate.py`
+- `docs/evaluation/machine-readable/crm-guest-order-gate-m7.json`
 
 ## Tests volontairement non automatisés dans ce lot
 

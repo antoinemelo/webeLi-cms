@@ -90,6 +90,29 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
         return $row ? $this->castRow($row) : null;
     }
 
+    /**
+     * Returns a CRM contact only when one verified channel matches inside the site.
+     * Zero or several matches deliberately remain unresolved for operator review.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function uniqueVerifiedContactByChannel(int $siteId, string $channel, string $normalizedValue): ?array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $channel = $this->channel($channel);
+        $normalizedValue = $this->text(strtolower(trim($normalizedValue)), 'normalized_value', 255);
+        $rows = $this->database()->all(
+            'SELECT c.* FROM crm_contact_channels cc
+             JOIN business_contacts c ON c.id = cc.contact_id
+             WHERE c.site_id = :site_id AND c.archived_at IS NULL
+               AND cc.channel = :channel AND cc.normalized_value = :normalized
+               AND cc.is_verified = 1 AND cc.archived_at IS NULL
+             ORDER BY c.id LIMIT 2',
+            ['site_id' => $siteId, 'channel' => $channel, 'normalized' => $normalizedValue]
+        );
+        return count($rows) === 1 ? $this->castRow($rows[0]) : null;
+    }
+
     public function upsertConsent(int $contactId, string $channel, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null, string $purpose = 'marketing', int $retentionDays = 2190): array
     {
         if ($contactId < 1) {

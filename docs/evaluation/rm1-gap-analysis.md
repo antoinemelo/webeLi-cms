@@ -161,6 +161,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Sale -> Business catalogue | sain mais fragile | Sale passe par `SellableCatalogPort` et `BusinessSellableCatalogAdapter`; garder cette règle stricte. |
 | Sale -> Business clients | sain et couvert | `CustomerSnapshotPort`, `CrmActivitySink` réel, outbox idempotente, attente/rattachement et réconciliation M7.2. |
 | Segmentation et consentements CRM | sain et couvert | Segments manuels/calculés M7.3 depuis activités projetées, registre append-only, préférences séparées et aucun opt-in issu d’un achat/compte. |
+| Commande invitée et rapprochement CRM | sain et couvert | Gate M7.4 sur 12 scénarios : e-mail vérifié unique, ambiguïtés en revue, POS facultatif, token post-achat, fusion/séparation, panne/rejeu, retrait et panier abandonné. |
 | Sale -> CRM activity | couvert | Le port `CrmActivitySink` est branché sur la projection CRM réelle et rejouable. |
 | Sale -> comptes CMS/IAM | couvert | Le bridge réel IAM–CRM–Sale couvre compte facultatif post-achat, revue, fusion et séparation auditées. |
 | Business routes | fragile | Business expose beaucoup de routes depuis `backend/routes/api.php`; la gouvernance module provider n'est pas homogène avec Sale. |

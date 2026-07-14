@@ -374,8 +374,15 @@ final class SaleCustomerAccountService implements CmsAccountBridge
         if ($linked !== null) {
             return $linked;
         }
+        $email=$this->email((string)($identity['email']??''));
         $contactId=(int)($order['customer_contact_id']??0);
         $contact=$contactId>0?$this->contacts->find($siteId,$contactId):null;
+        if($contact===null){
+            // A unique verified CRM address is strong evidence. Ambiguous or
+            // unverified matches are intentionally left to identity review.
+            $contact=$this->consents->uniqueVerifiedContactByChannel($siteId,'email',$email);
+            $contactId=(int)($contact['id']??0);
+        }
         if($contact!==null){
             if(($contact['iam_user_id']??null)!==null && (int)$contact['iam_user_id']!==$userId) throw new SaleValidationException('sale.customer.crm_contact_already_linked');
             $contact=$this->contacts->update($siteId,$contactId,['iam_user_id'=>$userId],$userId)??$contact;
@@ -383,7 +390,6 @@ final class SaleCustomerAccountService implements CmsAccountBridge
             $company=$this->companies->ensureSystemIndividualsCompany($siteId,$userId);
             $contact=$this->contacts->create($siteId,['company_id'=>(int)$company['id'],'iam_user_id'=>$userId,'first_name'=>$identity['first_name']??null,'last_name'=>$identity['last_name']??null,'email'=>$identity['email']??null,'phone'=>$identity['phone']??null,'status'=>'client'],$userId);
         }
-        $email=$this->email((string)($identity['email']??''));
         $this->consents->upsertChannel((int)$contact['id'],'email',$email,$email,true,true,$userId);
         return $contact;
     }

@@ -20,6 +20,14 @@ document_type: reference
 generated: false
 ---
 
+# 2026-07-14 — Business M7.4 : gate commande invitée et CRM
+
+- ajout de la gate M7.4 couvrant les douze scénarios checkout invité, POS, rattachement post-achat, rapprochement, rejeu, panne CRM, consentement et panier abandonné ;
+- rapprochement d'un compte post-achat avec une relation CRM uniquement lorsque l'e-mail est vérifié, unique et limité au site ;
+- maintien des correspondances non vérifiées ou ambiguës dans la revue humaine, sans réécriture des snapshots Sale ni consentement marketing implicite ;
+- ajout du rapport machine-readable, des métriques UX opérateur et des tests Python/PHP/Playwright associés ;
+- schémas canoniques inchangés et aucune migration requise.
+
 # 2026-07-14 — Business M7.3 : segmentation, préférences et consentements
 
 - ajout de segments CRM manuels ou calculés, avec règles simples explicables et versionnées ;

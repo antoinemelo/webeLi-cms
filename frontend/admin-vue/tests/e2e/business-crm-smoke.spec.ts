@@ -71,6 +71,18 @@ async function postJson<T>(page: Page, path: string, csrfToken: string, data: Re
   return payload.data;
 }
 
+async function patchJson<T>(page: Page, path: string, csrfToken: string, data: Record<string, unknown>, contract: string, label: string): Promise<T> {
+  const payload = await jsonEnvelope<T>(
+    await page.request.patch(cmsPath(path), {
+      headers: adminHeaders(csrfToken),
+      data: { data },
+    }),
+    contract,
+    label,
+  );
+  return payload.data;
+}
+
 async function getJson<T>(page: Page, path: string): Promise<T> {
   const response = await page.request.get(cmsPath(path));
   expect(response.ok(), `${path} returned ${response.status()}`).toBeTruthy();
@@ -181,7 +193,26 @@ test.describe('business CRM UX smoke', () => {
   });
 
   test('covers relations, memo, message and consent entry points without public CRM headless exposure', async ({ page }) => {
-    const { stamp, companyName, companyEmail, contactName, contactEmail, contactId } = await createCrmFixture(page);
+    const { context, stamp, companyName, companyEmail, contactName, contactEmail, contactId } = await createCrmFixture(page);
+    const siteQuery = `site_id=${context.data.site.id}`;
+    await patchJson(page, `/admin/api/business/contacts/${contactId}/consents/email?${siteQuery}`, context.data.csrf_token, {
+      value: contactEmail,
+      consent_status: 'opt_in',
+      source: 'manual',
+      evidence: 'Preuve explicite gate M7.4',
+      is_primary: true,
+      is_verified: true,
+      purpose: 'marketing',
+    }, 'admin.business.contacts.consents.show.v1', 'consent opt-in provenance');
+    await patchJson(page, `/admin/api/business/contacts/${contactId}/consents/email?${siteQuery}`, context.data.csrf_token, {
+      value: contactEmail,
+      consent_status: 'opt_out',
+      source: 'manual',
+      evidence: 'Retrait demandé lors de la gate M7.4',
+      is_primary: true,
+      is_verified: true,
+      purpose: 'marketing',
+    }, 'admin.business.contacts.consents.show.v1', 'consent withdrawal provenance');
 
     await page.goto(cmsPath('/admin/app/business'));
     await expect(page.getByRole('button', { name: 'Relations' })).toBeVisible();
@@ -264,6 +295,9 @@ test.describe('business CRM UX smoke', () => {
     await openRelationRowMenu(afterMessageRow);
     await relationRowMenuButton(afterMessageRow, 'Consentement').click();
     await expect(relationModal.getByRole('heading', { name: 'Consentements', level: 2 })).toBeVisible();
+    await expect(relationModal.getByText('Retrait demandé lors de la gate M7.4')).toBeVisible();
+    await expect(relationModal.getByText(/marketing · site:.* · manual/).first()).toBeVisible();
+    await expect(relationModal.getByText('Preuve explicite gate M7.4')).toBeVisible();
     await closeBusinessModal(page);
 
     const users = await getJson<{ data: { users: Array<{ id: number; email?: string }> } }>(page, '/admin/api/business/iam/available-users?include_assigned=true');
