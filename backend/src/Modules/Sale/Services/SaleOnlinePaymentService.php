@@ -480,6 +480,7 @@ final class SaleOnlinePaymentService
             'payment.expired' => 'expired', default => 'failed',
         });
         if ($type === 'payment.authorized') {
+            $this->inventory->prepareOrderForTrigger($order, 'payment_authorization');
             $amount = min((int) $intent['amount_minor'], max(0, (int) $event['amount_minor']));
             if ((int) $intent['authorized_minor'] < $amount) {
                 $this->payments->recordTransaction((int) $order['id'], $amount, (string) $intent['currency'], 'authorization', [
@@ -491,6 +492,7 @@ final class SaleOnlinePaymentService
             $this->setIntent((int) $intent['id'], 'authorized', $providerStatus, (string) $event['occurred_at'], ['authorized_minor' => $amount]);
             $this->db()->run("UPDATE sale_orders SET payment_status='authorized',updated_at=CURRENT_TIMESTAMP WHERE id=?", [(int) $order['id']]);
         } elseif ($type === 'payment.captured') {
+            $this->inventory->prepareOrderForTrigger($order, 'payment_capture');
             $target = (int) ($event['data']['captured_minor'] ?? 0);
             if ($target < 1) { $target = (int) $intent['captured_minor'] + max(0, (int) $event['amount_minor']); }
             $target = min((int) $intent['amount_minor'], $target);

@@ -274,7 +274,7 @@ generated: true
 | `sale_fulfillment_zones` | id, site_id, code, name, country_codes_json, postal_prefixes_json, status, active_from, active_until, created_at, updated_at |
 | `sale_fulfillments` | id, order_id, fulfillment_number, status, shipping_address_snapshot_json, shipping_method_snapshot_json, tracking_reference, correlation_id, version, created_by_iam_user_id, created_at, updated_at, shipped_at, delivered_at, cancelled_at |
 | `sale_idempotency_keys` | id, site_id, key_hash, scope, request_hash, response_json, status, locked_until, created_at, updated_at |
-| `sale_inventory_channel_configs` | channel_id, site_id, stock_location_id, availability_policy, status, updated_at |
+| `sale_inventory_channel_configs` | channel_id, site_id, stock_location_id, availability_policy, reservation_policy, reservation_ttl_seconds, reservation_renewal_window_seconds, reservation_max_lifetime_seconds, backorder_policy, show_exact_quantity, status, updated_at |
 | `sale_inventory_items` | id, site_id, business_variant_id, sellable_id, stock_location_id, sku, tracked, allow_negative, allow_backorder, backorder_delivery_days, low_stock_threshold, on_hand_quantity, reserved_quantity, available_quantity, version, updated_at |
 | `sale_inventory_reconciliation_runs` | id, site_id, status, items_checked, differences_count, repaired_count, report_json, started_at, completed_at, created_by_iam_user_id |
 | `sale_order_adjustments` | id, order_id, order_line_id, adjustment_type, source_type, source_id, label, amount_minor, currency, metadata_json, created_at |
@@ -305,9 +305,10 @@ generated: true
 | `sale_sandbox_payment_states` | provider_reference, payment_intent_id, status, amount_minor, authorized_minor, captured_minor, refunded_minor, currency, sandbox_token_hash, updated_at |
 | `sale_settings` | id, site_id, setting_key, setting_value_json, updated_at |
 | `sale_state_transitions` | id, site_id, aggregate_type, aggregate_id, from_status, to_status, correlation_id, changed_by_iam_user_id, reason, metadata_json, created_at |
+| `sale_stock_backorders` | id, inventory_item_id, cart_id, order_id, backorder_key, quantity, status, delivery_lead_time_days, reservation_trigger, fulfillment_mode, expires_at, max_expires_at, renewal_count, renewed_at, created_at, updated_at, confirmed_at, released_at, release_reason, released_by_iam_user_id, cancelled_at, fulfilled_at |
 | `sale_stock_locations` | id, site_id, code, name, location_type, status, created_at, updated_at, archived_at |
 | `sale_stock_movements` | id, inventory_item_id, stock_location_id, movement_type, quantity, balance_after_quantity, idempotency_key, transfer_key, reference_type, reference_id, correlation_id, reason, created_by_iam_user_id, created_at |
-| `sale_stock_reservations` | id, inventory_item_id, cart_id, order_id, reservation_key, quantity, status, expires_at, created_at, updated_at, confirmed_at, released_at, consumed_at |
+| `sale_stock_reservations` | id, inventory_item_id, cart_id, order_id, reservation_key, quantity, status, expires_at, max_expires_at, reservation_trigger, fulfillment_mode, renewal_count, renewed_at, created_at, updated_at, confirmed_at, released_at, cancelled_at, consumed_at |
 | `sale_test_payment_operations` | id, provider_key, provider_reference, operation_kind, operation_key, amount_minor, result_json, created_at |
 | `sale_test_payment_states` | provider_reference, payment_intent_id, scenario, status, amount_minor, authorized_minor, captured_minor, refunded_minor, currency, action_token_hash, updated_at |
 | `schema_migrations` | id, migration, migrated_at |

@@ -188,6 +188,12 @@ try {
     $h->assertSame(900, (int) ($reviewBody['data']['cart']['shipping_method']['amount_minor'] ?? -1), 'fixed fulfillment rate is calculated by the server');
     $h->assertSame(false, $reviewBody['data']['cart']['marketing_consent'] ?? null, 'marketing refusal remains distinct from terms consent');
     $h->assertSame('active', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront review creates the checkout reservation');
+    $reviewLine = $reviewBody['data']['cart']['lines'][0] ?? [];
+    $h->assertSame('sale.inventory.availability.v1', $reviewLine['availability']['contract'] ?? null, 'cart line exposes the same versioned availability contract as Shop');
+    $h->assertSame('En stock', $reviewLine['availability']['label'] ?? null, 'cart line uses a readable availability label');
+    $h->assertSame(1, (int) ($reviewLine['reservation']['physical_quantity'] ?? 0), 'cart explains the physically protected quantity');
+    $h->assertTrue(($reviewLine['reservation']['expires_at'] ?? null) !== null, 'cart exposes reservation expiry for immediate feedback');
+    $h->assertTrue(in_array('reduce_quantity', $reviewLine['recovery_options'] ?? [], true), 'cart exposes a quantity reduction recovery without losing the cart');
 
     $checkoutPayload = ['cart_token' => $token, 'idempotency_key' => 'public-sale-checkout'] + $guestData;
     $checkoutResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/checkout', $checkoutPayload)->checkout('web-main');

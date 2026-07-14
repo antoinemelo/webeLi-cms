@@ -7,7 +7,7 @@ require_once __DIR__ . '/../bootstrap/runtime.php';
 $config = require __DIR__ . '/../bootstrap/config.php';
 $cmd = $argv[1] ?? 'help';
 
-$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
+$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:reservations [site_id] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
 if (in_array($cmd, ['help', '--help', '-h'], true)) {
     echo $commandList . "\n";
     exit(0);
@@ -158,6 +158,13 @@ switch ($cmd) {
         App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
         $siteId = max(1, (int) ($argv[2] ?? 1));
         echo json_encode($services->salePaymentService()->processDueOperations($siteId, (int) ($argv[3] ?? 50)), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        break;
+
+    case 'worker:reservations':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $siteId = isset($argv[2]) ? max(1, (int) $argv[2]) : null;
+        $expired = $services->saleInventory()->expireDueReservations($siteId);
+        echo json_encode(['status' => 'ok', 'expired' => $expired, 'site_id' => $siteId], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
         break;
 
     case 'worker:outbox':

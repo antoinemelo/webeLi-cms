@@ -149,6 +149,10 @@ try {
         ['GET', '/admin/api/sale/export/pos-sessions.csv'],
         ['GET', '/admin/api/sale/export/stock-movements.csv'],
         ['GET', '/admin/api/sale/export/returns-refunds.csv'],
+        ['GET', '/admin/api/sale/stock/reservations'],
+        ['POST', '/admin/api/sale/stock/reservations/1/renew'],
+        ['POST', '/admin/api/sale/stock/reservations/1/release'],
+        ['PUT', '/admin/api/sale/stock/reservation-policies/1'],
         ['POST', '/admin/api/sale/import/stock/preview'],
         ['POST', '/admin/api/sale/import/stock/apply'],
         ['GET', '/admin/api/sale/pos/variants'],
@@ -301,6 +305,30 @@ try {
     $adjustmentMovement = $saleDb->one('SELECT * FROM sale_stock_movements WHERE idempotency_key=?', [$adjustmentKey]);
     $h->assertSame($adjustmentKey, $adjustmentMovement['correlation_id'] ?? null, 'manual movement keeps its correlation id');
     $h->assertTrue((int) ($adjustmentMovement['stock_location_id'] ?? 0) > 0, 'manual movement keeps its location');
+    $reservationChannel = $saleDb->one("SELECT id FROM sale_channels WHERE code='web-main'");
+    $saleDb->run('INSERT INTO sale_carts(site_id,channel_id,status,currency,cart_kind,customer_snapshot_json,billing_address_json,shipping_address_json) VALUES(1,?,"active","CHF","web","{}","{}","{}")', [(int) $reservationChannel['id']]);
+    $reservationCartId = (int) $saleDb->lastInsertId();
+    $reservation = $inventory->reserveForCart(1, $reservationCartId, [
+        'business_variant_id' => (int) ($stockItem['business_variant_id'] ?? $variant['id']),
+        'sellable_id' => (int) ($stockItem['sellable_id'] ?? $variant['id']),
+        'sku' => $stockItem['sku'] ?? 'RESERVATION-API', 'track_stock' => true,
+        'metadata' => ['available_quantity' => max(1, (int) ($stockItem['available_quantity'] ?? 1))],
+    ], 1);
+    $reservationsResponse = $controllerFor(1, 'GET', '/admin/api/sale/stock/reservations')->stockReservations();
+    $h->assertSame(200, $reservationsResponse->status(), 'sale admin can list reservations and policies');
+    $reservationsPayload = json_decode($reservationsResponse->body(), true);
+    $h->assertTrue(count($reservationsPayload['data']['reservations'] ?? []) > 0, 'reservation workspace returns active holds');
+    $h->assertTrue(count($reservationsPayload['data']['policies'] ?? []) >= 3, 'reservation workspace exposes channel policies');
+    $renewResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reservations/' . (int) $reservation['id'] . '/renew', [], ['reservation_kind' => 'physical'])->renewStockReservation((int) $reservation['id']);
+    $h->assertSame(200, $renewResponse->status(), 'authorized operator can request a controlled renewal');
+    $missingReasonRelease = $controllerFor(1, 'POST', '/admin/api/sale/stock/reservations/' . (int) $reservation['id'] . '/release', [], ['reservation_kind' => 'physical'])->releaseStockReservation((int) $reservation['id']);
+    $h->assertSame(422, $missingReasonRelease->status(), 'manual reservation release requires an audit reason');
+    $releaseResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reservations/' . (int) $reservation['id'] . '/release', [], ['reservation_kind' => 'physical', 'reason' => 'Libération contrôlée API'])->releaseStockReservation((int) $reservation['id']);
+    $h->assertSame(200, $releaseResponse->status(), 'authorized operator can release an active reservation');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT created_by_iam_user_id FROM sale_stock_movements WHERE idempotency_key=?', ['release:reservation:' . (int) $reservation['id']])['created_by_iam_user_id'] ?? 0), 'manual release records authenticated operator');
+    $policyResponse = $controllerFor(1, 'PUT', '/admin/api/sale/stock/reservation-policies/' . (int) $reservationChannel['id'], [], ['reservation_policy' => 'checkout_start', 'reservation_ttl_seconds' => 900, 'reservation_renewal_window_seconds' => 120, 'reservation_max_lifetime_seconds' => 3600, 'backorder_policy' => 'sellable'])->updateStockReservationPolicy((int) $reservationChannel['id']);
+    $h->assertSame(200, $policyResponse->status(), 'sale settings manager can configure channel reservation policy');
+    $h->assertSame(900, (int) (json_decode($policyResponse->body(), true)['data']['policy']['reservation_ttl_seconds'] ?? 0), 'configured TTL is persisted');
     $reconciliationResponse = $controllerFor(1, 'POST', '/admin/api/sale/stock/reconciliation', [], ['repair_derived' => true])->reconcileInventory();
     $h->assertSame(201, $reconciliationResponse->status(), 'sale admin can run inventory reconciliation');
     $reconciliationPayload = json_decode($reconciliationResponse->body(), true);

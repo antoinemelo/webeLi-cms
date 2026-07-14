@@ -40,6 +40,7 @@ $tests = [
     'unit/storefront_projection_test.php',
     'unit/sale_idempotency_service_test.php',
     'unit/sale_inventory_service_test.php',
+    'unit/sale_reservation_lifecycle_test.php',
     'unit/sale_inventory_reconciliation_test.php',
     'unit/sale_domain_workflows_test.php',
     'unit/sale_internal_sales_test.php',

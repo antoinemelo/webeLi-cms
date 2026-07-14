@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 import SalePosView from './SalePosView.vue';
 import SaleStockView from './SaleStockView.vue';
+import SaleReservationsView from './SaleReservationsView.vue';
 
 type Row = Record<string, unknown>;
 type Dashboard = {
@@ -125,6 +126,7 @@ const tabs = [
   { key: 'orders', labelKey: 'sale.tabs.orders', path: '/sale/orders' },
   { key: 'payments', labelKey: 'sale.tabs.payments', path: '/sale/payments' },
   { key: 'stock', labelKey: 'sale.tabs.stock', path: '/sale/stock' },
+  { key: 'reservations', labelKey: 'sale.tabs.reservations', path: '/sale/reservations' },
   { key: 'pos', labelKey: 'sale.tabs.pos', path: '/sale/pos' },
   { key: 'settings', labelKey: 'sale.tabs.settings', path: '/sale/settings' }
 ];
@@ -145,6 +147,7 @@ const activeTab = computed(() => {
   if (route.path.includes('/sale/orders')) return 'orders';
   if (route.path.includes('/sale/payments')) return 'payments';
   if (route.path.includes('/sale/stock')) return 'stock';
+  if (route.path.includes('/sale/reservations')) return 'reservations';
   if (route.path.includes('/sale/pos')) return 'pos';
   if (route.path.includes('/sale/settings')) return 'settings';
   return 'dashboard';
@@ -891,6 +894,10 @@ onMounted(load);
 
     <section v-if="activeTab === 'stock'" class="sale-admin__panel sale-admin__stock">
       <SaleStockView />
+    </section>
+
+    <section v-if="activeTab === 'reservations'" class="sale-admin__panel sale-admin__stock">
+      <SaleReservationsView />
     </section>
 
     <section v-if="activeTab === 'settings'" class="sale-admin__panel">

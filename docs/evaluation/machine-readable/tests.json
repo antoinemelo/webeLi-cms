@@ -420,6 +420,25 @@
   {
     "command": "python3 tools/cms.py test",
     "confidence": "high",
+    "discovered_test_functions": 4,
+    "evidence": [
+      "tools/python/tests/test_reservation_availability_gate.py"
+    ],
+    "execution_result": null,
+    "id": "test-file-tools-python-tests-test-reservation-availability-gate-py-e9cde67895",
+    "last_verified": "2026-07-14",
+    "limitations": [
+      "File presence is not proof that the tests were executed successfully."
+    ],
+    "name": "test_reservation_availability_gate",
+    "source": [
+      "tools/python/tests/test_reservation_availability_gate.py"
+    ],
+    "status": "unverified"
+  },
+  {
+    "command": "python3 tools/cms.py test",
+    "confidence": "high",
     "discovered_test_functions": 7,
     "evidence": [
       "tools/python/tests/test_runtime_bootstrap_and_audit_evidence.py"

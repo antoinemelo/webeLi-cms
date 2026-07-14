@@ -4,7 +4,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-07-14
 source_of_truth: manual
 owners:
   - core
@@ -33,6 +33,7 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | API | routes non dupliquées | test API/Playwright request | refus 401/403 sur appel direct webhook | ajouté partiellement |
 | Providers de paiement | tests séparés par adapter | contrat commun + gate PHP/Python/Playwright | capacités explicites, succès, refus/reprise, capture/remboursement, signature, doublon, réconciliation et UX Stripe/Revolut | ajouté pour M5.5 |
 | Ledger de stock | quantités Business/Sale dispersées | ledger Sale + gate PHP/Python/Playwright | mouvements immuables, reconstruction, seed d’ouverture, contrat Shop, recherche scanner, assistant, erreurs et mobile | ajouté pour M6.1 |
+| Réservations et disponibilité | réservation implicite sans politique de canal | concurrence PHP + gate Python + API/Playwright | déclencheurs configurables, TTL borné, expiration idempotente, backorder explicite, reprise Shop et libération opérateur auditée | ajouté pour M6.2 |
 
 ## Tests ajoutés
 
@@ -49,6 +50,9 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/php/tests/unit/sale_inventory_reconciliation_test.php`
 - `tools/python/tests/test_inventory_ledger_gate.py`
 - `frontend/admin-vue/tests/e2e/sale-stock-ledger.spec.ts`
+- `tools/php/tests/unit/sale_reservation_lifecycle_test.php`
+- `tools/python/tests/test_reservation_availability_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-reservations.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

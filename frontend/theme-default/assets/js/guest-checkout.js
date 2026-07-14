@@ -18,7 +18,7 @@
     summary.textContent = '';
     for (const line of cart.lines || []) {
       const row = document.createElement('div'); row.className = 'summary-line';
-      const name = document.createElement('span'); name.textContent = `${line.quantity} × ${line.product_name}`;
+      const name = document.createElement('span'); const availability=line.availability?.label||(line.availability_state==='backorder'?(lang==='en'?'Backorder':'Sur commande'):(lang==='en'?'In stock':'En stock')); name.textContent = `${line.quantity} × ${line.product_name} · ${availability}`;
       const total = document.createElement('strong'); total.textContent = `${(line.line_total_minor / 100).toFixed(2)} ${cart.currency}`;
       row.append(name, total); summary.append(row);
     }
@@ -26,7 +26,14 @@
     const shipping = document.createElement('p'); shipping.textContent = `${lang === 'en' ? 'Fulfillment' : 'Fulfillment'}: ${((cart.shipping_total_minor || 0) / 100).toFixed(2)} ${cart.currency}`; summary.append(shipping);
     const total = document.createElement('p'); total.textContent = `Total: ${(cart.grand_total_minor / 100).toFixed(2)} ${cart.currency}`; summary.append(total);
   };
-  const readJson = async (response) => { const payload = await response.json(); if (!response.ok) throw new Error(payload?.error?.message || 'Checkout invalid'); return payload; };
+  const readJson = async (response) => { const payload = await response.json(); if (!response.ok) { const failure=new Error(payload?.error?.message || 'Checkout invalid'); failure.details=payload?.error?.details||{}; throw failure; } return payload; };
+  const renderAvailabilityRecovery = (reason) => {
+    if (!reason?.details?.cart_preserved) return;
+    const box=document.createElement('div'); box.className='checkout-availability-recovery';
+    const help=document.createElement('p'); help.textContent=lang==='en'?'Your cart is preserved. Reduce the quantity, choose another variant, order later, or remove the line.':'Votre panier est conservé. Réduisez la quantité, choisissez une autre variante, commandez ultérieurement ou retirez la ligne.';
+    const cartLink=document.createElement('a'); cartLink.href=`${base}/shop`; cartLink.textContent=lang==='en'?'Return to the shop':'Retourner à la boutique';
+    box.append(help,cartLink); error.append(box);
+  };
   const offerAccount = (proof) => {
     if (!proof?.token) return;
     const box = document.createElement('form'); const title = document.createElement('h3');
@@ -104,7 +111,7 @@
       }
       if (payment?.state?.recoverable && payment.status === 'failed') { const retry=document.createElement('button'); retry.type='button'; retry.textContent=lang==='en'?'Try again or choose another method':'Réessayer ou choisir un autre moyen'; retry.addEventListener('click',()=>{retryPayment=true;completed=false;form.hidden=false;summary.textContent='';}); summary.append(retry); }
       form.hidden = true; offerAccount(payload.data.account_creation);
-    } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); }
+    } catch (reason) { error.textContent = reason instanceof Error ? reason.message : String(reason); renderAvailabilityRecovery(reason); }
     finally { if(submit&&!completed){submit.disabled=false;submit.removeAttribute('aria-busy');} }
   });
   load().catch((reason) => { error.textContent = reason instanceof Error ? reason.message : String(reason); });

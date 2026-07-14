@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "983dab5945720164efc280aa20e91f5c1535db25",
+  "commit": "7bc5e884c94b85f3e44ad3fa1016049519a65783",
   "confidence": "high",
   "databases": [
     "core",
@@ -47,6 +47,7 @@
     "docs/evaluation/rm1-gap-analysis.md",
     "docs/evaluation/sale-inventory-ledger.md",
     "docs/evaluation/sale-module-review.md",
+    "docs/evaluation/sale-reservations-availability.md",
     "docs/evaluation/visual-editor.md"
   ],
   "evidence": [
@@ -74,6 +75,7 @@
     "routes.json",
     "sale-inventory-ledger.json",
     "sale-payment-provider-interchangeability.json",
+    "sale-reservations-availability.json",
     "tests.json",
     "validators.json"
   ],

@@ -1427,6 +1427,7 @@
     "confidence": "high",
     "evidence": [
       "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue",
       "frontend/admin-vue/src/views/modules/SaleStockView.vue",
       "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
@@ -1438,6 +1439,7 @@
     "permission": "common.apply",
     "source": [
       "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue",
       "frontend/admin-vue/src/views/modules/SaleStockView.vue",
       "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
@@ -3699,7 +3701,8 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
     ],
     "id": "permission-sale-settings-manage-f529be0105",
     "last_verified": "2026-07-14",
@@ -3709,7 +3712,8 @@
     "permission": "sale.settings.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
     ],
     "status": "supported"
   },
@@ -3751,7 +3755,8 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
     ],
     "id": "permission-sale-stock-manage-360f179425",
     "last_verified": "2026-07-14",
@@ -3761,7 +3766,8 @@
     "permission": "sale.stock.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
     ],
     "status": "supported"
   },

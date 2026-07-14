@@ -195,6 +195,7 @@
         "tools/python/qualification/omnichannel_gate.py",
         "tools/python/qualification/payment_provider_gate.py",
         "tools/python/qualification/performance_baseline.py",
+        "tools/python/qualification/reservation_availability_gate.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
@@ -1856,10 +1857,13 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_inventory_ledger_gate.py",
-        "tools/python/tests/test_qualification_orchestrator.py"
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -1895,7 +1899,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/payment-provider-ux-comparison.md",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_payment_provider_gate.py",
@@ -1925,6 +1931,26 @@
       "replacement": null,
       "status": "active",
       "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/reservation_availability_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tests/test_reservation_availability_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -2231,7 +2257,10 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
@@ -2294,7 +2323,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2358,6 +2389,23 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_reservation_availability_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],

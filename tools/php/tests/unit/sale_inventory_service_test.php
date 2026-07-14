@@ -73,7 +73,10 @@ try {
         'backorder_delivery_days' => 10,
         'metadata' => ['available_quantity' => 0, 'allow_backorder' => true, 'backorder_delivery_days' => 10],
     ];
-    $h->assertSame(null, $inventory->reserveForCart(1, $backorderCartId, $backorder, 2), 'zero stock backorder creates no reservation but does not block cart');
+    $backorderReservation = $inventory->reserveForCart(1, $backorderCartId, $backorder, 2);
+    $h->assertSame('backorder', $backorderReservation['_reservation_kind'] ?? null, 'zero stock creates an explicit backorder rather than an implicit pass-through');
+    $h->assertSame(2, (int) ($backorderReservation['_backorder_quantity'] ?? 0), 'explicit backorder preserves the requested quantity');
+    $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_stock_backorders WHERE cart_id=? AND quantity=2 AND status="active"', [$backorderCartId])['count'] ?? 0), 'backorder is stored with its lifecycle');
     $backorderItem = $saleDb->one('SELECT * FROM sale_inventory_items WHERE business_variant_id = 9003 LIMIT 1');
     $h->assertSame(0, (int) ($backorderItem['on_hand_quantity'] ?? -1), 'backorder item keeps zero on-hand stock');
     $h->assertSame(0, (int) ($backorderItem['reserved_quantity'] ?? -1), 'backorder item does not reserve unavailable stock');

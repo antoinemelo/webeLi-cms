@@ -114,3 +114,12 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - schéma de commande partagé, snapshots immuables, stock et CRM idempotent ;
 - rapport JSON sans PII ni secret, validé indépendamment et bloquant pour la qualification release ;
 - mutations canal, prix, stock et permission couvertes par tests négatifs.
+
+# 2026-07-14 — Sale M6.2 : réservations, disponibilité et backorder
+
+- politique de réservation configurable par canal, avec déclencheur documenté par défaut au début du checkout ;
+- réservation atomique, renouvellement borné, confirmation, consommation, libération, annulation et expiration idempotente ;
+- backorder explicite et traçable, désactivé pour POS et retrait, avec délai annoncé pour la livraison ;
+- projection reconstruisible des états `deliverable`, `in_stock`, `backorder` et `unavailable` depuis Sale vers Business/Storefront ;
+- récupération Shop sans perte du panier en cas de conflit, vue opérateur dédiée et libération manuelle motivée/auditée ;
+- schémas canoniques reconstruits from scratch uniquement, sans migration.

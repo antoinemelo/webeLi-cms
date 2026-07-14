@@ -763,7 +763,8 @@ final class ServiceFactory
             $this->saleInventoryRepository(),
             new SaleStockReservationService($this->saleInventoryRepository()),
             new SaleStockMovementService($this->saleInventoryRepository()),
-            $this->saleEvents()
+            $this->saleEvents(),
+            $this->businessDatabaseConnection()
         ));
     }
 

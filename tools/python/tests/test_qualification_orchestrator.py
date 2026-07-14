@@ -124,6 +124,7 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("tools/python/qualification/omnichannel_gate.py", E2E_INPUTS)
         self.assertIn("tools/python/qualification/payment_provider_gate.py", E2E_INPUTS)
         self.assertIn("tools/python/qualification/inventory_ledger_gate.py", E2E_INPUTS)
+        self.assertIn("tools/python/qualification/reservation_availability_gate.py", E2E_INPUTS)
 
         class Parser:
             def __init__(self) -> None:

@@ -1196,6 +1196,62 @@ final class SaleAdminApiController
         return $this->ok(['movements' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.stock.movements.v1', $site, $languageCode);
     }
 
+    public function stockReservations(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.stock.read');
+        $result = $this->inventory->listReservations((int) $site['id'], $this->request->query, $this->limit(), $this->offset());
+        return $this->ok([
+            'reservations' => $result['items'],
+            'summary' => $result['summary'],
+            'policies' => $this->inventory->reservationPolicies((int) $site['id']),
+            'pagination' => $this->pagination($result),
+        ], 'admin.sale.stock.reservations.v1', $site, $languageCode);
+    }
+
+    public function renewStockReservation(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        try {
+            $payload = $this->payload();
+            $reservation = $this->inventory->renewReservation(
+                (int) $site['id'], $this->id($id), (string) ($payload['reservation_kind'] ?? 'physical'),
+                isset($payload['ttl_seconds']) ? (int) $payload['ttl_seconds'] : null
+            );
+            return $this->ok(['reservation' => $reservation], 'admin.sale.stock.reservations.renew.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function releaseStockReservation(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        try {
+            $payload = $this->payload();
+            $reason = trim((string) ($payload['reason'] ?? ''));
+            if ($reason === '') throw new SaleInventoryException('sale.stock_reason_required');
+            $reservation = $this->inventory->releaseReservationById(
+                (int) $site['id'], $this->id($id), (string) ($payload['reservation_kind'] ?? 'physical'),
+                (bool) ($payload['cancel'] ?? false), $reason, $this->actorId()
+            );
+            return $this->ok(['reservation' => $reservation], 'admin.sale.stock.reservations.release.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function expireStockReservations(): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        $expired = $this->inventory->expireDueReservations((int) $site['id']);
+        return $this->ok(['expired' => $expired], 'admin.sale.stock.reservations.expire.v1', $site, $languageCode);
+    }
+
+    public function updateStockReservationPolicy(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.settings.manage');
+        try {
+            $policy = $this->inventory->updateReservationPolicy((int) $site['id'], $this->id($id), $this->payload());
+            return $this->ok(['policy' => $policy], 'admin.sale.stock.reservations.policy.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
     public function transferStock(): Response
     {
         [$site,$languageCode]=$this->authorize('sale.stock.manage');

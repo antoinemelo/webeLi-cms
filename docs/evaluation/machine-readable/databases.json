@@ -1264,6 +1264,7 @@
       "sale_sandbox_payment_states",
       "sale_settings",
       "sale_state_transitions",
+      "sale_stock_backorders",
       "sale_stock_locations",
       "sale_stock_movements",
       "sale_stock_reservations",

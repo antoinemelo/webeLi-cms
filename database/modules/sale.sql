@@ -910,6 +910,12 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_locations_site_status
 CREATE TABLE IF NOT EXISTS sale_inventory_channel_configs (
     channel_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, stock_location_id INTEGER NOT NULL,
     availability_policy TEXT NOT NULL DEFAULT 'available' CHECK(availability_policy IN ('available','on_hand','allow_backorder')),
+    reservation_policy TEXT NOT NULL DEFAULT 'checkout_start' CHECK(reservation_policy IN ('checkout_start','order_placement','payment_authorization','payment_capture')),
+    reservation_ttl_seconds INTEGER NOT NULL DEFAULT 1800 CHECK(reservation_ttl_seconds BETWEEN 60 AND 86400),
+    reservation_renewal_window_seconds INTEGER NOT NULL DEFAULT 300 CHECK(reservation_renewal_window_seconds BETWEEN 30 AND 3600),
+    reservation_max_lifetime_seconds INTEGER NOT NULL DEFAULT 7200 CHECK(reservation_max_lifetime_seconds BETWEEN 300 AND 604800),
+    backorder_policy TEXT NOT NULL DEFAULT 'sellable' CHECK(backorder_policy IN ('disabled','sellable','enabled')),
+    show_exact_quantity INTEGER NOT NULL DEFAULT 0 CHECK(show_exact_quantity IN (0,1)),
     status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(channel_id) REFERENCES sale_channels(id) ON DELETE CASCADE,
     FOREIGN KEY(stock_location_id) REFERENCES sale_stock_locations(id) ON DELETE RESTRICT, CHECK(site_id>0)
@@ -959,12 +965,18 @@ CREATE TABLE IF NOT EXISTS sale_stock_reservations (
     order_id INTEGER,
     reservation_key TEXT NOT NULL,
     quantity INTEGER NOT NULL CHECK(quantity > 0),
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','confirmed','released','consumed','expired')),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','confirmed','released','consumed','expired','cancelled')),
     expires_at TEXT,
+    max_expires_at TEXT,
+    reservation_trigger TEXT NOT NULL DEFAULT 'checkout_start' CHECK(reservation_trigger IN ('checkout_start','order_placement','payment_authorization','payment_capture')),
+    fulfillment_mode TEXT NOT NULL DEFAULT 'delivery' CHECK(fulfillment_mode IN ('delivery','pickup','pos','admin')),
+    renewal_count INTEGER NOT NULL DEFAULT 0 CHECK(renewal_count >= 0),
+    renewed_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     confirmed_at TEXT,
     released_at TEXT,
+    cancelled_at TEXT,
     consumed_at TEXT,
     UNIQUE(inventory_item_id, reservation_key),
     FOREIGN KEY(inventory_item_id) REFERENCES sale_inventory_items(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -973,8 +985,11 @@ CREATE TABLE IF NOT EXISTS sale_stock_reservations (
     CHECK(cart_id IS NOT NULL OR order_id IS NOT NULL),
     CHECK(reservation_key = lower(trim(reservation_key)) AND reservation_key GLOB '[a-z0-9_.:-]*'),
     CHECK(status <> 'released' OR released_at IS NOT NULL),
+    CHECK(status <> 'expired' OR released_at IS NOT NULL),
+    CHECK(status <> 'cancelled' OR (released_at IS NOT NULL AND cancelled_at IS NOT NULL)),
     CHECK(status <> 'confirmed' OR confirmed_at IS NOT NULL),
-    CHECK(status <> 'consumed' OR consumed_at IS NOT NULL)
+    CHECK(status <> 'consumed' OR consumed_at IS NOT NULL),
+    CHECK(max_expires_at IS NULL OR expires_at IS NULL OR expires_at <= max_expires_at)
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_item_status
@@ -983,6 +998,49 @@ CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_cart
     ON sale_stock_reservations(cart_id, status);
 CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_order
     ON sale_stock_reservations(order_id, status);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_reservations_due
+    ON sale_stock_reservations(status, expires_at, id);
+
+CREATE TABLE IF NOT EXISTS sale_stock_backorders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    inventory_item_id INTEGER NOT NULL,
+    cart_id INTEGER,
+    order_id INTEGER,
+    backorder_key TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK(quantity > 0),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','confirmed','fulfilled','released','expired','cancelled')),
+    delivery_lead_time_days INTEGER NOT NULL CHECK(delivery_lead_time_days > 0),
+    reservation_trigger TEXT NOT NULL CHECK(reservation_trigger IN ('checkout_start','order_placement','payment_authorization','payment_capture')),
+    fulfillment_mode TEXT NOT NULL CHECK(fulfillment_mode IN ('delivery','pickup','pos','admin')),
+    expires_at TEXT,
+    max_expires_at TEXT,
+    renewal_count INTEGER NOT NULL DEFAULT 0 CHECK(renewal_count >= 0),
+    renewed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TEXT,
+    released_at TEXT,
+    release_reason TEXT,
+    released_by_iam_user_id INTEGER,
+    cancelled_at TEXT,
+    fulfilled_at TEXT,
+    UNIQUE(inventory_item_id, backorder_key),
+    FOREIGN KEY(inventory_item_id) REFERENCES sale_inventory_items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(cart_id) REFERENCES sale_carts(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CHECK(cart_id IS NOT NULL OR order_id IS NOT NULL),
+    CHECK(backorder_key=lower(trim(backorder_key)) AND backorder_key GLOB '[a-z0-9_.:-]*'),
+    CHECK(status <> 'confirmed' OR confirmed_at IS NOT NULL),
+    CHECK(status <> 'fulfilled' OR fulfilled_at IS NOT NULL),
+    CHECK(status NOT IN ('released','expired','cancelled') OR released_at IS NOT NULL),
+    CHECK(released_by_iam_user_id IS NULL OR released_by_iam_user_id > 0),
+    CHECK(status <> 'cancelled' OR cancelled_at IS NOT NULL),
+    CHECK(max_expires_at IS NULL OR expires_at IS NULL OR expires_at <= max_expires_at)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_backorders_item_status ON sale_stock_backorders(inventory_item_id,status,expires_at);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_backorders_cart ON sale_stock_backorders(cart_id,status);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_backorders_order ON sale_stock_backorders(order_id,status);
+CREATE INDEX IF NOT EXISTS idx_sale_stock_backorders_due ON sale_stock_backorders(status,expires_at,id);
 
 CREATE TABLE IF NOT EXISTS sale_stock_movements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1519,8 +1577,17 @@ INSERT OR IGNORE INTO sale_channel_checkout_configs(channel_id,site_id,cart_enab
 SELECT id,site_id,1,1,CASE WHEN channel_kind='storefront' THEN 1 ELSE 0 END,CASE WHEN status='active' THEN 'active' ELSE 'disabled' END FROM sale_channels;
 INSERT OR IGNORE INTO sale_stock_locations(site_id,code,name,location_type,status)
 SELECT DISTINCT site_id,'channel-default','Stock canal par défaut','main','active' FROM sale_channels;
-INSERT OR IGNORE INTO sale_inventory_channel_configs(channel_id,site_id,stock_location_id,availability_policy,status)
-SELECT c.id,c.site_id,l.id,'available',CASE WHEN c.status='active' THEN 'active' ELSE 'disabled' END FROM sale_channels c JOIN sale_stock_locations l ON l.site_id=c.site_id AND l.code='channel-default';
+INSERT OR IGNORE INTO sale_inventory_channel_configs(
+    channel_id,site_id,stock_location_id,availability_policy,reservation_policy,
+    reservation_ttl_seconds,reservation_renewal_window_seconds,reservation_max_lifetime_seconds,
+    backorder_policy,show_exact_quantity,status
+)
+SELECT c.id,c.site_id,l.id,'available',
+       CASE WHEN c.channel_kind='storefront' THEN 'checkout_start' ELSE 'order_placement' END,
+       CASE WHEN c.channel_kind='pos' THEN 300 ELSE 1800 END,300,7200,
+       CASE WHEN c.channel_kind='pos' THEN 'disabled' ELSE 'sellable' END,0,
+       CASE WHEN c.status='active' THEN 'active' ELSE 'disabled' END
+FROM sale_channels c JOIN sale_stock_locations l ON l.site_id=c.site_id AND l.code='channel-default';
 
 INSERT OR IGNORE INTO sale_payment_methods(site_id, channel_id, code, name, provider_key, method_type, status)
 SELECT c.site_id, c.id, m.code, m.name, m.provider_key, m.method_type, 'active'

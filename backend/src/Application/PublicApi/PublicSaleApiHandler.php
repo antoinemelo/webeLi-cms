@@ -553,14 +553,47 @@ final class PublicSaleApiHandler
             $payload['token'] = $token;
         }
         if ($includeLines) {
-            $payload['lines'] = array_map(fn(array $line): array => $this->linePayload($line), $cart['lines'] ?? []);
+            $reservationBySellable = [];
+            $database = $this->sale->database();
+            if ($database !== null) {
+                foreach ($database->all(
+                    "SELECT i.sellable_id,SUM(r.quantity) AS physical_quantity,MIN(r.expires_at) AS expires_at
+                     FROM sale_stock_reservations r INNER JOIN sale_inventory_items i ON i.id=r.inventory_item_id
+                     WHERE r.cart_id=? AND r.status IN ('active','confirmed') GROUP BY i.sellable_id",
+                    [(int) $cart['id']]
+                ) as $row) {
+                    $reservationBySellable[(int) $row['sellable_id']] = ['physical_quantity' => (int) $row['physical_quantity'], 'backorder_quantity' => 0, 'expires_at' => $row['expires_at']];
+                }
+                foreach ($database->all(
+                    "SELECT i.sellable_id,SUM(b.quantity) AS backorder_quantity,MAX(b.delivery_lead_time_days) AS delivery_lead_time_days,MIN(b.expires_at) AS expires_at
+                     FROM sale_stock_backorders b INNER JOIN sale_inventory_items i ON i.id=b.inventory_item_id
+                     WHERE b.cart_id=? AND b.status IN ('active','confirmed') GROUP BY i.sellable_id",
+                    [(int) $cart['id']]
+                ) as $row) {
+                    $key = (int) $row['sellable_id'];
+                    $reservationBySellable[$key] ??= ['physical_quantity' => 0, 'backorder_quantity' => 0, 'expires_at' => $row['expires_at']];
+                    $reservationBySellable[$key]['backorder_quantity'] = (int) $row['backorder_quantity'];
+                    $reservationBySellable[$key]['delivery_lead_time_days'] = (int) $row['delivery_lead_time_days'];
+                    $reservationBySellable[$key]['expires_at'] = $reservationBySellable[$key]['expires_at'] ?? $row['expires_at'];
+                }
+            }
+            $payload['lines'] = array_map(function (array $line) use ($reservationBySellable): array {
+                $sellableId = (int) ($line['sellable_id'] ?? $line['business_variant_id'] ?? 0);
+                return $this->linePayload($line, $reservationBySellable[$sellableId] ?? null);
+            }, $cart['lines'] ?? []);
         }
         return $payload;
     }
 
     /** @param array<string,mixed> $line @return array<string,mixed> */
-    private function linePayload(array $line): array
+    private function linePayload(array $line, ?array $reservation = null): array
     {
+        $state = (string) ($line['availability_state'] ?? 'available');
+        $availability = match ($state) {
+            'backorder' => ['status' => 'backorder', 'label' => 'Sur commande', 'is_orderable' => true],
+            'unavailable', 'contact_us' => ['status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false],
+            default => ['status' => 'in_stock', 'label' => 'En stock', 'is_orderable' => true],
+        };
         return [
             'id' => (int) ($line['id'] ?? 0),
             'business_product_id' => (int) ($line['business_product_id'] ?? 0),
@@ -584,7 +617,10 @@ final class PublicSaleApiHandler
             'options' => json_decode((string)($line['options_json']??'{}'),true)?:[],
             'personalization' => json_decode((string)($line['personalization_json']??'{}'),true)?:[],
             'fulfillment_class'=>(string)($line['fulfillment_class']??'shipping'),
-            'availability_state'=>(string)($line['availability_state']??'available'),
+            'availability_state'=>$state,
+            'availability'=>$availability + ['contract' => 'sale.inventory.availability.v1'],
+            'reservation'=>$reservation,
+            'recovery_options'=>['reduce_quantity','choose_variant','backorder','remove_line'],
             'calculation_version'=>(int)($line['calculation_version']??1),
             'previous_unit_price_minor'=>isset($line['previous_unit_price_minor'])?(int)$line['previous_unit_price_minor']:null,
             'price_changed_at'=>$line['price_changed_at']??null,
@@ -627,6 +663,13 @@ final class PublicSaleApiHandler
                 return Response::error(ErrorCode::PUBLIC_CONTENT_NOT_FOUND, 'Ressource Vente publique introuvable.', 404, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
             }
             return Response::validation(['sale' => [$e->getMessage()]], 'Donnée Vente invalide.', 422, ['Cache-Control' => 'no-store']);
+        }
+        if ($e instanceof SaleInventoryException && in_array($e->getMessage(), ['sale.stock_insufficient','sale.stock_reservation_expired','sale.stock_reservation_quantity_conflict'], true)) {
+            return Response::error(ErrorCode::VALIDATION_FAILED, 'La disponibilité a changé pour une variante du panier.', 409, $e->context() + [
+                'reason' => $e->getMessage(),
+                'recovery_options' => ['reduce_quantity','choose_variant','backorder','remove_line'],
+                'cart_preserved' => true,
+            ], ['Cache-Control' => 'no-store']);
         }
         if ($e instanceof SaleInventoryException || $e instanceof SalePaymentException || $e instanceof SaleBusinessException || $e instanceof InvalidArgumentException) {
             return Response::validation(['sale' => [$e->getMessage()]], 'Donnée Vente invalide.', 422, ['Cache-Control' => 'no-store']);

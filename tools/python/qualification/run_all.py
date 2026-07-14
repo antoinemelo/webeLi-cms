@@ -64,6 +64,7 @@ E2E_INPUTS = (
     "tools/python/qualification/omnichannel_gate.py",
     "tools/python/qualification/payment_provider_gate.py",
     "tools/python/qualification/inventory_ledger_gate.py",
+    "tools/python/qualification/reservation_availability_gate.py",
 )
 
 
@@ -150,6 +151,7 @@ def _artifact_hashes() -> dict[str, str]:
         "qualification_omnichannel": ROOT / "storage/qualification/omnichannel/latest.json",
         "payment_provider_interchangeability": ROOT / "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
         "inventory_ledger": ROOT / "docs/evaluation/machine-readable/sale-inventory-ledger.json",
+        "reservation_availability": ROOT / "docs/evaluation/machine-readable/sale-reservations-availability.json",
     }
     latest = _latest_archive()
     if latest is not None:
@@ -167,6 +169,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "gate E2E omnicanale storefront/POS", "source_steps": ["browser-e2e"], "release_commands": ["tools/cms.py e2e --use-built-assets --omnichannel-only"]},
         {"requirement": "gate M5 interchangeabilité providers", "source_steps": ["payment-provider-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/payment_provider_gate.py"]},
         {"requirement": "gate M6 ledger stock Sale", "source_steps": ["inventory-ledger-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/inventory_ledger_gate.py"]},
+        {"requirement": "gate M6.2 réservations et disponibilité", "source_steps": ["reservation-availability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/reservation_availability_gate.py", "backend/bin/console worker:reservations"]},
         {"requirement": "catalogue, panier, commande, paiement local, stock", "source_steps": ["tests", "performance-baseline"], "release_commands": []},
         {"requirement": "backup/restore et intégrité SQLite", "source_steps": ["backup-restore", "runtime-integrity"], "release_commands": ["tools/cms.py backup", "tools/cms.py backup --restore"]},
         {"requirement": "documentation OpenAPI SDK", "source_steps": ["docs-generate", "docs-check", "validate-core"], "release_commands": ["tools/cms.py docs check"]},
@@ -264,6 +267,19 @@ def steps() -> tuple[Step, ...]:
                 "tools/python/qualification/inventory_ledger_gate.py",
                 "tools/php/tests/unit/sale_inventory_reconciliation_test.php",
                 "frontend/admin-vue/tests/e2e/sale-stock-ledger.spec.ts",
+            ),
+            timeout=60,
+        ),
+        Step(
+            "reservation-availability-gate",
+            "Gate M6.2 réservations et disponibilité",
+            ("complete", "release"),
+            (py, "tools/python/qualification/reservation_availability_gate.py"),
+            files=(
+                "docs/evaluation/machine-readable/sale-reservations-availability.json",
+                "tools/python/qualification/reservation_availability_gate.py",
+                "tools/php/tests/unit/sale_reservation_lifecycle_test.php",
+                "frontend/admin-vue/tests/e2e/sale-reservations.spec.ts",
             ),
             timeout=60,
         ),

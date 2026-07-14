@@ -139,6 +139,12 @@ final class SaleGuestCheckoutService
             } catch (\InvalidArgumentException) {
                 throw new SaleValidationException('sale.checkout.product_unavailable');
             }
+            $availability = (string) ($snapshot['availability']['status'] ?? 'unavailable');
+            $snapshot['availability_state'] = match ($availability) {
+                'in_stock', 'deliverable' => 'available',
+                'backorder' => 'backorder',
+                default => 'unavailable',
+            };
             $amounts = $this->pricing->lineAmounts($snapshot);
             $changed = $changed || (int) $amounts['unit_price_minor'] !== (int) $line['unit_price_minor']
                 || (int) $amounts['tax_rate_basis_points'] !== (int) $line['tax_rate_basis_points'];
