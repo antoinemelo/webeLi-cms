@@ -517,24 +517,24 @@ onMounted(loadBootstrap);
         <select v-if="!session || session.status !== 'open'" v-model.number="selectedRegisterId" class="form-select form-select-sm" :aria-label="t('sale.pos.register')">
           <option v-for="register in bootstrap.registers" :key="Number(register.id)" :value="Number(register.id)">{{ register.name }}</option>
         </select>
-        <input v-if="!session || session.status !== 'open'" v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('sale.pos.openingCash')">
+        <input v-if="!session || session.status !== 'open'" v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('sale.pos.openingCash')" :placeholder="t('sale.pos.openingCash')">
         <button v-if="!session || session.status !== 'open'" class="btn btn-primary btn-sm" :disabled="saving" @click="openSession">{{ t('sale.pos.open') }}</button>
         <template v-else>
-          <input v-model.number="countedCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('sale.pos.countedCash')">
-          <input v-model="closingJustification" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.differenceJustification')">
+          <input v-model.number="countedCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('sale.pos.countedCash')" :placeholder="t('sale.pos.countedCash')">
+          <input v-model="closingJustification" class="form-control form-control-sm" type="text" :aria-label="t('sale.pos.differenceJustification')" :placeholder="t('sale.pos.differenceJustification')">
           <button class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">{{ t('sale.pos.close') }}</button>
         </template>
       </div>
     </header>
 
     <div v-if="session?.status === 'open'" class="sale-pos__cash-movement mb-3">
-      <select v-model="cashMovementType" class="form-select form-select-sm">
+      <select v-model="cashMovementType" class="form-select form-select-sm" :aria-label="t('sale.pos.cashMovementType')">
         <option value="cash_in">{{ t('sale.pos.cashIn') }}</option>
         <option value="cash_out">{{ t('sale.pos.cashOut') }}</option>
         <option value="correction">{{ t('sale.pos.cashCorrection') }}</option>
       </select>
-      <input v-model.number="cashMovementAmount" class="form-control form-control-sm" type="number" min="0" step="0.01" :placeholder="t('common.amount')">
-      <input v-model="cashMovementReason" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.cashReason')">
+      <input v-model.number="cashMovementAmount" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('common.amount')" :placeholder="t('common.amount')">
+      <input v-model="cashMovementReason" class="form-control form-control-sm" type="text" :aria-label="t('sale.pos.cashReason')" :placeholder="t('sale.pos.cashReason')">
       <button class="btn btn-outline-primary btn-sm" :disabled="saving || cashMovementAmount <= 0 || !cashMovementReason.trim()" @click="recordCashMovement">{{ t('common.add') }}</button>
     </div>
 
@@ -544,8 +544,8 @@ onMounted(loadBootstrap);
     <div class="sale-pos__layout">
       <main class="sale-pos__catalog">
         <div class="sale-pos__search">
-          <input v-model="query" class="form-control" type="search" :placeholder="t('sale.pos.productPlaceholder')" @keyup.enter="search">
-          <input v-model="barcode" class="form-control" type="search" :placeholder="t('sale.pos.barcodePlaceholder')" @keyup.enter="search">
+          <input v-model="query" class="form-control" type="search" :aria-label="t('sale.pos.productPlaceholder')" :placeholder="t('sale.pos.productPlaceholder')" @keyup.enter="search">
+          <input v-model="barcode" class="form-control" type="search" :aria-label="t('sale.pos.barcodePlaceholder')" :placeholder="t('sale.pos.barcodePlaceholder')" @keyup.enter="search">
           <button class="btn btn-outline-primary" :disabled="loading" @click="search">{{ t('common.search') }}</button>
         </div>
 
@@ -610,7 +610,7 @@ onMounted(loadBootstrap);
               <path d="M14.5 3a1 1 0 0 1-1 1H13l-.8 9.6A2 2 0 0 1 10.2 15H5.8a2 2 0 0 1-2-1.4L3 4h-.5a1 1 0 0 1 0-2H5V1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h2.5a1 1 0 0 1 1 1M6 2h4V1H6zM4 4l.8 9.5a1 1 0 0 0 1 .5h4.4a1 1 0 0 0 1-.5L12 4z"/>
             </svg>
           </button>
-          <input class="form-control form-control-sm sale-pos__qty" type="number" min="1" :value="line.quantity" @change="updateLineFromInput(line, $event)">
+          <input class="form-control form-control-sm sale-pos__qty" type="number" min="1" :aria-label="t('sale.pos.quantity')" :value="line.quantity" @change="updateLineFromInput(line, $event)">
           <b>{{ money(line.line_total_minor) }}</b>
         </div>
 
@@ -636,15 +636,15 @@ onMounted(loadBootstrap);
         </div>
 
         <div class="sale-pos__adjustment">
-          <select v-model="adjustmentMode" class="form-select form-select-sm" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
+          <select v-model="adjustmentMode" class="form-select form-select-sm" :aria-label="t('sale.pos.adjustmentMode')" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
             <option value="amount">{{ t('common.amount') }}</option>
             <option value="percent">%</option>
           </select>
-          <input v-model.number="adjustmentValue" class="form-control form-control-sm" type="number" step="0.01" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
+          <input v-model.number="adjustmentValue" class="form-control form-control-sm" type="number" step="0.01" :aria-label="t('sale.pos.adjustmentValue')" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
         </div>
 
         <label class="form-label mt-3">{{ t('sale.pos.payment') }}</label>
-        <select v-model="paymentMethod" class="form-select">
+        <select v-model="paymentMethod" class="form-select" :aria-label="t('sale.pos.payment')">
           <option v-for="method in paymentMethods" :key="method.id" :value="method.code">{{ method.name }}</option>
         </select>
 
@@ -659,9 +659,9 @@ onMounted(loadBootstrap);
           <pre>{{ receiptText }}</pre>
           <div class="sale-pos__receipt-actions">
             <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">{{ t('common.print') }}</button>
-            <input v-model="reprintReason" class="form-control form-control-sm" type="text" :placeholder="t('sale.pos.reprintReason')">
+            <input v-model="reprintReason" class="form-control form-control-sm" type="text" :aria-label="t('sale.pos.reprintReason')" :placeholder="t('sale.pos.reprintReason')">
             <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="saving || !receiptOrderId" @click="reprintReceipt">{{ t('sale.pos.reprint') }}</button>
-            <input v-model="receiptEmail" class="form-control form-control-sm" type="email" :placeholder="t('sale.pos.emailPlaceholder')">
+            <input v-model="receiptEmail" class="form-control form-control-sm" type="email" :aria-label="t('sale.pos.emailPlaceholder')" :placeholder="t('sale.pos.emailPlaceholder')">
             <button class="btn btn-outline-primary btn-sm" type="button" :disabled="receiptSending || !receiptOrderId" @click="emailReceipt">{{ receiptSending ? t('common.sending') : t('common.send') }}</button>
           </div>
         </section>

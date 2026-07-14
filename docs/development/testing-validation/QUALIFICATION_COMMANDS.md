@@ -11,6 +11,7 @@ source_paths:
   - tools/python/qualification/run_all.py
   - tools/python/qualification/performance_baseline.py
   - tools/python/qualification/omnichannel_gate.py
+  - tools/python/qualification/usability_commerce_gate.py
   - tools/python/commands/qualify.py
   - tools/admin.py
 owners:
@@ -67,6 +68,7 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Reconstruction from scratch | instance isolée Playwright et baseline performance | `tools/cms.py rebuild` explicite |
 | Smoke HTTP / E2E | Playwright isolé et installation neuve | `tools/cms.py smoke` |
 | Gate omnicanale storefront/POS | Playwright isolé, preuve JSON validée | commande ciblée disponible depuis le dépôt source |
+| Utilisabilité Commerce M5–M7 | revue statique + sept captures Playwright, accessibilité et preuve JSON | `tools/python/qualification/usability_commerce_gate.py` et exécution E2E ciblée |
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
 | Reconstruction et réconciliation stock M6.5 | `stock-reconstruction-gate` + scénario PHP + sauvegarde/restauration | `tools/python/qualification/stock_reconstruction_gate.py` et diagnostic CLI |
 | Identité client M7.1 | `customer-identity-gate` + tests IAM/CRM/Sale + Playwright | `tools/python/qualification/customer_identity_gate.py` |
@@ -116,6 +118,17 @@ python3 tools/cms.py e2e --use-built-assets --omnichannel-only
 ```
 
 Le détail des deux parcours, des comparaisons croisées et des mutations négatives est documenté dans [Gate E2E omnicanale storefront et POS](OMNICHANNEL_E2E_GATE.md).
+
+## Gate d’utilisabilité Commerce M5–M7
+
+Les profils `complete` et `release` valident la matrice statique des rôles, tâches, états et heuristiques. Le profil `release` exige en plus le rapport runtime et les sept captures hachées produits par Playwright. La commande ciblée reconstruit une instance jetable depuis les schémas canoniques et n’emploie aucune migration :
+
+```bash
+python3 tools/python/qualification/usability_commerce_gate.py --static-only
+python3 tools/cms.py e2e --use-built-assets --usability-only
+```
+
+Le rapport runtime est écrit dans `storage/qualification/usability/latest.json`, avec les captures sous `storage/qualification/usability/captures/`. Il ne contient ni saisie client ni donnée de paiement. La méthode, la revue structurée, les recommandations P0/P1/P2 et ses limites sont documentées dans [Gate d’utilisabilité Commerce M5–M7](../../evaluation/usability-commerce-foundations.md).
 
 ## Gate M6.5 reconstruction du stock
 

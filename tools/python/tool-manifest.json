@@ -205,6 +205,7 @@
         "tools/python/qualification/reservation_availability_gate.py",
         "tools/python/qualification/run_all.py",
         "tools/python/qualification/stock_reconstruction_gate.py",
+        "tools/python/qualification/usability_commerce_gate.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
         "tools/python/tests/test_business_module_smoke.py",
@@ -1932,8 +1933,10 @@
         "docs/development/testing-validation/CRM_GUEST_ORDER_GATE.md",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_crm_guest_order_gate.py"
+        "tools/python/tests/test_crm_guest_order_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2128,6 +2131,24 @@
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_stock_reconstruction_gate.py",
         "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/usability_commerce_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/usability-commerce-foundations.md",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_usability_commerce_gate.py"
       ],
       "replacement": null,
       "status": "active",
@@ -2387,7 +2408,9 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
@@ -2714,6 +2737,18 @@
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_usability_commerce_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,

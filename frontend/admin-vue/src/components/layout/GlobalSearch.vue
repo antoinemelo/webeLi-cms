@@ -297,6 +297,7 @@ onBeforeUnmount(() => {
       <input
         v-model="query"
         type="search"
+        :aria-label="placeholder"
         :placeholder="placeholder"
         autocomplete="off"
         @focus="onFocus"

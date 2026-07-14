@@ -1,0 +1,90 @@
+{
+  "format_version": 1,
+  "gate": "commerce-foundations.usability.m5-m7.v1",
+  "status": "passed",
+  "charter": "02_CHARTE_UX_PRODUIT.md",
+  "roles": {
+    "mobile_customer": {
+      "tasks": {
+        "find_product": "passed", "open_product": "passed", "add_product": "passed",
+        "understand_availability": "passed", "guest_checkout": "passed", "payment_success": "passed",
+        "payment_decline_recovery": "passed", "confirmation": "passed", "refund_followup": "passed"
+      },
+      "evidence": ["commerce-usability-gate.spec.ts", "omnichannel-release-gate.spec.ts", "payment-provider-interchangeability.spec.ts"]
+    },
+    "pos_operator": {
+      "tasks": {
+        "open_session": "passed", "scan_or_search": "passed", "optional_customer": "passed", "checkout": "passed",
+        "terminal_error_recovery": "passed", "print_receipt": "passed", "return": "passed", "close_session": "passed"
+      },
+      "evidence": ["SalePosView.vue", "sale-pos-omnichannel.spec.ts", "omnichannel-release-gate.spec.ts"]
+    },
+    "operations": {
+      "tasks": {
+        "blocked_reservation": "passed", "partial_fulfillment": "passed", "pickup": "passed",
+        "transfer": "passed", "inventory": "passed", "reconcile_difference": "passed"
+      },
+      "evidence": ["SaleOperationsView.vue", "sale-reservations.spec.ts", "sale-stock-reconstruction.spec.ts"]
+    },
+    "customer_service_finance": {
+      "tasks": {
+        "find_order": "passed", "understand_payment": "passed", "partial_refund": "passed",
+        "resolve_reconciliation": "passed", "navigate_to_crm": "passed"
+      },
+      "evidence": ["SaleView.vue", "omnichannel-release-gate.spec.ts", "sale-stock-reconstruction.spec.ts"]
+    },
+    "crm": {
+      "tasks": {
+        "understand_timeline": "passed", "review_duplicate": "passed", "verify_provenance": "passed",
+        "create_segment": "passed", "control_consent": "passed"
+      },
+      "evidence": ["RelationTimeline.vue", "sale-identity-review.spec.ts", "business-crm-smoke.spec.ts"]
+    }
+  },
+  "controls": {
+    "desktop_mobile": true, "keyboard_only": true, "visible_focus": true, "accessible_labels": true,
+    "contrast_and_non_color_errors": true, "fr_en": true, "complete_ui_states": true,
+    "input_preserved_after_error": true, "refresh_recovery": true, "no_dead_end": true,
+    "visible_next_action": true, "coherent_object_links": true, "progressive_disclosure": true,
+    "destructive_preview": true, "pii_free_telemetry": true
+  },
+  "states": {
+    "loading": ["POS bootstrap", "relations loading", "checkout aria-busy"],
+    "empty": ["operations queue", "CRM timeline", "segment preview"],
+    "success": ["checkout confirmation", "receipt", "reconciliation repaired"],
+    "recoverable_error": ["payment refusal", "POS quantity rollback", "checkout availability recovery"],
+    "blocking_error": ["invalid payment proof", "stock unavailable"],
+    "partial": ["partial fulfillment", "partial refund", "partial stock preparation"],
+    "permission_denied": ["anonymous POS", "read-only identity review"],
+    "unavailable": ["unavailable sellable", "expired reservation"]
+  },
+  "screens": {
+    "shop_mobile": {"review_status": "reviewed", "capture": "shop-mobile.png", "scores": {"clarity": 2, "consistency": 2, "error_prevention": 2, "recovery": 2, "efficiency": 2, "accessibility": 2, "mobile_readability": 2, "status_explainability": 2}},
+    "product_mobile": {"review_status": "reviewed", "capture": "product-mobile.png", "scores": {"clarity": 3, "consistency": 3, "error_prevention": 3, "recovery": 2, "efficiency": 3, "accessibility": 3, "mobile_readability": 3, "status_explainability": 3}},
+    "checkout_mobile": {"review_status": "reviewed", "capture": "checkout-mobile.png", "scores": {"clarity": 3, "consistency": 3, "error_prevention": 3, "recovery": 3, "efficiency": 2, "accessibility": 3, "mobile_readability": 3, "status_explainability": 3}},
+    "pos_desktop": {"review_status": "reviewed", "capture": "pos-desktop.png", "scores": {"clarity": 2, "consistency": 3, "error_prevention": 3, "recovery": 3, "efficiency": 3, "accessibility": 2, "mobile_readability": 2, "status_explainability": 3}},
+    "operations_mobile": {"review_status": "reviewed", "capture": "operations-mobile.png", "scores": {"clarity": 3, "consistency": 3, "error_prevention": 3, "recovery": 3, "efficiency": 2, "accessibility": 2, "mobile_readability": 3, "status_explainability": 3}},
+    "finance_desktop": {"review_status": "reviewed", "capture": "finance-desktop.png", "scores": {"clarity": 3, "consistency": 3, "error_prevention": 3, "recovery": 3, "efficiency": 2, "accessibility": 2, "mobile_readability": 2, "status_explainability": 3}},
+    "crm_mobile": {"review_status": "reviewed", "capture": "crm-mobile.png", "scores": {"clarity": 3, "consistency": 3, "error_prevention": 3, "recovery": 3, "efficiency": 2, "accessibility": 2, "mobile_readability": 3, "status_explainability": 3}}
+  },
+  "instrumentation": {
+    "contract": "commerce.usability.v1",
+    "collection_default": "disabled",
+    "payload_mode": "allowlist_only",
+    "transport": "browser_custom_event",
+    "events": ["task_success", "task_abandon", "task_error", "task_recovery", "task_duration", "action_cancelled"],
+    "allowed_fields": ["contract", "event", "journey", "role", "outcome", "duration_bucket", "error_kind", "recovery_kind", "cancelled", "viewport", "language"],
+    "forbidden_fields": ["card", "address", "email", "phone", "free_text", "name", "order_number", "contact_id", "customer_id"]
+  },
+  "blockers": [],
+  "recommendations": {
+    "P0": [],
+    "P1": ["Organiser des tests avec utilisateurs réels avant la gate Shop finale M8.", "Finaliser dans M8 la présentation mobile des filtres et des cartes de la liste Shop."],
+    "P2": ["Activer uniquement sur consentement une agrégation des événements anonymes.", "Mesurer les durées médianes sur un échantillon représentatif."]
+  },
+  "limitations": [
+    "Cette gate automatisée et sa revue structurée ne remplacent pas des tests avec de vrais utilisateurs.",
+    "Les captures prouvent les états de référence sur Chromium; elles ne couvrent pas toutes les combinaisons appareil et lecteur d’écran."
+  ],
+  "security": {"contains_pii": false, "contains_secret": false, "contains_card_data": false}
+}

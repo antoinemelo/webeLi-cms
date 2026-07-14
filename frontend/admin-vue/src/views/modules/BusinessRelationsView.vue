@@ -1104,7 +1104,7 @@ onBeforeUnmount(() => {
 }
 
 .relations-menu-panel button:disabled {
-  color: #98a2b3;
+  color: #475467;
 }
 
 .relations-filter-panel {

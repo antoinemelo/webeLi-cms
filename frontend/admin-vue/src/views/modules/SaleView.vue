@@ -829,12 +829,12 @@ onMounted(load);
         </details>
         <button class="btn btn-outline-primary btn-sm" type="button" @click="showBankQueue">{{ t('sale.payments.bankQueue') }}</button>
         <form class="sale-toolbar" @submit.prevent="applyPaymentFilters">
-          <input v-model="paymentSearch" class="form-control" type="search" :placeholder="t('sale.payments.searchPlaceholder')">
-          <select v-model="paymentFilter.status" class="select">
+          <input v-model="paymentSearch" class="form-control" type="search" :aria-label="t('sale.payments.searchPlaceholder')" :placeholder="t('sale.payments.searchPlaceholder')">
+          <select v-model="paymentFilter.status" class="select" :aria-label="t('common.status')">
             <option value="">{{ t('sale.payments.allStatuses') }}</option>
             <option v-for="status in ['requires_payment','requires_action','authorized','partially_captured','captured','cancelled','failed','expired']" :key="status" :value="status">{{ statusLabel(status) }}</option>
           </select>
-          <input v-model="paymentFilter.provider" class="form-control" type="text" :placeholder="t('sale.payments.provider')">
+          <input v-model="paymentFilter.provider" class="form-control" type="text" :aria-label="t('sale.payments.provider')" :placeholder="t('sale.payments.provider')">
           <button class="btn btn-primary btn-sm" type="submit">{{ t('common.filters') }}</button>
           <button class="btn btn-outline-secondary btn-sm" type="button" @click="clearPaymentFilters">{{ t('common.reset') }}</button>
         </form>

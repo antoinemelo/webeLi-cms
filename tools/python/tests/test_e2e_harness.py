@@ -10,6 +10,10 @@ from tools.python.operations.testing import run_playwright_e2e as harness
 
 
 class E2EHarnessTest(unittest.TestCase):
+    def test_targeted_e2e_gates_are_mutually_exclusive(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "mutuellement exclusifs"):
+            harness.run_playwright({}, headed=False, omnichannel_only=True, usability_only=True)
+
     def test_partial_external_configuration_is_rejected(self) -> None:
         with patch.dict(
             harness.os.environ,

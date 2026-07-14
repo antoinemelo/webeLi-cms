@@ -23,10 +23,12 @@ ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.python.qualification.omnichannel_gate import validate_report_file
+from tools.python.qualification.usability_commerce_gate import validate_report_files as validate_usability_reports
 
 FRONTEND = ROOT / "frontend" / "admin-vue"
 PLAYWRIGHT_CLI = FRONTEND / "node_modules" / "@playwright" / "test" / "cli.js"
 OMNICHANNEL_REPORT = ROOT / "storage/qualification/omnichannel/latest.json"
+USABILITY_REPORT = ROOT / "storage/qualification/usability/latest.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,6 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-instance", action="store_true", help="Conserve l’instance temporaire et affiche son chemin pour diagnostic.")
     parser.add_argument("--use-built-assets", action="store_true", help="Utilise les assets déjà compilés (réservé à la qualification après son étape de build).")
     parser.add_argument("--omnichannel-only", action="store_true", help="Exécute uniquement la gate storefront/POS.")
+    parser.add_argument("--usability-only", action="store_true", help="Exécute uniquement la gate d’utilisabilité Commerce M5–M7.")
     return parser.parse_args()
 
 
@@ -351,32 +354,51 @@ def require_playwright_chromium() -> None:
         )
 
 
-def run_playwright(environment: dict[str, str], *, headed: bool, omnichannel_only: bool = False) -> int:
+def run_playwright(
+    environment: dict[str, str], *, headed: bool, omnichannel_only: bool = False, usability_only: bool = False,
+) -> int:
+    if omnichannel_only and usability_only:
+        raise RuntimeError("--omnichannel-only et --usability-only sont mutuellement exclusifs.")
     node = require_executable("node")
     if not PLAYWRIGHT_CLI.is_file():
         raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
     require_playwright_chromium()
-    report = Path(environment.get("E2E_OMNICHANNEL_REPORT", str(OMNICHANNEL_REPORT))).resolve()
-    report.parent.mkdir(parents=True, exist_ok=True)
-    report.unlink(missing_ok=True)
-    environment["E2E_OMNICHANNEL_REPORT"] = str(report)
+    omnichannel_report = Path(environment.get("E2E_OMNICHANNEL_REPORT", str(OMNICHANNEL_REPORT))).resolve()
+    usability_report = Path(environment.get("E2E_USABILITY_REPORT", str(USABILITY_REPORT))).resolve()
+    for report in (omnichannel_report, usability_report):
+        report.parent.mkdir(parents=True, exist_ok=True)
+    if not usability_only:
+        omnichannel_report.unlink(missing_ok=True)
+        environment["E2E_OMNICHANNEL_REPORT"] = str(omnichannel_report)
+    if not omnichannel_only:
+        usability_report.unlink(missing_ok=True)
+        environment["E2E_USABILITY_REPORT"] = str(usability_report)
     command = [node, str(PLAYWRIGHT_CLI), "test"]
     if omnichannel_only:
         command.append("tests/e2e/omnichannel-release-gate.spec.ts")
+    elif usability_only:
+        command.append("tests/e2e/commerce-usability-gate.spec.ts")
     if headed:
         command.append("--headed")
     returncode = subprocess.run(command, cwd=FRONTEND, env=environment, timeout=900).returncode
     if returncode != 0:
         return returncode
-    _payload, errors = validate_report_file(report, ROOT)
-    if errors:
-        print("Gate E2E omnicanale échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
-        return 1
-    print(f"Gate E2E omnicanale validée: {report}")
+    if not usability_only:
+        _payload, errors = validate_report_file(omnichannel_report, ROOT)
+        if errors:
+            print("Gate E2E omnicanale échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
+            return 1
+        print(f"Gate E2E omnicanale validée: {omnichannel_report}")
+    if not omnichannel_only:
+        errors = validate_usability_reports(runtime_path=usability_report, root=ROOT)
+        if errors:
+            print("Gate E2E d’utilisabilité Commerce échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
+            return 1
+        print(f"Gate E2E d’utilisabilité Commerce validée: {usability_report}")
     return 0
 
 
-def run_external(*, headed: bool, omnichannel_only: bool = False) -> int | None:
+def run_external(*, headed: bool, omnichannel_only: bool = False, usability_only: bool = False) -> int | None:
     names = ("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD")
     provided = [name for name in names if os.environ.get(name, "").strip()]
     if not provided:
@@ -385,10 +407,13 @@ def run_external(*, headed: bool, omnichannel_only: bool = False) -> int | None:
         missing = ", ".join(name for name in names if name not in provided)
         raise RuntimeError(f"Configuration E2E externe incomplète; variables manquantes: {missing}")
     print("E2E: utilisation de l’environnement externe configuré.")
-    return run_playwright(os.environ.copy(), headed=headed, omnichannel_only=omnichannel_only)
+    return run_playwright(os.environ.copy(), headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only)
 
 
-def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool, omnichannel_only: bool = False) -> int:
+def run_isolated(
+    *, headed: bool, keep_instance: bool, use_built_assets: bool,
+    omnichannel_only: bool = False, usability_only: bool = False,
+) -> int:
     php = require_executable("php")
     require_executable("node")
     email = "e2e-admin@example.test"
@@ -441,7 +466,9 @@ def run_isolated(*, headed: bool, keep_instance: bool, use_built_assets: bool, o
             "E2E_WEBHOOK_URL": webhook_url,
         })
         print(f"E2E: CMS {base_url}; récepteur webhook {webhook_url}")
-        return run_playwright(test_env, headed=headed, omnichannel_only=omnichannel_only)
+        return run_playwright(
+            test_env, headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only,
+        )
     finally:
         if receiver is not None and receiver_started:
             receiver.shutdown()
@@ -471,12 +498,15 @@ def main() -> int:
         if not PLAYWRIGHT_CLI.is_file():
             raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
         return subprocess.run([node, str(PLAYWRIGHT_CLI), "install", "chromium"], cwd=FRONTEND).returncode
-    external = run_external(headed=args.headed, omnichannel_only=args.omnichannel_only)
+    external = run_external(
+        headed=args.headed, omnichannel_only=args.omnichannel_only, usability_only=args.usability_only,
+    )
     return external if external is not None else run_isolated(
         headed=args.headed,
         keep_instance=args.keep_instance,
         use_built_assets=args.use_built_assets,
         omnichannel_only=args.omnichannel_only,
+        usability_only=args.usability_only,
     )
 
 
