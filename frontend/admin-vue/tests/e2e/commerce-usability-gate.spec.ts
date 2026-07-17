@@ -204,11 +204,11 @@ test.describe('Gate d’utilisabilité Commerce M5–M7', () => {
     screens.checkout_mobile = await capture(page, captureDirectory, 'checkout-mobile.png', { width: 390, height: 844 });
 
     await page.goto(cmsPath('/admin/app/sale/pos'));
-    await expect(page.getByRole('heading', { name: 'Vente' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ventes' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Ouvrir', exact: true })).toBeVisible();
     screens.pos_desktop = await capture(page, captureDirectory, 'pos-desktop.png', { width: 1440, height: 1000 });
 
-    await page.goto(cmsPath('/admin/app/sale/operations'));
+    await page.goto(cmsPath('/admin/app/sale/advanced/logistics'));
     await expect(page.getByRole('heading', { name: 'Exécution logistique' })).toBeVisible();
     screens.operations_mobile = await capture(page, captureDirectory, 'operations-mobile.png', { width: 390, height: 844 });
 
@@ -217,7 +217,7 @@ test.describe('Gate d’utilisabilité Commerce M5–M7', () => {
     screens.finance_desktop = await capture(page, captureDirectory, 'finance-desktop.png', { width: 1440, height: 1000 });
 
     await page.goto(cmsPath('/admin/app/business'));
-    await page.getByRole('button', { name: 'Relations' }).click();
+    await page.getByRole('link', { name: 'Relations', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Relations' })).toBeVisible();
     screens.crm_mobile = await capture(page, captureDirectory, 'crm-mobile.png', { width: 390, height: 844 });
 

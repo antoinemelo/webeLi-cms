@@ -28,19 +28,24 @@ test.describe('admin i18n FR/EN', () => {
     test.setTimeout(60_000);
     await signIn(page);
     await page.goto(cmsPath('/admin/app/sale'));
-    await expect(page.getByRole('heading', { name: 'Vente' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Commandes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ventes' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Commandes' })).toBeVisible();
 
     await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Sale' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Orders' })).toBeVisible();
-    await expect(page.getByText('Today sales')).toBeVisible();
-    await expect(page.locator('body')).not.toContainText('Ventes du jour');
+    await expect(page.getByRole('heading', { name: 'Sales' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Orders' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'To process' })).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('À traiter');
 
+    await page.goto(cmsPath('/admin/app/business/relations'));
+    await expect(page.getByRole('button', { name: 'All', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Customers', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Suppliers', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Follow up', exact: true })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 820 });
     await page.getByRole('button', { name: 'Open menu' }).click();
     await expect(page.locator('#adminMobileNavigation')).toContainText('Modules');
-    await expect(page.locator('#adminMobileNavigation')).toContainText('Sale');
+    await expect(page.locator('#adminMobileNavigation')).toContainText('Sales');
   });
 });

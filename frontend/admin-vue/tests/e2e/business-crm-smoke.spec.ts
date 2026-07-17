@@ -127,7 +127,13 @@ async function openRelations(page: Page): Promise<void> {
     const url = new URL(response.url());
     return url.pathname.endsWith('/admin/api/business/relations');
   }, { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Relations' }).click();
+  const mobileNavigation = page.getByRole('combobox', { name: 'Navigation principale Opérations' });
+  if ((page.viewportSize()?.width ?? 1280) <= 680) {
+    await mobileNavigation.waitFor({ state: 'visible' });
+    await mobileNavigation.selectOption('/business/relations');
+  } else {
+    await page.getByRole('link', { name: 'Relations', exact: true }).click();
+  }
   expect((await responsePromise).ok(), 'Initial relations request succeeds').toBeTruthy();
   await expect(page.getByText('Chargement des relations...')).toBeHidden();
 }
@@ -215,7 +221,7 @@ test.describe('business CRM UX smoke', () => {
     }, 'admin.business.contacts.consents.show.v1', 'consent withdrawal provenance');
 
     await page.goto(cmsPath('/admin/app/business'));
-    await expect(page.getByRole('button', { name: 'Relations' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Relations', exact: true })).toBeVisible();
     await openRelations(page);
 
     await expect(page.getByRole('heading', { name: 'Relations' })).toBeVisible();
@@ -331,30 +337,29 @@ test.describe('business CRM UX smoke', () => {
     expect(horizontalOverflow, 'mobile CRM viewport has no page-level horizontal overflow').toBeFalsy();
   });
 
-  test('creates an explainable segment, handles an empty rule and stays localized FR/EN', async ({ page }) => {
+  test('creates an explainable audience, handles an empty rule and stays localized FR/EN', async ({ page }) => {
     const context = await jsonEnvelope<AdminContextData>(await page.request.get(cmsPath('/admin/api/context')), 'admin.context.v1', 'admin context');
     expect(context.data.capabilities['business.segment.read']).toBeTruthy();
     expect(context.data.capabilities['business.segment.manage']).toBeTruthy();
-    await page.goto(cmsPath('/admin/app/business'));
-    await page.getByRole('button', { name: 'Segments' }).click();
+    await page.goto(cmsPath('/admin/app/business/offers-marketing'));
+    await page.getByRole('link', { name: 'Audiences' }).click();
     const panel = page.getByTestId('crm-segments-panel');
-    await expect(panel.getByRole('heading', { name: 'Segmentation CRM' })).toBeVisible();
+    await expect(panel.getByRole('heading', { name: 'Audiences' })).toBeVisible();
 
     await panel.getByRole('button', { name: 'Aperçu' }).click();
     await expect(panel).toContainText('Choisissez un critère, un opérateur et une valeur.');
-    await panel.getByLabel('Nom du segment').fill(`E2E Segment ${Date.now()}`);
+    await panel.getByLabel('Nom de l’audience').fill(`E2E Audience ${Date.now()}`);
     await panel.getByLabel('Critère').selectOption('product_id');
     await panel.getByLabel('Opérateur').selectOption('contains');
     await panel.getByLabel('Valeur').fill('999999999');
     await panel.getByRole('button', { name: 'Aperçu' }).click();
     await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.');
-    await panel.getByRole('button', { name: 'Créer le segment' }).click();
-    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Segment' }).first()).toBeVisible();
+    await panel.getByRole('button', { name: 'Créer l’audience' }).click();
+    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Audience' }).first()).toBeVisible();
 
     await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
     await page.reload();
-    await page.getByRole('button', { name: 'Segments' }).click();
-    await expect(page.getByRole('heading', { name: 'CRM segmentation' })).toBeVisible();
-    await expect(page.getByText('Create explainable groups from projected activities without changing consent.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Audiences' })).toBeVisible();
+    await expect(page.getByText(/never constitutes marketing consent/i)).toBeVisible();
   });
 });

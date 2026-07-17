@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
@@ -675,8 +674,7 @@ watch(() => route.query.tab, (tab) => {
 </script>
 
 <template>
-  <PageHeader :title="t('configuration.title')" :intro="t('configuration.intro')" />
-  <ContextualHelpLink id="settings.configuration" class="mb-3" />
+  <PageHeader :title="t('configuration.title')" :intro="t('configuration.intro')" help-id="settings.configuration" />
   <ApiFeedback :error="error" :message="success" />
 
   <section v-if="loading" class="card p-4 text-center text-muted">{{ t('configuration.loading') }}</section>

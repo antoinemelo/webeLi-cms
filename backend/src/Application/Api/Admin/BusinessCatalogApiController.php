@@ -22,6 +22,8 @@ use App\Modules\Business\Services\CatalogProductService;
 use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
 use App\Modules\Business\Services\BusinessProductCompletenessService;
+use App\Modules\Sale\Exceptions\SaleInventoryException;
+use App\Modules\Sale\Services\SaleInventoryService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
@@ -49,6 +51,7 @@ final class BusinessCatalogApiController
         private readonly CatalogPdfService $pdf,
         private readonly CatalogPricingService $pricing,
         private readonly ?BusinessProductCompletenessService $completeness = null,
+        private readonly ?SaleInventoryService $saleInventory = null,
     ) {}
 
     public function exportCatalogCsv(): Response
@@ -459,6 +462,9 @@ final class BusinessCatalogApiController
     {
         [$site, $languageCode] = $this->authorize('business.catalog.read');
         try {
+            if ($this->saleInventory !== null) {
+                return Response::success($this->saleStockPayload((int) $site['id'], $this->id($id)), 'admin.business.catalog.variants.stock.v1', $this->meta($site, $languageCode));
+            }
             return Response::success([
                 'stock' => $this->stockService->stock((int) $site['id'], $this->id($id)),
                 'movements' => $this->stockService->movements((int) $site['id'], ['variant_id' => $this->id($id)], 20, 0)['items'],
@@ -473,6 +479,24 @@ final class BusinessCatalogApiController
         [$site, $languageCode] = $this->authorize('business.catalog.stock.write');
         $payload = $this->payload();
         try {
+            if ($this->saleInventory !== null) {
+                $variant = $this->variants->findById($this->id($id), true);
+                if (!$variant || (int) ($variant['site_id'] ?? 0) !== (int) $site['id']) return $this->notFound('Variante introuvable.', $id);
+                $plan = $this->stockMovementPlan((int) $site['id'], $this->id($id), $payload);
+                if (($payload['preview'] ?? false) === true) {
+                    return Response::success(['preview' => $plan], 'admin.business.catalog.stock_movements.store.v1', $this->meta($site, $languageCode));
+                }
+                $item = $this->saleInventory->adjust(
+                    (int) $site['id'], $this->id($id), (int) $plan['quantity_delta'], (string) ($variant['sku'] ?? ''),
+                    (string) $plan['reason'], $this->actorId(), (int) $plan['stock_location_id'], (string) $plan['ledger_movement_type'],
+                    isset($payload['idempotency_key']) ? trim((string) $payload['idempotency_key']) : null,
+                );
+                $this->recalculateCompleteness((int) ($variant['product_id'] ?? 0));
+                return Response::success($this->saleStockPayload((int) $site['id'], $this->id($id)) + [
+                    'movement' => ['inventory_item_id' => (int) ($item['id'] ?? 0), 'movement_type' => $plan['ledger_movement_type'], 'quantity' => $plan['quantity_delta'], 'reason' => $plan['reason']],
+                    'message' => 'Mouvement de stock audité enregistré dans le ledger Vente.',
+                ], 'admin.business.catalog.stock_movements.store.v1', $this->meta($site, $languageCode), 201);
+            }
             $result = $this->stockService->createMovement(
                 (int) $site['id'],
                 $this->id($id),
@@ -490,7 +514,7 @@ final class BusinessCatalogApiController
                 'variant' => $result['variant'],
                 'message' => 'Mouvement de stock enregistré.',
             ], 'admin.business.catalog.stock_movements.store.v1', $this->meta($site, $languageCode), 201);
-        } catch (InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|SaleInventoryException $e) {
             return $this->validation($e);
         }
     }
@@ -500,6 +524,58 @@ final class BusinessCatalogApiController
         [$site, $languageCode] = $this->authorize('business.catalog.read');
         $result = $this->stockService->movements((int) $site['id'], $this->stockMovementFilters(), $this->limit(), $this->offset());
         return Response::success(['movements' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.catalog.stock_movements.index.v1', $this->meta($site, $languageCode));
+    }
+
+    public function inventory(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.read');
+        if ($this->saleInventory === null) return Response::success(['items' => [], 'locations' => [], 'summary' => []], 'admin.business.catalog.inventory.index.v1', $this->meta($site, $languageCode));
+        $filters = [];
+        foreach (['q', 'location_id', 'alert'] as $key) if (array_key_exists($key, $this->request->query)) $filters[$key] = $this->request->query[$key];
+        $first = $this->saleInventory->listItems((int) $site['id'], 100, 0, $filters);
+        $items = $first['items'];
+        for ($offset = 100; $offset < (int) $first['total']; $offset += 100) {
+            $page = $this->saleInventory->listItems((int) $site['id'], 100, $offset, $filters);
+            array_push($items, ...$page['items']);
+        }
+        $canReadPurchase = $this->canReadPurchasePrices((int) $site['id']);
+        $summary = [
+            'on_hand_quantity' => 0, 'reserved_quantity' => 0, 'available_quantity' => 0, 'item_count' => count($items),
+            'physical_purchase_value_minor' => 0, 'reserved_sale_value_minor' => 0, 'available_sale_value_minor' => 0, 'currency' => 'CHF',
+        ];
+        foreach ($items as &$item) {
+            $onHand = (float) ($item['on_hand_quantity'] ?? 0);
+            $reserved = (float) ($item['reserved_quantity'] ?? 0);
+            $available = (float) ($item['available_quantity'] ?? 0);
+            $summary['on_hand_quantity'] += $onHand;
+            $summary['reserved_quantity'] += $reserved;
+            $summary['available_quantity'] += $available;
+            try {
+                $variant = $this->variants->findById((int) ($item['business_variant_id'] ?? 0), true);
+                if ($variant === null || (int) ($variant['site_id'] ?? 0) !== (int) $site['id']) continue;
+                $prices = $this->pricing->pricingSummary((int) $variant['id']);
+                $currency = strtoupper((string) ($prices['currency'] ?? 'CHF'));
+                $saleMinor = $this->catalogMoneyMinor($prices['final_sale_price'] ?? $prices['regular_sale_price'] ?? 0);
+                $purchaseMinor = $canReadPurchase ? $this->catalogMoneyMinor($prices['regular_purchase_price'] ?? 0) : null;
+                $item['currency'] = $currency;
+                $item['unit_sale_price_minor'] = $saleMinor;
+                $item['unit_purchase_price_minor'] = $purchaseMinor;
+                $item['physical_purchase_value_minor'] = $purchaseMinor === null ? null : (int) round($onHand * $purchaseMinor);
+                $item['reserved_sale_value_minor'] = (int) round($reserved * $saleMinor);
+                $item['available_sale_value_minor'] = (int) round($available * $saleMinor);
+                $summary['currency'] = $currency;
+                if ($purchaseMinor !== null) $summary['physical_purchase_value_minor'] += $item['physical_purchase_value_minor'];
+                $summary['reserved_sale_value_minor'] += $item['reserved_sale_value_minor'];
+                $summary['available_sale_value_minor'] += $item['available_sale_value_minor'];
+            } catch (Throwable) {
+                $item['valuation_unavailable'] = true;
+            }
+        }
+        unset($item);
+        return Response::success([
+            'items' => $items, 'locations' => $this->saleInventory->locations((int) $site['id']),
+            'summary' => $summary, 'pagination' => ['limit' => count($items), 'offset' => 0, 'total' => count($items), 'has_more' => false],
+        ], 'admin.business.catalog.inventory.index.v1', $this->meta($site, $languageCode));
     }
 
     public function discounts(): Response
@@ -515,6 +591,18 @@ final class BusinessCatalogApiController
         try {
             $discount = $this->discountService->create((int) $site['id'], $this->payload(), $this->actorId());
             return Response::success(['discount' => $discount, 'message' => 'Réduction créée.'], 'admin.business.catalog.discounts.show.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function previewDiscount(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.catalog.discounts.write');
+        try {
+            $payload = $this->payload();
+            $payload['include_audience_count'] = $this->auth->hasPermission('business.segment.read', (int) $site['id']);
+            return Response::success(['preview' => $this->discountService->preview((int) $site['id'], $payload)], 'admin.business.catalog.discounts.preview.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
         }
@@ -639,7 +727,75 @@ final class BusinessCatalogApiController
         return AdminApiContract::meta($site, $languageCode);
     }
 
-    private function validation(InvalidArgumentException $e): Response
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    private function stockMovementPlan(int $siteId, int $variantId, array $payload): array
+    {
+        $reason = trim((string) ($payload['reason'] ?? ''));
+        if ($reason === '') throw new InvalidArgumentException('business.catalog.stock_reason_required');
+        $state = $this->saleInventory?->operationalVariantStock($siteId, $variantId) ?? ['items' => [], 'locations' => []];
+        $locationId = (int) ($payload['stock_location_id'] ?? 0);
+        if ($locationId < 1) $locationId = (int) ($state['locations'][0]['id'] ?? 0);
+        if ($locationId < 1) throw new InvalidArgumentException('business.catalog.stock_location_required');
+        $current = null;
+        foreach ($state['items'] as $item) if ((int) ($item['stock_location_id'] ?? 0) === $locationId) { $current = $item; break; }
+        $onHand = (int) ($current['on_hand_quantity'] ?? 0);
+        $engaged = (int) ($current['reserved_quantity'] ?? 0);
+        $quantity = (int) ($payload['quantity'] ?? 0);
+        $action = (string) ($payload['action'] ?? $payload['movement_type'] ?? 'correction');
+        $action = match ($action) {
+            'purchase', 'receipt' => 'receipt',
+            'loss', 'breakage', 'issue' => 'loss',
+            'return' => 'return',
+            'inventory', 'count', 'inventory_adjustment' => 'count',
+            'adjustment', 'correction' => 'correction',
+            default => throw new InvalidArgumentException('business.catalog.stock_action_invalid'),
+        };
+        $delta = match ($action) {
+            'receipt', 'return' => abs($quantity),
+            'loss' => -abs($quantity),
+            'count' => $quantity - $onHand,
+            default => $quantity,
+        };
+        if ($delta === 0) throw new InvalidArgumentException('business.catalog.stock_no_change');
+        $afterOnHand = $onHand + $delta;
+        $afterAvailable = $afterOnHand - $engaged;
+        return [
+            'action' => $action,
+            'stock_location_id' => $locationId,
+            'quantity_entered' => $quantity,
+            'quantity_delta' => $delta,
+            'ledger_movement_type' => match ($action) { 'receipt' => 'receipt', 'return' => 'return', 'loss' => 'issue', 'count' => 'inventory_adjustment', default => 'correction' },
+            'reason' => $reason,
+            'before' => ['on_hand' => $onHand, 'engaged' => $engaged, 'available_to_sell' => $onHand - $engaged],
+            'after' => ['on_hand' => $afterOnHand, 'engaged' => $engaged, 'available_to_sell' => $afterAvailable],
+            'blocked' => $afterAvailable < 0,
+            'explanation' => $engaged > 0 ? $engaged . ' unité(s) sont engagées par des commandes ou réservations.' : 'Aucune quantité engagée sur cet emplacement.',
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function saleStockPayload(int $siteId, int $variantId): array
+    {
+        $state = $this->saleInventory?->operationalVariantStock($siteId, $variantId) ?? ['items' => [], 'locations' => [], 'movements' => [], 'incoming_quantity' => 0, 'blocked_quantity' => 0];
+        $onHand = array_sum(array_map(static fn(array $item): int => (int) ($item['on_hand_quantity'] ?? 0), $state['items']));
+        $engaged = array_sum(array_map(static fn(array $item): int => (int) ($item['reserved_quantity'] ?? 0), $state['items']));
+        return [
+            'stock' => [
+                'variant_id' => $variantId,
+                'stock_quantity' => $onHand,
+                'stock_reserved' => $engaged,
+                'available_quantity' => max(0, $onHand - $engaged),
+                'incoming_quantity' => (int) $state['incoming_quantity'],
+                'blocked_quantity' => (int) $state['blocked_quantity'],
+                'source' => 'sale_ledger',
+            ],
+            'locations' => $state['locations'],
+            'location_stock' => $state['items'],
+            'movements' => $state['movements'],
+        ];
+    }
+
+    private function validation(Throwable $e): Response
     {
         return Response::validation(['business_catalog' => [$e->getMessage()]], 'Donnée catalogue invalide.');
     }
@@ -820,6 +976,13 @@ final class BusinessCatalogApiController
     private function safeComputed(array $summary): array
     {
         return $this->canReadPurchasePrices($this->currentSiteId()) ? $summary : $this->pricing->publicPricingPayload($summary);
+    }
+
+    private function catalogMoneyMinor(mixed $value): int
+    {
+        $normalized = str_replace(["\u{00A0}", "'", ' '], '', trim((string) $value));
+        $normalized = str_replace(',', '.', $normalized);
+        return (int) round(((float) $normalized) * 100);
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */

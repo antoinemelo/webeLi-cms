@@ -13,9 +13,11 @@ use App\Application\Api\Admin\CapabilityApiController;
 use App\Application\Api\Admin\BlueprintApiController;
 use App\Application\Api\Admin\BusinessCatalogApiController;
 use App\Application\Api\Admin\BusinessCrmApiController;
+use App\Application\Api\Admin\BusinessRelation360ApiController;
 use App\Application\Api\Admin\BusinessMessagingApiController;
 use App\Application\Api\Admin\BusinessMailingApiController;
 use App\Application\Api\Admin\BusinessPimApiController;
+use App\Application\Api\Admin\SaleEcommerceAdminApiController;
 use App\Application\Api\Admin\ContentEntryApiController;
 use App\Application\Api\Admin\ContentRevisionApiController;
 use App\Application\Api\Admin\ConfigurationApiController;
@@ -320,7 +322,7 @@ final class App
                 new PublicCookieConsentApiHandler($this->request, $services->cookies(), $services->sites()),
                 new PublicCatalogApiHandler($this->request, $services->sites(), $services->businessPublicCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles(), $services->storefrontProjections()),
                 new PosCatalogApiHandler($this->request, $services->sites(), $services->businessPosCatalog(), $services->businessCatalogPricing(), $services->businessProductBundles()),
-                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver(), $services->saleOnlinePayments(), $services->salePaymentMethods()),
+                new PublicSaleApiHandler($this->request, $services->sites(), $services->saleDatabaseConnection(), $services->saleChannels(), $services->saleCarts(), $services->saleOrders(), $services->saleCartService(), $services->saleCheckout(), $services->saleGuestCheckout(), $services->saleCustomerAccounts(), $services->saleFulfillment(), $services->salesChannelResolver(), $services->saleOnlinePayments(), $services->salePaymentMethods(), $services->saleDeferredPayments()),
                 new PublicCustomerAccountApiHandler($this->request, $services->sites(), $services->saleCustomerAccounts()),
             ),
             UpdateManifestController::class => new UpdateManifestController(new VersionInventoryService($services->coreDatabase(), $this->config['updates'] ?? [], $this->config['modules'] ?? [], $this->config['databases'] ?? [])),
@@ -364,6 +366,16 @@ final class App
                 $services->iamAdmin(),
                 $services->saleCrmActivities(),
                 $services->businessSegmentation(),
+                $services->businessOperationsDashboard(),
+            ),
+            BusinessRelation360ApiController::class => new BusinessRelation360ApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->businessRelation360(),
+                $services->formSubmissionRelationProjection(),
+                $services->formRelationAddressTokens(),
             ),
             BusinessCatalogApiController::class => new BusinessCatalogApiController(
                 $this->request,
@@ -384,6 +396,7 @@ final class App
                 $services->businessCatalogPdf(),
                 $services->businessCatalogPricing(),
                 $services->businessProductCompleteness(),
+                $services->saleInventory(),
             ),
             BusinessPimApiController::class => new BusinessPimApiController(
                 $this->request,
@@ -451,6 +464,17 @@ final class App
                 $services->saleOnlinePayments(),
                 $services->salePosService(),
                 $services->salePaymentMethods(),
+                $services->saleOrderDossier(),
+                $services->saleOrderDocuments(),
+                $services->saleDeferredPayments(),
+            ),
+            SaleEcommerceAdminApiController::class => new SaleEcommerceAdminApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->coreDatabase(),
+                $services->saleDatabaseConnection(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),

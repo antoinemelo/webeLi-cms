@@ -62,6 +62,8 @@ try {
     foreach (['admin.business.pim.product_assets.index.v1', 'admin.business.pim.product_bundle.show.v1', 'admin.business.pim.bundle_components.store.v1', 'admin.business.pim.tax_classes.index.v1', 'admin.business.pim.tax_classes.store.v1', 'admin.business.pim.tax_classes.show.v1', 'admin.business.pim.tax_classes.delete.v1', 'admin.business.pim.attributes.index.v1', 'admin.business.pim.sellable_snapshot.show.v1', 'admin.business.pim.offers.bulk_update.v1', 'admin.business.pim.offers.export.v1', 'admin.business.pim.offers.import.preview.v1', 'admin.business.pim.offers.import.apply.v1'] as $contractKey) {
         $h->assertTrue(in_array($contractKey, $contractKeys, true), 'Business provider declares PIM contract ' . $contractKey);
     }
+    $projectionContract = array_values(array_filter($provider->apiContracts(), static fn(array $contract): bool => ($contract['key'] ?? '') === 'admin.business.pim.storefront_projections.rebuild.v1'))[0] ?? [];
+    $h->assertSame('business.advanced_tools.manage', $projectionContract['permission'] ?? null, 'storefront projection contract advertises its dedicated advanced guard');
 
     $core = new Database($coreDir . '/core.sqlite', 1000);
     $core->run("CREATE TABLE sites(id INTEGER PRIMARY KEY, site_key TEXT NOT NULL, name TEXT NOT NULL, default_language_code TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1)");
@@ -74,18 +76,19 @@ try {
     $core->run("INSERT INTO site_languages(site_id, language_code, is_default, is_active, sort_order) VALUES(1, 'fr', 1, 1, 1)");
 
     $iam = new Database($iamPath, 1000);
-    $iam->run("INSERT INTO iam_users(id,email,email_normalized,password_hash,is_active,login_mode) VALUES(1,'pim-admin@example.test','pim-admin@example.test','x',1,'password'),(2,'pim-reader@example.test','pim-reader@example.test','x',1,'password'),(3,'pim-empty@example.test','pim-empty@example.test','x',1,'password')");
-    $iam->run("INSERT INTO iam_roles(id,role_key,name) VALUES(1,'pim_admin','PIM admin'),(2,'pim_reader','PIM reader'),(3,'pim_empty','PIM empty')");
-    $permissions = ['business.catalog.read', 'business.catalog.write', 'business.catalog.purchase_prices.read'];
+    $iam->run("INSERT INTO iam_users(id,email,email_normalized,password_hash,is_active,login_mode) VALUES(1,'pim-admin@example.test','pim-admin@example.test','x',1,'password'),(2,'pim-reader@example.test','pim-reader@example.test','x',1,'password'),(3,'pim-empty@example.test','pim-empty@example.test','x',1,'password'),(4,'pim-operator@example.test','pim-operator@example.test','x',1,'password')");
+    $iam->run("INSERT INTO iam_roles(id,role_key,name) VALUES(1,'pim_admin','PIM admin'),(2,'pim_reader','PIM reader'),(3,'pim_empty','PIM empty'),(4,'pim_operator','PIM operator')");
+    $permissions = ['business.catalog.read', 'business.catalog.write', 'business.catalog.purchase_prices.read', 'business.advanced_tools.manage'];
     foreach ($permissions as $index => $permission) {
         $iam->run('INSERT INTO iam_permissions(id, permission_key, name) VALUES(?, ?, ?)', [$index + 1, $permission, $permission]);
     }
-    foreach ([1, 2, 3] as $permissionId) {
+    foreach (range(1, count($permissions)) as $permissionId) {
         $iam->run('INSERT INTO iam_role_permissions(role_id, permission_id) VALUES(1, ?)', [$permissionId]);
     }
     $iam->run('INSERT INTO iam_role_permissions(role_id, permission_id) VALUES(2, 1)');
-    $iam->run('INSERT INTO iam_user_site_roles(user_id, site_id, role_id) VALUES(1,1,1),(2,1,2),(3,1,3)');
-    foreach ([1, 2, 3] as $userId) {
+    $iam->run('INSERT INTO iam_role_permissions(role_id, permission_id) VALUES(4, 1),(4, 2)');
+    $iam->run('INSERT INTO iam_user_site_roles(user_id, site_id, role_id) VALUES(1,1,1),(2,1,2),(3,1,3),(4,1,4)');
+    foreach ([1, 2, 3, 4] as $userId) {
         $token = 'business-pim-api-test-token-' . $userId;
         $iam->run(
             'INSERT INTO iam_sessions(user_id, session_token_hash, ip_address, user_agent, last_seen_at, expires_at, created_at)
@@ -464,6 +467,17 @@ try {
     $h->assertSame('archived', $archivedDiscountOffer['status'] ?? null, 'offers bulk archive changes discount status');
     $h->assertTrue(trim((string) ($archivedBundleOffer['archived_at'] ?? '')) !== '', 'offers bulk archive sets bundle archived timestamp');
     $h->assertTrue(trim((string) ($archivedDiscountOffer['archived_at'] ?? '')) !== '', 'offers bulk archive sets discount archived timestamp');
+
+    $h->expectException(
+        fn() => $controllerFor(4, 'POST', '/admin/api/business/pim/storefront-projections/rebuild', [], ['locale' => 'fr'])->rebuildStorefrontProjections(),
+        ApiException::class,
+        'ordinary catalog operator cannot rebuild storefront projections without the dedicated advanced-tools permission'
+    );
+    $h->assertSame(
+        422,
+        $controllerFor(1, 'POST', '/admin/api/business/pim/storefront-projections/rebuild', [], ['locale' => 'fr'])->rebuildStorefrontProjections()->status(),
+        'advanced catalog administrator passes both permission guards before the optional projection service validation'
+    );
 
     $h->expectException(
         fn() => $controllerFor(3, 'GET', '/admin/api/business/pim/attributes')->attributes(),

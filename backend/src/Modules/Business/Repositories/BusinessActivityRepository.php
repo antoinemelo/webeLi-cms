@@ -59,7 +59,8 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             $this->shareActivity($siteId, $type, $id),
             $this->messageActivity($siteId, $type, $id),
             $this->consentActivity($siteId, $type, $id),
-            $this->saleActivity($siteId, $type, $id)
+            $this->saleActivity($siteId, $type, $id),
+            $this->formActivity($siteId, $type, $id)
         );
         usort($items, static fn(array $a, array $b): int => strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')) ?: strcmp((string) $b['id'], (string) $a['id']));
         $q = strtolower(trim((string) ($filters['q'] ?? '')));
@@ -207,6 +208,24 @@ final class BusinessActivityRepository extends BusinessRepositoryBase
             ['site_id' => $siteId, 'id' => $id]
         );
         return array_map(fn(array $row): array => $this->activityRow($row, 'sale'), $rows);
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function formActivity(int $siteId, string $type, int $id): array
+    {
+        if (!$this->database()->tableExists('crm_form_submission_activities')) return [];
+        $where = $type === 'company' ? 'related_company_id = :id' : 'related_contact_id = :id';
+        $rows = $this->database()->all(
+            "SELECT id,site_id,linked_by_iam_user_id AS actor_iam_user_id,
+                    'crm_form_submission_activity' AS entity_type,submission_id AS entity_id,
+                    related_company_id,related_contact_id,'business.form.submitted' AS action,safe_summary AS summary,
+                    json_object('form_id',form_id,'form_key',form_key,'submission_id',submission_id,'status',submission_status,'resolution_strategy',resolution_strategy,'retention_until',retention_until) AS metadata_json,
+                    occurred_at AS created_at
+             FROM crm_form_submission_activities WHERE site_id=:site_id AND {$where}
+             ORDER BY occurred_at DESC,id DESC LIMIT 200",
+            ['site_id' => $siteId, 'id' => $id]
+        );
+        return array_map(fn(array $row): array => $this->activityRow($row, 'form'), $rows);
     }
 
     private function companyIdForContact(int $siteId, int $contactId): ?int

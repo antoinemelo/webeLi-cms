@@ -30,6 +30,16 @@ $h->assertSame(81, $taxIncluded['line_tax_minor'], 'tax included extracts tax fr
 $h->assertSame(1000, $taxIncluded['taxable_amount_minor'], 'tax included computes net taxable amount');
 $h->assertSame(1081, $taxIncluded['line_total_minor'], 'tax included does not add tax twice');
 
+$taxIncludedAtTwentyNine = $pricing->lineTotals($pricing->lineAmounts([
+    'regular_unit_price_minor' => 2900,
+    'unit_price_minor' => 2900,
+    'tax_rate_basis_points' => 810,
+    'tax_included' => true,
+]), 1);
+$h->assertSame(217, $taxIncludedAtTwentyNine['line_tax_minor'], '29.00 tax included contains 2.17 tax at 8.1 percent');
+$h->assertSame(2683, $taxIncludedAtTwentyNine['taxable_amount_minor'], '29.00 tax included has a 26.83 taxable base');
+$h->assertSame(2900, $taxIncludedAtTwentyNine['line_total_minor'], 'tax included keeps the displayed 29.00 total');
+
 $taxExcluded = $pricing->lineTotals($pricing->lineAmounts([
     'regular_unit_price_minor' => 1000,
     'unit_price_minor' => 1000,

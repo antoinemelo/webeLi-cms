@@ -2,7 +2,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 import BlueprintStructureTree from '@/components/blueprints/BlueprintStructureTree.vue';
@@ -609,8 +608,7 @@ watch(() => context.siteId, async (_next, previous) => {
 </script>
 
 <template>
-  <PageHeader :eyebrow="t('blueprints.eyebrow')" :title="t('blueprints.title')" :intro="t('blueprints.intro')" />
-  <ContextualHelpLink id="system.blueprints" class="mb-3" />
+  <PageHeader :eyebrow="t('blueprints.eyebrow')" :title="t('blueprints.title')" :intro="t('blueprints.intro')" help-id="system.blueprints" />
   <div v-if="!canRead" class="card empty-state"><h2>{{ t('blueprints.accessDenied') }}</h2><p class="muted" v-html="t('blueprints.accessDeniedHelp', { permission: '<code>blueprints.read</code>' })"></p></div>
   <template v-else>
     <section class="blueprint-stats-grid mb-3">

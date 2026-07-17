@@ -24,6 +24,7 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Sequence
 
@@ -155,6 +156,9 @@ def print_intro() -> None:
     print("• Reconstruction explicite des bases de données")
     print("  1 — opération indépendante, destructive, réservée au développement/test/récupération")
     print()
+    print("• Synchronisation du dépôt source")
+    print("  12 — revue de l’état Git, commit explicite puis push optionnel")
+    print()
     print("Aucun profil de qualification ne reconstruit les bases de données.")
     print()
 
@@ -173,6 +177,7 @@ def print_menu() -> None:
     print(" 9. Créer un clone local d'instance")
     print("10. Mettre à jour les bases existantes — backup + migrations")
     print("11. Mettre à jour une instance client depuis une release")
+    print("12. Créer un commit Git et/ou pousser les commits locaux")
     print(" 0. Quitter")
     print()
 
@@ -301,46 +306,93 @@ def print_git_status() -> None:
         print(result.stdout.rstrip())
 
 
-def maybe_push_after_ftp() -> None:
+def git_current_branch() -> str | None:
+    branch = git_output("branch", "--show-current")
+    return branch or None
+
+
+def git_remotes() -> list[str]:
+    output = git_output("remote")
+    return [remote.strip() for remote in (output or "").splitlines() if remote.strip()]
+
+
+def run_git_sync() -> int:
     if not is_git_repository():
         print()
-        print("Git non détecté dans ce répertoire : commit/push ignorés.")
-        return
+        print("Git non détecté dans ce répertoire : commit/push impossibles.")
+        return 0
 
     print()
-    print("Synchronisation Git optionnelle")
-    print("-" * 31)
+    print("Commit et synchronisation Git")
+    print("-" * 29)
     print_git_status()
 
     if git_has_changes():
-        print(
-            "Changements locaux détectés : push automatique désactivé. "
-            "admin.py ne crée aucun commit ; créez un commit ciblé après revue du diff."
-        )
-        return
+        print()
+        print("Les changements ci-dessus seront tous indexés avec git add -A.")
+        if confirm_optional("Indexer tous ces changements et créer un commit Git"):
+            default_message = f"Mise à jour DEC CMS {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            message = prompt_text("Message de commit", default_message)
+            if not message:
+                print("Commit Git annulé : aucun message fourni.")
+                return 0
+
+            add_result = git_command("add", "-A", capture=False)
+            if add_result.returncode != 0:
+                print("Commit annulé : impossible d'ajouter les fichiers à l'index Git.")
+                return add_result.returncode or 1
+
+            commit_result = git_command("commit", "-m", message, capture=False)
+            if commit_result.returncode != 0:
+                print("Commit non créé. Vérifiez l'état Git avant de pousser.")
+                return commit_result.returncode or 1
+            print("Commit Git créé.")
+        else:
+            print("Commit Git ignoré. Les changements non commités ne seront pas poussés.")
+    else:
+        print("Aucun changement local à commiter.")
 
     upstream = git_upstream()
     if upstream is None:
-        print("Aucune branche upstream configurée : push automatique non proposé.")
-        return
+        branch = git_current_branch()
+        remotes = git_remotes()
+        remote = "origin" if "origin" in remotes else (remotes[0] if len(remotes) == 1 else None)
+        if not branch:
+            print("Branche Git détachée ou introuvable : push non proposé.")
+            return 0
+        if remote is None:
+            print("Aucun remote Git non ambigu disponible : push non proposé.")
+            return 0
+        if not confirm_optional(f"Aucune upstream configurée. Publier {branch} vers {remote}/{branch}"):
+            print("Push Git ignoré.")
+            return 0
+        push_result = git_command("push", "--set-upstream", remote, branch, capture=False)
+        if push_result.returncode == 0:
+            print("Push Git terminé et upstream configurée.")
+            return 0
+        print("Push Git en échec. Vérifiez le remote et vos droits d'accès.")
+        return push_result.returncode or 1
 
     ahead = git_ahead_count()
     if ahead is None:
         print("Impossible de calculer les commits en avance : push non proposé.")
-        return
+        return 0
     if ahead <= 0:
         print(f"Aucun commit à pousser vers {upstream}.")
-        return
+        return 0
 
     print(f"{ahead} commit(s) local(aux) en avance sur {upstream}.")
     if confirm_optional(f"Pousser maintenant vers {upstream}"):
         push_result = git_command("push", capture=False)
         if push_result.returncode == 0:
             print("Push Git terminé.")
+            return 0
         else:
             print("Push Git en échec. Relancez manuellement après correction.")
+            return push_result.returncode or 1
     else:
         print("Push Git ignoré.")
+    return 0
 
 
 def prompt_text(label: str, default: str = "") -> str:
@@ -548,7 +600,9 @@ def run_action(action: Action) -> int:
     if result.returncode == 0:
         print(f"\nOK — {action.title}")
         if action.key == "6":
-            maybe_push_after_ftp()
+            git_result = run_git_sync()
+            if git_result != 0:
+                return git_result
     elif result.returncode == 2:
         print(
             "\nINCOMPLET — certains contrôles n'ont pas pu être exécutés. "
@@ -603,6 +657,12 @@ def main() -> int:
 
         if choice == "11":
             last_returncode = run_instance_update()
+            if not pause_before_menu():
+                return last_returncode
+            continue
+
+        if choice == "12":
+            last_returncode = run_git_sync()
             if not pause_before_menu():
                 return last_returncode
             continue

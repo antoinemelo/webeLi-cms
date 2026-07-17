@@ -57,6 +57,7 @@ generated: true
 | `audit.read` |
 | `blueprints.manage` |
 | `blueprints.read` |
+| `business.advanced_tools.manage` |
 | `business.catalog.discounts.write` |
 | `business.catalog.prices.read` |
 | `business.catalog.prices.write` |
@@ -123,6 +124,7 @@ generated: true
 | `relations.restore` |
 | `roles.manage` |
 | `roles.read` |
+| `sale.advanced_tools.manage` |
 | `sale.cash.manage` |
 | `sale.channels.manage` |
 | `sale.customer_accounts.manage` |

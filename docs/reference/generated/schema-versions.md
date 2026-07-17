@@ -33,6 +33,8 @@ generated: true
 | `database/migrations/business/0010_sales_channel_configs.sql` | `0010_sales_channel_configs` |
 | `database/migrations/business/0011_sellables_storefront_invalidation.sql` | `0011_sellables_storefront_invalidation` |
 | `database/migrations/business/0012_sellable_lifecycle_triggers.sql` | `0012_sellable_lifecycle_triggers` |
+| `database/migrations/business/0013_relation_360.sql` | `0013_relation_360` |
+| `database/migrations/business/0014_stock_ledger_immutability.sql` | `0014_stock_ledger_immutability` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
@@ -64,3 +66,5 @@ generated: true
 | `database/migrations/sale/0008_sales_channel_contract.sql` | `0008_sales_channel_contract` |
 | `database/migrations/sale/0009_sellable_references.sql` | `0009_sellable_references` |
 | `database/migrations/sale/0010_cart_aggregate_contract.sql` | `0010_cart_aggregate_contract` |
+| `database/migrations/sale/0011_order_dossier_documents.sql` | `0011_order_dossier_documents` |
+| `database/migrations/sale/0012_stock_ledger_immutability.sql` | `0012_stock_ledger_immutability` |

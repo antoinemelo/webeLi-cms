@@ -35,6 +35,7 @@ use App\Application\VisualEditing\SaveVisualField;
 use App\Application\VisualEditing\VisualEditingMapBuilder;
 use App\Application\Frontend\ResolvePublicRoute;
 use App\Application\Forms\FormRepository;
+use App\Application\Forms\FormRelationAddressToken;
 use App\Application\Cookies\CookieConsentRepository;
 use App\Application\Iam\UserReferenceValidator;
 use App\Application\Iam\IamAdminRepository;
@@ -140,8 +141,11 @@ use App\Modules\Business\Services\BusinessCrmRelationSnapshotService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessDatabaseConnection;
+use App\Modules\Business\Services\BusinessOperationsDashboardService;
 use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\BusinessRelation360Service;
+use App\Modules\Business\Services\FormSubmissionRelationProjectionService;
 use App\Modules\Business\Services\BusinessSegmentationService;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
@@ -203,6 +207,9 @@ use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
+use App\Modules\Sale\Services\SaleOrderDossierService;
+use App\Modules\Sale\Services\SaleOrderDocumentService;
+use App\Modules\Sale\Services\SaleDeferredPaymentService;
 use App\Modules\Sale\Services\SalesChannelIntegrityService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
@@ -283,7 +290,18 @@ final class ServiceFactory
 
     public function forms(): FormRepository
     {
-        return $this->once('forms', fn() => new FormRepository($this->formsDatabase()));
+        return $this->once('forms', fn() => new FormRepository(
+            $this->formsDatabase(),
+            $this->formSubmissionRelationProjection(),
+            $this->formRelationAddressTokens(),
+        ));
+    }
+
+    public function formRelationAddressTokens(): FormRelationAddressToken
+    {
+        return $this->once('form_relation_address_tokens', fn() => new FormRelationAddressToken(
+            (string) ($this->config['form_relation_signing_key'] ?? $this->config['preview_signing_key'] ?? 'change-this-preview-key')
+        ));
     }
 
     public function logger(): Logger
@@ -907,6 +925,27 @@ final class ServiceFactory
         return $this->once('sale_order_timeline', fn() => new SaleOrderTimelineService($this->saleDatabaseConnection()));
     }
 
+    public function saleOrderDossier(): SaleOrderDossierService
+    {
+        return $this->once('sale_order_dossier', fn() => new SaleOrderDossierService(
+            $this->saleDatabaseConnection(),
+            $this->saleOrderTimeline(),
+        ));
+    }
+
+    public function saleOrderDocuments(): SaleOrderDocumentService
+    {
+        return $this->once('sale_order_documents', fn() => new SaleOrderDocumentService($this->saleDatabaseConnection()));
+    }
+
+    public function saleDeferredPayments(): SaleDeferredPaymentService
+    {
+        return $this->once('sale_deferred_payments', fn() => new SaleDeferredPaymentService(
+            $this->saleDatabaseConnection(),
+            $this->saleOnlinePayments(),
+        ));
+    }
+
     public function salePosService(): SalePosService
     {
         return $this->once('sale_pos_service', fn() => new SalePosService($this->saleCartService(), $this->saleCheckout(), $this->salePosRepository()));
@@ -930,6 +969,14 @@ final class ServiceFactory
     public function businessDashboard(): BusinessDashboardRepository
     {
         return $this->once('business_dashboard', fn() => new BusinessDashboardRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessOperationsDashboard(): BusinessOperationsDashboardService
+    {
+        return $this->once('business_operations_dashboard', fn() => new BusinessOperationsDashboardService(
+            $this->businessDatabaseConnection(),
+            $this->saleDatabaseConnection(),
+        ));
     }
 
     public function businessRelations(): BusinessRelationRepository
@@ -995,6 +1042,23 @@ final class ServiceFactory
     public function businessRelationSummary(): BusinessRelationSummaryService
     {
         return $this->once('business_relation_summary', fn() => new BusinessRelationSummaryService($this->businessRelationRead(), $this->businessActivity()));
+    }
+
+    public function formSubmissionRelationProjection(): FormSubmissionRelationProjectionService
+    {
+        return $this->once('form_submission_relation_projection', fn() => new FormSubmissionRelationProjectionService(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable')
+        ));
+    }
+
+    public function businessRelation360(): BusinessRelation360Service
+    {
+        return $this->once('business_relation_360', fn() => new BusinessRelation360Service(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable'),
+            $this->businessRelationRead(),
+            $this->businessActivity(),
+            $this->formSubmissionRelationProjection(),
+        ));
     }
 
     public function saleCrmActivities(): SaleCrmActivityProjectionService

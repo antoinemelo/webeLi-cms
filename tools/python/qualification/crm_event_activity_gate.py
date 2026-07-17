@@ -32,7 +32,7 @@ def validate(payload:dict[str,Any],root:Path=ROOT)->list[str]:
       'projection':(root/'backend/src/Modules/Business/Services/SaleCrmActivityProjectionService.php',['sale.cart.abandoned','customer.account.created','resolvePendingForOrder','rebuild','assertEligibleAbandonedCart']),
       'schema':(root/'database/modules/business.sql',['contract_version','source_type','source_id','provenance_json','retention_until']),
       'routes':(root/'backend/src/Modules/Business/BusinessModuleProvider.php',['sale-activities/unlinked','sale-activities/{id}/link','sale-activities/reconcile']),
-      'timeline':(root/'frontend/admin-vue/src/views/modules/business/RelationTimeline.vue',['Rechercher','Canal','pendingCount','Détails techniques','timeline-pagination']),
+      'timeline':(root/'frontend/admin-vue/src/views/modules/business/RelationTimeline.vue',['common.search','business.timeline.channel','pendingCount','business.timeline.technical','timeline-pagination']),
       'tests':(root/'tools/php/tests/unit/sale_crm_activity_projection_test.php',['out-of-order','CRM outage','versioned DTO','non-sensitive metadata']),
     }
     for label,(path,needles) in sources.items():

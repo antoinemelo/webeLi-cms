@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import ModuleSecondaryNavigation from '@/components/navigation/ModuleSecondaryNavigation.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import { useI18n } from '@/i18n';
 import { useAdminContextStore } from '@/stores/adminContext';
 import BusinessCatalogView from './BusinessCatalogView.vue';
 import BusinessRelationsView from './BusinessRelationsView.vue';
+import SaleIdentityReviewView from './SaleIdentityReviewView.vue';
+import FormLinkReviewView from './business/FormLinkReviewView.vue';
+import OperationsInventoryView from './business/OperationsInventoryView.vue';
 import BusinessSegmentsPanel from './business/BusinessSegmentsPanel.vue';
 import RelationHeader from './business/RelationHeader.vue';
 import RelationInfoCard from './business/RelationInfoCard.vue';
 import RelationLinkedEntities from './business/RelationLinkedEntities.vue';
-import RelationTimeline from './business/RelationTimeline.vue';
+import Relation360Sections from './business/Relation360Sections.vue';
 import MemoCard from './business/MemoCard.vue';
 import MessageCard from './business/MessageCard.vue';
 import ProviderStatusBadge from './business/ProviderStatusBadge.vue';
@@ -21,7 +25,7 @@ import QuickCreateMemoDrawer from './business/QuickCreateMemoDrawer.vue';
 import QuickCreateRelationDrawer from './business/QuickCreateRelationDrawer.vue';
 import SendMessageDrawer from './business/SendMessageDrawer.vue';
 
-type BusinessTab = 'dashboard' | 'relations' | 'segments' | 'messages' | 'products' | 'offers' | 'settings';
+type BusinessTab = 'dashboard' | 'relations' | 'segments' | 'messages' | 'products' | 'inventory' | 'offers' | 'settings';
 type LegacyBusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging';
 type RelationsPanel = 'main' | 'memos';
 type BusinessModal = '' | 'relation' | 'memo' | 'import' | 'export' | 'message' | 'consent' | 'archive' | 'delete';
@@ -47,6 +51,7 @@ type MessagePreview = Record<string, unknown> & { channel?: string; recipient_va
 type IamUserOption = { id: number; email: string; name?: string; is_active?: boolean };
 type BusinessActivity = { id: number; kind: string; site_id?: number; action: string; summary: string; created_at?: string | null; metadata?: Record<string, unknown> };
 type DashboardAlert = Record<string, unknown> & { level?: string; code?: string; message?: string; channel?: string; count?: number };
+type OperationsTask = { key: string; queue: string; priority: number; count: number; label: string; explanation: string; route: string; advanced?: boolean };
 type DashboardSearchItem = Record<string, unknown> & { group?: string; type?: string; id: number; title?: string; subtitle?: string | null; excerpt?: string | null; status?: string | null; company_id?: number | null; contact_id?: number | null };
 type CatalogDashboardProduct = Record<string, unknown> & { status?: string; archived_at?: string | null; stock_quantity_total?: number | string | null; stock_reserved_total?: number | string | null; purchase_price_min?: number | string | null; completeness_score?: number | null; image_count?: number };
 type CatalogDashboardMetric = { label: string; value: string };
@@ -57,6 +62,7 @@ type BusinessDashboard = {
   latest_memos: Memo[];
   latest_messages: MessageRow[];
   alerts: DashboardAlert[];
+  actionable: { tasks: OperationsTask[]; summary: Record<string, number>; generated_at?: string };
 };
 
 const props = withDefaults(defineProps<{
@@ -66,10 +72,14 @@ const props = withDefaults(defineProps<{
 });
 
 const context = useAdminContextStore();
+const route = useRoute();
+const router = useRouter();
+const isProfilesAdvancedRoute = computed(() => route.path === '/business/relations/advanced/profiles');
+const canReviewProfiles = computed(() => context.can('business.advanced_tools.manage') && context.can('sale.advanced_tools.manage') && context.can('sale.customer_accounts.manage'));
 const { t } = useI18n();
 const normalizeBusinessTab = (tab?: BusinessTab | LegacyBusinessTab): BusinessTab => {
   if (tab === 'dashboard') return 'dashboard';
-  if (tab === 'segments' || tab === 'products' || tab === 'offers' || tab === 'settings') return tab;
+  if (tab === 'segments' || tab === 'messages' || tab === 'products' || tab === 'inventory' || tab === 'offers' || tab === 'settings') return tab;
   if (tab === 'mailing') return 'messages';
   if (tab === 'messaging') return 'messages';
   return 'relations';
@@ -98,6 +108,7 @@ const relationMemoFilter = ref<RelationMemoFilter | null>(null);
 const linkedRelationContacts = ref<BusinessRelation[]>([]);
 const iamUsers = ref<IamUserOption[]>([]);
 const relationActivity = ref<BusinessActivity[]>([]);
+const relation360 = ref<Record<string, unknown> | null>(null);
 const pendingSaleActivityCount = ref(0);
 const dashboard = ref<BusinessDashboard | null>(null);
 const dashboardSearch = reactive({ q: '' });
@@ -118,15 +129,22 @@ const canMessagingSend = computed(() => context.can('business.messaging.send'));
 const canMessagingAdmin = computed(() => context.can('business.messaging.admin'));
 const canCatalogRead = computed(() => context.can('business.catalog.read'));
 const canMessagesAccess = computed(() => canMailingRead.value || canMessagingAdmin.value);
+const canOperationsDashboard = computed(() => canCrmRead.value || canCatalogRead.value || canSegmentRead.value || canMailingRead.value);
+const canOperationsSettings = computed(() => canMessagingAdmin.value || context.can('business.catalog.write') || context.can('business.catalog.discounts.write') || context.can('business.catalog.stock.write') || context.can('business.advanced_tools.manage'));
 
-const tabs: Array<{ key: BusinessTab; label: string; labelKey?: string; permission: () => boolean }> = [
-  { key: 'dashboard', label: 'Tableau de bord', permission: () => canCrmRead.value },
-  { key: 'relations', label: 'Relations', permission: () => canCrmRead.value || canMemoRead.value },
-  { key: 'segments', label: 'Segments', labelKey: 'business.segments.tab', permission: () => canSegmentRead.value },
-  { key: 'products', label: 'Produits', permission: () => canCatalogRead.value },
-  { key: 'offers', label: 'Offres', permission: () => canCatalogRead.value },
-  { key: 'settings', label: 'Réglages', permission: () => canMessagingAdmin.value },
-];
+const navigationItems = computed(() => [
+  { key: 'dashboard', label: t('business.tabs.dashboard'), route: '/business', visible: canOperationsDashboard.value },
+  { key: 'relations', label: t('business.tabs.relations'), route: '/business/relations', visible: canCrmRead.value || canMemoRead.value },
+  { key: 'products', label: t('business.tabs.productsStock'), route: '/business/products-stock', visible: canCatalogRead.value },
+  { key: 'inventory', label: t('business.tabs.inventory'), route: '/business/inventory', visible: canCatalogRead.value },
+  { key: 'offers', label: t('business.tabs.offersMarketing'), route: '/business/offers-marketing', visible: canCatalogRead.value || canSegmentRead.value || canMessagesAccess.value },
+  { key: 'settings', label: t('business.tabs.settings'), route: '/business/settings', visible: canOperationsSettings.value }
+]);
+const marketingNavigationItems = computed(() => [
+  { key: 'offers', label: t('business.marketing.offers'), route: '/business/offers-marketing', visible: canCatalogRead.value },
+  { key: 'segments', label: t('business.marketing.audiences'), route: '/business/offers-marketing/audiences', visible: canSegmentRead.value },
+  { key: 'messages', label: t('business.marketing.campaigns'), route: '/business/offers-marketing/campaigns', visible: canMessagesAccess.value }
+]);
 
 const crmStatuses = ['prospect', 'client', 'supplier', 'former_client', 'other'];
 const channels = ['email', 'whatsapp', 'telegram'];
@@ -745,7 +763,7 @@ async function deleteProviderDraft(key: string): Promise<void> {
 }
 
 async function loadDashboard(): Promise<void> {
-  if (!canCrmRead.value) return;
+  if (!canOperationsDashboard.value) return;
   loading.value = true;
   try {
     const response = await adminApi.get<BusinessDashboard>('/business/dashboard');
@@ -755,6 +773,7 @@ async function loadDashboard(): Promise<void> {
       latest_memos: response.data.latest_memos || [],
       latest_messages: response.data.latest_messages || [],
       alerts: response.data.alerts || [],
+      actionable: response.data.actionable || { tasks: [], summary: {} },
     };
   } catch (err) {
     setError(err, 'Dashboard Opérations indisponible.');
@@ -811,11 +830,25 @@ async function loadRelations(): Promise<void> {
 }
 
 async function loadCurrentTab(): Promise<void> {
-  if (activeTab.value === 'dashboard') await Promise.all([loadDashboard(), loadCatalogDashboard(), loadMailing(), loadMessaging()]);
+  if (activeTab.value === 'dashboard') await loadDashboard();
   if (activeTab.value === 'relations') await loadRelations();
   if (activeTab.value === 'messages') await Promise.all([loadMailing(), loadMessaging()]);
-  if (activeTab.value === 'settings') await loadMessaging();
+  if (activeTab.value === 'settings' && canMessagingAdmin.value) await loadMessaging();
   if (activeTab.value === 'products' || activeTab.value === 'offers') catalogRefreshKey.value++;
+}
+
+async function openDeepLinkedRelation(): Promise<void> {
+  if (activeTab.value !== 'relations') return;
+  const type = String(route.query.relation_type || '');
+  const id = Number(route.query.relation_id || 0);
+  if (!['contact', 'company'].includes(type) || id < 1) return;
+  try {
+    const response = await adminApi.get<{ relation: BusinessRelation }>(`/business/relations/${type}/${id}`);
+    if (type === 'company') await editRelationCompany(response.data.relation, 'view');
+    else await editRelationContact(response.data.relation, 'view');
+  } catch (err) {
+    setError(err, 'Ouverture de la relation impossible.');
+  }
 }
 
 function openRelationsMain(): void {
@@ -1077,6 +1110,56 @@ async function loadRelationActivity(type: 'contact' | 'company', id: number): Pr
   }
 }
 
+async function loadRelation360(type: 'contact' | 'company', id: number): Promise<void> {
+  relation360.value = null;
+  if (!id) return;
+  try {
+    const response = await adminApi.get<Record<string, unknown>>(`/business/relations/${type}/${id}/360`);
+    relation360.value = response.data;
+  } catch (err) {
+    setError(err, 'La vue Relation 360 est partiellement indisponible.');
+  }
+}
+
+function openProfileReconciliation(): void {
+  if (!currentRelation.value.id) return;
+  closeModal(true);
+  void router.push({
+    path: '/business/relations/advanced/profiles',
+    query: { relation_type: currentRelation.value.type, relation_id: String(currentRelation.value.id) },
+  });
+}
+
+async function addRelationTask(): Promise<void> {
+  if (!currentRelation.value.id || !canCrmManage.value) return;
+  const title = window.prompt('Action à planifier');
+  if (!title?.trim()) return;
+  const dueAt = window.prompt('Échéance facultative (AAAA-MM-JJ HH:MM)') || null;
+  try {
+    await adminApi.post(`/business/relations/${currentRelation.value.type}/${currentRelation.value.id}/tasks`, { title: title.trim(), due_at: dueAt });
+    await loadRelation360(currentRelation.value.type, currentRelation.value.id);
+    setNotice('Action planifiée.');
+  } catch (err) {
+    setError(err, 'Planification impossible.');
+  }
+}
+
+async function manageRelationRoles(): Promise<void> {
+  if (!currentRelation.value.id || !canCrmManage.value) return;
+  const current = ((relation360.value?.relation as Record<string, unknown> | undefined)?.roles as Array<Record<string, unknown>> | undefined)?.map((role) => String(role.role_key || '')).filter(Boolean) || [];
+  const answer = window.prompt('Rôles séparés par des virgules : prospect, client, supplier, partner, other', current.join(', '));
+  if (!answer) return;
+  const roles = answer.split(',').map((role) => role.trim().toLowerCase()).filter(Boolean);
+  try {
+    await adminApi.put(`/business/relations/${currentRelation.value.type}/${currentRelation.value.id}/roles`, { roles });
+    await loadRelation360(currentRelation.value.type, currentRelation.value.id);
+    await reloadRelationsView();
+    setNotice('Rôles mis à jour.');
+  } catch (err) {
+    setError(err, 'Mise à jour des rôles impossible.');
+  }
+}
+
 async function reloadCurrentRelationActivity(): Promise<void> {
   if (!currentRelation.value.id) return;
   await loadRelationActivity(currentRelation.value.type, currentRelation.value.id);
@@ -1108,7 +1191,7 @@ async function editRelationCompany(relation: BusinessRelation, mode: 'view' | 'e
   try {
     const response = await adminApi.get<{ company: Company }>(`/business/companies/${relation.id}`);
     editCompany(response.data.company);
-    await Promise.all([loadRelationDetail('company', relation.id), loadLinkedRelationContacts(relation.id), loadRelationActivity('company', relation.id), loadIamUserOptions()]);
+    await Promise.all([loadRelationDetail('company', relation.id), loadLinkedRelationContacts(relation.id), loadRelationActivity('company', relation.id), loadRelation360('company', relation.id), loadIamUserOptions()]);
     relationDraftType.value = 'company';
     relationModalMode.value = mode;
     activeModal.value = 'relation';
@@ -1121,7 +1204,7 @@ async function editRelationContact(relation: BusinessRelation, mode: 'view' | 'e
   try {
     const response = await adminApi.get<{ contact: Contact }>(`/business/contacts/${relation.id}`);
     editContact(response.data.contact);
-    await Promise.all([loadRelationDetail('contact', relation.id), loadRelationActivity('contact', relation.id), loadContactConsents(response.data.contact.id), loadIamUserOptions()]);
+    await Promise.all([loadRelationDetail('contact', relation.id), loadRelationActivity('contact', relation.id), loadRelation360('contact', relation.id), loadContactConsents(response.data.contact.id), loadIamUserOptions()]);
     relationDraftType.value = 'contact';
     relationModalMode.value = mode;
     activeModal.value = 'relation';
@@ -1149,8 +1232,15 @@ function openRelationMemos(relation: BusinessRelation): void {
 
 async function openRelationConsent(relation: BusinessRelation): Promise<void> {
   if (relation.type !== 'contact' || !canConsentRead.value) return;
-  await editRelationContact(relation);
-  activeModal.value = 'consent';
+  try {
+    const response = await adminApi.get<{ contact: Contact }>(`/business/contacts/${relation.id}`);
+    editContact(response.data.contact);
+    relationDraftType.value = 'contact';
+    await loadContactConsents(response.data.contact.id);
+    activeModal.value = 'consent';
+  } catch (err) {
+    setError(err, 'Ouverture des consentements impossible.');
+  }
 }
 
 function openImportModal(): void {
@@ -1894,6 +1984,7 @@ watch(() => props.initialTab, (tab) => {
   const normalized = normalizeBusinessTab(tab);
   if (activeTab.value !== normalized) activeTab.value = normalized;
 });
+watch(() => [route.query.relation_type, route.query.relation_id], () => { void openDeepLinkedRelation(); });
 watch(activeTab, () => { void loadCurrentTab(); });
 watch(() => messageTestForm.channel, () => {
   if (activeModal.value === 'message') void loadRelationMessagePreview();
@@ -1915,6 +2006,7 @@ watch(() => context.siteId, () => {
 
 onMounted(async () => {
   await loadCurrentTab();
+  await openDeepLinkedRelation();
 });
 
 onBeforeUnmount(() => {
@@ -1926,18 +2018,19 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-stack business-crm">
-    <PageHeader title="Opérations" intro="CRM, catalogue produits, offres, mailing simple et outbox messaging." />
-    <ContextualHelpLink id="business.crm" class="mb-3" />
+    <PageHeader :title="t('business.title')" :intro="t('business.intro')" help-id="business.crm" />
 
     <ApiFeedback :error="error" :success="success" />
 
-    <nav class="editor-tabs business-tabs" aria-label="Sections Opérations">
-      <button v-for="tab in tabs" :key="tab.key" type="button" :class="['editor-tab', { active: activeTab === tab.key }]" :disabled="!tab.permission()" @click="activeTab = tab.key">
-        {{ tab.labelKey ? t(tab.labelKey) : tab.label }}
-      </button>
-    </nav>
+    <ModuleSecondaryNavigation :label="`${t('common.mainNavigation')} ${t('business.title')}`" :items="navigationItems" />
+    <ModuleSecondaryNavigation
+      v-if="['offers', 'segments', 'messages'].includes(activeTab)"
+      :label="t('business.tabs.offersMarketing')"
+      :items="marketingNavigationItems"
+      variant="compact"
+    />
 
-    <section v-if="activeTab === 'relations' && relationsPanel !== 'main'" class="business-relations-shell">
+    <section v-if="!isProfilesAdvancedRoute && activeTab === 'relations' && relationsPanel !== 'main'" class="business-relations-shell">
       <div class="business-secondary-head">
         <button class="btn ghost small" type="button" @click="openRelationsMain">Retour aux relations</button>
         <span>{{ relationsPanel === 'memos' ? 'Liste mémos et commentaires' : 'Relations' }}</span>
@@ -1946,7 +2039,7 @@ onBeforeUnmount(() => {
 
     <section v-if="activeTab === 'dashboard'" class="business-dashboard">
       <div class="business-dashboard-commandbar">
-        <form class="business-dashboard-search" @submit.prevent="runDashboardSearch">
+        <form v-if="canCrmRead" class="business-dashboard-search" @submit.prevent="runDashboardSearch">
           <div class="business-dashboard-search-control">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             <input v-model="dashboardSearch.q" type="search" aria-label="Recherche rapide Opérations" placeholder="Recherche rapide relation, mémo ou message">
@@ -1954,15 +2047,15 @@ onBeforeUnmount(() => {
           <button class="btn small" type="submit" :disabled="busy === 'dashboard.search'">Rechercher</button>
         </form>
         <div class="business-dashboard-actions">
-          <button class="btn primary small business-action-btn" type="button" @click="startNewRelation" aria-label="Nouvelle relation">
+          <button v-if="canCrmManage" class="btn primary small business-action-btn" type="button" @click="startNewRelation" aria-label="Nouvelle relation">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database-add" viewBox="0 0 16 16"><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0"/><path d="M12.096 6.223A5 5 0 0 0 13 5.698V7c0 .289-.213.654-.753 1.007a4.5 4.5 0 0 1 1.753.25V4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-.813-.927Q8.378 15 8 15c-1.464 0-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13h.027a4.6 4.6 0 0 1 0-1H8c-1.464 0-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10q.393 0 .774-.024a4.5 4.5 0 0 1 1.102-1.132C9.298 8.944 8.666 9 8 9c-1.464 0-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777M3 4c0-.374.356-.875 1.318-1.313C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4"/></svg>
             <span>Nouvelle relation</span>
           </button>
-          <button class="btn small business-action-btn" type="button" @click="startDashboardMemo" aria-label="Nouveau mémo">
+          <button v-if="canMemoManage" class="btn small business-action-btn" type="button" @click="startDashboardMemo" aria-label="Nouveau mémo">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat-square-text" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 11.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5a1 1 0 0 1 .8.4l1.9 2.533a1 1 0 0 0 1.6 0l1.9-2.533a1 1 0 0 1 .8-.4H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/><path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6m0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/></svg>
             <span>Nouveau mémo</span>
           </button>
-          <button class="btn small business-action-btn" type="button" @click="startDashboardMessage" aria-label="Envoyer message">
+          <button v-if="canMessagingSend" class="btn small business-action-btn" type="button" @click="startDashboardMessage" aria-label="Envoyer message">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send-plus" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855a.75.75 0 0 0-.124 1.329l4.995 3.178 1.531 2.406a.5.5 0 0 0 .844-.536L6.637 10.07l7.494-7.494-1.895 4.738a.5.5 0 1 0 .928.372zm-2.54 1.183L5.93 9.363 1.591 6.602z"/><path d="M16 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0m-3.5-2a.5.5 0 0 0-.5.5v1h-1a.5.5 0 0 0 0 1h1v1a.5.5 0 0 0 1 0v-1h1a.5.5 0 0 0 0-1h-1v-1a.5.5 0 0 0-.5-.5"/></svg>
             <span>Envoyer message</span>
           </button>
@@ -1977,25 +2070,20 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="business-dashboard-counters">
-        <article v-for="status in ['prospect', 'client', 'supplier', 'former_client', 'other']" :key="status">
-          <span>{{ statusLabel(status) }}</span>
-          <strong>{{ dashboard?.counters?.[status] ?? 0 }}</strong>
-        </article>
-      </div>
-
-      <div v-if="catalogDashboardMetrics.length" class="business-dashboard-counters business-dashboard-counters--catalog" aria-label="Résumé catalogue">
-        <article v-for="metric in catalogDashboardMetrics" :key="metric.label">
-          <span>{{ metric.label }}</span>
-          <strong>{{ metric.value }}</strong>
-        </article>
-      </div>
-
-      <div v-if="canMessagesAccess" class="business-dashboard-communication business-message-stats" aria-label="Résumé communication">
-        <article><strong>{{ mailingLists.length }}</strong><span>Listes</span></article>
-        <article><strong>{{ campaigns.length }}</strong><span>Campagnes</span></article>
-        <article><strong>{{ outbox.length }}</strong><span>Messages</span></article>
-      </div>
+      <section class="operations-work-queue" aria-labelledby="operations-work-title">
+        <header class="business-panel-head">
+          <div><p class="eyebrow">Priorités métier</p><h2 id="operations-work-title">À traiter</h2></div>
+          <small>{{ dashboard?.actionable?.tasks?.length || 0 }} file(s) actionnable(s)</small>
+        </header>
+        <div v-if="dashboard?.actionable?.tasks?.length" class="operations-task-list">
+          <RouterLink v-for="task in dashboard.actionable.tasks" :key="task.key" class="operations-task" :to="task.route">
+            <span class="operations-task-count">{{ task.count }}</span>
+            <span><strong>{{ task.label }}</strong><small>{{ task.explanation }}</small></span>
+            <StatusBadge :status="task.advanced ? 'info' : task.priority <= 10 ? 'warning' : 'pending'" />
+          </RouterLink>
+        </div>
+        <p v-else class="business-empty">Aucune action prioritaire avec vos permissions actuelles.</p>
+      </section>
 
       <div v-if="dashboard?.alerts?.length" class="business-dashboard-alerts">
         <article v-for="alert in dashboard.alerts" :key="`${alert.code}-${alert.channel || alert.count || ''}`">
@@ -2004,51 +2092,23 @@ onBeforeUnmount(() => {
         </article>
       </div>
 
-      <div class="business-dashboard-grid">
-        <section class="business-panel">
-          <header class="business-panel-head"><div><p class="eyebrow">Récent</p><h2>Relations</h2></div></header>
-          <div class="business-list">
-            <article v-for="relation in dashboard?.recent_relations || []" :key="`${relation.type}-${relation.id}`" class="business-list-row">
-              <strong><button class="business-link" type="button" @click="openDashboardRelation(relation)">{{ relation.display_name }}</button></strong>
-              <span>{{ relation.company?.name || relation.primary_email || relation.phone || '-' }}</span>
-              <StatusBadge :status="relation.status || 'other'" />
-            </article>
-            <p v-if="!(dashboard?.recent_relations || []).length" class="business-empty">Aucune relation récente.</p>
-          </div>
-        </section>
-
-        <section class="business-panel">
-          <header class="business-panel-head"><div><p class="eyebrow">Récent</p><h2>Mémos</h2></div></header>
-          <div class="business-list">
-            <MemoCard
-              v-for="memo in dashboard?.latest_memos || []"
-              :key="memo.id"
-              :title="memo.title"
-              :context="String(memo.relation_name || '')"
-              :body="memo.body"
-              :date="String(memo.activity_at || memo.created_at || '')"
-            />
-            <p v-if="!(dashboard?.latest_memos || []).length" class="business-empty">Aucun mémo récent.</p>
-          </div>
-        </section>
-
-        <section class="business-panel">
-          <header class="business-panel-head"><div><p class="eyebrow">Récent</p><h2>Messages</h2></div></header>
-          <div class="business-list">
-            <MessageCard
-              v-for="message in dashboard?.latest_messages || []"
-              :key="message.id"
-              :title="String(message.subject || `Message ${message.channel || ''}`)"
-              :context="String(message.relation_name || message.recipient_value || '')"
-              :status="message.status || 'pending'"
-            />
-            <p v-if="!(dashboard?.latest_messages || []).length" class="business-empty">Aucun message récent.</p>
-          </div>
-        </section>
-      </div>
     </section>
 
-    <section v-if="activeTab === 'relations' && relationsPanel === 'main'" class="business-relations-unified">
+    <section v-if="isProfilesAdvancedRoute" class="business-relations-unified">
+      <SaleIdentityReviewView
+        v-if="canReviewProfiles"
+        :relation-type="String(route.query.relation_type || '')"
+        :relation-id="Number(route.query.relation_id || 0)"
+      />
+      <FormLinkReviewView
+        v-if="context.can('business.advanced_tools.manage') && context.can('business.form_links.review')"
+        :relation-type="String(route.query.relation_type || '')"
+        :relation-id="Number(route.query.relation_id || 0)"
+      />
+      <div v-else class="alert alert-warning" role="alert">Cet outil avancé exige les permissions de rapprochement Opérations et Ventes.</div>
+    </section>
+
+    <section v-if="!isProfilesAdvancedRoute && activeTab === 'relations' && relationsPanel === 'main'" class="business-relations-unified">
       <BusinessRelationsView
         ref="relationsView"
         @new-relation="startNewRelation"
@@ -2138,7 +2198,6 @@ onBeforeUnmount(() => {
                 <RelationInfoCard title="Informations clés" :rows="relationInfoRows" />
                 <RelationInfoCard title="Coordonnées" :rows="relationContactRows" />
                 <RelationInfoCard title="Audit" :rows="relationAuditRows" />
-                <RelationInfoCard title="À venir" :rows="[{ label: 'Commandes', value: 'Placeholder' }, { label: 'Factures', value: 'Placeholder' }]" />
               </div>
 
               <RelationLinkedEntities
@@ -2159,14 +2218,17 @@ onBeforeUnmount(() => {
                 @open-memos="(entity) => openRelationMemos({ type: 'company', id: entity.id, display_name: entity.label })"
               />
 
-              <RelationTimeline
-                title="Derniers mémos et activité"
-                empty-label="Aucune activité récente pour cette relation."
-                :items="relationTimelineItems"
-                :pending-count="pendingSaleActivityCount"
-                :can-add-memo="Boolean(currentRelation.id) && canMemoRead"
-                action-label="Voir tous les mémos"
-                @add-memo="openRelationMemos(currentRelation)"
+              <Relation360Sections
+                :data="relation360"
+                :can-add-memo="Boolean(currentRelation.id) && canMemoManage"
+                :can-manage="canCrmManage"
+                :can-read-consents="canConsentRead"
+                :can-use-advanced-tools="context.can('business.advanced_tools.manage') && context.can('sale.advanced_tools.manage')"
+                @add-memo="startRelationMemo(currentRelation)"
+                @add-task="addRelationTask"
+                @manage-roles="manageRelationRoles"
+                @open-consents="openRelationConsent(currentRelation)"
+                @open-profiles="openProfileReconciliation"
               />
             </template>
 
@@ -2405,7 +2467,7 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <section v-if="activeTab === 'relations' && relationsPanel === 'memos'" class="business-grid">
+    <section v-if="!isProfilesAdvancedRoute && activeTab === 'relations' && relationsPanel === 'memos'" class="business-grid">
       <div class="business-panel business-panel--wide">
         <header class="business-panel-head">
           <div>
@@ -2624,7 +2686,7 @@ onBeforeUnmount(() => {
     </section>
 
     <section v-if="activeTab === 'settings'" class="business-grid">
-      <div v-if="!canMessagingAdmin" class="business-panel business-panel--wide business-empty">Permission administration messaging requise.</div>
+      <div v-if="!canMessagingAdmin" class="business-panel business-panel--wide business-empty">La configuration des providers nécessite la permission d’administration messaging.</div>
       <template v-else>
         <div class="business-panel business-panel--wide">
           <header class="business-panel-head">
@@ -2680,7 +2742,11 @@ onBeforeUnmount(() => {
     </section>
 
     <section v-if="activeTab === 'products'" class="business-catalog-tab">
-      <BusinessCatalogView :key="`products-${catalogRefreshKey}`" embedded fixed-tab="products" />
+      <BusinessCatalogView :key="`products-${catalogRefreshKey}`" embedded fixed-tab="products" :initial-product-id="Number(route.query.product_id || 0)" />
+    </section>
+
+    <section v-if="activeTab === 'inventory'" class="business-catalog-tab">
+      <OperationsInventoryView />
     </section>
 
     <section v-if="activeTab === 'offers'" class="business-catalog-tab">
@@ -2702,16 +2768,6 @@ onBeforeUnmount(() => {
   outline-offset: 2px;
 }
 
-.business-tabs {
-  flex-wrap: wrap;
-  overflow-x: visible;
-  scrollbar-width: none;
-}
-
-.business-tabs .editor-tab {
-  flex: 0 1 auto;
-}
-
 .business-catalog-tab {
   min-width: 0;
 }
@@ -2720,6 +2776,36 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 1rem;
 }
+
+.operations-work-queue {
+  display: grid;
+  gap: .8rem;
+  padding: 1rem;
+  border: 1px solid #dbe4ef;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.operations-task-list {
+  display: grid;
+  gap: .6rem;
+}
+
+.operations-task {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .8rem;
+  padding: .8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .85rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.operations-task:hover { border-color: #93c5fd; background: #f8fbff; }
+.operations-task-count { min-width: 2.25rem; font-size: 1.25rem; font-weight: 800; text-align: center; }
+.operations-task small { display: block; margin-top: .2rem; color: #64748b; }
 
 .business-dashboard-hero,
 .business-dashboard-actions,
@@ -3607,15 +3693,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 760px) {
-  .business-tabs {
-    margin-inline: 0;
-    padding-bottom: 0;
-  }
-
-  .business-tabs .editor-tab {
-    min-height: 2.5rem;
-  }
-
   .business-form,
   .business-modal-grid,
   .business-meta,

@@ -378,16 +378,19 @@ export const businessCatalogApi = {
     return adminApi.put<{ variant: CatalogVariant }>(`/business/catalog/variants/${id}/price-adjustments`, payload);
   },
   stock(id: number) {
-    return adminApi.get<{ stock: Record<string, unknown>; movements: Array<Record<string, unknown>> }>(`/business/catalog/variants/${id}/stock`);
+    return adminApi.get<{ stock: Record<string, unknown>; locations?: Array<Record<string, unknown>>; location_stock?: Array<Record<string, unknown>>; movements: Array<Record<string, unknown>> }>(`/business/catalog/variants/${id}/stock`);
   },
   createStockMovement(id: number, payload: Record<string, unknown>) {
-    return adminApi.post<{ stock: Record<string, unknown>; movement: Record<string, unknown> }>(`/business/catalog/variants/${id}/stock-movements`, payload);
+    return adminApi.post<{ stock?: Record<string, unknown>; movement?: Record<string, unknown>; preview?: Record<string, unknown> }>(`/business/catalog/variants/${id}/stock-movements`, payload);
   },
   discounts() {
     return adminApi.get<{ discounts: CatalogDiscount[] }>('/business/catalog/discounts', { limit: 200 });
   },
   createDiscount(payload: Record<string, unknown>) {
     return adminApi.post<{ discount: CatalogDiscount }>('/business/catalog/discounts', payload);
+  },
+  previewDiscount(payload: Record<string, unknown>) {
+    return adminApi.post<{ preview: Record<string, unknown> }>('/business/catalog/discounts/preview', payload);
   },
   updateDiscount(id: number, payload: Record<string, unknown>) {
     return adminApi.patch<{ discount: CatalogDiscount }>(`/business/catalog/discounts/${id}`, payload);

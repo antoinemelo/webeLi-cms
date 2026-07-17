@@ -37,6 +37,19 @@ final class CatalogDiscountService implements CatalogDiscountServiceContract
         ], $actorId);
     }
 
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function preview(int $siteId, array $payload): array
+    {
+        $this->validator->offer([
+            'name' => $payload['name'] ?? null,
+            'type' => $payload['type'] ?? $payload['discount_type'] ?? 'percent',
+            'value' => $payload['value'] ?? $payload['discount_value'] ?? null,
+            'scope' => $payload['scope'] ?? $payload['scope_type'] ?? 'product',
+            'channel' => $payload['channel'] ?? 'all',
+        ]);
+        return $this->discounts->preview($siteId, $payload);
+    }
+
     /** @return list<array<string,mixed>> */
     public function activeForVariant(int $siteId, int $productId, int $variantId, ?string $channel = null, ?DateTimeImmutable $at = null): array
     {

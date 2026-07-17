@@ -24,11 +24,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from tools.python.qualification.omnichannel_gate import validate_report_file
 from tools.python.qualification.usability_commerce_gate import validate_report_files as validate_usability_reports
+from tools.python.qualification.admin_convergence_gate import validate_report_files as validate_admin_convergence_reports
 
 FRONTEND = ROOT / "frontend" / "admin-vue"
 PLAYWRIGHT_CLI = FRONTEND / "node_modules" / "@playwright" / "test" / "cli.js"
 OMNICHANNEL_REPORT = ROOT / "storage/qualification/omnichannel/latest.json"
 USABILITY_REPORT = ROOT / "storage/qualification/usability/latest.json"
+ADMIN_CONVERGENCE_REPORT = ROOT / "storage/qualification/admin-convergence/latest.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,7 +41,51 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--use-built-assets", action="store_true", help="Utilise les assets déjà compilés (réservé à la qualification après son étape de build).")
     parser.add_argument("--omnichannel-only", action="store_true", help="Exécute uniquement la gate storefront/POS.")
     parser.add_argument("--usability-only", action="store_true", help="Exécute uniquement la gate d’utilisabilité Commerce M5–M7.")
+    parser.add_argument("--admin-convergence-only", action="store_true", help="Exécute uniquement la gate UX de convergence admin 38e.")
+    parser.add_argument(
+        "--spec",
+        action="append",
+        default=[],
+        help="Exécute uniquement ce fichier sous frontend/admin-vue/tests/e2e; option répétable.",
+    )
     return parser.parse_args()
+
+
+def normalize_specs(values: list[str] | tuple[str, ...]) -> tuple[str, ...]:
+    specs: list[str] = []
+    for raw in values:
+        name = str(raw).strip().replace("\\", "/")
+        if name.startswith("tests/e2e/"):
+            name = name.removeprefix("tests/e2e/")
+        if not name.endswith(".spec.ts") or "/" in name or name in {".", ".."}:
+            raise RuntimeError(f"Spec E2E invalide: {raw}")
+        path = FRONTEND / "tests/e2e" / name
+        if not path.is_file():
+            raise RuntimeError(f"Spec E2E introuvable: tests/e2e/{name}")
+        specs.append(f"tests/e2e/{name}")
+    return tuple(dict.fromkeys(specs))
+
+
+def source_commit(root: Path = ROOT) -> str:
+    git = shutil.which("git")
+    if git and (root / ".git").exists():
+        completed = subprocess.run(
+            [git, "rev-parse", "HEAD"], cwd=root, text=True, capture_output=True, timeout=15,
+        )
+        value = completed.stdout.strip().lower()
+        if completed.returncode == 0 and 7 <= len(value) <= 40 and all(char in "0123456789abcdef" for char in value):
+            return value
+    manifest = root / "docs/evaluation/machine-readable/cms-evaluation-manifest.json"
+    if manifest.is_file():
+        try:
+            value = str(json.loads(manifest.read_text(encoding="utf-8")).get("commit", "")).strip().lower()
+        except (OSError, json.JSONDecodeError):
+            value = ""
+        if 7 <= len(value) <= 40 and all(char in "0123456789abcdef" for char in value):
+            return value
+    raise RuntimeError(
+        "Commit source E2E indéterminable: fournissez E2E_BUILD_COMMIT ou conservez le manifeste d’évaluation."
+    )
 
 
 def require_executable(name: str) -> str:
@@ -356,49 +402,72 @@ def require_playwright_chromium() -> None:
 
 def run_playwright(
     environment: dict[str, str], *, headed: bool, omnichannel_only: bool = False, usability_only: bool = False,
+    admin_convergence_only: bool = False, specs: tuple[str, ...] = (),
 ) -> int:
-    if omnichannel_only and usability_only:
-        raise RuntimeError("--omnichannel-only et --usability-only sont mutuellement exclusifs.")
+    if sum((omnichannel_only, usability_only, admin_convergence_only)) > 1:
+        raise RuntimeError("Ces modes E2E ciblés sont mutuellement exclusifs.")
+    if specs and any((omnichannel_only, usability_only, admin_convergence_only)):
+        raise RuntimeError("--spec et les modes E2E de gate sont mutuellement exclusifs.")
     node = require_executable("node")
     if not PLAYWRIGHT_CLI.is_file():
         raise RuntimeError("Playwright absent. Exécutez npm ci dans frontend/admin-vue.")
     require_playwright_chromium()
     omnichannel_report = Path(environment.get("E2E_OMNICHANNEL_REPORT", str(OMNICHANNEL_REPORT))).resolve()
     usability_report = Path(environment.get("E2E_USABILITY_REPORT", str(USABILITY_REPORT))).resolve()
-    for report in (omnichannel_report, usability_report):
+    convergence_report = Path(environment.get("E2E_ADMIN_CONVERGENCE_REPORT", str(ADMIN_CONVERGENCE_REPORT))).resolve()
+    for report in (omnichannel_report, usability_report, convergence_report):
         report.parent.mkdir(parents=True, exist_ok=True)
-    if not usability_only:
+    run_omnichannel = not specs and not usability_only and not admin_convergence_only
+    run_usability = not specs and not omnichannel_only and not admin_convergence_only
+    run_convergence = not specs and not omnichannel_only and not usability_only
+    if run_omnichannel:
         omnichannel_report.unlink(missing_ok=True)
         environment["E2E_OMNICHANNEL_REPORT"] = str(omnichannel_report)
-    if not omnichannel_only:
+    if run_usability:
         usability_report.unlink(missing_ok=True)
         environment["E2E_USABILITY_REPORT"] = str(usability_report)
+    if run_convergence:
+        convergence_report.unlink(missing_ok=True)
+        environment["E2E_ADMIN_CONVERGENCE_REPORT"] = str(convergence_report)
     command = [node, str(PLAYWRIGHT_CLI), "test"]
     if omnichannel_only:
         command.append("tests/e2e/omnichannel-release-gate.spec.ts")
     elif usability_only:
         command.append("tests/e2e/commerce-usability-gate.spec.ts")
+    elif admin_convergence_only:
+        command.append("tests/e2e/admin-convergence-gate-38e.spec.ts")
+    else:
+        command.extend(specs)
     if headed:
         command.append("--headed")
     returncode = subprocess.run(command, cwd=FRONTEND, env=environment, timeout=900).returncode
     if returncode != 0:
         return returncode
-    if not usability_only:
+    if run_omnichannel:
         _payload, errors = validate_report_file(omnichannel_report, ROOT)
         if errors:
             print("Gate E2E omnicanale échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
             return 1
         print(f"Gate E2E omnicanale validée: {omnichannel_report}")
-    if not omnichannel_only:
+    if run_usability:
         errors = validate_usability_reports(runtime_path=usability_report, root=ROOT)
         if errors:
             print("Gate E2E d’utilisabilité Commerce échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
             return 1
         print(f"Gate E2E d’utilisabilité Commerce validée: {usability_report}")
+    if run_convergence:
+        errors = validate_admin_convergence_reports(runtime_path=convergence_report, root=ROOT)
+        if errors:
+            print("Gate E2E UX de convergence admin échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
+            return 1
+        print(f"Gate E2E UX de convergence admin validée: {convergence_report}")
     return 0
 
 
-def run_external(*, headed: bool, omnichannel_only: bool = False, usability_only: bool = False) -> int | None:
+def run_external(
+    *, headed: bool, omnichannel_only: bool = False, usability_only: bool = False,
+    admin_convergence_only: bool = False, specs: tuple[str, ...] = (),
+) -> int | None:
     names = ("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD")
     provided = [name for name in names if os.environ.get(name, "").strip()]
     if not provided:
@@ -407,12 +476,18 @@ def run_external(*, headed: bool, omnichannel_only: bool = False, usability_only
         missing = ", ".join(name for name in names if name not in provided)
         raise RuntimeError(f"Configuration E2E externe incomplète; variables manquantes: {missing}")
     print("E2E: utilisation de l’environnement externe configuré.")
-    return run_playwright(os.environ.copy(), headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only)
+    environment = os.environ.copy()
+    environment.setdefault("E2E_BUILD_COMMIT", source_commit())
+    return run_playwright(
+        environment, headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only,
+        admin_convergence_only=admin_convergence_only, specs=specs,
+    )
 
 
 def run_isolated(
     *, headed: bool, keep_instance: bool, use_built_assets: bool,
-    omnichannel_only: bool = False, usability_only: bool = False,
+    omnichannel_only: bool = False, usability_only: bool = False, admin_convergence_only: bool = False,
+    specs: tuple[str, ...] = (),
 ) -> int:
     php = require_executable("php")
     require_executable("node")
@@ -464,10 +539,12 @@ def run_isolated(
             "E2E_ADMIN_EMAIL": email,
             "E2E_ADMIN_PASSWORD": password,
             "E2E_WEBHOOK_URL": webhook_url,
+            "E2E_BUILD_COMMIT": os.environ.get("E2E_BUILD_COMMIT", "").strip() or source_commit(),
         })
         print(f"E2E: CMS {base_url}; récepteur webhook {webhook_url}")
         return run_playwright(
             test_env, headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only,
+            admin_convergence_only=admin_convergence_only, specs=specs,
         )
     finally:
         if receiver is not None and receiver_started:
@@ -493,6 +570,7 @@ def run_isolated(
 
 def main() -> int:
     args = parse_args()
+    specs = normalize_specs(args.spec)
     if args.install_browser:
         node = require_executable("node")
         if not PLAYWRIGHT_CLI.is_file():
@@ -500,6 +578,7 @@ def main() -> int:
         return subprocess.run([node, str(PLAYWRIGHT_CLI), "install", "chromium"], cwd=FRONTEND).returncode
     external = run_external(
         headed=args.headed, omnichannel_only=args.omnichannel_only, usability_only=args.usability_only,
+        admin_convergence_only=args.admin_convergence_only, specs=specs,
     )
     return external if external is not None else run_isolated(
         headed=args.headed,
@@ -507,6 +586,8 @@ def main() -> int:
         use_built_assets=args.use_built_assets,
         omnichannel_only=args.omnichannel_only,
         usability_only=args.usability_only,
+        admin_convergence_only=args.admin_convergence_only,
+        specs=specs,
     )
 
 

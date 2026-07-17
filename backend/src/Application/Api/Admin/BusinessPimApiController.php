@@ -40,7 +40,7 @@ final class BusinessPimApiController
 
     public function rebuildStorefrontProjections(): Response
     {
-        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        [$site,$languageCode]=$this->authorizeAdvanced('business.catalog.write');
         try {
             if ($this->storefrontProjections===null) throw new InvalidArgumentException('storefront.projection_service_unavailable');
             $payload=$this->payload();
@@ -598,6 +598,14 @@ final class BusinessPimApiController
         $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
         $this->authorization->require($permission, (int) $site['id']);
         return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAdvanced(string $permission): array
+    {
+        [$site, $languageCode] = $this->authorize('business.advanced_tools.manage');
+        $this->authorization->require($permission, (int) $site['id']);
+        return [$site, $languageCode];
     }
 
     private function actorId(): int

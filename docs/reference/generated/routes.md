@@ -106,6 +106,7 @@ generated: true
 | `GET` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/export.csv` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/export.pdf` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/inventory` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/products` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/products/{id}` | API administrative | `backend/routes/api.php` |
@@ -130,6 +131,7 @@ generated: true
 | `GET` | `/admin/api/business/export/contacts` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/export/memos` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/export/relations` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/form-links/pending` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/iam/available-users` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/mailing/campaigns` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/mailing/campaigns/{id}` | API administrative | `backend/routes/api.php` |
@@ -161,6 +163,7 @@ generated: true
 | `GET` | `/admin/api/business/pim/variants/{id}/sellable-snapshot` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/relations/{type}/{id}/360` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/activity` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/comments` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
@@ -353,6 +356,7 @@ generated: true
 | `POST` | `/admin/api/business/catalog/brands` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/categories` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/discounts` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/discounts/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/import/apply` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/import/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
@@ -368,6 +372,7 @@ generated: true
 | `POST` | `/admin/api/business/contacts/import.csv` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/contacts/{id}/archive` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/contacts/{id}/messages` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/form-links/{id}/decision` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/companies` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/contacts` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/relations` | API administrative | `backend/routes/api.php` |
@@ -411,10 +416,12 @@ generated: true
 | `POST` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/archive` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/relations/{type}/{id}/form-address` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/restore` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/relations/{type}/{id}/tasks` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/reconcile` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/{id}/link` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/segments` | API administrative | `backend/routes/api.php` |
@@ -490,5 +497,6 @@ generated: true
 | `PUT` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/products/{id}/gift-card-policy` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
+| `PUT` | `/admin/api/business/relations/{type}/{id}/roles` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/fieldsets/{key}` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/menus/{key}/items` | API administrative | `backend/routes/api.php` |

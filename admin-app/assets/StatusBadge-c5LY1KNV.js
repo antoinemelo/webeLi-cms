@@ -1,1 +1,0 @@
-import{D as e,R as t,S as n,ct as r,ot as i}from"./InfoHint-BHrCkX_9.js";var a=e({__name:`StatusBadge`,props:{status:{}},setup(e){return(a,o)=>(t(),n(`span`,{class:i([`badge`,e.status||`draft`])},r(e.status||`draft`),3))}});export{a as t};

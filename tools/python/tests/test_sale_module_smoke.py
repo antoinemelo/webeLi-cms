@@ -94,7 +94,7 @@ class SaleModuleSmokeTest(unittest.TestCase):
     def test_manifest_declares_sale_as_system_module(self) -> None:
         manifest = json.loads((ROOT / "backend/src/Modules/Sale/module.json").read_text(encoding="utf-8"))
         self.assertEqual("sale", manifest["key"])
-        self.assertEqual("Vente", manifest["name"])
+        self.assertEqual("Ventes", manifest["name"])
         self.assertEqual("system", manifest["type"])
         self.assertTrue(manifest["enabled_by_default"])
         self.assertEqual("App\\Modules\\Sale\\SaleModuleProvider", manifest["provider_class"])

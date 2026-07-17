@@ -22,13 +22,13 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
 {
     public function key(): string { return 'sale'; }
 
-    public function name(): string { return 'Vente'; }
+    public function name(): string { return 'Ventes'; }
 
     public function version(): string { return '0.1.0'; }
 
     public function description(): string
     {
-        return 'Vente, commandes, paiements, POS et stock transactionnel dans sale.sqlite.';
+        return 'Commandes, paiements, factures, points de vente et configuration des sites e-commerce; stock transactionnel conserve dans sale.sqlite.';
     }
 
     /** @return list<string> */
@@ -52,6 +52,7 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
         return [
             ['key' => 'sale.read', 'name' => 'Lire Vente', 'description' => 'Consulter le tableau de bord Vente et les donnees commerciales autorisees.'],
             ['key' => 'sale.manage', 'name' => 'Gerer Vente', 'description' => 'Administrer les donnees et reglages generaux du module Vente.'],
+            ['key' => 'sale.advanced_tools.manage', 'name' => 'Utiliser les outils avances Ventes', 'description' => 'Acceder aux reservations, au ledger et a sa reconstruction, a la logistique, aux identites et aux diagnostics provider/projection.'],
             ['key' => 'sale.orders.read', 'name' => 'Lire les commandes', 'description' => 'Consulter les paniers convertis, commandes, lignes et statuts.'],
             ['key' => 'sale.orders.manage', 'name' => 'Gerer les commandes', 'description' => 'Creer, confirmer, completer ou annuler des commandes.'],
             ['key' => 'sale.payments.read', 'name' => 'Lire les paiements', 'description' => 'Consulter moyens de paiement, intentions, transactions et allocations.'],
@@ -276,8 +277,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
     {
         return [[
             'key' => 'sale',
-            'label' => 'Vente',
-            'navLabel' => 'Vente',
+            'label' => 'Ventes',
+            'navLabel' => 'Ventes',
             'route' => '/sale',
             'anyPermission' => [
                 'sale.read',
@@ -286,15 +287,18 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
                 'sale.payments.read',
                 'sale.stock.read',
                 'sale.reports.read',
+                'sale.settings.manage',
             ],
             'section' => 'Modules',
-            'hint' => 'Commandes, POS, paiements et stock transactionnel.',
+            'hint' => 'Commandes, paiements, factures, points de vente et configuration des sites e-commerce.',
             'sort_order' => 150,
             'children' => [
                 ['key' => 'sale.dashboard', 'label' => 'Tableau de bord', 'route' => '/sale', 'permission' => 'sale.read'],
                 ['key' => 'sale.orders', 'label' => 'Commandes', 'route' => '/sale/orders', 'permission' => 'sale.orders.read'],
+                ['key' => 'sale.payments', 'label' => 'Paiements et factures', 'route' => '/sale/payments', 'permission' => 'sale.payments.read'],
                 ['key' => 'sale.pos', 'label' => 'POS', 'route' => '/sale/pos', 'permission' => 'sale.pos.use'],
                 ['key' => 'sale.settings', 'label' => 'Reglages', 'route' => '/sale/settings', 'permission' => 'sale.settings.manage'],
+                ['key' => 'sale.settings.ecommerce', 'label' => 'E-Commerce', 'route' => '/sale/settings?section=ecommerce', 'permission' => 'sale.settings.manage'],
             ],
         ]];
     }
@@ -303,10 +307,14 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
     public function adminRoutes(): array
     {
         $c = 'App\\Application\\Api\\Admin\\SaleAdminApiController@';
+        $ecommerce = 'App\\Application\\Api\\Admin\\SaleEcommerceAdminApiController@';
         return [
             $this->route('GET', '/admin/api/sale/schema', $c . 'schema'),
             $this->route('GET', '/admin/api/sale/dashboard', $c . 'dashboard'),
             $this->route('GET', '/admin/api/sale/channels', $c . 'channels'),
+            $this->route('GET', '/admin/api/sale/ecommerce/shops', $ecommerce . 'shops'),
+            // Alias de compatibilité pour les intégrations antérieures au rattachement à Ventes.
+            $this->route('GET', '/admin/api/commerce/shops', $ecommerce . 'shops'),
             $this->route('POST', '/admin/api/sale/channels', $c . 'storeChannel'),
             $this->route('GET', '/admin/api/sale/channels/resolve', $c . 'resolveChannel'),
             $this->route('GET', '/admin/api/sale/channels/integrity', $c . 'channelIntegrity'),
@@ -325,6 +333,10 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->route('GET', '/admin/api/sale/orders', $c . 'orders'),
             $this->route('POST', '/admin/api/sale/orders', $c . 'storeOrder'),
             $this->route('GET', '/admin/api/sale/orders/{id}', $c . 'showOrder'),
+            $this->route('GET', '/admin/api/sale/orders/{id}/dossier', $c . 'orderDossier'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/documents', $c . 'issueOrderDocument'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/deferred-payment', $c . 'configureDeferredPayment'),
+            $this->route('POST', '/admin/api/sale/orders/{id}/availability', $c . 'markOrderAvailable'),
             $this->route('PATCH', '/admin/api/sale/orders/{id}', $c . 'updateOrder'),
             $this->route('POST', '/admin/api/sale/orders/{id}/cancel', $c . 'cancelOrder'),
             $this->route('GET', '/admin/api/sale/orders/{id}/events', $c . 'orderEvents'),
@@ -484,6 +496,8 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.schema.v1', 'GET', '/admin/api/sale/schema', 'sale.read'),
             $this->contract('admin.sale.dashboard.v1', 'GET', '/admin/api/sale/dashboard', 'sale.read'),
             $this->contract('admin.sale.channels.index.v1', 'GET', '/admin/api/sale/channels', 'sale.settings.manage'),
+            $this->contract('admin.sale.ecommerce.shops.index.v1', 'GET', '/admin/api/sale/ecommerce/shops', 'sale.settings.manage'),
+            $this->contract('admin.commerce.shops.index.v1', 'GET', '/admin/api/commerce/shops', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.store.v1', 'POST', '/admin/api/sale/channels', 'sale.settings.manage'),
             $this->contract('admin.sale.channels.resolve.v1', 'GET', '/admin/api/sale/channels/resolve', 'sale.channels.manage'),
             $this->contract('admin.sale.channels.integrity.v1', 'GET', '/admin/api/sale/channels/integrity', 'sale.channels.manage'),
@@ -502,6 +516,10 @@ final class SaleModuleProvider implements ModuleProvider, ModuleCapabilityProvid
             $this->contract('admin.sale.orders.index.v1', 'GET', '/admin/api/sale/orders', 'sale.orders.read'),
             $this->contract('admin.sale.orders.store.v1', 'POST', '/admin/api/sale/orders', 'sale.orders.manage'),
             $this->contract('admin.sale.orders.show.v1', 'GET', '/admin/api/sale/orders/{id}', 'sale.orders.read'),
+            $this->contract('admin.sale.orders.dossier.v1', 'GET', '/admin/api/sale/orders/{id}/dossier', 'sale.orders.read'),
+            $this->contract('admin.sale.orders.documents.store.v1', 'POST', '/admin/api/sale/orders/{id}/documents', 'sale.orders.manage'),
+            $this->contract('admin.sale.orders.deferred_payment.store.v1', 'POST', '/admin/api/sale/orders/{id}/deferred-payment', 'sale.orders.manage'),
+            $this->contract('admin.sale.orders.availability.store.v1', 'POST', '/admin/api/sale/orders/{id}/availability', 'sale.orders.manage'),
             $this->contract('admin.sale.orders.update.v1', 'PATCH', '/admin/api/sale/orders/{id}', 'sale.orders.manage'),
             $this->contract('admin.sale.orders.cancel.v1', 'POST', '/admin/api/sale/orders/{id}/cancel', 'sale.orders.manage'),
             $this->contract('admin.sale.orders.events.v1', 'GET', '/admin/api/sale/orders/{id}/events', 'sale.orders.read'),

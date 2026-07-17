@@ -66,7 +66,7 @@ test.describe('M6.5 reconstruction et réconciliation stock', () => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) });
     });
 
-    await page.goto(cmsPath('/admin/app/sale/operations'));
+    await page.goto(cmsPath('/admin/app/sale/advanced/logistics'));
     await page.getByRole('button', { name: 'Inventaires' }).click();
     await page.getByRole('button', { name: 'Lancer l’aperçu' }).click();
     await expect(page.getByText('available_formula · item #42')).toBeVisible();

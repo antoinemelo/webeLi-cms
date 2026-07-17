@@ -19,6 +19,7 @@ type Relation = {
   shared_memo_count?: number;
   linked_contacts_count?: number;
   last_activity_at?: string | null;
+  next_action_title?: string | null;
   archived_at?: string | null;
 };
 
@@ -28,6 +29,7 @@ defineProps<{
   phoneLabel: string;
   consentLabel?: string;
   canConsent?: boolean;
+  nextAction?: string;
 }>();
 
 defineEmits<{
@@ -61,6 +63,7 @@ defineEmits<{
     <div class="relation-card-meta">
       <span>{{ phoneLabel }}</span>
       <span v-if="relation.last_activity_at">Act. {{ relation.last_activity_at.slice(0, 10) }}</span>
+      <span v-if="nextAction">À suivre : {{ nextAction }}</span>
     </div>
 
     <div class="relation-card-badges">

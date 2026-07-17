@@ -27,6 +27,7 @@ $expectedTables = [
     'sale_order_status_history',
     'sale_payment_methods',
     'sale_payment_intents',
+    'sale_order_payment_plans',
     'sale_payment_transactions',
     'sale_payment_allocations',
     'sale_pos_registers',
@@ -39,6 +40,7 @@ $expectedTables = [
     'sale_stock_reservations',
     'sale_stock_movements',
     'sale_receipts',
+    'sale_order_documents',
     'sale_receipt_actions',
     'sale_returns',
     'sale_return_lines',
@@ -58,6 +60,7 @@ $expectedTables = [
 $expectedPermissions = [
     'sale.read',
     'sale.manage',
+    'sale.advanced_tools.manage',
     'sale.orders.read',
     'sale.orders.manage',
     'sale.payments.read',
@@ -81,7 +84,7 @@ $expectedPermissions = [
 ];
 
 $h->assertSame('sale', $provider->key(), 'sale provider key is stable');
-$h->assertSame('Vente', $provider->name(), 'sale provider name is stable');
+$h->assertSame('Ventes', $provider->name(), 'sale provider visible name is stable');
 $h->assertSame([], $provider->dependencies(), 'sale provider has no hard module dependency');
 $h->assertSame('sale', $provider->databases()[0]['key'] ?? null, 'sale provider declares sale database');
 $h->assertSame('database/modules/sale.sql', $provider->databases()[0]['schema'] ?? null, 'sale provider points to sale SQL schema');

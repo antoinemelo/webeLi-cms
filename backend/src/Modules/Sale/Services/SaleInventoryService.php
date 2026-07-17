@@ -24,15 +24,49 @@ final class SaleInventoryService
     }
 
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
-    public function listItems(int $siteId, int $limit = 50, int $offset = 0): array
+    public function listItems(int $siteId, int $limit = 50, int $offset = 0, array $filters = []): array
     {
-        return $this->inventory->listItems($siteId, $limit, $offset);
+        return $this->inventory->listItems($siteId, $limit, $offset, $filters);
     }
 
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
-    public function movements(int $siteId, int $limit = 50, int $offset = 0): array
+    public function movements(int $siteId, int $limit = 50, int $offset = 0, array $filters = []): array
     {
-        return $this->movements->list($siteId, $limit, $offset);
+        return $filters === []
+            ? $this->movements->list($siteId, $limit, $offset)
+            : $this->inventory->movements($siteId, $limit, $offset, $filters);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function locations(int $siteId): array
+    {
+        return $this->inventory->rawDatabase()->all("SELECT id,code,name,location_type,status FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY location_type='main' DESC,name,id", [$siteId]);
+    }
+
+    /** @return array{items:list<array<string,mixed>>,locations:list<array<string,mixed>>,movements:list<array<string,mixed>>,incoming_quantity:int,blocked_quantity:int} */
+    public function operationalVariantStock(int $siteId, int $businessVariantId): array
+    {
+        $items = $this->listItems($siteId, 100, 0, ['business_variant_id' => $businessVariantId])['items'];
+        $db = $this->inventory->rawDatabase();
+        $incoming = (int) ($db->one(
+            "SELECT COALESCE(SUM(l.requested_quantity-l.received_quantity),0) AS quantity
+             FROM sale_stock_transfer_lines l INNER JOIN sale_stock_transfers t ON t.id=l.transfer_id
+             WHERE t.site_id=? AND l.business_variant_id=? AND t.status IN ('requested','in_transit','partially_received','discrepancy')",
+            [$siteId, $businessVariantId]
+        )['quantity'] ?? 0);
+        $blocked = (int) ($db->one(
+            "SELECT COALESCE(SUM(b.quantity),0) AS quantity FROM sale_stock_backorders b
+             INNER JOIN sale_inventory_items i ON i.id=b.inventory_item_id
+             WHERE i.site_id=? AND i.business_variant_id=? AND b.status IN ('active','confirmed')",
+            [$siteId, $businessVariantId]
+        )['quantity'] ?? 0);
+        return [
+            'items' => $items,
+            'locations' => $this->locations($siteId),
+            'movements' => $this->movements($siteId, 50, 0, ['business_variant_id' => $businessVariantId])['items'],
+            'incoming_quantity' => $incoming,
+            'blocked_quantity' => $blocked,
+        ];
     }
 
     /** @return array<string,mixed> */

@@ -41,6 +41,9 @@ use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
+use App\Modules\Sale\Services\SaleOrderDossierService;
+use App\Modules\Sale\Services\SaleOrderDocumentService;
+use App\Modules\Sale\Services\SaleDeferredPaymentService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
@@ -82,6 +85,9 @@ final class SaleAdminApiController
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
         private readonly ?SalePosService $posService = null,
         private readonly ?SalePaymentMethodService $paymentMethodsService = null,
+        private readonly ?SaleOrderDossierService $orderDossier = null,
+        private readonly ?SaleOrderDocumentService $orderDocuments = null,
+        private readonly ?SaleDeferredPaymentService $deferredPayments = null,
     ) {}
 
     public function schema(): Response
@@ -102,13 +108,27 @@ final class SaleAdminApiController
         $siteId = (int) $site['id'];
         $registers = $this->pos()->repository()->registers($siteId, true);
         $channels = $this->db()->all('SELECT * FROM sale_channels WHERE site_id = ? AND channel_type = \'pos\' ORDER BY code ASC', [$siteId]);
+        if ($registers === [] && $channels !== []) {
+            $this->defaultRegisterId($siteId);
+            $registers = $this->pos()->repository()->registers($siteId, true);
+        }
         $session = $this->pos()->repository()->activeSession($siteId);
+        $fulfillmentMethods = $this->db()->all(
+            "SELECT id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,free_above_minor,requires_shipping_address,stock_location_id
+             FROM sale_fulfillment_methods WHERE site_id=? AND status='active' AND fulfillment_type='shipping'
+             AND (active_from IS NULL OR active_from<=CURRENT_TIMESTAMP) AND (active_until IS NULL OR active_until>CURRENT_TIMESTAMP)
+             ORDER BY sort_order,code",
+            [$siteId]
+        );
+        foreach ($fulfillmentMethods as &$method) $method['label'] = (string) ($method[$languageCode === 'en' ? 'label_en' : 'label_fr'] ?? $method['code']);
+        unset($method);
         return $this->ok([
             'site_id' => $siteId,
             'channels' => $channels,
             'registers' => $registers,
             'active_session' => $session,
             'payment_methods' => $session === null ? [] : $this->pos()->repository()->allowedPaymentMethods((int) $session['register_id']),
+            'fulfillment_methods' => $fulfillmentMethods,
             'offline_supported' => false,
         ], 'admin.sale.pos.bootstrap.v1', $site, $languageCode);
     }
@@ -221,33 +241,9 @@ final class SaleAdminApiController
     public function dashboard(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.read');
-        $db = $this->db();
         $siteId = (int) $site['id'];
-        return $this->ok([
-            'orders' => $this->count('sale_orders', $siteId),
-            'active_carts' => (int) ($db->one('SELECT COUNT(*) AS count FROM sale_carts WHERE site_id = ? AND status = \'active\'', [$siteId])['count'] ?? 0),
-            'paid_total_minor' => (int) ($db->one('SELECT COALESCE(SUM(paid_total_minor), 0) AS total FROM sale_orders WHERE site_id = ?', [$siteId])['total'] ?? 0),
-            'today_sales_minor' => (int) ($db->one('SELECT COALESCE(SUM(grand_total_minor), 0) AS total FROM sale_orders WHERE site_id = ? AND date(placed_at) = date(\'now\') AND status <> \'cancelled\'', [$siteId])['total'] ?? 0),
-            'recent_orders' => $db->all('SELECT * FROM sale_orders WHERE site_id = ? ORDER BY placed_at DESC, id DESC LIMIT 6', [$siteId]),
-            'recent_payments' => $db->all(
-                'SELECT t.*, o.order_number
-                 FROM sale_payment_transactions t
-                 INNER JOIN sale_orders o ON o.id = t.order_id
-                 WHERE o.site_id = ?
-                 ORDER BY t.created_at DESC, t.id DESC
-                 LIMIT 6',
-                [$siteId]
-            ),
-            'open_cash_sessions' => $db->all(
-                'SELECT s.*, r.name AS register_name, r.code AS register_code
-                 FROM sale_cash_sessions s
-                 INNER JOIN sale_pos_registers r ON r.id = s.register_id
-                 WHERE r.site_id = ? AND s.status IN (\'open\',\'closing\')
-                 ORDER BY s.opened_at DESC, s.id DESC',
-                [$siteId]
-            ),
-            'channels' => $this->count('sale_channels', $siteId),
-        ], 'admin.sale.dashboard.v1', $site, $languageCode);
+        $actionable = $this->orderDossier?->actionableDashboard($siteId, $languageCode) ?? ['tasks' => [], 'groups' => [], 'total' => 0];
+        return $this->ok(['actionable' => $actionable], 'admin.sale.dashboard.v1', $site, $languageCode);
     }
 
     public function channels(): Response
@@ -450,6 +446,24 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.orders.read');
         $result = $this->orders->list((int) $site['id'], $this->request->query, $this->limit(), $this->offset());
+        foreach ($result['items'] as &$order) {
+            $customer = json_decode((string) ($order['customer_snapshot_json'] ?? '{}'), true);
+            $order['customer'] = is_array($customer) ? $customer : [];
+            $order['aggregate_fulfillment_status'] = $order['fulfillment_status'];
+            $operation = $this->db()->one(
+                "SELECT status FROM sale_fulfillments WHERE order_id=?
+                 ORDER BY CASE status
+                    WHEN 'blocked' THEN 0 WHEN 'partially_prepared' THEN 1 WHEN 'preparing' THEN 2
+                    WHEN 'allocated' THEN 3 WHEN 'ready_for_pickup' THEN 4 WHEN 'shipped' THEN 5
+                    WHEN 'handed_over' THEN 6 WHEN 'delivered' THEN 7 ELSE 8 END, id DESC LIMIT 1",
+                [(int) $order['id']]
+            );
+            if ($operation !== null) {
+                $operationStatus = (string) $operation['status'];
+                $order['fulfillment_status'] = in_array($operationStatus, ['partially_prepared', 'preparing'], true) ? 'preparing' : $operationStatus;
+            }
+        }
+        unset($order);
         return $this->ok(['orders' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.orders.index.v1', $site, $languageCode);
     }
 
@@ -463,6 +477,66 @@ final class SaleAdminApiController
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function orderDossier(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.read');
+        try {
+            $service = $this->orderDossier ?? new SaleOrderDossierService($this->sale, $this->timeline());
+            $dossier = $service->dossier($this->id($id), $languageCode);
+            $this->ensureSite((int) $site['id'], (int) $dossier['order']['site_id']);
+            foreach ($dossier['state']['actions'] as &$action) {
+                $action['permitted'] = $this->auth->hasPermission((string) $action['permission'], (int) $site['id']);
+            }
+            unset($action);
+            return $this->ok(['dossier' => $dossier], 'admin.sale.orders.dossier.v1', $site, $languageCode);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function issueOrderDocument(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            $service = $this->orderDocuments ?? new SaleOrderDocumentService($this->sale);
+            $document = $service->issue($this->id($id), (string) ($payload['document_type'] ?? ''), $languageCode, $this->actorId());
+            return $this->ok(['document' => $document], 'admin.sale.orders.documents.store.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) {
+            return $this->domainError($e);
+        }
+    }
+
+    public function configureDeferredPayment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            $plan = ($this->deferredPayments ?? throw new SalePaymentException('sale.deferred_payment_unavailable'))->configure(
+                $this->id($id), $payload + ['idempotency_key' => $this->idempotencyKey($payload)], $this->actorId()
+            );
+            return $this->ok(['plan' => $plan], 'admin.sale.orders.deferred_payment.store.v1', $site, $languageCode, 201);
+        } catch (Throwable $e) { return $this->domainError($e); }
+    }
+
+    public function markOrderAvailable(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('sale.orders.manage');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int) $site['id'], (int) $order['site_id']);
+            $payload = $this->payload();
+            $result = ($this->deferredPayments ?? throw new SalePaymentException('sale.deferred_payment_unavailable'))->markAvailable(
+                $this->id($id), $payload + ['language' => $languageCode, 'idempotency_key' => $this->idempotencyKey($payload)]
+            );
+            return $this->ok($result, 'admin.sale.orders.availability.store.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function storeOrder(): Response
@@ -567,7 +641,7 @@ final class SaleAdminApiController
 
     public function reconcilePayments(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.manage');
         try {
             $payload = $this->payload();
             $result = ($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->reconcile(
@@ -579,7 +653,7 @@ final class SaleAdminApiController
 
     public function expirePayments(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.manage');
         try {
             $count = ($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->expireDue((int) $site['id']);
             return $this->ok(['expired' => $count], 'admin.sale.payments.expire.v1', $site, $languageCode);
@@ -588,7 +662,7 @@ final class SaleAdminApiController
 
     public function paymentObservability(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.read');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.read');
         try {
             return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->observability((int) $site['id']), 'admin.sale.payments.observability.v1', $site, $languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }
@@ -596,7 +670,7 @@ final class SaleAdminApiController
 
     public function previewPaymentExceptions(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.manage');
         try {
             $payload = $this->payload();
             return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->previewExceptionResolution(
@@ -607,7 +681,7 @@ final class SaleAdminApiController
 
     public function resolvePaymentException(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.manage');
         try {
             $payload = $this->payload();
             return $this->ok(($this->onlinePayments ?? throw new SalePaymentException('sale.online_payment_unavailable'))->resolveException(
@@ -618,14 +692,14 @@ final class SaleAdminApiController
 
     public function retryPaymentWebhook(string|int $id): Response
     {
-        [$site,$languageCode]=$this->authorize('sale.payments.manage');
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.payments.manage');
         try{return $this->ok(($this->onlinePayments??throw new SalePaymentException('sale.online_payment_unavailable'))->retryWebhook((int)$site['id'],$this->id($id)),'admin.sale.payment_webhooks.retry.v1',$site,$languageCode);}
         catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function retryPaymentOperations(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.payments.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.payments.manage');
         try {
             return $this->ok(
                 $this->paymentService->processDueOperations((int) $site['id'], (int) ($this->payload()['limit'] ?? 50), $this->actorId()),
@@ -863,7 +937,8 @@ final class SaleAdminApiController
         [$site, $languageCode] = $this->authorize('sale.pos.sessions.open');
         try {
             $payload = $this->payload();
-            $registerId = (int) ($payload['register_id'] ?? $this->defaultRegisterId((int) $site['id']));
+            $requestedRegisterId = (int) ($payload['register_id'] ?? 0);
+            $registerId = $requestedRegisterId > 0 ? $requestedRegisterId : $this->defaultRegisterId((int) $site['id']);
             $register = $this->pos()->repository()->requireRegister($registerId, (int) $site['id']);
             $session = $this->pos()->repository()->openSession(
                 $register,
@@ -1023,10 +1098,35 @@ final class SaleAdminApiController
                 'cash_session_id' => (int) ($payload['cash_session_id'] ?? $payload['session_id'] ?? 0),
                 'payment_method' => (string) ($payload['payment_method'] ?? 'cash'),
                 'amount_minor' => (int) ($payload['amount_minor'] ?? 0),
+                'payment_timing' => (string) ($payload['payment_timing'] ?? 'immediate'),
+                'fulfillment_timing' => (string) ($payload['fulfillment_timing'] ?? 'immediate'),
+                'fulfillment_method_code' => (string) ($payload['fulfillment_method_code'] ?? ''),
+                'customer_contact_id' => (int) ($payload['customer_contact_id'] ?? 0),
+                'customer_company_id' => (int) ($payload['customer_company_id'] ?? 0),
             ];
             $data = $this->idempotency->run((int) $site['id'], 'pos.complete_sale', $this->idempotencyKey($payload), $request, function () use ($site, $payload, $languageCode): array {
                 $sessionId = (int) ($payload['cash_session_id'] ?? $payload['session_id'] ?? 0);
                 $paymentMethod = (string) ($payload['payment_method'] ?? 'cash');
+                $paymentTiming = (string) ($payload['payment_timing'] ?? 'immediate');
+                $fulfillmentTiming = (string) ($payload['fulfillment_timing'] ?? 'immediate');
+                if (!in_array($paymentTiming, ['immediate','later','deposit'], true) || !in_array($fulfillmentTiming, ['immediate','pickup_later','delivery_later','on_order'], true)) {
+                    throw new SaleValidationException('sale.pos_execution_mode_invalid');
+                }
+                if ($fulfillmentTiming === 'immediate' && $paymentTiming !== 'immediate') {
+                    throw new SaleValidationException('sale.pos_payment_required_before_handover');
+                }
+                $fulfillmentMethod = null;
+                if ($fulfillmentTiming === 'delivery_later') {
+                    $methodCode = trim((string) ($payload['fulfillment_method_code'] ?? 'standard'));
+                    $fulfillmentMethod = $this->db()->one(
+                        "SELECT id,code,label_fr,label_en,fulfillment_type,flat_rate_minor,free_above_minor,requires_shipping_address,stock_location_id
+                         FROM sale_fulfillment_methods WHERE site_id=? AND code=? AND status='active' AND fulfillment_type='shipping'",
+                        [(int) $site['id'], $methodCode]
+                    );
+                    if ($fulfillmentMethod === null) throw new SaleValidationException('sale.checkout.fulfillment_method_invalid');
+                    $fulfillmentMethod['label'] = (string) ($fulfillmentMethod[$languageCode === 'en' ? 'label_en' : 'label_fr'] ?? $methodCode);
+                    $fulfillmentMethod['type'] = 'shipping';
+                }
                 $context = $this->pos()->context($sessionId, (int) $site['id'], $this->actorId());
                 $session = $this->pos()->repository()->requireSession($sessionId, (int) $site['id']);
                 $method = $this->pos()->requireAllowedPaymentMethod($session, $paymentMethod);
@@ -1036,16 +1136,32 @@ final class SaleAdminApiController
                     throw new SaleValidationException('sale.pos_cart_session_mismatch');
                 }
                 $this->db()->run('UPDATE sale_carts SET register_session_id=? WHERE id=?', [$sessionId, (int) $cart['id']]);
-                $order = $this->checkout->placeOrder((int) $cart['id'], [
+                $customerContactId = (int) ($payload['customer_contact_id'] ?? 0);
+                $customerCompanyId = (int) ($payload['customer_company_id'] ?? 0);
+                if ($customerContactId > 0 || $customerCompanyId > 0) {
+                    $cart = $this->carts->linkCustomer(
+                        (int) $cart['id'],
+                        $customerCompanyId > 0 ? $customerCompanyId : null,
+                        $customerContactId > 0 ? $customerContactId : null,
+                        is_array($payload['customer_snapshot'] ?? null) ? $payload['customer_snapshot'] : []
+                    );
+                }
+                $checkoutPayload = [
                     'idempotency_key' => $this->idempotencyKey($payload),
                     'source' => 'pos',
                     'iam_user_id' => $this->actorId(),
-                ]);
+                    'defer_inventory_until_payment' => $fulfillmentTiming === 'on_order',
+                ];
+                if ($fulfillmentMethod !== null) $checkoutPayload['shipping_method_snapshot'] = $fulfillmentMethod;
+                $order = $this->checkout->placeOrder((int) $cart['id'], $checkoutPayload);
                 $this->pos()->repository()->attachOrderContext((int) $order['id'], $session, $this->actorId());
                 $freshOrder = $this->orders->requireOrder((int) $order['id']);
                 $dueMinor = max(0, (int) $freshOrder['grand_total_minor'] - (int) $freshOrder['paid_total_minor']);
                 $requestedPaymentMinor = array_key_exists('amount_minor', $payload) ? max(0, (int) $payload['amount_minor']) : $dueMinor;
                 $paymentMinor = min($dueMinor, $requestedPaymentMinor);
+                if ($paymentTiming === 'immediate' && $paymentMinor !== $dueMinor) throw new SaleValidationException('sale.pos_full_payment_required');
+                if ($paymentTiming === 'deposit' && ($paymentMinor < 1 || $paymentMinor >= $dueMinor)) throw new SaleValidationException('sale.pos_deposit_invalid');
+                if ($paymentTiming === 'later') $paymentMinor = 0;
                 $paid = $paymentMinor > 0
                     ? $this->paymentService->recordManualPayment((int) $order['id'], $paymentMinor, $this->actorId(), [
                         'idempotency_key' => $this->idempotencyKey($payload),
@@ -1063,6 +1179,34 @@ final class SaleAdminApiController
                     }
                 }
                 $paid['order'] = $this->orders->requireOrder((int) $order['id']);
+                $fulfillmentStatus = $fulfillmentTiming === 'immediate' ? 'fulfilled' : 'unfulfilled';
+                $this->db()->run(
+                    "UPDATE sale_orders SET fulfillment_status=?,metadata_json=json_set(metadata_json,'$.pos_payment_timing',?,'$.pos_fulfillment_timing',?,'$.expected_availability_at',?),updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [$fulfillmentStatus,$paymentTiming,$fulfillmentTiming,$payload['expected_availability_at']??null,(int)$order['id']]
+                );
+                if ($fulfillmentTiming === 'immediate') {
+                    $this->db()->run('UPDATE sale_order_lines SET fulfilled_quantity=quantity WHERE order_id=?', [(int) $order['id']]);
+                    $current = $this->orders->requireOrder((int) $order['id']);
+                    if ((string) $current['status'] === 'placed') {
+                        $current = $this->orderService->confirmOrder((int) $order['id'], $this->actorId(), 'POS immediate handover');
+                    }
+                    if ((string) $current['status'] === 'confirmed') {
+                        $this->orderService->completeOrder((int) $order['id'], $this->actorId(), 'POS immediate handover');
+                    }
+                }
+                if ($fulfillmentTiming === 'on_order' || $paymentTiming !== 'immediate') {
+                    if ($this->deferredPayments === null) throw new SalePaymentException('sale.deferred_payment_unavailable');
+                    $this->deferredPayments->configure((int) $order['id'], [
+                        'mode' => $paymentTiming === 'deposit' ? 'deposit_balance' : 'deferred_availability',
+                        'price_policy' => (string) ($payload['price_policy'] ?? 'frozen'),
+                        'deposit_minor' => $paymentTiming === 'deposit' ? $paymentMinor : 0,
+                        'expected_availability_at' => $payload['expected_availability_at'] ?? null,
+                        'available_now' => $fulfillmentTiming !== 'on_order',
+                        'provider_key' => (string) ($method['provider_key'] ?: $method['method_type']),
+                        'idempotency_key' => (string) $this->idempotencyKey($payload) . '-plan',
+                    ], $this->actorId());
+                }
+                $paid['order'] = $this->orders->requireOrder((int) $order['id']);
                 $this->events->emit((int) $site['id'], 'sale.pos.order.completed', 'order', (int) $order['id'], [
                     'site_id' => (int) $site['id'],
                     'order_id' => (int) $order['id'],
@@ -1073,7 +1217,13 @@ final class SaleAdminApiController
                     'source' => 'pos',
                     'iam_user_id' => $this->actorId(),
                 ], $this->actorId(), $paid['order']['correlation_id'] ?? null);
-                return ['order' => $paid['order'], 'transaction' => $paid['transaction'], 'receipt' => $this->receipt()->issue((int) $order['id'], (string) $context['locale'], $this->actorId()), 'pos_context' => $context];
+                return [
+                    'order' => $paid['order'],
+                    'transaction' => $paid['transaction'],
+                    'receipt' => $paymentMinor > 0 ? $this->receipt()->issue((int) $order['id'], (string) $context['locale'], $this->actorId()) : null,
+                    'execution' => ['payment_timing' => $paymentTiming, 'fulfillment_timing' => $fulfillmentTiming],
+                    'pos_context' => $context,
+                ];
             });
             return $this->ok($data, 'admin.sale.pos.checkout.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
@@ -1156,7 +1306,7 @@ final class SaleAdminApiController
 
     public function stockItems(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.read');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.read');
         $siteId = (int) $site['id'];
         $result = $this->inventory->listItems($siteId, $this->limit(), $this->offset(), $this->request->query);
         $locations = $this->db()->all("SELECT id,code,name,location_type,status FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY name,id", [$siteId]);
@@ -1175,7 +1325,7 @@ final class SaleAdminApiController
 
     public function stockAdjustments(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.manage');
         try {
             $payload = $this->payload();
             $type = (string) ($payload['movement_type'] ?? 'adjustment');
@@ -1191,14 +1341,14 @@ final class SaleAdminApiController
 
     public function stockMovements(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.read');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.read');
         $result = $this->inventory->movements((int) $site['id'], $this->limit(), $this->offset(), $this->request->query);
         return $this->ok(['movements' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.sale.stock.movements.v1', $site, $languageCode);
     }
 
     public function stockReservations(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.read');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.read');
         $result = $this->inventory->listReservations((int) $site['id'], $this->request->query, $this->limit(), $this->offset());
         return $this->ok([
             'reservations' => $result['items'],
@@ -1210,7 +1360,7 @@ final class SaleAdminApiController
 
     public function renewStockReservation(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.manage');
         try {
             $payload = $this->payload();
             $reservation = $this->inventory->renewReservation(
@@ -1223,7 +1373,7 @@ final class SaleAdminApiController
 
     public function releaseStockReservation(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.manage');
         try {
             $payload = $this->payload();
             $reason = trim((string) ($payload['reason'] ?? ''));
@@ -1238,14 +1388,14 @@ final class SaleAdminApiController
 
     public function expireStockReservations(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.stock.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.stock.manage');
         $expired = $this->inventory->expireDueReservations((int) $site['id']);
         return $this->ok(['expired' => $expired], 'admin.sale.stock.reservations.expire.v1', $site, $languageCode);
     }
 
     public function updateStockReservationPolicy(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.settings.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.settings.manage');
         try {
             $policy = $this->inventory->updateReservationPolicy((int) $site['id'], $this->id($id), $this->payload());
             return $this->ok(['policy' => $policy], 'admin.sale.stock.reservations.policy.v1', $site, $languageCode);
@@ -1254,7 +1404,7 @@ final class SaleAdminApiController
 
     public function transferStock(): Response
     {
-        [$site,$languageCode]=$this->authorize('sale.transfers.manage');
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.transfers.manage');
         try {
             $payload=$this->payload();
             if($this->fulfillment===null) throw new SaleBusinessException('sale.fulfillment_unavailable');
@@ -1263,20 +1413,20 @@ final class SaleAdminApiController
         } catch (Throwable $e) { return $this->domainError($e); }
     }
 
-    public function stockTransfers():Response{[$site,$languageCode]=$this->authorize('sale.stock.read');return $this->ok(['transfers'=>$this->fulfillment?->transfers((int)$site['id'])??[]],'admin.sale.stock.transfers.index.v1',$site,$languageCode);}
-    public function shipStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->shipTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.ship.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
-    public function receiveStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->receiveTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.receive.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
-    public function cancelStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->cancelTransfer((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.stock.transfers.cancel.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function stockTransfers():Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.stock.read');return $this->ok(['transfers'=>$this->fulfillment?->transfers((int)$site['id'])??[]],'admin.sale.stock.transfers.index.v1',$site,$languageCode);}
+    public function shipStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->shipTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.ship.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function receiveStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->receiveTransfer((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.stock.transfers.receive.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function cancelStockTransfer(string|int $id):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.transfers.manage');try{return $this->ok(['transfer'=>$this->fulfillment?->cancelTransfer((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.stock.transfers.cancel.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
 
-    public function inventorySessions():Response{[$site,$languageCode]=$this->authorize('sale.stock.read');return $this->ok(['sessions'=>$this->fulfillment?->inventorySessions((int)$site['id'])??[]],'admin.sale.inventory_sessions.index.v1',$site,$languageCode);}
-    public function storeInventorySession():Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->createInventorySession((int)$site['id'],$this->payload(),$this->actorId())??[]],'admin.sale.inventory_sessions.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
-    public function saveInventoryCount(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{$p=$this->payload();return $this->ok(['session'=>$this->fulfillment?->saveInventoryCount((int)$site['id'],$this->id($id),$this->id($lineId),(int)($p['counted_quantity']??-1),isset($p['discrepancy_reason'])?(string)$p['discrepancy_reason']:null,$this->actorId())??[]],'admin.sale.inventory_sessions.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
-    public function submitInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->submitInventorySession((int)$site['id'],$this->id($id))??[]],'admin.sale.inventory_sessions.submit.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
-    public function approveInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.inventory.approve');try{return $this->ok(['session'=>$this->fulfillment?->approveInventorySession((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.inventory_sessions.approve.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function inventorySessions():Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.stock.read');return $this->ok(['sessions'=>$this->fulfillment?->inventorySessions((int)$site['id'])??[]],'admin.sale.inventory_sessions.index.v1',$site,$languageCode);}
+    public function storeInventorySession():Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->createInventorySession((int)$site['id'],$this->payload(),$this->actorId())??[]],'admin.sale.inventory_sessions.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
+    public function saveInventoryCount(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.inventory.count');try{$p=$this->payload();return $this->ok(['session'=>$this->fulfillment?->saveInventoryCount((int)$site['id'],$this->id($id),$this->id($lineId),(int)($p['counted_quantity']??-1),isset($p['discrepancy_reason'])?(string)$p['discrepancy_reason']:null,$this->actorId())??[]],'admin.sale.inventory_sessions.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function submitInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.inventory.count');try{return $this->ok(['session'=>$this->fulfillment?->submitInventorySession((int)$site['id'],$this->id($id))??[]],'admin.sale.inventory_sessions.submit.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function approveInventorySession(string|int $id):Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.inventory.approve');try{return $this->ok(['session'=>$this->fulfillment?->approveInventorySession((int)$site['id'],$this->id($id),$this->actorId())??[]],'admin.sale.inventory_sessions.approve.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
 
     public function reconcileInventory(): Response
     {
-        [$site,$languageCode]=$this->authorize('sale.stock.read');
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.stock.read');
         try {
             if ($this->inventoryReconciliation===null) throw new SaleBusinessException('sale.inventory_reconciliation_unavailable');
             $payload=$this->payload();
@@ -1287,13 +1437,13 @@ final class SaleAdminApiController
 
     public function inventoryReconciliationHistory():Response
     {
-        [$site,$languageCode]=$this->authorize('sale.stock.read');
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.stock.read');
         return $this->ok(['runs'=>$this->inventoryReconciliation?->history((int)$site['id'],(int)($this->request->query['limit']??20))??[]],'admin.sale.stock.reconciliation.history.v1',$site,$languageCode);
     }
 
     public function repairInventoryReconciliation():Response
     {
-        [$site,$languageCode]=$this->authorize('sale.inventory.repair');
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.inventory.repair');
         try{$payload=$this->payload();if($this->inventoryReconciliation===null)throw new SaleBusinessException('sale.inventory_reconciliation_unavailable');$report=$this->inventoryReconciliation->run((int)$site['id'],true,$this->actorId(),(string)($payload['reason']??''),is_array($payload['corrections']??null)?$payload['corrections']:[],is_array($payload['only_inventory_item_ids']??null)?$payload['only_inventory_item_ids']:[]);return $this->ok(['reconciliation'=>$report],'admin.sale.stock.reconciliation.repair.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}
     }
 
@@ -1306,7 +1456,20 @@ final class SaleAdminApiController
     public function settings(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.settings.manage');
-        return $this->ok(['settings' => $this->db()->all('SELECT * FROM sale_settings WHERE site_id = ? ORDER BY setting_key ASC', [(int) $site['id']])], 'admin.sale.settings.v1', $site, $languageCode);
+        $rows = $this->db()->all('SELECT * FROM sale_settings WHERE site_id = ? ORDER BY setting_key ASC', [(int) $site['id']]);
+        $configured = [];
+        foreach ($rows as $row) $configured[(string) $row['setting_key']] = json_decode((string) $row['setting_value_json'], true);
+        return $this->ok([
+            'settings' => $rows,
+            'order_policies' => [
+                'payment_before_delivery' => (bool) ($configured['order.payment_before_delivery'] ?? true),
+                'deferred_on_order' => (array) ($configured['order.deferred_on_order'] ?? ['enabled' => true, 'price_policy' => 'frozen', 'payment_window_days' => 7, 'reminders_after_days' => [2, 5]]),
+                'deposit' => (array) ($configured['order.deposit'] ?? ['enabled' => true, 'default_percent' => 0]),
+                'documents' => (array) ($configured['order.documents'] ?? ['invoice_on_paid' => true, 'credit_note_on_refund' => true, 'delivery_note_on_fulfillment' => true]),
+                'pos_deferred' => (array) ($configured['order.pos_deferred'] ?? ['enabled' => true, 'requires_explicit_choice' => true]),
+                'approval' => (array) ($configured['order.approval'] ?? ['manual_payment_permission' => 'sale.payments.manage', 'fulfillment_permission' => 'sale.fulfillment.manage']),
+            ],
+        ], 'admin.sale.settings.v1', $site, $languageCode);
     }
 
     public function fulfillmentConfiguration(): Response
@@ -1333,7 +1496,7 @@ final class SaleAdminApiController
         } catch(Throwable $e) { return $this->domainError($e); }
     }
 
-    public function fulfillmentQueue():Response{[$site,$languageCode]=$this->authorize('sale.orders.read');return $this->ok(['fulfillments'=>$this->fulfillment?->workQueue((int)$site['id'],$this->request->query)??[]],'admin.sale.fulfillment.queue.v1',$site,$languageCode);}
+    public function fulfillmentQueue():Response{[$site,$languageCode]=$this->authorizeAdvanced('sale.orders.read');return $this->ok(['fulfillments'=>$this->fulfillment?->workQueue((int)$site['id'],$this->request->query)??[]],'admin.sale.fulfillment.queue.v1',$site,$languageCode);}
     public function storeFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->createOperation((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
     public function saveFulfillmentLine(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->savePreparation((int)$site['id'],$this->id($id),$this->id($lineId),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
     public function transitionFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{$p=$this->payload();return $this->ok(['fulfillment'=>$this->fulfillment?->transitionOperation((int)$site['id'],$this->id($id),(string)($p['status']??''),$p,$this->actorId())??[]],'admin.sale.fulfillments.transition.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
@@ -1352,7 +1515,7 @@ final class SaleAdminApiController
 
     public function mergeCustomerAccounts(): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.customer_accounts.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('sale.customer_accounts.manage');
         try {
             if ($this->customerAccounts === null) {
                 throw new SaleBusinessException('sale.customer_accounts_unavailable');
@@ -1374,22 +1537,22 @@ final class SaleAdminApiController
 
     public function customerIdentityReview():Response
     {
-        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['cases'=>$this->customerAccounts->reviewIdentities((int)$site['id'],($this->request->query['allow_verified_phone']??'0')==='1',(int)($this->request->query['limit']??100))],'admin.sale.customer_identities.review.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.customer_accounts.manage');try{if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['cases'=>$this->customerAccounts->reviewIdentities((int)$site['id'],($this->request->query['allow_verified_phone']??'0')==='1',(int)($this->request->query['limit']??100),isset($this->request->query['relation_type'])?(string)$this->request->query['relation_type']:null,isset($this->request->query['relation_id'])?(int)$this->request->query['relation_id']:null)],'admin.sale.customer_identities.review.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function decideCustomerIdentity(string|int $id):Response
     {
-        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');$case=$this->customerAccounts->decideIdentity((int)$site['id'],$this->id($id),(string)($payload['action']??''),$this->actorId(),(string)($payload['reason']??''),is_array($payload['field_decisions']??null)?$payload['field_decisions']:[]);return $this->ok(['case'=>$case],'admin.sale.customer_identities.decision.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');$case=$this->customerAccounts->decideIdentity((int)$site['id'],$this->id($id),(string)($payload['action']??''),$this->actorId(),(string)($payload['reason']??''),is_array($payload['field_decisions']??null)?$payload['field_decisions']:[]);return $this->ok(['case'=>$case],'admin.sale.customer_identities.decision.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function previewCustomerAccountMerge():Response
     {
-        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['preview'=>$this->customerAccounts->mergePreview((int)$site['id'],(int)($payload['source_iam_user_id']??0),(int)($payload['target_iam_user_id']??0))],'admin.sale.customer_accounts.merge_preview.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['preview'=>$this->customerAccounts->mergePreview((int)$site['id'],(int)($payload['source_iam_user_id']??0),(int)($payload['target_iam_user_id']??0))],'admin.sale.customer_accounts.merge_preview.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function separateCustomerAccountMerge(string|int $id):Response
     {
-        [$site,$languageCode]=$this->authorize('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['merge'=>$this->customerAccounts->separateMerge((int)$site['id'],$this->id($id),$this->actorId(),(string)($payload['reason']??''))],'admin.sale.customer_accounts.separate.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+        [$site,$languageCode]=$this->authorizeAdvanced('sale.customer_accounts.manage');try{$payload=$this->payload();if($this->customerAccounts===null)throw new SaleBusinessException('sale.customer_accounts_unavailable');return $this->ok(['merge'=>$this->customerAccounts->separateMerge((int)$site['id'],$this->id($id),$this->actorId(),(string)($payload['reason']??''))],'admin.sale.customer_accounts.separate.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function dailyReport(): Response
@@ -1420,7 +1583,9 @@ final class SaleAdminApiController
                     (SELECT COUNT(*) FROM sale_orders o WHERE o.pos_session_id=s.id) AS orders_count,
                     (SELECT COALESCE(SUM(o.grand_total_minor),0) FROM sale_orders o WHERE o.pos_session_id=s.id AND o.status<>'cancelled') AS sales_minor,
                     (SELECT COALESCE(SUM(CASE WHEN m.movement_type='cash_in' THEN m.amount_minor WHEN m.movement_type='cash_out' THEN m.amount_minor ELSE 0 END),0) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS manual_cash_delta_minor,
-                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS movements_count
+                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id) AS movements_count,
+                    (SELECT COALESCE(SUM(m.amount_minor),0) FROM sale_cash_movements m WHERE m.cash_session_id=s.id AND m.movement_type NOT IN ('opening','closing')) AS net_cash_movement_minor,
+                    (SELECT COUNT(*) FROM sale_cash_movements m WHERE m.cash_session_id=s.id AND m.movement_type NOT IN ('opening','closing')) AS operational_movements_count
              FROM sale_cash_sessions s INNER JOIN sale_pos_registers r ON r.id=s.register_id
              WHERE r.site_id=? ORDER BY s.id DESC",
             [(int) $site['id']]
@@ -1685,6 +1850,14 @@ final class SaleAdminApiController
         $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
         $this->authorization->require($permission, (int) $site['id']);
         return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAdvanced(string $permission): array
+    {
+        [$site, $languageCode] = $this->authorize('sale.advanced_tools.manage');
+        $this->authorization->require($permission, (int) $site['id']);
+        return [$site, $languageCode];
     }
 
     private function db(): \App\Core\Database

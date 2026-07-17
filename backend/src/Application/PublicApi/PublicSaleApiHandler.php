@@ -25,6 +25,7 @@ use App\Modules\Sale\Services\SaleCustomerAccountService;
 use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
+use App\Modules\Sale\Services\SaleDeferredPaymentService;
 use App\Repository\SiteRepository;
 use InvalidArgumentException;
 use Throwable;
@@ -48,6 +49,7 @@ final class PublicSaleApiHandler
         private readonly ?SalesChannelResolverService $channelResolver = null,
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
         private readonly ?SalePaymentMethodService $paymentMethods = null,
+        private readonly ?SaleDeferredPaymentService $deferredPayments = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -70,7 +72,17 @@ final class PublicSaleApiHandler
             return $this->json([
                 'channel' => $this->channelPayload($channel),
                 'cart' => ['enabled' => true, 'token_transport' => 'opaque_token'],
-                'checkout' => ['enabled' => true, 'idempotency_required' => true],
+                'checkout' => [
+                    'enabled' => true,
+                    'idempotency_required' => true,
+                    'payment_timing' => ['prepaid', 'when_available'],
+                    'on_order_policy' => [
+                        'default_price_policy' => 'frozen',
+                        'requires_expected_availability' => true,
+                        'requires_explicit_terms_acceptance' => true,
+                        'invoice_before_payment' => false,
+                    ],
+                ],
                 'fulfillment_methods' => $this->fulfillment?->availableMethods((int) $site['id'], $languageCode) ?? [],
                 'payment_methods' => $paymentMethods,
             ], 'public.sale.channels.bootstrap.v1', $site, $languageCode);
@@ -198,15 +210,32 @@ final class PublicSaleApiHandler
                 (int) $cart['grand_total_minor'], $paymentCode
             );
             $createSession = (bool) ($resolvedPayment['create_session'] ?? false);
+            $orderPolicy = is_array($payload['order_policy'] ?? null) ? $payload['order_policy'] : [];
+            $deferredOnAvailability = (string) ($orderPolicy['payment_timing'] ?? 'prepaid') === 'when_available';
+            if ($deferredOnAvailability && (($orderPolicy['terms_accepted'] ?? false) !== true || trim((string) ($orderPolicy['expected_availability_at'] ?? '')) === '')) {
+                throw new SaleValidationException('sale.deferred_payment_terms_required');
+            }
             $order = $this->checkout->placeOrder((int) $cart['id'], [
                 'idempotency_key' => $idempotencyKey,
                 'source' => 'ecommerce',
-                'defer_inventory_until_payment' => (bool) ($resolvedPayment['defer_order_until_payment'] ?? false),
+                'defer_inventory_until_payment' => $deferredOnAvailability || (bool) ($resolvedPayment['defer_order_until_payment'] ?? false),
                 'payment_reservation_ttl_seconds' => 1800,
                 'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
             ]);
             $data = ['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))];
-            if ($createSession) {
+            if ($deferredOnAvailability) {
+                if ($this->deferredPayments === null) throw new SalePaymentException('sale.deferred_payment_unavailable');
+                $data['deferred_payment'] = $this->deferredPayments->configure((int) $order['id'], [
+                    'mode' => (int) ($orderPolicy['deposit_minor'] ?? 0) > 0 ? 'deposit_balance' : 'deferred_availability',
+                    'price_policy' => (string) ($orderPolicy['price_policy'] ?? 'frozen'),
+                    'deposit_minor' => (int) ($orderPolicy['deposit_minor'] ?? 0),
+                    'expected_availability_at' => (string) $orderPolicy['expected_availability_at'],
+                    'payment_window_seconds' => (int) ($orderPolicy['payment_window_seconds'] ?? 604800),
+                    'provider_key' => (string) $resolvedPayment['provider_key'],
+                    'idempotency_key' => $idempotencyKey . '-deferred',
+                    'accepted_at' => gmdate('Y-m-d H:i:s'),
+                ]);
+            } elseif ($createSession) {
                 if ($this->onlinePayments === null) {
                     throw new SalePaymentException('sale.online_payment_unavailable');
                 }

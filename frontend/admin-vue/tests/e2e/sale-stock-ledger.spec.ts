@@ -71,7 +71,7 @@ test.describe('M6 ledger stock Sale', () => {
     test.setTimeout(90_000);
     await signIn(page);
     const state = await mockStock(page);
-    await page.goto(cmsPath('/admin/app/sale/stock'));
+    await page.goto(cmsPath('/admin/app/sale/advanced/stock'));
     await expect(page.getByRole('heading', { name: 'Stock transactionnel' })).toBeVisible();
     await expect(page.locator('.stock-row')).toHaveCount(100);
     await page.getByPlaceholder('Nom, SKU, code-barres ou emplacement').fill('7610000001');
@@ -90,7 +90,7 @@ test.describe('M6 ledger stock Sale', () => {
   test('rejects an invalid quantity and completes the five-step audited movement wizard', async ({ page }) => {
     await signIn(page);
     const state = await mockStock(page);
-    await page.goto(cmsPath('/admin/app/sale/stock'));
+    await page.goto(cmsPath('/admin/app/sale/advanced/stock'));
     await page.locator('.stock-row').first().click();
     await page.getByRole('button', { name: 'Nouveau mouvement' }).last().click();
     await page.getByRole('button', { name: 'Suivant' }).click();
@@ -113,7 +113,7 @@ test.describe('M6 ledger stock Sale', () => {
   test('shows empty and permission states without a dead end', async ({ page }) => {
     await signIn(page);
     await mockStock(page, { empty: true });
-    await page.goto(cmsPath('/admin/app/sale/stock'));
+    await page.goto(cmsPath('/admin/app/sale/advanced/stock'));
     await expect(page.getByText('Aucun item de stock ne correspond à ces filtres.')).toBeVisible();
     await page.unroute('**/admin/api/sale/stock/**');
     await mockStock(page, { forbidden: true });

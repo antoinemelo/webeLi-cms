@@ -34,6 +34,7 @@ generated: true
 | `APP_EDITORIAL_IMPORT_MAX_UNCOMPRESSED_BYTES` | `backend/config/app.php` |
 | `APP_ENV` | `backend/config/app.php`, `backend/config/security.php`, `backend/src/Application/PublicApi/PublicSaleApiHandler.php`, `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php`, `backend/src/Security/PreviewSigner.php` |
 | `APP_FALLBACK_LOCALE` | `backend/config/app.php` |
+| `APP_FORM_RELATION_SIGNING_KEY` | `backend/config/app.php` |
 | `APP_HEALTH_DB_BUSY_TIMEOUT_MS` | `backend/config/health.php` |
 | `APP_HEALTH_READY_TIMEOUT_MS` | `backend/config/health.php` |
 | `APP_KEY` | `backend/src/Repository/AuthRepository.php` |

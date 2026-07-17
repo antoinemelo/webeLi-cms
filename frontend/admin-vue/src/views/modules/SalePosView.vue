@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import { useI18n } from '@/i18n';
+import { useAdminContextStore } from '@/stores/adminContext';
 
 type PosVariant = Record<string, unknown> & {
   sellable_id?: number;
@@ -42,10 +44,12 @@ type PosCart = Record<string, unknown> & { id: number; version?: number; subtota
 type PosSession = Record<string, unknown> & { id: number; register_id?: number; status?: string; expected_cash_minor?: number; currency?: string };
 type PosPaymentMethod = Record<string, unknown> & { id: number; code: string; name: string; method_type: string };
 type PosReceipt = Record<string, unknown> & { order_id?: number | string; order_number?: string | null; printable_text?: string };
+type PosCustomer = Record<string, unknown> & { id: number; company_id?: number; display_name?: string; email?: string; phone?: string; mobile?: string; company_name?: string };
 
 defineProps<{ embedded?: boolean }>();
 
 const { languageCode, t, money: formatMoney } = useI18n();
+const context = useAdminContextStore();
 
 const loading = ref(false);
 const saving = ref(false);
@@ -58,10 +62,10 @@ const bundles = ref<PosVariant[]>([]);
 const cart = ref<PosCart | null>(null);
 const session = ref<PosSession | null>(null);
 const receipt = ref<PosReceipt | null>(null);
-const bootstrap = reactive<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>> }>({ registers: [], channels: [] });
+const bootstrap = reactive<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>>; fulfillmentMethods: Array<Record<string, unknown>> }>({ registers: [], channels: [], fulfillmentMethods: [] });
 const openingCash = ref(0);
 const selectedRegisterId = ref(0);
-const countedCash = ref(0);
+const countedCash = ref<number | string>('');
 const closingJustification = ref('');
 const cashMovementType = ref<'cash_in' | 'cash_out' | 'correction'>('cash_in');
 const cashMovementAmount = ref(0);
@@ -70,10 +74,19 @@ const paidAmount = ref(0);
 const adjustmentMode = ref<'amount' | 'percent'>('amount');
 const adjustmentValue = ref(0);
 const paymentMethod = ref('cash');
+const paymentTiming = ref<'immediate' | 'later' | 'deposit'>('immediate');
+const fulfillmentTiming = ref<'immediate' | 'pickup_later' | 'delivery_later' | 'on_order'>('immediate');
+const fulfillmentMethodCode = ref('standard');
+const expectedAvailabilityAt = ref('');
 const paymentMethods = ref<PosPaymentMethod[]>([]);
 const receiptEmail = ref('');
 const receiptSending = ref(false);
 const reprintReason = ref('');
+const customerQuery = ref('');
+const customerResults = ref<PosCustomer[]>([]);
+const selectedCustomer = ref<PosCustomer | null>(null);
+const customerLoading = ref(false);
+let customerSearchTimer: number | undefined;
 
 const cartLines = computed(() => cart.value?.lines || []);
 const catalogVariants = computed(() => variants.value.filter((variant) => !isBundle(variant)));
@@ -87,16 +100,37 @@ const cartManualDiscountMinor = computed(() => cartAdjustments.value
 const cartDiscountMinor = computed(() => Number(cart.value?.discount_total_minor || 0));
 const cartOfferDiscountMinor = computed(() => Math.max(0, cartDiscountMinor.value - cartManualDiscountMinor.value));
 const openingCashMinor = computed(() => amountToMinor(openingCash.value));
+const countedCashMinor = computed(() => countedCash.value === ''
+  ? Number(session.value?.expected_cash_minor || 0)
+  : amountToMinor(countedCash.value));
+const closingDifferenceMinor = computed(() => countedCashMinor.value - Number(session.value?.expected_cash_minor || 0));
+const requiresClosingJustification = computed(() => countedCash.value !== '' && closingDifferenceMinor.value !== 0);
+const canCloseCashSession = computed(() => !saving.value && (!requiresClosingJustification.value || closingJustification.value.trim().length > 0));
 const paidAmountMinor = computed(() => amountToMinor(paidAmount.value));
 const paymentTotalMinor = computed(() => paidAmountMinor.value);
 const remainingDueMinor = computed(() => Number(cart.value?.grand_total_minor || 0) - paymentTotalMinor.value);
 const isOverpaid = computed(() => remainingDueMinor.value < 0);
-const canCheckout = computed(() => !!cart.value?.id && cartLines.value.length > 0 && (paymentMethod.value !== 'cash' || !!session.value?.id));
+const canCheckout = computed(() => {
+  if (!cart.value?.id || cartLines.value.length < 1 || (paymentMethod.value === 'cash' && !session.value?.id)) return false;
+  const total = Number(cart.value.grand_total_minor || 0);
+  if (fulfillmentTiming.value === 'immediate' && paymentTiming.value !== 'immediate') return false;
+  if (fulfillmentTiming.value === 'on_order' && !expectedAvailabilityAt.value) return false;
+  if (fulfillmentTiming.value === 'delivery_later' && !fulfillmentMethodCode.value) return false;
+  if (paymentTiming.value === 'immediate') return paidAmountMinor.value >= total;
+  if (paymentTiming.value === 'deposit') return paidAmountMinor.value > 0 && paidAmountMinor.value < total;
+  return true;
+});
 const receiptText = computed(() => String(receipt.value?.printable_text || ''));
 const receiptOrderId = computed(() => Number(receipt.value?.order_id || 0));
+const selectedRegister = computed(() => bootstrap.registers.find((register) => Number(register.id) === selectedRegisterId.value));
+const openingCurrency = computed(() => String(selectedRegister.value?.currency || session.value?.currency || 'CHF'));
+const canLinkCustomer = computed(() => context.can('business.crm.read'));
 
 function money(minor?: unknown): string {
-  return formatMoney(minor, cart.value?.currency || 'CHF');
+  return new Intl.NumberFormat(languageCode.value === 'en' ? 'en-CH' : 'fr-CH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(minor || 0) / 100);
 }
 
 function cardPrice(minor?: unknown): string {
@@ -116,11 +150,15 @@ async function loadBootstrap(): Promise<void> {
   loading.value = true;
   error.value = '';
   try {
-    const response = await adminApi.get<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>>; active_session?: PosSession | null; payment_methods?: PosPaymentMethod[] }>('/sale/pos/bootstrap');
+    const response = await adminApi.get<{ registers: Array<Record<string, unknown>>; channels: Array<Record<string, unknown>>; active_session?: PosSession | null; payment_methods?: PosPaymentMethod[]; fulfillment_methods?: Array<Record<string, unknown>> }>('/sale/pos/bootstrap');
     bootstrap.registers = response.data.registers || [];
     bootstrap.channels = response.data.channels || [];
     session.value = response.data.active_session || null;
     paymentMethods.value = response.data.payment_methods || [];
+    bootstrap.fulfillmentMethods = response.data.fulfillment_methods || [];
+    if (!bootstrap.fulfillmentMethods.some((method) => String(method.code || '') === fulfillmentMethodCode.value)) {
+      fulfillmentMethodCode.value = String(bootstrap.fulfillmentMethods[0]?.code || 'standard');
+    }
     selectedRegisterId.value = Number(session.value?.register_id || selectedRegisterId.value || bootstrap.registers[0]?.id || 0);
     if (paymentMethods.value.length && !paymentMethods.value.some((method) => method.code === paymentMethod.value || method.method_type === paymentMethod.value)) {
       paymentMethod.value = paymentMethods.value[0].code;
@@ -158,13 +196,50 @@ async function loadBundles(): Promise<void> {
   bundles.value = response.data.variants || [];
 }
 
+function scheduleCustomerSearch(): void {
+  selectedCustomer.value = null;
+  if (customerSearchTimer) window.clearTimeout(customerSearchTimer);
+  customerSearchTimer = window.setTimeout(searchCustomers, 250);
+}
+
+async function searchCustomers(): Promise<void> {
+  if (!canLinkCustomer.value) return;
+  customerLoading.value = true;
+  try {
+    const response = await adminApi.get<{ contacts: PosCustomer[] }>('/business/contacts', { q: customerQuery.value.trim(), limit: 8 });
+    customerResults.value = response.data.contacts || [];
+  } catch (err) {
+    error.value = apiErrorMessage(err);
+    customerResults.value = [];
+  } finally {
+    customerLoading.value = false;
+  }
+}
+
+function selectCustomer(customer: PosCustomer): void {
+  selectedCustomer.value = customer;
+  customerQuery.value = String(customer.display_name || '');
+  customerResults.value = [];
+  if (!receiptEmail.value && customer.email) receiptEmail.value = String(customer.email);
+}
+
+function clearCustomer(): void {
+  selectedCustomer.value = null;
+  customerQuery.value = '';
+  customerResults.value = [];
+}
+
 async function openSession(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const response = await adminApi.post<{ session: PosSession }>('/sale/pos/sessions/open', { register_id: selectedRegisterId.value, opening_cash_minor: amountToMinor(openingCash.value) });
+    const response = await adminApi.post<{ session: PosSession }>('/sale/pos/sessions/open', {
+      register_id: selectedRegisterId.value || undefined,
+      opening_cash_minor: amountToMinor(openingCash.value)
+    });
     session.value = response.data.session;
     notice.value = t('sale.pos.sessionOpened');
+    await loadBootstrap();
   } catch (err) {
     error.value = apiErrorMessage(err);
   } finally {
@@ -177,12 +252,13 @@ async function closeSession(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const countedMinor = countedCash.value > 0 ? amountToMinor(countedCash.value) : Number(session.value.expected_cash_minor || 0);
     const response = await adminApi.post<{ session: PosSession }>(`/sale/pos/sessions/${session.value.id}/close`, {
-      counted_cash_minor: countedMinor,
+      counted_cash_minor: countedCashMinor.value,
       difference_justification: closingJustification.value.trim() || undefined
     });
     session.value = response.data.session;
+    countedCash.value = '';
+    closingJustification.value = '';
     notice.value = t('sale.pos.sessionClosedNotice');
   } catch (err) {
     error.value = apiErrorMessage(err);
@@ -220,6 +296,10 @@ async function ensureCart(): Promise<PosCart> {
 }
 
 async function addVariant(variant: PosVariant): Promise<void> {
+  if (!session.value?.id || session.value.status !== 'open') {
+    error.value = t('sale.pos.openSessionRequired');
+    return;
+  }
   saving.value = true;
   error.value = '';
   try {
@@ -480,17 +560,31 @@ async function checkout(): Promise<void> {
   saving.value = true;
   error.value = '';
   try {
-    const response = await adminApi.post<{ order: Record<string, unknown>; receipt: PosReceipt }>('/sale/pos/checkout', {
+    const response = await adminApi.post<{ order: Record<string, unknown>; receipt: PosReceipt | null }>('/sale/pos/checkout', {
       cart_id: cart.value.id,
       cash_session_id: session.value?.id,
       payment_method: paymentMethod.value,
       amount_minor: paymentTotalMinor.value,
+      payment_timing: paymentTiming.value,
+      fulfillment_timing: fulfillmentTiming.value,
+      fulfillment_method_code: fulfillmentTiming.value === 'delivery_later' ? fulfillmentMethodCode.value : null,
+      expected_availability_at: expectedAvailabilityAt.value || null,
+      price_policy: 'frozen',
+      customer_contact_id: selectedCustomer.value?.id || null,
+      customer_company_id: selectedCustomer.value?.company_id || null,
+      customer_snapshot: selectedCustomer.value ? {
+        display_name: selectedCustomer.value.display_name,
+        email: selectedCustomer.value.email,
+        phone: selectedCustomer.value.mobile || selectedCustomer.value.phone,
+        company_name: selectedCustomer.value.company_name,
+      } : null,
       idempotency_key: `pos-checkout-${cart.value.id}`
     });
-    receipt.value = response.data.receipt;
+    receipt.value = response.data.receipt || null;
     cart.value = null;
     paidAmount.value = 0;
     adjustmentValue.value = 0;
+    clearCustomer();
     notice.value = t('sale.pos.saleCompleted', { order: String(response.data.order.order_number || '') });
     await loadBootstrap();
   } catch (err) {
@@ -500,7 +594,20 @@ async function checkout(): Promise<void> {
   }
 }
 
+watch(paymentTiming, (timing) => {
+  if (timing === 'immediate') paidAmount.value = Number(cart.value?.grand_total_minor || 0) / 100;
+  if (timing === 'later') paidAmount.value = 0;
+});
+
+watch(fulfillmentTiming, (timing) => {
+  if (timing === 'immediate') paymentTiming.value = 'immediate';
+  if (timing === 'delivery_later' && bootstrap.fulfillmentMethods.some((method) => String(method.code || '') === 'standard')) fulfillmentMethodCode.value = 'standard';
+});
+
 onMounted(loadBootstrap);
+onBeforeUnmount(() => {
+  if (customerSearchTimer) window.clearTimeout(customerSearchTimer);
+});
 </script>
 
 <template>
@@ -514,15 +621,23 @@ onMounted(loadBootstrap);
         <span class="badge" :class="session?.status === 'open' ? 'text-bg-success' : 'text-bg-secondary'">
           {{ session?.status === 'open' ? t('sale.pos.sessionOpen') : t('sale.pos.sessionClosed') }}
         </span>
-        <select v-if="!session || session.status !== 'open'" v-model.number="selectedRegisterId" class="form-select form-select-sm" :aria-label="t('sale.pos.register')">
-          <option v-for="register in bootstrap.registers" :key="Number(register.id)" :value="Number(register.id)">{{ register.name }}</option>
-        </select>
-        <input v-if="!session || session.status !== 'open'" v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('sale.pos.openingCash')" :placeholder="t('sale.pos.openingCash')">
+        <div v-if="!session || session.status !== 'open'" class="sale-pos__opening-fields">
+          <label class="sale-pos__session-field">
+            <span>{{ t('sale.pos.register') }}</span>
+            <select v-model.number="selectedRegisterId" class="form-select form-select-sm" :aria-label="t('sale.pos.register')">
+              <option v-for="register in bootstrap.registers" :key="Number(register.id)" :value="Number(register.id)">{{ register.name }}</option>
+            </select>
+          </label>
+          <label class="sale-pos__session-field">
+            <span>{{ t('sale.pos.openingCash') }} [{{ openingCurrency }}]</span>
+            <input v-model.number="openingCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('sale.pos.openingCash')" :placeholder="t('sale.pos.openingCash')">
+          </label>
+        </div>
         <button v-if="!session || session.status !== 'open'" class="btn btn-primary btn-sm" :disabled="saving" @click="openSession">{{ t('sale.pos.open') }}</button>
         <template v-else>
           <input v-model.number="countedCash" class="form-control form-control-sm" type="number" min="0" step="0.01" :aria-label="t('sale.pos.countedCash')" :placeholder="t('sale.pos.countedCash')">
-          <input v-model="closingJustification" class="form-control form-control-sm" type="text" :aria-label="t('sale.pos.differenceJustification')" :placeholder="t('sale.pos.differenceJustification')">
-          <button class="btn btn-outline-secondary btn-sm" :disabled="saving" @click="closeSession">{{ t('sale.pos.close') }}</button>
+          <input v-if="requiresClosingJustification" v-model="closingJustification" class="form-control form-control-sm" type="text" required :aria-label="t('sale.pos.differenceJustification')" :placeholder="t('sale.pos.differenceJustification')">
+          <button class="btn btn-outline-secondary btn-sm" :disabled="!canCloseCashSession" @click="closeSession">{{ t('sale.pos.close') }}</button>
         </template>
       </div>
     </header>
@@ -538,8 +653,7 @@ onMounted(loadBootstrap);
       <button class="btn btn-outline-primary btn-sm" :disabled="saving || cashMovementAmount <= 0 || !cashMovementReason.trim()" @click="recordCashMovement">{{ t('common.add') }}</button>
     </div>
 
-    <div v-if="notice" class="alert alert-success py-2">{{ notice }}</div>
-    <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+    <ApiFeedback :success="notice" :error="error" />
 
     <div class="sale-pos__layout">
       <main class="sale-pos__catalog">
@@ -554,7 +668,7 @@ onMounted(loadBootstrap);
             <h2>{{ t('sale.pos.bundles') }}</h2>
           </div>
           <div class="sale-pos__grid sale-pos__grid--bundles">
-            <button v-for="bundle in bundles" :key="`bundle-${bundle.business_variant_id}`" class="sale-pos__product sale-pos__product--bundle" type="button" :disabled="saving" @click="addVariant(bundle)">
+            <button v-for="bundle in bundles" :key="`bundle-${bundle.business_variant_id}`" class="sale-pos__product sale-pos__product--bundle" type="button" :disabled="saving || session?.status !== 'open'" @click="addVariant(bundle)">
               <span v-if="hasDiscount(bundle)" class="sale-pos__discount-badge">-{{ discountPercent(bundle) }}%</span>
               <span class="sale-pos__product-top">
                 <span v-if="stockLabel(bundle)" class="sale-pos__stock-tag">{{ stockLabel(bundle) }}</span>
@@ -576,7 +690,7 @@ onMounted(loadBootstrap);
         </section>
 
         <div class="sale-pos__grid">
-          <button v-for="variant in catalogVariants" :key="variant.business_variant_id" class="sale-pos__product" type="button" :disabled="saving" @click="addVariant(variant)">
+          <button v-for="variant in catalogVariants" :key="variant.business_variant_id" class="sale-pos__product" type="button" :disabled="saving || session?.status !== 'open'" @click="addVariant(variant)">
             <span v-if="hasDiscount(variant)" class="sale-pos__discount-badge">-{{ discountPercent(variant) }}%</span>
             <span class="sale-pos__product-top">
               <span v-if="stockLabel(variant)" class="sale-pos__stock-tag">{{ stockLabel(variant) }}</span>
@@ -643,6 +757,40 @@ onMounted(loadBootstrap);
           <input v-model.number="adjustmentValue" class="form-control form-control-sm" type="number" step="0.01" :aria-label="t('sale.pos.adjustmentValue')" :disabled="!cartLines.length || saving" @change="applyCartAdjustment">
         </div>
 
+        <div v-if="canLinkCustomer" class="sale-pos__customer">
+          <div class="sale-pos__customer-search">
+            <input id="sale-pos-customer" v-model="customerQuery" class="form-control" type="search" autocomplete="off" :aria-label="t('sale.pos.customerPlaceholder')" :placeholder="t('sale.pos.customerPlaceholder')" @input="scheduleCustomerSearch" @focus="searchCustomers">
+            <button v-if="selectedCustomer" class="btn btn-outline-secondary" type="button" :aria-label="t('sale.pos.customerClear')" @click="clearCustomer">×</button>
+          </div>
+          <small v-if="selectedCustomer" class="sale-pos__customer-selected">{{ selectedCustomer.display_name }}<span v-if="selectedCustomer.company_name"> · {{ selectedCustomer.company_name }}</span></small>
+          <div v-else-if="customerResults.length" class="sale-pos__customer-results">
+            <button v-for="customer in customerResults" :key="customer.id" type="button" @click="selectCustomer(customer)">
+              <strong>{{ customer.display_name }}</strong>
+              <small>{{ customer.email || customer.mobile || customer.phone || customer.company_name || '—' }}</small>
+            </button>
+          </div>
+          <small v-else-if="customerLoading" class="text-muted">{{ t('common.loading') }}</small>
+        </div>
+
+        <label class="form-label mt-3">{{ t('sale.pos.fulfillmentTiming') }}</label>
+        <select v-model="fulfillmentTiming" class="form-select" :aria-label="t('sale.pos.fulfillmentTiming')">
+          <option value="immediate">{{ t('sale.pos.fulfillment.immediate') }}</option>
+          <option value="pickup_later">{{ t('sale.pos.fulfillment.pickupLater') }}</option>
+          <option value="delivery_later">{{ t('sale.pos.fulfillment.deliveryLater') }}</option>
+          <option value="on_order">{{ t('sale.pos.fulfillment.onOrder') }}</option>
+        </select>
+        <label v-if="fulfillmentTiming === 'delivery_later'" class="form-label mt-2">{{ t('sale.pos.fulfillmentMethod') }}
+          <select v-model="fulfillmentMethodCode" class="form-select" :aria-label="t('sale.pos.fulfillmentMethod')" required>
+            <option v-for="method in bootstrap.fulfillmentMethods" :key="String(method.id || method.code)" :value="String(method.code)">{{ method.label || method.label_fr || method.code }}</option>
+          </select>
+        </label>
+        <label v-if="fulfillmentTiming === 'on_order'" class="form-label mt-2">{{ t('sale.orders.expectedAvailability') }}<input v-model="expectedAvailabilityAt" class="form-control" type="date" required></label>
+        <label class="form-label mt-3">{{ t('sale.pos.paymentTiming') }}</label>
+        <select v-model="paymentTiming" class="form-select" :aria-label="t('sale.pos.paymentTiming')" :disabled="fulfillmentTiming === 'immediate'">
+          <option value="immediate">{{ t('sale.pos.payment.immediate') }}</option>
+          <option value="later">{{ t('sale.pos.payment.later') }}</option>
+          <option value="deposit">{{ t('sale.pos.payment.deposit') }}</option>
+        </select>
         <label class="form-label mt-3">{{ t('sale.pos.payment') }}</label>
         <select v-model="paymentMethod" class="form-select" :aria-label="t('sale.pos.payment')">
           <option v-for="method in paymentMethods" :key="method.id" :value="method.code">{{ method.name }}</option>
@@ -697,6 +845,21 @@ onMounted(loadBootstrap);
   justify-content: space-between;
   margin-bottom: 1rem;
 }
+.sale-pos__opening-fields {
+  align-items: end;
+  display: grid;
+  gap: .25rem .5rem;
+  grid-template-columns: minmax(10rem, 1fr) minmax(10rem, 1fr);
+}
+.sale-pos__session-field {
+  display: grid;
+  gap: .2rem;
+}
+.sale-pos__session-field > span {
+  color: #475569;
+  font-size: .75rem;
+  font-weight: 700;
+}
 .sale-pos__head--embedded {
   justify-content: flex-end;
   margin-bottom: .75rem;
@@ -730,6 +893,49 @@ onMounted(loadBootstrap);
 }
 .sale-pos__search {
   margin-bottom: 1rem;
+}
+.sale-pos__customer {
+  display: grid;
+  gap: .35rem;
+  margin-top: 1rem;
+  position: relative;
+}
+.sale-pos__customer-search {
+  display: flex;
+  gap: .35rem;
+}
+.sale-pos__customer-selected {
+  color: #166534;
+  font-weight: 700;
+}
+.sale-pos__customer-results {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px #0f172a22;
+  display: grid;
+  left: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  top: 4.3rem;
+  z-index: 20;
+}
+.sale-pos__customer-results button {
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  display: grid;
+  padding: .65rem .75rem;
+  text-align: left;
+}
+.sale-pos__customer-results button:hover,
+.sale-pos__customer-results button:focus-visible {
+  background: #eff6ff;
+}
+.sale-pos__customer-results small {
+  color: #64748b;
 }
 .sale-pos__bundle-section {
   display: grid;
@@ -1004,6 +1210,14 @@ onMounted(loadBootstrap);
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 @media (max-width: 900px) {
+  .sale-pos,
+  .sale-pos__catalog,
+  .sale-pos__cart,
+  .sale-pos__session > *,
+  .sale-pos__search > * {
+    min-width: 0;
+    max-width: 100%;
+  }
   .sale-pos__layout {
     grid-template-columns: 1fr;
   }
@@ -1011,6 +1225,21 @@ onMounted(loadBootstrap);
   .sale-pos__search {
     align-items: stretch;
     flex-direction: column;
+  }
+  .sale-pos__session {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .sale-pos__session,
+  .sale-pos__cash-movement {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+  .sale-pos__session .badge {
+    justify-self: start;
   }
 }
 </style>

@@ -4,6 +4,7 @@ export type ContextualHelpId =
   | 'system.blueprints'
   | 'tools.maintenance'
   | 'modules.sale'
+  | 'modules.commerce'
   | 'business.crm';
 
 export type ContextualHelpEntry = {
@@ -49,6 +50,13 @@ export const contextualHelp: Record<ContextualHelpId, ContextualHelpEntry> = {
     summary: 'Contrôler commandes, POS, paiements et stock transactionnel.',
     commonErrors: ['Créer une vente sans canal actif.', 'Interpréter un paiement en attente comme payé.'],
     docId: 'business~vente'
+  },
+  'modules.commerce': {
+    id: 'modules.commerce',
+    label: 'Aide E-Commerce',
+    summary: 'Comprendre la configuration des sites e-commerce rattachée aux réglages Ventes.',
+    commonErrors: ['Supposer qu’ouvrir les réglages publie un Shop.', 'Confondre canal de vente existant et Shop activé.'],
+    docId: 'business~commerce'
   },
   'business.crm': {
     id: 'business.crm',

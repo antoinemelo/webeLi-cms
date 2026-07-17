@@ -209,6 +209,7 @@ return [
     'vue_node_modules_path' => $vueNodeModulesPath,
     'twig_vendor_path' => $twigVendorPath,
     'preview_signing_key' => env('APP_PREVIEW_SIGNING_KEY', 'change-this-preview-key'),
+    'form_relation_signing_key' => env('APP_FORM_RELATION_SIGNING_KEY', env('APP_PREVIEW_SIGNING_KEY', 'change-this-preview-key')),
     'worker_max_attempts' => (int) env('APP_WORKER_MAX_ATTEMPTS', 5),
 
     // Runtime public léger : en production, aucune maintenance automatique ne

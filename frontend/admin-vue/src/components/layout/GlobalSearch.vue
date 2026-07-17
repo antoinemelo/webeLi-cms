@@ -10,7 +10,7 @@ import type { ContentTypeSummary, EntryListItem } from '@/api/contracts';
 
 type SearchItem = {
   id: string;
-  kind: 'action' | 'content';
+  kind: 'action' | 'content' | 'relation' | 'order' | 'product';
   title: string;
   meta?: string;
   route?: string;
@@ -216,21 +216,54 @@ async function fetchContentResults() {
   const serial = ++requestSerial;
   loading.value = true;
   try {
-    const response = await adminApi.get<EntryListItem[]>('/entries', {
-      site_id: context.siteId,
-      language_code: context.languageCode,
-      q,
-      limit: 6,
-      offset: 0
-    });
+    const requests: Array<Promise<SearchItem[]>> = [
+      adminApi.get<EntryListItem[]>('/entries', {
+        site_id: context.siteId,
+        language_code: context.languageCode,
+        q,
+        limit: 4,
+        offset: 0
+      }).then((response) => response.data.map((row) => ({
+        id: `content:${row.id}`,
+        kind: 'content' as const,
+        title: row.title || `#${row.id}`,
+        meta: contentMeta(row),
+        route: `/contents/${contentTypeRouteSegment(row.content_type_key)}/${row.id}`
+      })))
+    ];
+    if (context.can('business.crm.read')) {
+      requests.push(adminApi.get<{ relations?: Array<Record<string, unknown>> }>('/business/search', { q, limit: 4 })
+        .then((response) => (response.data.relations || []).map((row) => ({
+          id: `relation:${row.type}:${row.id}`,
+          kind: 'relation' as const,
+          title: String(row.title || `#${row.id}`),
+          meta: String(row.subtitle || row.status || ''),
+          route: `/business/relations?relation_type=${encodeURIComponent(String(row.type || 'contact'))}&relation_id=${encodeURIComponent(String(row.id))}`
+        }))));
+    }
+    if (context.can('sale.orders.read')) {
+      requests.push(adminApi.get<{ orders?: Array<Record<string, unknown>> }>('/sale/orders', { q, limit: 4 })
+        .then((response) => (response.data.orders || []).map((row) => ({
+          id: `order:${row.id}`,
+          kind: 'order' as const,
+          title: String(row.order_number || `#${row.id}`),
+          meta: String(row.status || ''),
+          route: `/sale/orders?order_id=${encodeURIComponent(String(row.id))}`
+        }))));
+    }
+    if (context.can('business.catalog.read')) {
+      requests.push(adminApi.get<{ products?: Array<Record<string, unknown>> }>('/business/catalog/products', { q, limit: 4 })
+        .then((response) => (response.data.products || []).map((row) => ({
+          id: `product:${row.id}`,
+          kind: 'product' as const,
+          title: String(row.name || `#${row.id}`),
+          meta: String(row.sku_base || row.status || ''),
+          route: `/business/products-stock?product_id=${encodeURIComponent(String(row.id))}`
+        }))));
+    }
+    const settled = await Promise.allSettled(requests);
     if (serial !== requestSerial) return;
-    contentResults.value = response.data.map((row) => ({
-      id: `content:${row.id}`,
-      kind: 'content',
-      title: row.title || `#${row.id}`,
-      meta: contentMeta(row),
-      route: `/contents/${contentTypeRouteSegment(row.content_type_key)}/${row.id}`
-    }));
+    contentResults.value = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []).slice(0, 8);
   } catch (_) {
     if (serial === requestSerial) contentResults.value = [];
   } finally {
@@ -247,6 +280,10 @@ function contentMeta(row: EntryListItem): string {
 function statusLabel(status: string): string {
   const key = `core.status.${status}`;
   return hasTranslation(key, context.uiLanguageCode) ? t(key) : status;
+}
+
+function kindLabel(kind: SearchItem['kind']): string {
+  return t(`search.kind.${kind}`);
 }
 
 function submitSearch() {
@@ -319,7 +356,7 @@ onBeforeUnmount(() => {
           :aria-selected="index === activeIndex"
           @mousedown.prevent="go(item)"
         >
-          <span class="global-search-kind">{{ item.kind === 'action' ? t('search.action') : t('search.content') }}</span>
+          <span class="global-search-kind">{{ kindLabel(item.kind) }}</span>
           <span class="global-search-item__body">
             <strong>{{ item.title }}</strong>
             <small v-if="item.meta">{{ item.meta }}</small>

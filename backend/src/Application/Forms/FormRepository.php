@@ -9,7 +9,11 @@ use InvalidArgumentException;
 
 final class FormRepository
 {
-    public function __construct(private readonly Database $db) {}
+    public function __construct(
+        private readonly Database $db,
+        private readonly ?FormSubmissionActivitySink $activitySink = null,
+        private readonly ?FormRelationAddressToken $relationTokens = null,
+    ) {}
 
     /** @return array{forms:list<array<string,mixed>>} */
     public function list(int $siteId, string $q = '', ?string $language = null, int $limit = 100): array
@@ -113,6 +117,11 @@ final class FormRepository
         if (!$form) {
             throw new InvalidArgumentException('FORM_NOT_FOUND');
         }
+        $addressedRelation = null;
+        $relationToken = trim((string) ($payload['_relation_token'] ?? ''));
+        if ($relationToken !== '' && $this->relationTokens !== null) {
+            $addressedRelation = $this->relationTokens->verify($relationToken, $siteId, $formKey);
+        }
         $raw = is_array($payload['values'] ?? null) ? $payload['values'] : $payload;
         $spam = $this->spamCheck($form, $payload, $context);
         if ($spam['blocked']) {
@@ -124,6 +133,24 @@ final class FormRepository
         $submissionId = null;
         if (!empty($form['store_submissions'])) {
             $submissionId = $this->storeSubmission($form, $language, $values, $context, $spam);
+            if ($this->activitySink !== null) {
+                try {
+                    $this->activitySink->recordFormSubmission([
+                        'site_id' => (int) $form['site_id'],
+                        'form_id' => (int) $form['id'],
+                        'form_key' => (string) $form['form_key'],
+                        'form_name' => (string) ($form['name'] ?? $form['form_key']),
+                        'submission_id' => $submissionId,
+                        'status' => 'received',
+                        'occurred_at' => gmdate('Y-m-d H:i:s'),
+                        'addressed_relation' => $addressedRelation ?? (is_array($context['addressed_relation'] ?? null) ? $context['addressed_relation'] : null),
+                        'verified_email' => is_string($context['verified_email'] ?? null) ? $context['verified_email'] : null,
+                        'retention_until' => $context['retention_until'] ?? null,
+                    ]);
+                } catch (\Throwable) {
+                    // Forms remains canonical and available when the optional CRM projection fails.
+                }
+            }
         }
         $this->notify($form, $values, $submissionId);
         return ['accepted' => true, 'status' => 'received', 'submission_id' => $submissionId, 'message' => (string) $form['success_message']];

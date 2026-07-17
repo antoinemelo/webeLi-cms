@@ -50,7 +50,7 @@ test.describe('M6 reservations, expiry and backorder UX', () => {
   test.skip(!enabled, 'Dedicated E2E admin environment is required');
 
   test('shows decision states, human TTL, order link and mobile layout', async ({ page }) => {
-    await signIn(page); await mockReservations(page); await page.goto(cmsPath('/admin/app/sale/reservations'));
+    await signIn(page); await mockReservations(page); await page.goto(cmsPath('/admin/app/sale/advanced/reservations'));
     await expect(page.getByRole('heading', { name: 'Réservations et backorders' })).toBeVisible();
     await expect(page.getByText('5 min restantes')).toBeVisible();
     await expect(page.getByText('Backorder explicite · 2', { exact: true })).toBeVisible();
@@ -64,7 +64,7 @@ test.describe('M6 reservations, expiry and backorder UX', () => {
   });
 
   test('requires a release reason and configures the channel policy', async ({ page }) => {
-    await signIn(page); const state = await mockReservations(page); await page.goto(cmsPath('/admin/app/sale/reservations'));
+    await signIn(page); const state = await mockReservations(page); await page.goto(cmsPath('/admin/app/sale/advanced/reservations'));
     await page.getByRole('button', { name: 'Libérer' }).first().click();
     await expect(page.getByRole('button', { name: 'Confirmer la libération' })).toBeDisabled();
     await page.getByLabel('Raison obligatoire').fill('Client parti avant paiement');

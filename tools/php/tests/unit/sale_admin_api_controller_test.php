@@ -60,10 +60,10 @@ try {
     $core->run("INSERT INTO site_languages(site_id, language_code, is_default, is_active, sort_order) VALUES(1, 'fr', 1, 1, 1)");
 
     $iam = new Database($iamPath, 1000);
-    $iam->run("INSERT INTO iam_users(id,email,email_normalized,password_hash,is_active,login_mode) VALUES(1,'sale-admin@example.test','sale-admin@example.test','x',1,'password'),(2,'sale-empty@example.test','sale-empty@example.test','x',1,'password')");
-    $iam->run("INSERT INTO iam_roles(id,role_key,name) VALUES(1,'sale_admin','Sale admin'),(2,'sale_empty','Sale empty')");
+    $iam->run("INSERT INTO iam_users(id,email,email_normalized,password_hash,is_active,login_mode) VALUES(1,'sale-admin@example.test','sale-admin@example.test','x',1,'password'),(2,'sale-empty@example.test','sale-empty@example.test','x',1,'password'),(3,'sale-operator@example.test','sale-operator@example.test','x',1,'password')");
+    $iam->run("INSERT INTO iam_roles(id,role_key,name) VALUES(1,'sale_admin','Sale admin'),(2,'sale_empty','Sale empty'),(3,'sale_operator','Sale operator')");
     $permissions = [
-        'sale.read', 'sale.manage', 'sale.orders.read', 'sale.orders.manage',
+        'sale.read', 'sale.manage', 'sale.advanced_tools.manage', 'sale.orders.read', 'sale.orders.manage',
         'sale.payments.read', 'sale.payments.manage', 'sale.refunds.manage',
         'sale.pos.use', 'sale.pos.manage', 'sale.cash.manage',
         'sale.pos.sessions.open', 'sale.pos.sessions.close', 'sale.pos.discounts.manage',
@@ -74,7 +74,9 @@ try {
         $iam->run('INSERT INTO iam_permissions(id, permission_key, name) VALUES(?, ?, ?)', [$index + 1, $permission, $permission]);
         $iam->run('INSERT INTO iam_role_permissions(role_id, permission_id) VALUES(1, ?)', [$index + 1]);
     }
-    $iam->run("INSERT INTO iam_user_site_roles(user_id,site_id,role_id) VALUES(1,1,1),(2,1,2)");
+    $stockReadPermissionId = (int) ($iam->one("SELECT id FROM iam_permissions WHERE permission_key='sale.stock.read'")['id'] ?? 0);
+    $iam->run('INSERT INTO iam_role_permissions(role_id, permission_id) VALUES(3, ?)', [$stockReadPermissionId]);
+    $iam->run("INSERT INTO iam_user_site_roles(user_id,site_id,role_id) VALUES(1,1,1),(2,1,2),(3,1,3)");
 
     $sites = new SiteRepository($core, ['cms' => ['default_site_key' => 'main'], 'app' => ['default_locale' => 'fr']]);
     $pricingRepository = new BusinessCatalogPricingRepository($businessDb);
@@ -203,6 +205,11 @@ try {
         ApiException::class,
         'user without sale permission cannot access sale admin API'
     );
+    $h->expectException(
+        fn() => $controllerFor(3, 'GET', '/admin/api/sale/stock/items')->stockItems(),
+        ApiException::class,
+        'ordinary operator with stock permission cannot bypass the dedicated advanced-tools permission'
+    );
 
     $channelsResponse = $controllerFor(1, 'GET', '/admin/api/sale/channels')->channels();
     $h->assertSame(200, $channelsResponse->status(), 'sale admin can list channels');
@@ -213,10 +220,10 @@ try {
     $dashboardResponse = $controllerFor(1, 'GET', '/admin/api/sale/dashboard')->dashboard();
     $h->assertSame(200, $dashboardResponse->status(), 'sale dashboard is available');
     $dashboardPayload = json_decode($dashboardResponse->body(), true);
-    $h->assertTrue(array_key_exists('today_sales_minor', $dashboardPayload['data'] ?? []), 'sale dashboard exposes today sales');
-    $h->assertTrue(array_key_exists('recent_orders', $dashboardPayload['data'] ?? []), 'sale dashboard exposes recent orders');
-    $h->assertTrue(array_key_exists('recent_payments', $dashboardPayload['data'] ?? []), 'sale dashboard exposes recent payments');
-    $h->assertTrue(array_key_exists('open_cash_sessions', $dashboardPayload['data'] ?? []), 'sale dashboard exposes open POS sessions');
+    $h->assertTrue(array_key_exists('actionable', $dashboardPayload['data'] ?? []), 'sale dashboard exposes only actionable work');
+    $h->assertTrue(!array_key_exists('today_sales_minor', $dashboardPayload['data'] ?? []), 'sale dashboard does not expose vanity sales metrics');
+    $h->assertTrue(!array_key_exists('recent_orders', $dashboardPayload['data'] ?? []), 'sale dashboard does not expose a non-actionable recent list');
+    $h->assertTrue(!array_key_exists('open_cash_sessions', $dashboardPayload['data'] ?? []), 'sale dashboard keeps non-actionable POS sessions out of the main queue');
 
     $createdChannel = $controllerFor(1, 'POST', '/admin/api/sale/channels', [], ['code' => 'test-pos', 'name' => 'Test POS', 'channel_type' => 'pos', 'status' => 'active'])->storeChannel();
     $h->assertSame(201, $createdChannel->status(), 'sale admin can create channel');
@@ -347,6 +354,7 @@ try {
     $h->assertSame(200, $posBootstrapResponse->status(), 'sale POS bootstrap is available');
     $posBootstrapPayload = json_decode($posBootstrapResponse->body(), true);
     $h->assertTrue(isset($posBootstrapPayload['data']['payment_methods']), 'sale POS bootstrap exposes payment methods');
+    $h->assertTrue((int) ($posBootstrapPayload['data']['registers'][0]['id'] ?? 0) > 0, 'sale POS bootstrap provisions an explicit default register');
 
     $posCatalogResponse = $controllerFor(1, 'GET', '/admin/api/sale/pos/catalog', ['q' => 'gourde'])->posCatalog();
     $h->assertSame(200, $posCatalogResponse->status(), 'sale POS catalog is searchable');
@@ -358,7 +366,7 @@ try {
     $posVariantsPayload = json_decode($posVariantsResponse->body(), true);
     $h->assertSame('DEMO-GOURDE-BLEU', $posVariantsPayload['data']['variants'][0]['sku'] ?? null, 'sale POS SKU lookup returns expected variant');
 
-    $sessionResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/open', [], ['opening_cash_minor' => 1000])->openCashSession();
+    $sessionResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/sessions/open', [], ['register_id' => 0, 'opening_cash_minor' => 1000])->openCashSession();
     $h->assertSame(201, $sessionResponse->status(), 'sale POS can open a cash session');
     $sessionPayload = json_decode($sessionResponse->body(), true);
     $cashSessionId = (int) ($sessionPayload['data']['session']['id'] ?? 0);
@@ -402,20 +410,45 @@ try {
     $posUpdateLinePayload = json_decode($posUpdateLineResponse->body(), true);
     $h->assertSame(5800, (int) ($posUpdateLinePayload['data']['cart']['grand_total_minor'] ?? 0), 'sale POS quantity update recalculates totals');
 
-    $posCheckoutPayload = ['cart_id' => $posCartId, 'cash_session_id' => $cashSessionId, 'payment_method' => 'cash', 'idempotency_key' => 'pos-api-checkout'];
+    $posCheckoutPayload = [
+        'cart_id' => $posCartId, 'cash_session_id' => $cashSessionId, 'payment_method' => 'cash', 'idempotency_key' => 'pos-api-checkout',
+        'customer_contact_id' => 77, 'customer_company_id' => 88,
+        'customer_snapshot' => ['display_name' => 'Ada Exemple', 'email' => 'ada@example.test', 'phone' => '+41790000000', 'company_name' => 'Exemple SA'],
+    ];
     $posCheckoutResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/checkout', [], $posCheckoutPayload)->posCheckout();
     $h->assertSame(201, $posCheckoutResponse->status(), 'sale POS can checkout a cash cart');
     $posCheckoutBody = json_decode($posCheckoutResponse->body(), true);
     $posOrderId = (int) ($posCheckoutBody['data']['order']['id'] ?? 0);
     $h->assertTrue(str_starts_with((string) ($posCheckoutBody['data']['order']['order_number'] ?? ''), 'POS-'), 'sale POS checkout uses POS order number prefix');
     $h->assertSame('paid', $posCheckoutBody['data']['order']['payment_status'] ?? null, 'sale POS checkout records payment');
-    $posOrderContext = $saleDb->one('SELECT channel_id,stock_location_id,pos_register_id,pos_session_id,pos_operator_iam_user_id FROM sale_orders WHERE id=?', [$posOrderId]);
+    $posOrderContext = $saleDb->one('SELECT channel_id,stock_location_id,pos_register_id,pos_session_id,pos_operator_iam_user_id,status,fulfillment_status,customer_contact_id,customer_company_id,customer_snapshot_json FROM sale_orders WHERE id=?', [$posOrderId]);
     $h->assertSame($cashSessionId, (int) ($posOrderContext['pos_session_id'] ?? 0), 'shared order traces the POS session');
     $h->assertSame(1, (int) ($posOrderContext['pos_operator_iam_user_id'] ?? 0), 'shared order traces the POS operator');
     $h->assertTrue((int) ($posOrderContext['pos_register_id'] ?? 0) > 0 && (int) ($posOrderContext['stock_location_id'] ?? 0) > 0, 'shared order traces register and location');
+    $h->assertSame(77, (int) ($posOrderContext['customer_contact_id'] ?? 0), 'sale POS links the existing CRM contact before checkout');
+    $h->assertSame(88, (int) ($posOrderContext['customer_company_id'] ?? 0), 'sale POS keeps the CRM company relation');
+    $h->assertTrue(str_contains((string) ($posOrderContext['customer_snapshot_json'] ?? ''), 'Ada Exemple'), 'sale POS freezes the selected CRM customer snapshot');
+    $placedEvent = $saleDb->one("SELECT payload_json FROM sale_events WHERE event_type='sale.order.placed' AND aggregate_id=? ORDER BY id DESC LIMIT 1", [$posOrderId]);
+    $h->assertTrue(str_contains((string) ($placedEvent['payload_json'] ?? ''), 'customer_contact_id') && str_contains((string) ($placedEvent['payload_json'] ?? ''), '77'), 'sale order event exposes the CRM identity for activity projection');
+    $h->assertSame('fulfilled', $posOrderContext['fulfillment_status'] ?? null, 'immediate POS handover is already delivered');
+    $h->assertSame('completed', $posOrderContext['status'] ?? null, 'immediate POS handover completes the order');
+    $h->assertSame(0, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_fulfillments WHERE order_id=?', [$posOrderId])['count'] ?? -1), 'immediate POS handover creates no preparation or delivery workflow');
+    $posDashboard = json_decode($controllerFor(1, 'GET', '/admin/api/sale/dashboard')->dashboard()->body(), true);
+    $posTasks = array_filter($posDashboard['data']['actionable']['tasks'] ?? [], static fn(array $task): bool => (int) ($task['order_id'] ?? 0) === $posOrderId);
+    $h->assertSame(0, count($posTasks), 'immediate POS handover is absent from the actionable queue');
     $posStockLocation = $saleDb->one('SELECT i.stock_location_id,r.stock_location_id AS register_location_id FROM sale_stock_reservations sr INNER JOIN sale_inventory_items i ON i.id=sr.inventory_item_id INNER JOIN sale_carts c ON c.id=sr.cart_id INNER JOIN sale_cash_sessions s ON s.id=c.register_session_id INNER JOIN sale_pos_registers r ON r.id=s.register_id WHERE sr.cart_id=?', [$posCartId]);
     $h->assertSame((int) ($posStockLocation['register_location_id'] ?? 0), (int) ($posStockLocation['stock_location_id'] ?? -1), 'POS checkout consumes stock from its register location');
     $h->assertTrue(isset($posCheckoutBody['data']['receipt']['printable_text']), 'sale POS checkout returns printable receipt payload');
+    $receiptText = (string) ($posCheckoutBody['data']['receipt']['printable_text'] ?? '');
+    $h->assertTrue(strpos($receiptText, 'Taxes incluses:') > strpos($receiptText, 'Total:'), 'POS receipt presents included taxes below the total');
+
+    $saleDb->run("INSERT INTO sale_fulfillments(order_id,fulfillment_number,fulfillment_type,stock_location_id,status,correlation_id) VALUES(?,'FUL-ADMIN-PREPARING','shipping',?,'preparing','corr-admin-preparing')", [$orderId, (int) ($posOrderContext['stock_location_id'] ?? 0)]);
+    $ordersResponse = $controllerFor(1, 'GET', '/admin/api/sale/orders')->orders();
+    $listedOrders = json_decode($ordersResponse->body(), true)['data']['orders'] ?? [];
+    $listedAdminOrder = array_values(array_filter($listedOrders, static fn(array $order): bool => (int) ($order['id'] ?? 0) === $orderId))[0] ?? [];
+    $listedPosOrder = array_values(array_filter($listedOrders, static fn(array $order): bool => (int) ($order['id'] ?? 0) === $posOrderId))[0] ?? [];
+    $h->assertSame('preparing', $listedAdminOrder['fulfillment_status'] ?? null, 'orders list projects the active preparation status instead of stale unfulfilled aggregate');
+    $h->assertSame('Ada Exemple', $listedPosOrder['customer']['display_name'] ?? null, 'orders list exposes the immutable customer snapshot as structured relation data');
 
     $posCheckoutReplayResponse = $controllerFor(1, 'POST', '/admin/api/sale/pos/checkout', [], $posCheckoutPayload)->posCheckout();
     $h->assertSame(201, $posCheckoutReplayResponse->status(), 'sale POS checkout is idempotent');
@@ -460,6 +493,12 @@ try {
     $h->assertSame(1, (int) ($closeSessionPayload['data']['session']['difference_minor'] ?? 0), 'sale POS closed session computes cash difference');
     $h->assertSame('un centime surnuméraire', $closeSessionPayload['data']['session']['difference_justification'] ?? null, 'sale POS closed session keeps difference justification');
     $h->assertSame(1, (int) ($saleDb->one('SELECT COUNT(*) AS count FROM sale_outbox WHERE topic = "sale.pos.session.closed"')['count'] ?? 0), 'sale POS session closing is queued in outbox');
+    $sessionReportResponse = $controllerFor(1, 'GET', '/admin/api/sale/reports/pos-sessions')->posSessionsReport();
+    $sessionReportRows = json_decode($sessionReportResponse->body(), true)['data']['sessions'] ?? [];
+    $sessionReport = array_values(array_filter($sessionReportRows, static fn(array $row): bool => (int) ($row['id'] ?? 0) === $cashSessionId))[0] ?? [];
+    $h->assertSame(1000, (int) ($sessionReport['opening_cash_minor'] ?? 0), 'POS session report exposes opening cash');
+    $h->assertSame(5800, (int) ($sessionReport['net_cash_movement_minor'] ?? 0), 'POS session report exposes net operational movements excluding opening and closing counts');
+    $h->assertSame($expectedCash + 1, (int) ($sessionReport['counted_cash_minor'] ?? 0), 'POS session report exposes closing counted cash');
 
     $aiPosContextResponse = $controllerFor(1, 'GET', '/admin/api/sale/ai/pos/day-summary-context', ['date' => gmdate('Y-m-d')])->aiPosDaySummaryContext();
     $h->assertSame(200, $aiPosContextResponse->status(), 'sale AI POS day context is available');

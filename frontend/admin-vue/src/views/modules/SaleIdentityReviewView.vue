@@ -3,10 +3,11 @@ import { computed, onMounted, ref } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 
 type Row=Record<string,any>;
+const props=withDefaults(defineProps<{relationType?:string;relationId?:number}>(),{relationType:'',relationId:0});
 const cases=ref<Row[]>([]);const loading=ref(false);const error=ref('');const notice=ref('');const status=ref('pending');
 const merge=ref({source_iam_user_id:0,target_iam_user_id:0,reason:'Doublon vérifié par l’opérateur'});const preview=ref<Row|null>(null);const choices=ref<Record<string,string>>({});const separateId=ref(0);
 const visible=computed(()=>cases.value.filter(row=>status.value==='all'||row.status===status.value));
-async function load(){loading.value=true;error.value='';try{const response=await adminApi.get<{cases:Row[]}>('/sale/customer-identities/review',{limit:100});cases.value=response.data.cases||[]}catch(e){error.value=apiErrorMessage(e)}finally{loading.value=false}}
+async function load(){loading.value=true;error.value='';try{const response=await adminApi.get<{cases:Row[]}>('/sale/customer-identities/review',{limit:100,relation_type:props.relationType||undefined,relation_id:props.relationId||undefined});cases.value=response.data.cases||[]}catch(e){error.value=apiErrorMessage(e)}finally{loading.value=false}}
 async function decide(row:Row,action:string){const reason=window.prompt(action==='link'?'Pourquoi ces profils représentent-ils la même personne ?':action==='do_not_link'?'Pourquoi faut-il conserver deux profils distincts ?':'Pourquoi reporter cette décision ?');if(!reason)return;loading.value=true;try{await adminApi.post(`/sale/customer-identities/${row.id}/decision`,{action,reason});notice.value=action==='link'?'Profil lié sans modifier la commande.':action==='do_not_link'?'Profils conservés séparément.':'Décision reportée.';await load()}catch(e){error.value=apiErrorMessage(e)}finally{loading.value=false}}
 async function previewMerge(){error.value='';try{const response=await adminApi.post<{preview:Row}>('/sale/customer-accounts/merge-preview',{source_iam_user_id:merge.value.source_iam_user_id,target_iam_user_id:merge.value.target_iam_user_id});preview.value=response.data.preview;choices.value={};for(const field of preview.value.conflicts||[])choices.value[field]=preview.value.fields[field].allowed_choices[0]}catch(e){error.value=apiErrorMessage(e)}}
 async function applyMerge(){if(!preview.value||!merge.value.reason.trim())return;loading.value=true;try{await adminApi.post('/sale/customer-accounts/merge',{...merge.value,field_decisions:choices.value});notice.value='Fusion auditée terminée. Les snapshots des commandes sont inchangés.';preview.value=null;await load()}catch(e){error.value=apiErrorMessage(e)}finally{loading.value=false}}
@@ -17,7 +18,7 @@ onMounted(load);
 
 <template>
  <section class="identity-review">
-  <header><div><p>Vente · relation client</p><h2>Revue des identités</h2><span>Relier prudemment les commandes, comptes et fiches relation client sans réécrire l’historique.</span></div><button class="btn btn-outline-primary" :disabled="loading" @click="load">Actualiser</button></header>
+  <header><div><p>Opérations · Relation 360</p><h2>Rapprochement de profils</h2><span>Relier prudemment les commandes, comptes et fiches Relation sans réécrire l’historique.</span></div><button class="btn btn-outline-primary" :disabled="loading" @click="load">Actualiser</button></header>
   <div v-if="notice" class="alert alert-success">{{ notice }}</div><div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div><p v-if="loading" class="alert alert-info">Analyse en cours…</p>
   <nav class="filters"><button v-for="item in ['pending','postponed','linked','not_linked','all']" :key="item" :class="{active:status===item}" @click="status=item">{{ {pending:'À revoir',postponed:'Reportés',linked:'Liés',not_linked:'Séparés',all:'Tous'}[item] }}</button></nav>
   <p v-if="!loading&&!visible.length" class="empty">Aucun profil à revoir dans cette file.</p>

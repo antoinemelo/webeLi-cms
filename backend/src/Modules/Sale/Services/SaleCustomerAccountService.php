@@ -271,7 +271,7 @@ final class SaleCustomerAccountService implements CmsAccountBridge
     }
 
     /** @return list<array<string,mixed>> */
-    public function reviewIdentities(int $siteId, bool $allowVerifiedPhone = false, int $limit = 100): array
+    public function reviewIdentities(int $siteId, bool $allowVerifiedPhone = false, int $limit = 100, ?string $relationType = null, ?int $relationId = null): array
     {
         $business=$this->business??throw new SaleValidationException('sale.customer.identity_review_unavailable');
         $orders=$this->saleDb()->all("SELECT o.* FROM sale_orders o LEFT JOIN sale_customer_order_links l ON l.order_id=o.id AND l.status='active' WHERE o.site_id=? AND l.id IS NULL ORDER BY o.id DESC LIMIT ?",[$siteId,max(1,min(200,$limit))]);
@@ -304,6 +304,10 @@ final class SaleCustomerAccountService implements CmsAccountBridge
         }
         $rows=$this->saleDb()->all('SELECT c.*,o.order_number,o.grand_total_minor,o.currency,(SELECT COUNT(*) FROM sale_identity_resolution_audit a WHERE a.review_case_id=c.id) AS decision_count FROM sale_identity_review_cases c JOIN sale_orders o ON o.id=c.order_id WHERE c.site_id=? ORDER BY CASE c.status WHEN \'pending\' THEN 0 WHEN \'postponed\' THEN 1 ELSE 2 END,c.confidence_score DESC,c.id DESC LIMIT ?',[$siteId,max(1,min(200,$limit))]);
         foreach($rows as &$row){foreach(['signals_json'=>'signals','divergences_json'=>'divergences','profiles_json'=>'profiles','provenance_json'=>'provenance'] as $column=>$key){$row[$key]=json_decode((string)$row[$column],true)?:[];unset($row[$column]);}$row['orders']=[['id'=>(int)$row['order_id'],'order_number'=>$row['order_number'],'grand_total_minor'=>(int)$row['grand_total_minor'],'currency'=>$row['currency']]];$row['activities']=($row['candidate_crm_contact_id']??null)!==null?$business->all('SELECT id,activity_type,summary,status,occurred_at FROM crm_sale_activities WHERE site_id=? AND related_contact_id=? ORDER BY occurred_at DESC LIMIT 20',[$siteId,(int)$row['candidate_crm_contact_id']]):[];}
+        if (in_array($relationType, ['contact', 'company'], true) && ($relationId ?? 0) > 0) {
+            $field = $relationType === 'contact' ? 'candidate_crm_contact_id' : 'candidate_organization_id';
+            $rows = array_values(array_filter($rows, static fn(array $row): bool => (int) ($row[$field] ?? 0) === $relationId));
+        }
         return $rows;
     }
 

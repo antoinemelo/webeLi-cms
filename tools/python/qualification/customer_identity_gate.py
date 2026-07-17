@@ -26,7 +26,7 @@ def validate(payload:dict[str,Any],root:Path=ROOT)->list[str]:
       'schema':(root/'database/modules/sale.sql',['sale_identity_review_cases','sale_identity_resolution_audit','sale_identity_field_provenance','field_decisions_json']),
       'service':(root/'backend/src/Modules/Sale/Services/SaleCustomerAccountService.php',['reviewIdentities','nom seul','mergePreview','merge_field_decision_required','separateMerge','snapshot']),
       'bridges':(root/'backend/src/Core/ServiceFactory.php',['saleCrmActivities()','saleCustomerIdentityBridge']),
-      'ui':(root/'frontend/admin-vue/src/views/modules/SaleIdentityReviewView.vue',['Revue des identités','Concordances expliquées','Ne pas lier','Fusionner avec ces décisions','Séparer']),
+      'ui':(root/'frontend/admin-vue/src/views/modules/SaleIdentityReviewView.vue',['Rapprochement de profils','Concordances expliquées','Ne pas lier','Fusionner avec ces décisions','Séparer']),
       'tests':(root/'tools/php/tests/unit/sale_customer_accounts_test.php',['post-purchase proof','across sites','merge preview','separation','snapshot']),
       'browser':(root/'frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts',['explains evidence','Preuves vérifiées','snapshots immuables'])}
     for label,(path,needles) in sources.items():

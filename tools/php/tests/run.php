@@ -22,6 +22,7 @@ $tests = [
     'unit/business_pos_catalog_api_test.php',
     'unit/business_catalog_pricing_service_test.php',
     'unit/business_pricing_offers_bundles_test.php',
+    'unit/business_operations_products_stock_offers_test.php',
     'unit/business_bundle_stock_strategies_test.php',
     'unit/business_sellable_snapshot_service_test.php',
     'unit/business_crm_blueprints_test.php',
@@ -30,6 +31,7 @@ $tests = [
     'unit/business_segmentation_consent_test.php',
     'unit/business_csv_service_test.php',
     'unit/business_crm_api_controller_test.php',
+    'unit/business_relation_360_test.php',
     'unit/business_messaging_provider_test.php',
     'unit/business_mailing_service_test.php',
     'unit/capability_registry_test.php',
@@ -48,6 +50,7 @@ $tests = [
     'unit/sale_domain_workflows_test.php',
     'unit/sale_internal_sales_test.php',
     'unit/sale_online_payment_workflow_test.php',
+    'unit/sale_order_dossier_workflow_test.php',
     'unit/sale_payment_provider_contract_test.php',
     'unit/sale_payment_provider_interchangeability_test.php',
     'unit/sale_reference_payment_providers_test.php',
@@ -90,6 +93,7 @@ $testTimeouts = [
     'integration/business_pim_http_test.php' => 45,
     'integration/sale_uses_business_sellable_snapshot_test.php' => 45,
     'integration/public_sale_http_test.php' => 45,
+    'integration/roles_matrix_http_test.php' => 45,
 ];
 
 /**

@@ -19,18 +19,28 @@ try{
     $db->run("INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(1,'branch','Agence','external','active')");$branch=(int)$db->lastInsertId();
     $inventory->adjust(1,701,10,'SKU-701','Opening stock',1,$main,'receipt','opening-701');
 
+    $db->run("INSERT INTO sale_orders(site_id,channel_id,order_number,source,status,payment_status,fulfillment_status,currency,customer_snapshot_json,billing_address_json,shipping_address_json,shipping_method_snapshot_json,grand_total_minor) VALUES(1,?,'LOG-UNPAID','ecommerce','pending_payment','pending','unfulfilled','CHF','{\"name\":\"Client\"}','{}','{}','{\"type\":\"pickup\"}',1000)",[$channel]);$unpaidOrder=(int)$db->lastInsertId();
+    $db->run("INSERT INTO sale_order_lines(order_id,line_number,business_product_id,business_variant_id,sku,product_name,product_type,quantity,unit_price_minor,regular_unit_price_minor,currency,line_subtotal_minor,line_total_minor,snapshot_json) VALUES(?,1,70,701,'SKU-701','Produit impayé','physical',1,1000,1000,'CHF',1000,1000,'{}')",[$unpaidOrder]);$unpaidLine=(int)$db->lastInsertId();
+    $h->expectException(fn()=>$service->createOperation(1,$unpaidOrder,['fulfillment_type'=>'pickup','stock_location_id'=>$main,'lines'=>[['order_line_id'=>$unpaidLine,'quantity'=>1]]],1),SaleValidationException::class,'unpaid order cannot enter fulfillment through the API');
+
     $db->run("INSERT INTO sale_orders(site_id,channel_id,order_number,source,status,payment_status,fulfillment_status,currency,customer_snapshot_json,billing_address_json,shipping_address_json,shipping_method_snapshot_json,grand_total_minor,placed_at) VALUES(1,?,'LOG-1','ecommerce','confirmed','paid','unfulfilled','CHF','{\"name\":\"Ada\"}','{}','{}','{\"type\":\"pickup\"}',2000,CURRENT_TIMESTAMP)",[$channel]);$order=(int)$db->lastInsertId();
     $db->run("INSERT INTO sale_order_lines(order_id,line_number,business_product_id,business_variant_id,sku,product_name,product_type,quantity,unit_price_minor,regular_unit_price_minor,currency,line_subtotal_minor,line_total_minor,snapshot_json) VALUES(?,1,70,701,'SKU-701','Produit logistique','physical',2,1000,1000,'CHF',2000,2000,'{}')",[$order]);$orderLine=(int)$db->lastInsertId();
     $pickup=$service->createOperation(1,$order,['fulfillment_type'=>'pickup','stock_location_id'=>$main,'lines'=>[['order_line_id'=>$orderLine,'quantity'=>1]]],1);
     $h->assertSame('allocated',$pickup['status'],'fulfillment snapshots its stock allocation');
+    $h->assertSame('prepare',$pickup['next_action'],'an incomplete allocation guides the operator to preparation rather than shipping');
     $h->assertTrue(trim((string)$pickup['pickup_code'])!=='','pickup receives a customer code');
     $h->expectException(fn()=>$service->createOperation(1,$order,['fulfillment_type'=>'pickup','stock_location_id'=>$main,'lines'=>[['order_line_id'=>$orderLine,'quantity'=>2]]],1),SaleValidationException::class,'pending allocations cannot over-allocate an order line');
     $pickup=$service->savePreparation(1,(int)$pickup['id'],(int)$pickup['lines'][0]['id'],['prepared_quantity'=>1],1);
     $h->assertSame('preparing',$pickup['status'],'complete preparation remains ready for the operator decision');
+    $h->assertSame('mark_ready',$pickup['next_action'],'pickup handover becomes available only after every line is prepared');
     $pickup=$service->savePreparation(1,(int)$pickup['id'],(int)$pickup['lines'][0]['id'],['prepared_quantity'=>0],1);
     $h->assertSame('allocated',$pickup['status'],'operator can correct preparation back to zero without losing the task');
+    $h->assertSame('prepare',$pickup['next_action'],'corrected incomplete preparation cannot suggest a delivery transition');
     $pickup=$service->savePreparation(1,(int)$pickup['id'],(int)$pickup['lines'][0]['id'],['prepared_quantity'=>1],1);
     $pickup=$service->transitionOperation(1,(int)$pickup['id'],'ready_for_pickup',[],1);
+    $db->run("UPDATE sale_orders SET payment_status='pending' WHERE id=?",[$order]);
+    $h->expectException(fn()=>$service->transitionOperation(1,(int)$pickup['id'],'handed_over',['pickup_code'=>$pickup['pickup_code'],'proof'=>'ID card checked'],1),SaleValidationException::class,'handover is rejected server-side when payment is not proved');
+    $db->run("UPDATE sale_orders SET payment_status='paid' WHERE id=?",[$order]);
     $h->expectException(fn()=>$service->transitionOperation(1,(int)$pickup['id'],'handed_over',['pickup_code'=>'WRONG','proof'=>'ID card'],1),SaleValidationException::class,'handover requires matching pickup code');
     $pickup=$service->transitionOperation(1,(int)$pickup['id'],'handed_over',['pickup_code'=>$pickup['pickup_code'],'proof'=>'ID card checked'],1);
     $h->assertSame('handed_over',$pickup['status'],'pickup handover is explicit and proved');

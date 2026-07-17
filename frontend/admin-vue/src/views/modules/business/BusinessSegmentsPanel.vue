@@ -56,7 +56,7 @@ async function load(): Promise<void> {
     const response = await adminApi.get<{ segments: Segment[]; criteria: Criterion[] }>('/business/segments');
     segments.value = response.data.segments || [];
     criteria.value = response.data.criteria || [];
-  } catch (err) { error.value = apiErrorMessage(err, 'Segments indisponibles.'); }
+  } catch (err) { error.value = apiErrorMessage(err, 'Audiences indisponibles.'); }
   finally { loading.value = false; }
 }
 
@@ -96,7 +96,7 @@ async function createSegment(): Promise<void> {
     form.name = ''; preview.value = null;
     await load();
     success.value = t('business.segments.create');
-  } catch (err) { error.value = apiErrorMessage(err, 'Création du segment impossible.'); }
+  } catch (err) { error.value = apiErrorMessage(err, 'Création de l’audience impossible.'); }
   finally { busy.value = ''; }
 }
 

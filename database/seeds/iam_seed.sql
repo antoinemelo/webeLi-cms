@@ -77,6 +77,8 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('imports_exports.manage', 'Gérer les imports et exports', 'Inclut les opérations d’écriture et permet de supprimer ou nettoyer les releases.'),
 ('business.crm.read', 'Lire le CRM Business', 'Lire les entreprises, contacts, tags, consentements et données CRM autorisées.'),
 ('business.crm.manage', 'Gérer le CRM Business', 'Créer, modifier et archiver entreprises, contacts, tags et consentements.'),
+('business.advanced_tools.manage', 'Outils avancés Opérations', 'Exécuter les rapprochements et reconstructions de projections CRM, PIM et storefront.'),
+('business.form_links.review', 'Réviser les rattachements de formulaires', 'Examiner et décider les rattachements ambigus entre soumissions et Relations.'),
 ('business.segment.read', 'Lire les segments CRM', 'Consulter règles, calculs et membres des segments CRM.'),
 ('business.segment.manage', 'Gérer les segments CRM', 'Créer, modifier et recalculer les segments CRM.'),
 ('business.consent.read', 'Lire les consentements CRM', 'Consulter consentements marketing, preuves et historique.'),
@@ -88,6 +90,7 @@ INSERT OR IGNORE INTO iam_permissions(permission_key, name, description) VALUES
 ('business.mailing.manage', 'Gérer le mailing Business', 'Gérer listes, campagnes simples, destinataires et désabonnements.'),
 ('business.messaging.send', 'Envoyer des messages Business', 'Planifier ou déclencher un envoi après contrôle du consentement.'),
 ('business.messaging.admin', 'Administrer le messaging Business', 'Configurer providers, templates et outbox messaging sans stocker de secret en clair.'),
+('sale.advanced_tools.manage', 'Outils avancés Ventes', 'Accéder aux réservations, au ledger et à sa reconstruction, à la logistique, aux identités et aux diagnostics provider.'),
 ('profile.read', 'Lire son profil', 'Consulter son propre profil.'),
 ('profile.update', 'Modifier son profil', 'Modifier ses données personnelles autorisées.');
 

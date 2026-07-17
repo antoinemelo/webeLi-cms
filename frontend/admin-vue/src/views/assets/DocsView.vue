@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import { useAdminContextStore } from '@/stores/adminContext';
 
@@ -399,8 +398,7 @@ watch(() => route.query.doc, (doc) => {
 </script>
 
 <template>
-  <PageHeader title="Documentation" intro="Toute la documentation du CMS, accessible à chaque utilisateur du back-office depuis le menu principal Actifs." />
-  <ContextualHelpLink id="docs.index" class="mb-3" />
+  <PageHeader title="Documentation" intro="Toute la documentation du CMS, accessible à chaque utilisateur du back-office depuis le menu principal Actifs." help-id="docs.index" />
 
   <ApiFeedback :error="error" />
 

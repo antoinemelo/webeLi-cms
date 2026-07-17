@@ -30,6 +30,24 @@ Ce guide resume les gestes courants dans **Opérations > Relations**. Le CRM reg
 3. Ouvrez les filtres pour limiter la liste aux personnes, organisations, prospects, clients, fournisseurs, anciens ou relations archivees.
 4. Cliquez sur une relation pour ouvrir sa fiche en lecture.
 
+Les vues rapides **Tous**, **Prospects**, **Clients**, **Fournisseurs** et **À suivre** sont disponibles en permanence. **Doublons à revoir** n’apparaît qu’avec les permissions avancées. Les filtres, colonnes et le nombre de lignes sont conservés localement pour le site courant ; le texte recherché n’est pas conservé.
+
+## Lire la fiche Relation 360
+
+La fiche rassemble sans changer les propriétaires des données :
+
+- l’identité, les rôles métier et la prochaine action dans Opérations ;
+- une chronologie commune des mémos, messages, consentements, formulaires et événements de vente ;
+- les commandes, paiements, factures, remboursements, livraisons et retours projetés depuis Ventes ;
+- les soumissions projetées depuis Formulaires, sans copie de leur contenu sensible ;
+- les consentements uniquement si votre permission le permet.
+
+Les liens transactionnels ouvrent le dossier dans Ventes. Si une projection est indisponible, la fiche l’indique sans modifier ni bloquer la commande canonique.
+
+Une relation peut cumuler plusieurs rôles, par exemple client et fournisseur. Utilisez **Planifier une action** pour créer un suivi. Les autres commandes restent regroupées dans le menu Actions afin de conserver une seule action principale visible.
+
+Le **Rapprochement de profils** est un outil avancé. Il explique les concordances et divergences entre profil transactionnel, compte IAM et contact CRM ; le nom seul, un e-mail non vérifié ou un téléphone non normalisé ne suffisent jamais à fusionner.
+
 Les compteurs de ligne indiquent les memos, memos partages et contacts lies. Les actions secondaires sont regroupees dans le menu `...`.
 
 ## Creer une personne

@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "ba25704883e344a0885d433ef6b39227491cadb8",
+  "commit": "31ff57882893e4dc03f597b477e49fe8448b44a2",
   "confidence": "high",
   "databases": [
     "core",
@@ -34,6 +34,11 @@
   "evaluation_documents": [
     "docs/evaluation/P1_VALIDATION_20260625.md",
     "docs/evaluation/README.md",
+    "docs/evaluation/admin-architecture-modules-navigation-38a.md",
+    "docs/evaluation/admin-convergence-ux-gate-38e.md",
+    "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
+    "docs/evaluation/admin-relation-360-crm-38b.md",
+    "docs/evaluation/admin-ventes-commande-paiement-livraison-38c.md",
     "docs/evaluation/audit-evidence-troubleshooting.md",
     "docs/evaluation/bundle-stock-strategies.md",
     "docs/evaluation/business-crm-review.md",
@@ -49,6 +54,7 @@
     "docs/evaluation/sale-inventory-ledger.md",
     "docs/evaluation/sale-module-review.md",
     "docs/evaluation/sale-reservations-availability.md",
+    "docs/evaluation/usability-commerce-foundations.md",
     "docs/evaluation/visual-editor.md"
   ],
   "evidence": [
@@ -58,13 +64,14 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-07-14",
+  "generated_at": "2026-07-16",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-07-14",
+  "last_verified": "2026-07-16",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],
   "machine_readable_documents": [
+    "admin-convergence-ux-38e.json",
     "api-endpoints.json",
     "architecture.json",
     "bundle-stock-strategies.json",
@@ -84,6 +91,7 @@
     "sale-reservations-availability.json",
     "sale-stock-reconstruction-m6.json",
     "tests.json",
+    "usability-commerce-foundations.json",
     "validators.json"
   ],
   "modules": [

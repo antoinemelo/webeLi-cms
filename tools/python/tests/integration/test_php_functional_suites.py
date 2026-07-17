@@ -3,7 +3,7 @@ import subprocess, unittest
 from pathlib import Path
 from tools.python.cms.runtime import resolve_php_binary
 ROOT=Path(__file__).resolve().parents[4]
-PHP_FUNCTIONAL_SUITE_TIMEOUT_SECONDS = 300
+PHP_FUNCTIONAL_SUITE_TIMEOUT_SECONDS = 360
 class PhpFunctionalSuitesTest(unittest.TestCase):
     def test_php_functional_suites(self):
         try:

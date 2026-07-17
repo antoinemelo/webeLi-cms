@@ -22,6 +22,10 @@ final class SaleInventoryRepository extends SaleRepositoryBase
             $where[] = 'i.stock_location_id=:location_id';
             $params['location_id'] = (int) $filters['location_id'];
         }
+        if ((int) ($filters['business_variant_id'] ?? 0) > 0) {
+            $where[] = 'i.business_variant_id=:business_variant_id';
+            $params['business_variant_id'] = (int) $filters['business_variant_id'];
+        }
         $alert = trim((string) ($filters['alert'] ?? ''));
         if ($alert === 'out_of_stock') $where[] = 'i.tracked=1 AND i.available_quantity<=0';
         if ($alert === 'low_stock') $where[] = 'i.tracked=1 AND i.available_quantity>0 AND i.available_quantity<=i.low_stock_threshold';
@@ -60,6 +64,10 @@ final class SaleInventoryRepository extends SaleRepositoryBase
                 $where[] = 'm.' . $key . '=:' . $key;
                 $params[$key] = (int) $filters[$key];
             }
+        }
+        if ((int) ($filters['business_variant_id'] ?? 0) > 0) {
+            $where[] = 'i.business_variant_id=:business_variant_id';
+            $params['business_variant_id'] = (int) $filters['business_variant_id'];
         }
         foreach (['movement_type', 'reference_type', 'correlation_id'] as $key) {
             if (trim((string) ($filters[$key] ?? '')) !== '') {

@@ -110,6 +110,15 @@ final class SalePaymentService
             return ['order' => $order, 'transaction' => $transaction, 'intent' => $intent, '_provider_failed' => true];
         }
         $order = $this->orders->updatePaidTotal($orderId, $newTotal);
+        if ((string) $order['payment_status'] === 'paid' && (string) $order['status'] === 'pending_payment') {
+            if ($this->inventory !== null && $order['source_cart_id'] !== null) {
+                $this->inventory->consumeCartReservations((int) $order['source_cart_id'], $orderId);
+            }
+            $states = $this->states ?? new SaleStateMachineService($this->payments->rawDatabase(), $this->events);
+            $order = $states->transition('order', $orderId, 'confirmed', $iamUserId, 'manual payment captured', $correlationId);
+            $this->payments->rawDatabase()->run('UPDATE sale_orders SET placed_at=COALESCE(placed_at,CURRENT_TIMESTAMP) WHERE id=?', [$orderId]);
+            $order = $this->orders->requireOrder($orderId);
+        }
         $this->events->emit((int) $order['site_id'], 'sale.payment.recorded', 'order', $orderId, [
             'site_id' => (int) $order['site_id'],
             'order_id' => $orderId,

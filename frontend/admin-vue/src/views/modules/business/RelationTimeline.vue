@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from '@/i18n';
 
 type TimelineItem = {
   id: string | number;
@@ -25,6 +26,7 @@ const props = defineProps<{
 }>();
 
 defineEmits<{ addMemo: [] }>();
+const { t } = useI18n();
 
 const search = ref('');
 const kind = ref('');
@@ -45,7 +47,7 @@ watch([search, kind, channel], () => { page.value = 1; });
 const groups = computed(() => {
   const map = new Map<string, TimelineItem[]>();
   for (const item of visible.value) {
-    const date = String(item.date || '').slice(0, 10) || 'Sans date';
+    const date = String(item.date || '').slice(0, 10) || t('business.timeline.noDate');
     const key = item.groupKey ? `${item.groupKey} · ${date}` : date;
     map.set(key, [...(map.get(key) || []), item]);
   }
@@ -57,16 +59,16 @@ const groups = computed(() => {
   <section class="relation-timeline">
     <header>
       <h3>{{ title }}</h3>
-      <button v-if="canAddMemo" class="btn small" type="button" @click="$emit('addMemo')">{{ actionLabel || 'Ajouter mémo' }}</button>
+      <button v-if="canAddMemo" class="btn small" type="button" @click="$emit('addMemo')">{{ actionLabel || t('business.relation360.addMemo') }}</button>
     </header>
-    <p v-if="pendingCount" class="pending-note"><b>{{ pendingCount }}</b> événement(s) attendent un rattachement d’identité. <router-link to="/sale/identities">Les examiner</router-link></p>
+    <p v-if="pendingCount" class="pending-note"><b>{{ pendingCount }}</b> {{ t('business.timeline.pendingIdentity') }} <router-link to="/business/relations/advanced/profiles">{{ t('business.timeline.review') }}</router-link></p>
     <div v-if="items.length" class="timeline-filters">
-      <label>Rechercher<input v-model="search" type="search" placeholder="Commande, paiement, statut…"></label>
-      <label>Type<select v-model="kind"><option value="">Tous</option><option v-for="value in kinds" :key="value" :value="value">{{ value }}</option></select></label>
-      <label>Canal<select v-model="channel"><option value="">Tous</option><option v-for="value in channels" :key="value" :value="value">{{ value }}</option></select></label>
+      <label>{{ t('common.search') }}<input v-model="search" type="search" :placeholder="t('business.timeline.searchPlaceholder')"></label>
+      <label>{{ t('business.timeline.type') }}<select v-model="kind"><option value="">{{ t('business.relations.views.all') }}</option><option v-for="value in kinds" :key="value" :value="value">{{ value }}</option></select></label>
+      <label>{{ t('business.timeline.channel') }}<select v-model="channel"><option value="">{{ t('business.relations.views.all') }}</option><option v-for="value in channels" :key="value" :value="value">{{ value }}</option></select></label>
     </div>
     <p v-if="!items.length" class="relation-empty">{{ emptyLabel }}</p>
-    <p v-else-if="!filtered.length" class="relation-empty">Aucune activité ne correspond aux filtres.</p>
+    <p v-else-if="!filtered.length" class="relation-empty">{{ t('business.timeline.noMatch') }}</p>
     <div v-else class="relation-timeline-groups">
       <section v-for="group in groups" :key="group.date">
         <h4>{{ group.date }}</h4>
@@ -76,13 +78,13 @@ const groups = computed(() => {
             <strong>{{ item.title }}</strong>
             <small>{{ item.date || '—' }}</small>
             <p v-if="item.detail">{{ item.detail }}</p>
-            <router-link v-if="item.link" :to="item.link">Ouvrir l’élément lié</router-link>
-            <details v-if="item.technical"><summary>Détails techniques</summary><small>{{ item.technical }}</small></details>
+            <router-link v-if="item.link" :to="item.link">{{ t('business.timeline.openLinked') }}</router-link>
+            <details v-if="item.technical"><summary>{{ t('business.timeline.technical') }}</summary><small>{{ item.technical }}</small></details>
           </li>
         </ol>
       </section>
     </div>
-    <footer v-if="pages > 1" class="timeline-pagination"><button type="button" :disabled="page === 1" @click="page--">Précédent</button><span>Page {{ page }} / {{ pages }}</span><button type="button" :disabled="page === pages" @click="page++">Suivant</button></footer>
+    <footer v-if="pages > 1" class="timeline-pagination"><button type="button" :disabled="page === 1" @click="page--">{{ t('common.previous') }}</button><span>{{ t('common.page') }} {{ page }} / {{ pages }}</span><button type="button" :disabled="page === pages" @click="page++">{{ t('common.next') }}</button></footer>
   </section>
 </template>
 

@@ -93,6 +93,10 @@
         "docs/development/testing-validation/business-pim-lite.md",
         "docs/development/testing-validation/load-testing.md",
         "docs/development/testing-validation/sale-module.md",
+        "docs/evaluation/admin-architecture-modules-navigation-38a.md",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
+        "docs/evaluation/admin-relation-360-crm-38b.md",
+        "docs/evaluation/admin-ventes-commande-paiement-livraison-38c.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/evidence-index.md",
@@ -193,6 +197,7 @@
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/admin_convergence_gate.py",
         "tools/python/qualification/bundle_stock_strategy_gate.py",
         "tools/python/qualification/crm_event_activity_gate.py",
         "tools/python/qualification/crm_guest_order_gate.py",
@@ -1887,6 +1892,26 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/admin_convergence_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_admin_convergence_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/bundle_stock_strategy_gate.py",
       "category": "internal",
       "public": false,
@@ -1912,6 +1937,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
@@ -1930,6 +1956,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/CRM_GUEST_ORDER_GATE.md",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
@@ -1950,6 +1977,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/qualification/run_all.py",
@@ -1968,6 +1996,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/machine-readable/tests.json",
@@ -2125,6 +2154,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
         "docs/evaluation/machine-readable/tests.json",
@@ -2144,11 +2174,16 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
+        "docs/evaluation/admin-relation-360-crm-38b.md",
+        "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/usability-commerce-foundations.md",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/run_all.py",
-        "tools/python/tests/test_usability_commerce_gate.py"
+        "tools/python/tests/test_usability_commerce_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2198,6 +2233,21 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_admin_convergence_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2393,6 +2443,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2408,6 +2459,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
@@ -2424,6 +2476,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2439,6 +2492,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
@@ -2603,6 +2657,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2717,6 +2772,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
@@ -2748,7 +2804,11 @@
       "category": "test",
       "public": false,
       "entrypoint": false,
-      "called_by": [],
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
       "destructive": false,

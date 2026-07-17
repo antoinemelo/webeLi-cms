@@ -5,7 +5,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-blueprints-delete-35119f85ae",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -21,7 +21,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-blueprints-versions-write-6d36c951e3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -37,7 +37,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-blueprints-write-37fb92998f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -53,7 +53,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-capabilities-apply-a2ceb5d3c6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -69,7 +69,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-configuration-update-a7f783f220",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -85,7 +85,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-cookies-delete-abc9bfb2ce",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -101,7 +101,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-cookies-write-1cd4f492ea",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -118,7 +118,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-entries-publish-6029128f84",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -135,7 +135,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-entries-revisions-restore-872d5442c6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -151,7 +151,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-entries-save-draft-create-0432e48e1d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -167,7 +167,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-entries-save-draft-update-958066b346",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -183,7 +183,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-fieldsets-delete-0199936392",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -199,7 +199,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-fieldsets-write-c91a32e678",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -215,7 +215,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-forms-delete-c5efd2c54e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -231,7 +231,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-forms-write-e6daa9e1a7",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -247,7 +247,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-iam-roles-update-601e448d63",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -263,7 +263,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-iam-users-login-mode-update-3adefe7827",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -279,7 +279,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-iam-users-update-7634deb82f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -295,7 +295,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-imports-exports-delete-c6d9e49d34",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -312,7 +312,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-media-folders-update-2b8f96c640",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -329,7 +329,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-menus-delete-9b6bb44239",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -345,7 +345,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-menus-write-5e214d8e27",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -361,7 +361,7 @@
       "backend/src/Application/Api/Admin/AdminContextApiController.php"
     ],
     "id": "permission-admin-profile-update-d950d9ad70",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -378,7 +378,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-security-cors-update-e9d0686b97",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -396,7 +396,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-security-tokens-delete-b63a25c610",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -414,7 +414,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-security-tokens-update-869157c7e1",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -432,7 +432,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-security-webhooks-delete-6ce4bb6568",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -450,7 +450,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-security-webhooks-update-61b5749fa3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -467,7 +467,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-taxonomies-delete-1a4de3f186",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -483,7 +483,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-taxonomies-terms-delete-ca7f6229ab",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -499,7 +499,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-taxonomies-terms-write-b7e53421b0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -515,7 +515,7 @@
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php"
     ],
     "id": "permission-admin-taxonomies-write-493947f8d9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -531,7 +531,7 @@
       "backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php"
     ],
     "id": "permission-ai-assistant-manage-8336975d7b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -551,7 +551,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-actions-apply-454b580697",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -574,7 +574,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-ai-content-draft-3269ca47f9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -597,7 +597,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-ai-content-suggest-c0dab95680",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -618,7 +618,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-ai-default-embedding-model-869eda2e14",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -636,7 +636,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-ai-default-model-id-00447b8fbb",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -654,7 +654,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-ai-default-text-model-0d00d6a9e9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -674,7 +674,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-enabled-88e53b6faf",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -694,7 +694,7 @@
       "backend/src/Modules/AiAssistant/Services/AiTaskWorker.php"
     ],
     "id": "permission-ai-generate-from-prompt-71b3db027b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -713,7 +713,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-log-prompts-85e14c7e4c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -733,7 +733,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-log-responses-d8cb5a0d86",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -756,7 +756,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-logs-read-c815507700",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -782,7 +782,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-provider-manage-08ba2240e6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -807,7 +807,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-ai-seo-suggest-dfacf01652",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -832,7 +832,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-suggestions-manage-e098346ba2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -858,7 +858,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-suggestions-read-c0cb0a529f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -879,7 +879,7 @@
       "backend/src/Modules/AiAssistant/Services/AiTaskWorker.php"
     ],
     "id": "permission-ai-task-54d3464402",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -895,7 +895,7 @@
       "frontend/admin-vue/src/views/modules/AiAssistantConfigView.vue"
     ],
     "id": "permission-ai-test-result-4675d33968",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -913,7 +913,7 @@
       "backend/src/Modules/AiAssistant/Services/AiTaskWorker.php"
     ],
     "id": "permission-ai-test-usage-d4fa13cae0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -935,7 +935,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-ai-translation-suggest-446b086875",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -959,7 +959,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-ai-use-1ee4989e34",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -984,7 +984,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-audit-read-53a01f0826",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1009,7 +1009,7 @@
       "frontend/admin-vue/src/views/system/BlueprintsView.vue"
     ],
     "id": "permission-blueprints-manage-af26b85161",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1037,7 +1037,7 @@
       "frontend/admin-vue/src/views/system/BlueprintsView.vue"
     ],
     "id": "permission-blueprints-read-bc67e4f5e9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1058,13 +1058,44 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessPimApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue"
+    ],
+    "id": "permission-business-advanced-tools-manage-63d035caee",
+    "last_verified": "2026-07-16",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "business.advanced_tools.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessPimApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
+      "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-catalog-discounts-write-840584b0e3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1073,7 +1104,8 @@
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },
@@ -1086,7 +1118,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
     "id": "permission-business-catalog-prices-read-10ed85df41",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1107,7 +1139,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
     "id": "permission-business-catalog-prices-write-45c7375a0f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1126,10 +1158,11 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/business/OperationsInventoryView.vue"
     ],
     "id": "permission-business-catalog-purchase-prices-read-a0f9bb2a87",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1139,7 +1172,8 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/business/OperationsInventoryView.vue"
     ],
     "status": "supported"
   },
@@ -1150,12 +1184,13 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-catalog-read-920dcbabbd",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1165,6 +1200,7 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
@@ -1176,10 +1212,12 @@
     "evidence": [
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/business/OperationsInventoryView.vue"
     ],
     "id": "permission-business-catalog-stock-write-aca1e1dce5",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1187,7 +1225,9 @@
     "source": [
       "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/business/OperationsInventoryView.vue"
     ],
     "status": "supported"
   },
@@ -1198,10 +1238,11 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-catalog-write-42a5ce7a22",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1211,7 +1252,8 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Application/Api/Admin/BusinessPimApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },
@@ -1225,7 +1267,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-consent-manage-0b1307baa3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1244,13 +1286,14 @@
     "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
       "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue"
     ],
     "id": "permission-business-consent-read-ee35355e34",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1258,6 +1301,7 @@
     "source": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
@@ -1270,13 +1314,14 @@
     "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-crm-manage-b6d86b5438",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1284,6 +1329,7 @@
     "source": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
@@ -1296,15 +1342,17 @@
     "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
-      "frontend/admin-vue/src/views/modules/SaleView.vue"
+      "frontend/admin-vue/src/views/modules/SalePosView.vue"
     ],
     "id": "permission-business-crm-read-8aabb8e3ea",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1312,12 +1360,14 @@
     "source": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
+      "backend/src/Application/Api/Admin/BusinessRelation360ApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/migrations/iam/0008_business_permissions.sql",
       "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
-      "frontend/admin-vue/src/views/modules/SaleView.vue"
+      "frontend/admin-vue/src/views/modules/SalePosView.vue"
     ],
     "status": "supported"
   },
@@ -1333,7 +1383,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-mailing-manage-49f2097fac",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1361,7 +1411,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-mailing-read-ee8428e89d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1388,7 +1438,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-memo-manage-7699ca9550",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1414,7 +1464,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-memo-read-a89890788e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1441,7 +1491,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-messaging-admin-37cfad1ada",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1467,7 +1517,7 @@
       "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
     ],
     "id": "permission-business-segment-manage-af1ded06e2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1485,19 +1535,21 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-business-segment-read-a46bd73b8b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
     "permission": "business.segment.read",
     "source": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
+      "backend/src/Application/Api/Admin/BusinessCatalogApiController.php",
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php",
       "backend/src/Modules/Business/BusinessModuleProvider.php",
       "database/seeds/iam_seed.sql",
@@ -1512,7 +1564,7 @@
       "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue"
     ],
     "id": "permission-business-segments-create-62b76c46f8",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1530,7 +1582,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-catalog-product-read-e45f432c13",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1550,7 +1602,7 @@
       "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-common-apply-84304c3e13",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1571,7 +1623,7 @@
       "frontend/admin-vue/src/views/system/BlueprintsView.vue"
     ],
     "id": "permission-common-create-1accaea9b2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1590,7 +1642,7 @@
       "frontend/admin-vue/src/views/system/BlueprintsView.vue"
     ],
     "id": "permission-common-delete-2e5e6c2fc7",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1604,10 +1656,28 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "id": "permission-common-view-af9b7f6837",
+    "last_verified": "2026-07-16",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "common.view",
+    "source": [
+      "frontend/admin-vue/src/i18n/messages.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
     ],
     "id": "permission-contacts-consents-update-ebeb970502",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1623,7 +1693,7 @@
       "backend/src/Application/Content/PublishContentEntry.php"
     ],
     "id": "permission-content-after-publish-42d7baa052",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1640,7 +1710,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-approve-c62be48a2b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1663,7 +1733,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-content-archive-0d19772749",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1685,7 +1755,7 @@
       "backend/src/Application/Content/PublishContentEntry.php"
     ],
     "id": "permission-content-before-publish-f0591900f6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1701,7 +1771,7 @@
       "backend/src/Application/Api/Admin/SeoAuditApiController.php"
     ],
     "id": "permission-content-blocks-9f60f25a0e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1725,7 +1795,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-content-create-ac94d07597",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1754,7 +1824,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-delete-1ed3eb6336",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1775,7 +1845,7 @@
       "backend/src/Application/Iam/UserReferenceValidator.php"
     ],
     "id": "permission-content-draft-create-19fff501b1",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1792,7 +1862,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-duplicate-77b1889696",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1809,7 +1879,7 @@
       "backend/src/Application/Content/ArchiveDeleteContentEntry.php"
     ],
     "id": "permission-content-entry-archived-95290c8b66",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1825,7 +1895,7 @@
       "backend/src/Application/Content/ArchiveDeleteContentEntry.php"
     ],
     "id": "permission-content-entry-deleted-d392d877c6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1842,7 +1912,7 @@
       "database/seeds/default/core_default_seed.sql"
     ],
     "id": "permission-content-entry-published-8652d4d525",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1859,7 +1929,7 @@
       "backend/src/Application/Content/UnpublishContentEntry.php"
     ],
     "id": "permission-content-entry-unpublished-6f76357bff",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1878,7 +1948,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-content-html-raw-manage-564aa73b96",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1897,7 +1967,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
     "id": "permission-content-id-b2a543fe27",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1914,7 +1984,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-order-57604dc992",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1937,7 +2007,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-preview-d41d11bc26",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1968,7 +2038,7 @@
       "frontend/admin-vue/src/views/content/ContentEditorView.vue"
     ],
     "id": "permission-content-publish-0a81a47049",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -1994,7 +2064,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-content-published-057746443d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2013,7 +2083,7 @@
       "database/seeds/default/core_default_seed.sql"
     ],
     "id": "permission-content-published-projection-ready-3f9b3e2c5d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2047,7 +2117,7 @@
       "frontend/admin-vue/src/views/DashboardView.vue"
     ],
     "id": "permission-content-read-632a755e89",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2083,7 +2153,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-revisions-prune-723d6d861d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2107,7 +2177,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-revisions-restore-a4b9dda0af",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2133,7 +2203,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-revisions-save-c5503d312a",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2156,7 +2226,7 @@
       "backend/src/Application/VisualEditing/VisualEditingMapBuilder.php"
     ],
     "id": "permission-content-slug-60e949ea07",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2174,7 +2244,7 @@
       "backend/src/Application/VisualEditing/VisualEditingMapBuilder.php"
     ],
     "id": "permission-content-title-f4402e65f5",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2192,7 +2262,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-translate-b26e4694ca",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2214,7 +2284,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-unpublish-b4d1d6f84d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2236,7 +2306,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-content-unpublished-3ad6345795",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2259,7 +2329,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-content-update-ac3695438c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2282,7 +2352,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-content-update-primary-language-a988dc8db2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2300,7 +2370,7 @@
       "database/seeds/native_blueprints.json"
     ],
     "id": "permission-content-updated-242a195e11",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2318,7 +2388,7 @@
       "backend/src/Application/Seo/RunSeoAudit.php"
     ],
     "id": "permission-content-word-count-0fa88398cd",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2338,7 +2408,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-cookies-manage-31ebefb5f1",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2361,7 +2431,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-cookies-read-8f20d9f94f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2381,7 +2451,7 @@
       "backend/src/Module/ModuleProvider.php"
     ],
     "id": "permission-crm-manage-8e906b22b6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2397,7 +2467,7 @@
       "backend/src/Module/ModuleProvider.php"
     ],
     "id": "permission-crm-read-b219bf5080",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2414,7 +2484,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-deployments-manage-779e6d890b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2432,7 +2502,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-deployments-read-2f971e6d21",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2452,7 +2522,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-fields-manage-c37a5a8331",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2476,7 +2546,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-fields-read-121cbb2e01",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2498,7 +2568,7 @@
       "backend/vendor/twig/twig/src/TokenParser/ImportTokenParser.php"
     ],
     "id": "permission-forms-html-twig-32f489efb2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2521,7 +2591,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-forms-manage-8a55b17189",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2549,7 +2619,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-forms-read-908aeeac6e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2568,10 +2638,26 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Forms/FormRelationAddressToken.php"
+    ],
+    "id": "permission-forms-relation-address-invalid-b7b07ecbc5",
+    "last_verified": "2026-07-16",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "forms.relation_address_invalid",
+    "source": [
+      "backend/src/Application/Forms/FormRelationAddressToken.php"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-role-created-28e0cbaa28",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2587,7 +2673,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-role-updated-96565e7e2e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2603,7 +2689,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-session-revoked-1176b579d8",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2619,7 +2705,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-activated-739fbc7715",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2636,7 +2722,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-iam-user-created-c5dc14dea1",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2653,7 +2739,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-deactivated-3448ef9763",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2669,7 +2755,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-deleted-ade58959be",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2685,7 +2771,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-login-mode-changed-5b07628f70",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2701,7 +2787,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-password-reset-41a821bf93",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2717,7 +2803,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-totp-prepare-8904a89aa9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2733,7 +2819,7 @@
       "backend/src/Application/Api/Admin/IamAdminApiController.php"
     ],
     "id": "permission-iam-user-totp-recovery-regenerated-58fa15a436",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2750,7 +2836,7 @@
       "database/seeds/default/iam_default_seed.sql"
     ],
     "id": "permission-iam-user-updated-85c977cfd0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2774,7 +2860,7 @@
       "frontend/admin-vue/src/views/ImportsExportsView.vue"
     ],
     "id": "permission-imports-exports-manage-a53028a5ee",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2804,7 +2890,7 @@
       "frontend/admin-vue/src/views/ImportsExportsView.vue"
     ],
     "id": "permission-imports-exports-read-9f45600b50",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2834,7 +2920,7 @@
       "frontend/admin-vue/src/views/ImportsExportsView.vue"
     ],
     "id": "permission-imports-exports-write-9508dda7bc",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2858,7 +2944,7 @@
       "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
     ],
     "id": "permission-maintenance-action-audit-run-e80c656aad",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2876,7 +2962,7 @@
       "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
     ],
     "id": "permission-maintenance-action-cache-run-bc6f7a1e41",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2894,7 +2980,7 @@
       "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
     ],
     "id": "permission-maintenance-action-runtime-run-b90865149d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2912,7 +2998,7 @@
       "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
     ],
     "id": "permission-maintenance-action-search-run-5e2f225531",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2935,7 +3021,7 @@
       "frontend/admin-vue/src/views/tools/MaintenanceView.vue"
     ],
     "id": "permission-maintenance-manage-29fa583f53",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2957,7 +3043,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-allowed-mime-types-30ee6c06ae",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2975,7 +3061,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-media-alt-text-3e9e0f98e6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -2993,7 +3079,7 @@
       "backend/src/Modules/AiAssistant/Services/AiActionRegistry.php"
     ],
     "id": "permission-media-alt-text-suggest-701e2479ac",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3009,7 +3095,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-default-folder-key-4e1592949c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3028,7 +3114,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-media-delete-0742d22354",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3047,7 +3133,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-favicon-media-id-3141dc6626",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3063,7 +3149,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
     ],
     "id": "permission-media-id-ea6b0fb734",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3079,7 +3165,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-logo-media-id-42feabeed5",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3095,7 +3181,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-max-upload-mb-15804106c3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3111,7 +3197,7 @@
       "backend/src/Application/Api/Admin/MediaApiController.php"
     ],
     "id": "permission-media-metadata-update-failed-666c65104d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3127,7 +3213,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-media-open-72f3ec92f6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3149,7 +3235,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-media-read-a9c4382447",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3175,7 +3261,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-media-update-b49857d48e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3199,7 +3285,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-media-upload-aa0e9a43d9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3219,7 +3305,7 @@
       "backend/src/Application/Api/Admin/MediaApiController.php"
     ],
     "id": "permission-media-upload-failed-6d3c8fa366",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3235,7 +3321,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-memo-comment-update-83f3b17cc0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3254,7 +3340,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-menu-manage-d2a375b8fa",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3278,7 +3364,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-menu-read-ae5292b1b2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3296,6 +3382,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/modules/SaleEcommerceSettings.vue"
+    ],
+    "id": "permission-modules-commerce-65d52c5007",
+    "last_verified": "2026-07-16",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "modules.commerce",
+    "source": [
+      "frontend/admin-vue/src/contextualHelp.ts",
+      "frontend/admin-vue/src/views/modules/SaleEcommerceSettings.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Application/Api/Admin/AdminContextApiController.php",
       "backend/src/Application/Api/Admin/Contract/AdminApiEndpointRegistry.php",
       "backend/src/Application/Api/Admin/ModuleAdminApiController.php",
@@ -3307,7 +3411,7 @@
       "frontend/admin-vue/src/views/modules/ModulesView.vue"
     ],
     "id": "permission-modules-manage-d4fafd3280",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3338,7 +3442,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-modules-read-cec37b6b1b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3362,7 +3466,7 @@
       "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-modules-sale-b34de62bcf",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3380,7 +3484,7 @@
       "backend/src/Application/Api/Admin/SecurityAdminApiController.php"
     ],
     "id": "permission-pos-catalog-read-3e87e051d0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3398,7 +3502,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-profile-read-c0500f8745",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3416,7 +3520,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-profile-update-870cf2180e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3434,7 +3538,7 @@
       "database/modules/sale.sql"
     ],
     "id": "permission-refund-create-be7d3ab33d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3451,7 +3555,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-relation-delete-ad8d5c7208",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3467,7 +3571,7 @@
       "backend/src/Application/Api/Admin/BusinessCrmApiController.php"
     ],
     "id": "permission-relations-restore-e222698fdf",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3489,7 +3593,7 @@
       "frontend/admin-vue/src/components/layout/AdminShell.vue"
     ],
     "id": "permission-roles-manage-a964925e7e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3516,7 +3620,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-roles-read-ba72100a9f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3534,10 +3638,36 @@
   {
     "confidence": "high",
     "evidence": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "id": "permission-sale-advanced-tools-manage-d42c95060b",
+    "last_verified": "2026-07-16",
+    "limitations": [
+      "The effective role assignment and site scope must be checked separately."
+    ],
+    "permission": "sale.advanced_tools.manage",
+    "source": [
+      "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "database/seeds/iam_seed.sql",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/BusinessRelationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
+    ],
+    "status": "supported"
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-cash-manage-3067ce4d2e",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3555,7 +3685,7 @@
       "database/migrations/iam/0010_sales_channel_permission.sql"
     ],
     "id": "permission-sale-channels-manage-61963815c8",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3571,17 +3701,19 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-sale-customer-accounts-manage-7d36fb2569",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
     "permission": "sale.customer_accounts.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "status": "supported"
   },
@@ -3590,10 +3722,12 @@
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-fulfillment-manage-e68cd8bce9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3601,7 +3735,9 @@
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php",
+      "frontend/admin-vue/src/views/modules/SaleOperationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3613,7 +3749,7 @@
       "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
     ],
     "id": "permission-sale-inventory-approve-960a12cfa9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3631,7 +3767,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-manage-f299f7db39",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3645,17 +3781,19 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php"
     ],
     "id": "permission-sale-orders-manage-10f6a15210",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
     "permission": "sale.orders.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php"
     ],
     "status": "supported"
   },
@@ -3665,11 +3803,13 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/Contracts/SaleAiContextContracts.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-orders-read-438f3d0656",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3678,8 +3818,10 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/Contracts/SaleAiContextContracts.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "frontend/admin-vue/src/components/layout/GlobalSearch.vue",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3687,17 +3829,19 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php"
     ],
     "id": "permission-sale-payments-manage-2eb7b71a1d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
     "permission": "sale.payments.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
-      "backend/src/Modules/Sale/SaleModuleProvider.php"
+      "backend/src/Modules/Sale/SaleModuleProvider.php",
+      "backend/src/Modules/Sale/Services/SaleOrderDossierService.php"
     ],
     "status": "supported"
   },
@@ -3707,10 +3851,11 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-payments-read-444856a7d6",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3719,7 +3864,8 @@
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
       "frontend/admin-vue/src/router/navigation.ts",
-      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
+      "frontend/admin-vue/src/views/modules/BusinessCrmView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3730,7 +3876,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-pos-discounts-manage-e9016b4404",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3748,7 +3894,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-pos-manage-f1c7e57a21",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3766,7 +3912,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-pos-refunds-manage-ed16ac515c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3782,10 +3928,11 @@
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-pos-use-3a2d83cc8d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3793,7 +3940,8 @@
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3802,10 +3950,11 @@
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-read-446df8bd43",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3813,7 +3962,8 @@
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/router/navigation.ts"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3824,7 +3974,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-refunds-manage-e91d908a1d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3844,7 +3994,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-sale-reports-read-131ac9024f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3864,7 +4014,7 @@
       "backend/src/Modules/Sale/SaleModuleProvider.php"
     ],
     "id": "permission-sale-returns-manage-174ae6d6bb",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3879,19 +4029,25 @@
     "confidence": "high",
     "evidence": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Application/Api/Admin/SaleEcommerceAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "id": "permission-sale-settings-manage-f529be0105",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
     "permission": "sale.settings.manage",
     "source": [
       "backend/src/Application/Api/Admin/SaleAdminApiController.php",
+      "backend/src/Application/Api/Admin/SaleEcommerceAdminApiController.php",
       "backend/src/Modules/Sale/SaleModuleProvider.php",
-      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
+      "frontend/admin-vue/src/router/navigation.ts",
+      "frontend/admin-vue/src/views/modules/SaleReservationsView.vue",
+      "frontend/admin-vue/src/views/modules/SaleView.vue"
     ],
     "status": "supported"
   },
@@ -3901,7 +4057,7 @@
       "frontend/admin-vue/src/i18n/messages.ts"
     ],
     "id": "permission-sale-status-admin-f626857da9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3918,7 +4074,7 @@
       "frontend/admin-vue/src/views/modules/SaleStockView.vue"
     ],
     "id": "permission-sale-stock-export-210dcb2ca0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3937,7 +4093,7 @@
       "frontend/admin-vue/src/views/modules/SaleReservationsView.vue"
     ],
     "id": "permission-sale-stock-manage-360f179425",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3957,7 +4113,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-sale-stock-read-b9942c6392",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3977,7 +4133,7 @@
       "frontend/admin-vue/src/views/modules/SaleOperationsView.vue"
     ],
     "id": "permission-sale-transfers-manage-d35fde3b17",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -3996,7 +4152,7 @@
       "frontend/admin-vue/src/i18n/messages.ts"
     ],
     "id": "permission-search-keyword-create-d7f6414899",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4014,7 +4170,7 @@
       "frontend/admin-vue/src/i18n/messages.ts"
     ],
     "id": "permission-search-section-create-74a904e40d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4038,7 +4194,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-cors-manage-6e2c63956c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4067,7 +4223,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-cors-read-1f9f4bbb09",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4096,7 +4252,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-tokens-manage-b489a67f16",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4126,7 +4282,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-tokens-read-4884450689",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4156,7 +4312,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-webhooks-manage-d03f1dabc5",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4186,7 +4342,7 @@
       "frontend/admin-vue/src/admin/securityPanel.ts"
     ],
     "id": "permission-security-webhooks-read-b934b070e8",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4210,7 +4366,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-seo-advanced-45318092d7",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4229,7 +4385,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-seo-audit-7a249b2955",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4247,7 +4403,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-canonical-invalid-8b72e99b96",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4263,7 +4419,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-description-long-40240ccc78",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4279,7 +4435,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-seo-description-max-length-dc7ad50967",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4295,7 +4451,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-description-missing-2024ffda42",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4311,7 +4467,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-description-short-710d3d9c38",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4327,7 +4483,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-json-ld-invalid-79cbba5cf7",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4343,7 +4499,7 @@
       "backend/src/Application/Api/Admin/SeoAuditApiController.php"
     ],
     "id": "permission-seo-json-ld-valid-a93f80cd7c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4361,7 +4517,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-seo-manage-b6ed06ea83",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4382,7 +4538,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-seo-meta-description-a8b825f6ca",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4401,7 +4557,7 @@
       "backend/src/Modules/AiAssistant/Services/AiActionRegistry.php"
     ],
     "id": "permission-seo-meta-description-suggest-6a17003026",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4417,7 +4573,7 @@
       "backend/src/Application/VisualEditing/VisualEditingMapBuilder.php"
     ],
     "id": "permission-seo-meta-title-83060d1342",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4433,7 +4589,7 @@
       "backend/src/Application/Publication/ProjectionBuilder.php"
     ],
     "id": "permission-seo-metadata-building-7047ed4240",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4449,7 +4605,7 @@
       "backend/src/Application/Api/Admin/SeoAuditApiController.php"
     ],
     "id": "permission-seo-metadata-complete-for-canonical-routes-ad693a37e3",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4468,7 +4624,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-seo-read-c67c7c7df0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4488,7 +4644,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-seo-redirects-97028abe09",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4505,7 +4661,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-seo-robots-c081c2662d",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4521,7 +4677,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-robots-noindex-2864cb2f9c",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4538,7 +4694,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-seo-simple-18f676f4a9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4555,7 +4711,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-seo-suggest-metadata-2b9b92c3fe",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4572,7 +4728,7 @@
       "database/seeds/default/ai_default_seed.sql"
     ],
     "id": "permission-seo-title-9a41c0fb48",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4589,7 +4745,7 @@
       "backend/src/Modules/AiAssistant/Services/AiActionRegistry.php"
     ],
     "id": "permission-seo-title-suggest-67cee8ac1b",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4605,7 +4761,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-title-long-c24b2db298",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4621,7 +4777,7 @@
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-seo-title-max-length-8eb807c976",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4637,7 +4793,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-title-missing-717f4c417a",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4653,7 +4809,7 @@
       "backend/src/Infrastructure/Persistence/Sql/SqlPublishedProjectionStore.php"
     ],
     "id": "permission-seo-title-short-dead567118",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4673,7 +4829,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-sessions-manage-dc8e0d20b9",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4698,7 +4854,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-sessions-read-665596ce44",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4720,7 +4876,7 @@
       "frontend/admin-vue/src/views/system/SystemConfigurationView.vue"
     ],
     "id": "permission-settings-configuration-1ab116bfea",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4743,7 +4899,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-settings-manage-5c51aaa8c7",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4765,7 +4921,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-settings-open-6ca09096b2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4788,7 +4944,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-settings-read-daf4ad0fec",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4813,7 +4969,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-settings-sensitive-4f0b91dd88",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4834,7 +4990,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-taxonomy-manage-07ed2bc8f1",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4858,7 +5014,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-taxonomy-read-18ad1cbdf0",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4880,7 +5036,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-themes-manage-bee90f59eb",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4898,7 +5054,7 @@
       "database/seeds/iam_seed.sql"
     ],
     "id": "permission-themes-read-a8955099f8",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4923,7 +5079,7 @@
       "frontend/admin-vue/src/views/iam/IamUsersView.vue"
     ],
     "id": "permission-users-email-2fa-manage-61101a376f",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4955,7 +5111,7 @@
       "frontend/admin-vue/src/views/modules/BusinessCrmView.vue"
     ],
     "id": "permission-users-manage-9bb74f9425",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],
@@ -4985,7 +5141,7 @@
       "frontend/admin-vue/src/router/navigation.ts"
     ],
     "id": "permission-users-read-95e4134ab2",
-    "last_verified": "2026-07-14",
+    "last_verified": "2026-07-16",
     "limitations": [
       "The effective role assignment and site scope must be checked separately."
     ],

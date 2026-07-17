@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import DataTable from '@/components/ui/DataTable.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
@@ -505,9 +504,7 @@ onMounted(load);
 </script>
 
 <template>
-  <PageHeader :title="t('maintenance.title')" :intro="t('maintenance.intro')">
-  </PageHeader>
-  <ContextualHelpLink id="tools.maintenance" class="mb-3" />
+  <PageHeader :title="t('maintenance.title')" :intro="t('maintenance.intro')" help-id="tools.maintenance" />
 
   <ApiFeedback :error="error" :message="message" />
 

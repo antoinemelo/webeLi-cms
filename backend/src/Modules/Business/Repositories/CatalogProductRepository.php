@@ -6,11 +6,14 @@ namespace App\Modules\Business\Repositories;
 
 final class CatalogProductRepository extends BusinessRepositoryBase
 {
+    private ?bool $hasInventoryProjection = null;
+
     /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int} */
     public function list(int $siteId, array $filters = [], int $limit = 50, int $offset = 0, bool $includeArchived = false): array
     {
         $where = ['site_id = :site_id'];
         $params = ['site_id' => $this->requireSiteId($siteId)];
+        [$stockOnHand, $stockReserved, $stockAvailable] = $this->stockExpressions();
         if (!$includeArchived) {
             $where[] = 'archived_at IS NULL';
         }
@@ -52,7 +55,7 @@ final class CatalogProductRepository extends BusinessRepositoryBase
             $where[] = 'is_catalogue_enabled = 1';
         }
         if (!empty($filters['low_stock'])) {
-            $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1)';
+            $where[] = 'EXISTS (SELECT 1 FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND ' . $stockAvailable . ' <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1)';
         }
         if ($imageFilter === 'with') {
             $where[] = 'EXISTS (SELECT 1 FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\')';
@@ -110,10 +113,10 @@ final class CatalogProductRepository extends BusinessRepositoryBase
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = \'active\' AND v.archived_at IS NULL) AS active_variant_count,
                     (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL) AS sale_price_min,
                     (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'purchase\' AND p.valid_from IS NULL) AS purchase_price_min,
-                    (SELECT COALESCE(SUM(v.stock_quantity), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
-                    (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
+                    (SELECT COALESCE(SUM(' . $stockOnHand . '), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
+                    (SELECT COALESCE(SUM(' . $stockReserved . '), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
-                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
+                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND ' . $stockAvailable . ' <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
                     (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\') AS image_count,
                     (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS completeness_score,
                     (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS is_sellable_summary,
@@ -237,16 +240,17 @@ final class CatalogProductRepository extends BusinessRepositoryBase
 
     public function find(int $siteId, int $id, bool $includeArchived = false): ?array
     {
+        [$stockOnHand, $stockReserved, $stockAvailable] = $this->stockExpressions();
         $row = $this->database()->one(
             'SELECT business_products.*,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS variant_count,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.status = \'active\' AND v.archived_at IS NULL) AS active_variant_count,
                     (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'sale\' AND p.valid_from IS NULL) AS sale_price_min,
                     (SELECT MIN(p.amount) FROM business_product_base_prices p WHERE p.product_id = business_products.id AND p.price_kind = \'purchase\' AND p.valid_from IS NULL) AS purchase_price_min,
-                    (SELECT COALESCE(SUM(v.stock_quantity), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
-                    (SELECT COALESCE(SUM(v.stock_reserved), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
+                    (SELECT COALESCE(SUM(' . $stockOnHand . '), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_quantity_total,
+                    (SELECT COALESCE(SUM(' . $stockReserved . '), 0) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL) AS stock_reserved_total,
                     (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS stock_tracked_variant_count,
-                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND v.stock_quantity <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
+                    (SELECT COUNT(*) FROM business_product_variants v WHERE v.product_id = business_products.id AND v.archived_at IS NULL AND ' . $stockAvailable . ' <= 5 AND COALESCE(v.track_stock, business_products.track_stock) = 1) AS low_stock_variant_count,
                     (SELECT COUNT(*) FROM business_product_assets a WHERE a.product_id = business_products.id AND a.archived_at IS NULL AND a.role <> \'internal\') AS image_count,
                     (SELECT s.score FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS completeness_score,
                     (SELECT s.is_sellable FROM business_product_completeness_scores s WHERE s.product_id = business_products.id AND s.variant_id IS NULL AND s.channel = \'all\' LIMIT 1) AS is_sellable_summary,
@@ -486,6 +490,18 @@ final class CatalogProductRepository extends BusinessRepositoryBase
             )'
         );
         $this->database()->run('CREATE INDEX IF NOT EXISTS idx_business_product_attribute_group_links_group ON business_product_attribute_group_links(group_id, sort_order)');
+    }
+
+    /** @return array{0:string,1:string,2:string} */
+    private function stockExpressions(): array
+    {
+        $this->hasInventoryProjection ??= $this->database()->one("SELECT 1 FROM sqlite_master WHERE type='table' AND name='business_inventory_availability_projections'") !== null;
+        if (!$this->hasInventoryProjection) return ['v.stock_quantity', 'v.stock_reserved', 'v.stock_quantity-v.stock_reserved'];
+        return [
+            'COALESCE((SELECT ip.on_hand_quantity FROM business_inventory_availability_projections ip WHERE ip.site_id=business_products.site_id AND ip.sellable_id=v.id),v.stock_quantity)',
+            'COALESCE((SELECT ip.reserved_quantity FROM business_inventory_availability_projections ip WHERE ip.site_id=business_products.site_id AND ip.sellable_id=v.id),v.stock_reserved)',
+            'COALESCE((SELECT ip.available_quantity FROM business_inventory_availability_projections ip WHERE ip.site_id=business_products.site_id AND ip.sellable_id=v.id),v.stock_quantity-v.stock_reserved)',
+        ];
     }
 
     private function skuBase(mixed $value): ?string

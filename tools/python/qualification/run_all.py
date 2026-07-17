@@ -31,6 +31,7 @@ from tools.python.lib.change_cache import fingerprint_paths, read_success, write
 from tools.python.lib.release_metadata import load_release_metadata
 from tools.python.qualification.omnichannel_gate import validate_report_file
 from tools.python.qualification.usability_commerce_gate import validate_report_files as validate_usability_reports
+from tools.python.qualification.admin_convergence_gate import validate_report_files as validate_admin_convergence_reports
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
@@ -65,6 +66,8 @@ E2E_INPUTS = (
     "tools/python/qualification/omnichannel_gate.py",
     "tools/python/qualification/usability_commerce_gate.py",
     "docs/evaluation/machine-readable/usability-commerce-foundations.json",
+    "tools/python/qualification/admin_convergence_gate.py",
+    "docs/evaluation/machine-readable/admin-convergence-ux-38e.json",
     "tools/python/qualification/payment_provider_gate.py",
     "tools/python/qualification/inventory_ledger_gate.py",
     "tools/python/qualification/reservation_availability_gate.py",
@@ -156,6 +159,8 @@ def _artifact_hashes() -> dict[str, str]:
         "qualification_omnichannel": ROOT / "storage/qualification/omnichannel/latest.json",
         "qualification_usability": ROOT / "storage/qualification/usability/latest.json",
         "usability_commerce_foundations": ROOT / "docs/evaluation/machine-readable/usability-commerce-foundations.json",
+        "admin_convergence_ux_38e": ROOT / "docs/evaluation/machine-readable/admin-convergence-ux-38e.json",
+        "qualification_admin_convergence": ROOT / "storage/qualification/admin-convergence/latest.json",
         "payment_provider_interchangeability": ROOT / "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
         "inventory_ledger": ROOT / "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "stock_reconstruction_m6": ROOT / "docs/evaluation/machine-readable/sale-stock-reconstruction-m6.json",
@@ -180,6 +185,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "smoke HTTP et E2E", "source_steps": ["browser-e2e", "fresh-install"], "release_commands": ["tools/cms.py smoke"]},
         {"requirement": "gate E2E omnicanale storefront/POS", "source_steps": ["browser-e2e"], "release_commands": ["tools/cms.py e2e --use-built-assets --omnichannel-only"]},
         {"requirement": "gate utilisabilité Commerce M5-M7", "source_steps": ["commerce-usability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/usability_commerce_gate.py", "tools/cms.py e2e --use-built-assets --usability-only"]},
+        {"requirement": "gate UX convergence admin 38e", "source_steps": ["admin-convergence-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/admin_convergence_gate.py", "tools/cms.py e2e --use-built-assets --admin-convergence-only"]},
         {"requirement": "gate M5 interchangeabilité providers", "source_steps": ["payment-provider-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/payment_provider_gate.py"]},
         {"requirement": "gate M6 ledger stock Sale", "source_steps": ["inventory-ledger-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/inventory_ledger_gate.py"]},
         {"requirement": "gate M6.5 reconstruction et réconciliation", "source_steps": ["stock-reconstruction-gate", "backup-restore", "browser-e2e"], "release_commands": ["tools/python/qualification/stock_reconstruction_gate.py", "tools/cms.py inventory reconcile"]},
@@ -390,6 +396,23 @@ def steps() -> tuple[Step, ...]:
             timeout=60,
         ),
         Step(
+            "admin-convergence-gate",
+            "Gate UX de convergence admin 38e",
+            ("complete", "release"),
+            (py, "tools/python/qualification/admin_convergence_gate.py", "--static-only"),
+            files=(
+                "docs/evaluation/machine-readable/admin-convergence-ux-38e.json",
+                "docs/evaluation/admin-convergence-ux-gate-38e.md",
+                "docs/reference/admin-convergence-routes.md",
+                "docs/administration/admin-convergence-roles.md",
+                "tools/python/qualification/admin_convergence_gate.py",
+                "frontend/admin-vue/tests/e2e/admin-convergence-gate-38e.spec.ts",
+                "tools/php/tests/unit/business_pim_api_controller_test.php",
+                "tools/php/tests/unit/sale_admin_api_controller_test.php",
+            ),
+            timeout=60,
+        ),
+        Step(
             "browser-e2e",
             "Tests navigateur Playwright isolés",
             ("release",),
@@ -506,16 +529,19 @@ def _browser_e2e_check() -> tuple[int, str, str]:
     cache_file = CACHE_DIR / "browser-e2e.json"
     report_file = ROOT / "storage/qualification/omnichannel/latest.json"
     usability_report = ROOT / "storage/qualification/usability/latest.json"
+    admin_convergence_report = ROOT / "storage/qualification/admin-convergence/latest.json"
     _report, report_errors = validate_report_file(report_file, ROOT)
     usability_errors = validate_usability_reports(runtime_path=usability_report, root=ROOT)
-    if USE_CACHE and not report_errors and not usability_errors and read_success(cache_file, fingerprint) is not None:
+    admin_convergence_errors = validate_admin_convergence_reports(runtime_path=admin_convergence_report, root=ROOT)
+    if USE_CACHE and not report_errors and not usability_errors and not admin_convergence_errors and read_success(cache_file, fingerprint) is not None:
         return (
             0,
             browser_stdout
             + "\nCache qualification: E2E Playwright inchangés, dernier succès réutilisé."
             + f"\nEmpreinte: {fingerprint}"
             + f"\nGate omnicanale: {_display_path(report_file)}"
-            + f"\nGate utilisabilité: {_display_path(usability_report)}",
+            + f"\nGate utilisabilité: {_display_path(usability_report)}"
+            + f"\nGate convergence admin: {_display_path(admin_convergence_report)}",
             "",
         )
 

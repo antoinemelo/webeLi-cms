@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "key": "sale",
-  "name": "Vente",
+  "name": "Ventes",
   "version": "0.1.0",
   "type": "system",
   "provider_class": "App\\Modules\\Sale\\SaleModuleProvider",

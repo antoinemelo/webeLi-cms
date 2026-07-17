@@ -22,6 +22,7 @@ use App\Modules\Business\Services\BusinessConsentService;
 use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessMemoSharingService;
+use App\Modules\Business\Services\BusinessOperationsDashboardService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
 use App\Modules\Business\Services\BusinessSegmentationService;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
@@ -54,6 +55,7 @@ final class BusinessCrmApiController
         private readonly IamAdminRepository $iam,
         private readonly ?SaleCrmActivityProjectionService $saleActivities = null,
         private readonly ?BusinessSegmentationService $segmentation = null,
+        private readonly ?BusinessOperationsDashboardService $operationsDashboard = null,
     ) {}
 
     public function schema(): Response
@@ -182,6 +184,7 @@ final class BusinessCrmApiController
                 'has_phone' => $this->queryBool('has_phone'),
                 'missing_email_consent' => $this->queryBool('missing_email_consent'),
                 'linked_iam' => $this->queryBool('linked_iam'),
+                'view' => $this->queryString('view'),
                 'tag' => $this->queryString('tag'),
                 'updated_after' => $this->queryString('updated_after'),
                 'archived' => $this->queryString('archived'),
@@ -194,12 +197,18 @@ final class BusinessCrmApiController
 
     public function dashboard(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.read');
+        [$site, $languageCode] = $this->authorizeAny(['business.crm.read', 'business.catalog.read', 'business.segment.read', 'business.mailing.read']);
         $siteId = (int) $site['id'];
         $dashboard = $this->dashboard->dashboard($siteId, [
             'include_memos' => $this->auth->hasPermission('business.memo.read', $siteId),
             'include_messages' => $this->auth->hasPermission('business.messaging.send', $siteId) || $this->auth->hasPermission('business.messaging.admin', $siteId),
         ]);
+        $dashboard['actionable'] = $this->operationsDashboard?->actionable($siteId, [
+            'catalog' => $this->auth->hasPermission('business.catalog.read', $siteId),
+            'relations' => $this->auth->hasPermission('business.crm.read', $siteId),
+            'inventory' => $this->auth->hasPermission('business.catalog.read', $siteId),
+            'advanced' => $this->auth->hasPermission('business.advanced_tools.manage', $siteId),
+        ]) ?? ['tasks' => [], 'summary' => [], 'generated_at' => gmdate('c')];
         return Response::success($dashboard, 'admin.business.dashboard.v1', $this->meta($site, $languageCode));
     }
 
@@ -278,7 +287,7 @@ final class BusinessCrmApiController
 
     public function reconcileSaleActivities(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('business.crm.manage');
         try {
             $payload = $this->payload();
             $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
@@ -1322,6 +1331,26 @@ final class BusinessCrmApiController
         $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
         $this->authorization->require($permission, (int) $site['id']);
         return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @param list<string> $permissions @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAny(array $permissions): array
+    {
+        $this->auth->requireAuth();
+        $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
+        foreach ($permissions as $permission) {
+            if ($this->auth->hasPermission($permission, (int) $site['id'])) return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+        }
+        $this->authorization->require($permissions[0] ?? 'business.crm.read', (int) $site['id']);
+        return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAdvanced(string $permission): array
+    {
+        [$site, $languageCode] = $this->authorize('business.advanced_tools.manage');
+        $this->authorization->require($permission, (int) $site['id']);
+        return [$site, $languageCode];
     }
 
     private function actorId(): int

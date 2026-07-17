@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
@@ -42,16 +43,20 @@ type CatalogOfferRow = {
 const props = withDefaults(defineProps<{
   embedded?: boolean;
   fixedTab?: CatalogTab;
+  initialProductId?: number;
 }>(), {
   embedded: false,
   fixedTab: undefined,
+  initialProductId: 0,
 });
 
 const context = useAdminContextStore();
+const route = useRoute();
 const { t } = useI18n();
 const activeTab = ref<CatalogTab>(props.fixedTab ?? 'products');
 const activeProductSection = ref<ProductSection>('summary');
 const productModalOpen = ref(false);
+const inventoryAdjustmentOpen = ref(false);
 const productModalMode = ref<'create' | 'edit'>('create');
 const productModalScope = ref<ProductModalScope>('all');
 const productModalFocus = ref<ProductEditFocus | ''>('');
@@ -104,10 +109,16 @@ const mediaRows = ref<CatalogRecord[]>([]);
 const selectedProduct = ref<ProductDetail | null>(null);
 const selectedVariant = ref<CatalogVariant | null>(null);
 const selectedDiscount = ref<CatalogDiscount | null>(null);
+const offerWizardStep = ref(1);
+const offerPreview = ref<Record<string, any> | null>(null);
+const offerConflictAcknowledged = ref(false);
 const selectedBundleProductId = ref(0);
 const selectedBundle = ref<CatalogProductBundle | null>(null);
 const bundleLoading = ref(false);
 const variantStock = ref<Record<string, unknown> | null>(null);
+const stockLocations = ref<Array<Record<string, unknown>>>([]);
+const stockByLocation = ref<Array<Record<string, unknown>>>([]);
+const stockPreview = ref<Record<string, any> | null>(null);
 const stockMovements = ref<Array<Record<string, unknown>>>([]);
 const importCsvText = ref('');
 const importReport = ref<CatalogImportReport | null>(null);
@@ -240,9 +251,10 @@ const variantForm = reactive({
   sale_adjustment_type: 'none',
   sale_adjustment_value: ''
 });
-const stockForm = reactive({ movement_type: 'purchase', quantity: '1', reason: '', reference_type: '', reference_id: '' });
+const stockForm = reactive({ action: 'receipt', quantity: '1', reason: '', stock_location_id: '' });
 const discountForm = reactive({
   id: 0,
+  objective: 'increase_sales',
   name: '',
   status: 'active',
   type: 'percent',
@@ -253,7 +265,8 @@ const discountForm = reactive({
   channel: 'all',
   starts_at: '',
   ends_at: '',
-  priority: '100'
+  priority: '100',
+  customer_segment: ''
 });
 const brandForm = reactive({ id: 0, name: '', slug: '', company_id: '', description: '', website_url: '', status: 'active', sort_order: '0' });
 const categoryForm = reactive({ id: 0, name: '', slug: '', parent_id: '', description: '', sort_order: '0' });
@@ -1795,9 +1808,25 @@ function closeVariantPriceModal(): void {
 }
 
 function closeProductModal(): void {
+  inventoryAdjustmentOpen.value = false;
   productModalOpen.value = false;
   variantAttributesOnlyModal.value = false;
   if (selectedProduct.value) fillProductForm(selectedProduct.value);
+}
+
+async function openInventoryAdjustment(variant: CatalogVariant): Promise<void> {
+  stockForm.action = 'correction';
+  stockForm.quantity = '0';
+  stockForm.reason = '';
+  stockPreview.value = null;
+  await selectVariant(variant);
+  inventoryAdjustmentOpen.value = true;
+}
+
+function closeInventoryAdjustment(): void {
+  inventoryAdjustmentOpen.value = false;
+  stockPreview.value = null;
+  stockForm.reason = '';
 }
 
 function closeProductViewModal(): void {
@@ -1879,6 +1908,7 @@ function fillVariantFormFromVariant(variant: CatalogVariant): void {
 function fillDiscountForm(discount: CatalogDiscount | null = null): void {
   Object.assign(discountForm, {
     id: Number(discount?.id || 0),
+    objective: 'increase_sales',
     name: text(discount?.name),
     status: text(discount?.status || 'active'),
     type: text(discount?.discount_type || 'percent'),
@@ -1890,8 +1920,12 @@ function fillDiscountForm(discount: CatalogDiscount | null = null): void {
     starts_at: text(discount?.starts_at),
     ends_at: text(discount?.ends_at),
     priority: text(discount?.priority || 100),
+    customer_segment: text(discount?.customer_segment),
   });
   selectedDiscount.value = discount;
+  offerWizardStep.value = 1;
+  offerPreview.value = null;
+  offerConflictAcknowledged.value = false;
 }
 
 function fillBundleForm(bundle: CatalogProductBundle | null): void {
@@ -3332,9 +3366,14 @@ async function loadVariantStock(variant: CatalogVariant): Promise<void> {
   try {
     const response = await businessCatalogApi.stock(Number(variant.id));
     variantStock.value = response.data.stock;
+    stockLocations.value = response.data.locations || [];
+    stockByLocation.value = response.data.location_stock || [];
     stockMovements.value = response.data.movements || [];
+    if (!stockForm.stock_location_id && stockLocations.value.length) stockForm.stock_location_id = String(stockLocations.value[0].id || '');
   } catch (_) {
     variantStock.value = null;
+    stockLocations.value = [];
+    stockByLocation.value = [];
     stockMovements.value = [];
   }
 }
@@ -3377,20 +3416,42 @@ async function saveSelectedVariantAdjustments(): Promise<void> {
   });
 }
 
-async function createStockMovement(): Promise<void> {
+function stockMovementPayload(preview: boolean): Record<string, unknown> {
+  return {
+    action: stockForm.action,
+    quantity: Number(stockForm.quantity || 0),
+    reason: stockForm.reason,
+    stock_location_id: Number(stockForm.stock_location_id || 0),
+    preview,
+    idempotency_key: preview ? undefined : `operations-stock-${selectedVariant.value?.id}-${Date.now()}`,
+  };
+}
+
+async function previewStockMovement(): Promise<void> {
   if (!canStockWrite.value || !selectedVariant.value?.id) return;
+  busy.value = 'stock-preview';
+  try {
+    const response = await businessCatalogApi.createStockMovement(Number(selectedVariant.value.id), stockMovementPayload(true));
+    stockPreview.value = response.data.preview || null;
+  } catch (err) {
+    stockPreview.value = null;
+    setError(err, 'Impact du mouvement non calculé.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+async function createStockMovement(): Promise<void> {
+  if (!canStockWrite.value || !selectedVariant.value?.id || !stockPreview.value) return;
   busy.value = 'stock';
   try {
-    await businessCatalogApi.createStockMovement(Number(selectedVariant.value.id), {
-      movement_type: stockForm.movement_type,
-      quantity: Number(stockForm.quantity || 0),
-      reason: stockForm.reason || undefined,
-      reference_type: stockForm.reference_type || undefined,
-      reference_id: idOrNull(stockForm.reference_id),
-    });
+    await businessCatalogApi.createStockMovement(Number(selectedVariant.value.id), stockMovementPayload(false));
     await loadVariantStock(selectedVariant.value);
     await selectProduct({ id: selectedProductId.value, name: productForm.name });
-    setNotice('Mouvement enregistré.');
+    stockPreview.value = null;
+    stockForm.reason = '';
+    inventoryAdjustmentOpen.value = false;
+    setNotice('Mouvement audité enregistré dans le ledger Vente.');
   } catch (err) {
     setError(err, 'Mouvement non enregistré.');
   } finally {
@@ -3402,7 +3463,28 @@ async function saveDiscount(): Promise<void> {
   if (!canDiscountWrite.value) return;
   busy.value = 'discount';
   try {
-    const payload = {
+    const payload = discountPayload();
+    if (!offerPreview.value) throw new Error('offer.preview_required');
+    if (discountForm.status === 'active' && offerPreview.value.activation_allowed === false) throw new Error('offer.conflict_acknowledgement_required');
+    if (discountForm.id > 0) {
+      await businessCatalogApi.updateDiscount(discountForm.id, payload);
+    } else {
+      await businessCatalogApi.createDiscount(payload);
+    }
+    fillDiscountForm();
+    await loadCatalog();
+    if (selectedProductId.value > 0) await selectProduct({ id: selectedProductId.value, name: productForm.name });
+    setNotice('Offre enregistrée après prévisualisation.');
+  } catch (err) {
+    setError(err, 'Offre non enregistrée. Vérifiez l’aperçu et les conflits.');
+  } finally {
+    busy.value = '';
+  }
+}
+
+function discountPayload(): Record<string, unknown> {
+  return {
+      id: discountForm.id || undefined,
       name: discountForm.name,
       status: discountForm.status,
       type: discountForm.type,
@@ -3414,18 +3496,21 @@ async function saveDiscount(): Promise<void> {
       starts_at: discountForm.starts_at || undefined,
       ends_at: discountForm.ends_at || undefined,
       priority: Number(discountForm.priority || 100),
+      customer_segment: discountForm.customer_segment || undefined,
+      conflict_acknowledged: offerConflictAcknowledged.value,
     };
-    if (discountForm.id > 0) {
-      await businessCatalogApi.updateDiscount(discountForm.id, payload);
-    } else {
-      await businessCatalogApi.createDiscount(payload);
-    }
-    fillDiscountForm();
-    await loadCatalog();
-    if (selectedProductId.value > 0) await selectProduct({ id: selectedProductId.value, name: productForm.name });
-    setNotice('Offre enregistrée.');
+}
+
+async function previewDiscount(): Promise<void> {
+  if (!canDiscountWrite.value) return;
+  busy.value = 'discount-preview';
+  try {
+    const response = await businessCatalogApi.previewDiscount(discountPayload());
+    offerPreview.value = response.data.preview;
+    offerWizardStep.value = 7;
   } catch (err) {
-    setError(err, 'Offre non enregistrée.');
+    offerPreview.value = null;
+    setError(err, 'Aperçu de l’offre impossible.');
   } finally {
     busy.value = '';
   }
@@ -3616,6 +3701,11 @@ watch(() => props.fixedTab, (tab) => {
     activeTab.value = tab;
   }
 });
+watch(() => props.initialProductId, (id) => {
+  if (Number(id || 0) > 0 && Number(selectedProduct.value?.id || 0) !== Number(id)) {
+    void openViewProduct({ id: Number(id), name: '' });
+  }
+});
 
 watch(() => context.siteId, () => { void loadCatalog(); });
 watch(() => productForm.attribute_group_ids.slice(), () => pruneAttributeForms());
@@ -3626,8 +3716,13 @@ watch(offerPageCount, (count) => {
 
 onMounted(async () => {
   loadReferenceLabels();
+  if (typeof route.query.view === 'string') productFilter.view = appliedProductFilters.view = route.query.view;
+  if (route.query.status && activeTab.value === 'offers') offerFilter.status = appliedOfferFilters.status = String(route.query.status);
   document.addEventListener('pointerdown', onDocumentPointerDown);
   await Promise.all([loadCatalog(), loadMediaRows(), loadAttributeDefinitions()]);
+  if (Number(props.initialProductId || 0) > 0) {
+    await openViewProduct({ id: Number(props.initialProductId), name: '' });
+  }
 });
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown);
@@ -3660,7 +3755,7 @@ onBeforeUnmount(() => {
           <form class="catalog-toolbar" @submit.prevent="applyProductFilters">
             <div class="catalog-search-control">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-              <input v-model="productFilter.q" type="search" placeholder="Recherche produit, marque, catégorie, SKU" @keyup.enter="applyProductFilters">
+              <input v-model="productFilter.q" type="search" aria-label="Recherche produit, marque, catégorie, SKU" placeholder="Recherche produit, marque, catégorie, SKU" @keyup.enter="applyProductFilters">
               <button v-if="productFilter.q" type="button" aria-label="Effacer la recherche" @click="productFilter.q = ''; applyProductFilters()">×</button>
             </div>
             <div class="catalog-toolbar-buttons">
@@ -4237,10 +4332,34 @@ onBeforeUnmount(() => {
                 <div class="stock-summary">
                   <strong>{{ selectedVariant.sku }}</strong>
                   <span>{{ variantStock?.stock_quantity ?? selectedVariant.stock_quantity ?? 0 }} en stock</span>
-                  <span>{{ variantStock?.stock_reserved ?? selectedVariant.stock_reserved ?? 0 }} réservé</span>
+                  <span>{{ variantStock?.stock_reserved ?? selectedVariant.stock_reserved ?? 0 }} engagé</span>
+                  <span>{{ variantStock?.available_quantity ?? 0 }} disponible à la vente</span>
+                  <span>{{ variantStock?.incoming_quantity ?? 0 }} entrant</span>
                 </div>
-                <p class="muted">Projection en lecture seule depuis le ledger transactionnel Sale.</p>
-                <RouterLink class="btn primary" to="/sale/stock">Ouvrir Vente › Stock</RouterLink>
+                <p class="muted">La quantité constatée et les engagements proviennent du ledger Vente. Ils ne sont jamais réécrits directement.</p>
+                <div v-if="stockByLocation.length" class="history-list" aria-label="Stock par emplacement">
+                  <div v-for="item in stockByLocation" :key="`location-${item.id}`" class="history-row">
+                    <strong>{{ item.location_name || item.location_code }}</strong>
+                    <span>{{ item.on_hand_quantity }} en stock · {{ item.reserved_quantity }} engagé · {{ item.available_quantity }} disponible</span>
+                  </div>
+                </div>
+                <form v-if="canStockWrite" class="stock-operation" @submit.prevent="previewStockMovement">
+                  <label class="field">Opération<select v-model="stockForm.action" class="select" @change="stockPreview = null"><option value="count">Quantité comptée</option><option value="receipt">Réception</option><option value="loss">Perte ou casse</option><option value="return">Retour en stock</option><option value="correction">Correction compensatoire</option></select></label>
+                  <label class="field">Emplacement<select v-model="stockForm.stock_location_id" class="select" @change="stockPreview = null"><option v-for="location in stockLocations" :key="Number(location.id)" :value="String(location.id)">{{ location.name || location.code }}</option></select></label>
+                  <label class="field">{{ stockForm.action === 'count' ? 'Quantité comptée' : 'Quantité' }}<input v-model="stockForm.quantity" class="input" type="number" :min="stockForm.action === 'correction' ? undefined : 0" step="1" @input="stockPreview = null"></label>
+                  <label class="field wide">Motif obligatoire<textarea v-model="stockForm.reason" class="input" rows="2" required @input="stockPreview = null"></textarea></label>
+                  <button class="btn ghost" type="submit" :disabled="!stockForm.reason.trim() || busy === 'stock-preview'">Prévisualiser l’impact</button>
+                </form>
+                <div v-if="stockPreview" class="stock-impact" aria-live="polite">
+                  <strong>Impact avant confirmation</strong>
+                  <span>En stock : {{ stockPreview.before?.on_hand }} → {{ stockPreview.after?.on_hand }}</span>
+                  <span>Engagé : {{ stockPreview.before?.engaged }} → {{ stockPreview.after?.engaged }}</span>
+                  <span>Disponible à la vente : {{ stockPreview.before?.available_to_sell }} → {{ stockPreview.after?.available_to_sell }}</span>
+                  <p>{{ stockPreview.explanation }}</p>
+                  <button class="btn primary" type="button" :disabled="stockPreview.blocked || busy === 'stock'" @click="createStockMovement">Confirmer le mouvement audité</button>
+                  <small v-if="stockPreview.blocked" class="catalog-signal catalog-signal--danger">Mouvement refusé : il rendrait le disponible négatif.</small>
+                </div>
+                <RouterLink v-if="context.can('business.advanced_tools.manage')" class="btn ghost" to="/sale/advanced/stock">Ouvrir le ledger détaillé</RouterLink>
                 <div class="history-list">
                   <div v-for="movement in stockMovements" :key="movement.id as number" class="history-row">
                     <strong>{{ movement.movement_type }}</strong>
@@ -4302,7 +4421,7 @@ onBeforeUnmount(() => {
           <form class="catalog-toolbar" @submit.prevent="applyOfferFilters">
             <div class="catalog-search-control">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-              <input v-model="offerFilter.q" type="search" placeholder="Recherche offre, bundle, réduction, SKU">
+              <input v-model="offerFilter.q" type="search" aria-label="Recherche offre, bundle, réduction, SKU" placeholder="Recherche offre, bundle, réduction, SKU">
               <button v-if="offerFilter.q" type="button" aria-label="Effacer la recherche" @click="offerFilter.q = ''">×</button>
             </div>
             <div class="catalog-toolbar-buttons">
@@ -4611,22 +4730,56 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else class="stack">
-            <div class="catalog-form-grid">
-              <label class="field wide">Nom<input v-model="discountForm.name" class="input" :disabled="!canDiscountWrite"></label>
-              <label class="field">Statut<select v-model="discountForm.status" class="select" :disabled="!canDiscountWrite"><option v-for="status in statuses" :key="status" :value="status">{{ status }}</option></select></label>
-              <label class="field">Type<select v-model="discountForm.type" class="select" :disabled="!canDiscountWrite"><option v-for="type in discountTypes" :key="type" :value="type">{{ type }}</option></select></label>
-              <label class="field">Valeur<input v-model="discountForm.value" class="input" :disabled="!canDiscountWrite"></label>
-              <label v-if="discountForm.type === 'amount'" class="field">Devise<input v-model="discountForm.currency" class="input" :disabled="!canDiscountWrite"></label>
-              <label class="field">Portée<select v-model="discountForm.scope" class="select" :disabled="!canDiscountWrite"><option v-for="scope in discountScopes" :key="scope" :value="scope">{{ scope }}</option></select></label>
-              <label class="field">ID portée<input v-model="discountForm.scope_id" class="input" :disabled="!canDiscountWrite"></label>
-              <label class="field">Canal<select v-model="discountForm.channel" class="select" :disabled="!canDiscountWrite"><option v-for="channel in discountChannels" :key="channel" :value="channel">{{ offerChannelLabel(channel) }}</option></select></label>
-              <label class="field">Début<input v-model="discountForm.starts_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
-              <label class="field">Fin<input v-model="discountForm.ends_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
-              <label class="field">Priorité<input v-model="discountForm.priority" class="input" :disabled="!canDiscountWrite"></label>
+            <ol class="offer-wizard-steps" aria-label="Étapes de création d’une offre">
+              <li v-for="(label,index) in ['Objectif','Périmètre','Avantage','Période','Cumul','Aperçu','Activation']" :key="label" :class="{ active: offerWizardStep === index + 1, done: offerWizardStep > index + 1 }"><button type="button" @click="offerWizardStep = index + 1">{{ index + 1 }}. {{ label }}</button></li>
+            </ol>
+            <div class="catalog-form-grid offer-wizard-panel">
+              <template v-if="offerWizardStep === 1">
+                <label class="field">Objectif<select v-model="discountForm.objective" class="select" :disabled="!canDiscountWrite"><option value="increase_sales">Développer les ventes</option><option value="clear_stock">Écouler un stock</option><option value="loyalty">Fidéliser</option><option value="launch">Lancer un produit</option></select></label>
+                <label class="field wide">Nom de l’offre<input v-model="discountForm.name" class="input" :disabled="!canDiscountWrite"></label>
+              </template>
+              <template v-else-if="offerWizardStep === 2">
+                <label class="field">Portée<select v-model="discountForm.scope" class="select" :disabled="!canDiscountWrite"><option v-for="scope in discountScopes" :key="scope" :value="scope">{{ scope }}</option></select></label>
+                <label class="field">Objet concerné<input v-model="discountForm.scope_id" class="input" inputmode="numeric" :disabled="!canDiscountWrite" placeholder="Identifiant produit, variante, catégorie ou marque"></label>
+                <label class="field">Canal<select v-model="discountForm.channel" class="select" :disabled="!canDiscountWrite"><option v-for="channel in discountChannels" :key="channel" :value="channel">{{ offerChannelLabel(channel) }}</option></select></label>
+                <label class="field">Audience facultative<input v-model="discountForm.customer_segment" class="input" :disabled="!canDiscountWrite" placeholder="Nom de l’audience"></label>
+                <p class="muted wide">Une Audience personnalise le périmètre. Elle ne constitue jamais un consentement marketing et n’est pas requise pour une offre publique.</p>
+              </template>
+              <template v-else-if="offerWizardStep === 3">
+                <label class="field">Avantage<select v-model="discountForm.type" class="select" :disabled="!canDiscountWrite"><option v-for="type in discountTypes" :key="type" :value="type">{{ type }}</option></select></label>
+                <label class="field">Valeur<input v-model="discountForm.value" class="input" :disabled="!canDiscountWrite"></label>
+                <label v-if="discountForm.type === 'amount'" class="field">Devise<input v-model="discountForm.currency" class="input" :disabled="!canDiscountWrite"></label>
+              </template>
+              <template v-else-if="offerWizardStep === 4">
+                <label class="field">Début<input v-model="discountForm.starts_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
+                <label class="field">Fin<input v-model="discountForm.ends_at" class="input" type="datetime-local" :disabled="!canDiscountWrite"></label>
+              </template>
+              <template v-else-if="offerWizardStep === 5">
+                <label class="field">Priorité de cumul<input v-model="discountForm.priority" class="input" type="number" :disabled="!canDiscountWrite"></label>
+                <p class="muted wide">La priorité la plus basse est évaluée en premier. L’aperçu signale les offres actives de même portée et période.</p>
+              </template>
+              <template v-else-if="offerWizardStep === 6">
+                <p class="wide">Vérifiez les produits, le canal, la période, l’Audience autorisée et les conflits avant toute activation.</p>
+                <button class="btn primary wide" type="button" :disabled="busy === 'discount-preview'" @click="previewDiscount">Générer l’aperçu</button>
+              </template>
+              <template v-else>
+                <div v-if="offerPreview" class="offer-preview wide" aria-live="polite">
+                  <strong>{{ offerPreview.affected_products }} produit(s) concerné(s)</strong>
+                  <span>Canal : {{ offerChannelLabel(String(offerPreview.channel || 'all')) }}</span>
+                  <span v-if="offerPreview.audience">Audience : {{ offerPreview.audience.rule }} · {{ offerPreview.audience.estimated_count ?? 'volume masqué' }}</span>
+                  <small v-if="offerPreview.audience">Cette estimation n’est pas une preuve de consentement.</small>
+                  <div v-if="offerPreview.conflicts?.length" class="catalog-signal catalog-signal--danger">{{ offerPreview.conflicts.length }} conflit(s) potentiel(s) détecté(s).</div>
+                  <label v-if="offerPreview.conflicts?.length" class="checkbox-inline"><input v-model="offerConflictAcknowledged" type="checkbox" @change="previewDiscount"> J’ai examiné la priorité et le cumul de ces offres.</label>
+                </div>
+                <label class="field">Activation<select v-model="discountForm.status" class="select" :disabled="!canDiscountWrite"><option value="draft">Conserver en brouillon</option><option value="active">Activer ou programmer</option></select></label>
+              </template>
             </div>
             <footer class="catalog-modal-actions">
               <button class="btn ghost" type="button" @click="offerEditModalOpen = false">Fermer</button>
-              <button class="btn primary" type="button" :disabled="!canDiscountWrite || busy === 'discount'" @click="saveDiscount">Enregistrer</button>
+              <button v-if="offerWizardStep > 1" class="btn ghost" type="button" @click="offerWizardStep--">Précédent</button>
+              <button v-if="offerWizardStep < 6" class="btn primary" type="button" @click="offerWizardStep++">Suivant</button>
+              <button v-if="offerWizardStep === 6" class="btn primary" type="button" :disabled="busy === 'discount-preview'" @click="previewDiscount">Prévisualiser</button>
+              <button v-if="offerWizardStep === 7" class="btn primary" type="button" :disabled="!canDiscountWrite || !offerPreview || busy === 'discount' || (discountForm.status === 'active' && offerPreview.activation_allowed === false)" @click="saveDiscount">Enregistrer</button>
             </footer>
           </div>
         </section>
@@ -5068,14 +5221,19 @@ onBeforeUnmount(() => {
             <p class="muted">La classe TVA sélectionnée est reprise par les snapshots de vente, le POS et les exports.</p>
           </div>
           <div v-if="productModalShows('stock')" class="catalog-section">
-            <h3>Stock</h3>
-            <div class="catalog-form-grid">
-              <label class="field">Unité<input v-model="productForm.unit" class="input" :disabled="!canWrite" placeholder="unit, kg, h..."></label>
-              <label class="checkbox-inline"><input v-model="productForm.track_stock" type="checkbox" :disabled="!canWrite"> Suivre le stock</label>
-              <label class="checkbox-inline"><input v-model="productForm.allow_backorder" type="checkbox" :disabled="!canWrite"> Livraison différée si stock à zéro</label>
-              <label class="field">Délai hors stock (jours)<input v-model="productForm.backorder_delivery_days" class="input" type="number" min="1" step="1" :disabled="!canWrite || !productForm.allow_backorder"></label>
+            <h3>Stock des variantes</h3>
+            <div class="catalog-variant-stock-list">
+              <article v-for="variant in selectedVariants" :key="`edit-stock-${variant.id}`">
+                <div class="stock-summary">
+                  <strong>{{ variant.sku }}</strong>
+                  <span>{{ Number(variant.stock_quantity || 0) }} en stock</span>
+                  <span>{{ Number(variant.stock_reserved || 0) }} engagé</span>
+                  <span>{{ variantStockAvailable(variant) }} disponible à la vente</span>
+                </div>
+                <button v-if="canStockWrite" class="btn ghost btn-sm" type="button" @click="openInventoryAdjustment(variant)">Modifier l’inventaire</button>
+              </article>
+              <p v-if="!selectedVariants.length" class="muted">Aucune variante.</p>
             </div>
-            <p class="muted">Envoi immédiat si stock &gt; 0. Livraison différée si livrable mais stock nul. Option contact si stock nul et pas livrable.</p>
           </div>
           <div v-if="productModalShows('prices')" class="catalog-section">
             <h3>Schéma des prix</h3>
@@ -5314,6 +5472,36 @@ onBeforeUnmount(() => {
             <button class="btn ghost" type="button" @click="closeProductModal">Fermer</button>
             <button v-if="productModalScope !== 'media' || productModalMode === 'create'" class="btn primary" type="button" :disabled="!canWrite || busy === 'product' || busy === 'product-attributes' || busy === 'variant-attributes'" @click="saveProductModal">Enregistrer</button>
           </footer>
+        </section>
+      </div>
+
+      <div v-if="inventoryAdjustmentOpen && selectedVariant" class="catalog-modal-backdrop catalog-modal-backdrop--inventory" role="presentation" @click.self="closeInventoryAdjustment">
+        <section class="catalog-modal catalog-modal--inventory" role="dialog" aria-modal="true" aria-label="Modifier l’inventaire">
+          <header class="catalog-modal-head">
+            <div><p class="eyebrow">Variation auditée</p><h2>{{ selectedVariant.sku }}</h2></div>
+            <button class="catalog-modal-close" type="button" aria-label="Fermer" @click="closeInventoryAdjustment">×</button>
+          </header>
+          <div class="stock-summary">
+            <span>{{ variantStock?.stock_quantity ?? selectedVariant.stock_quantity ?? 0 }} en stock</span>
+            <span>{{ variantStock?.stock_reserved ?? selectedVariant.stock_reserved ?? 0 }} engagé</span>
+            <span>{{ variantStock?.available_quantity ?? variantStockAvailable(selectedVariant) }} disponible à la vente</span>
+          </div>
+          <form class="stock-operation" @submit.prevent="previewStockMovement">
+            <label class="field">Emplacement<select v-model="stockForm.stock_location_id" class="select" @change="stockPreview = null"><option v-for="location in stockLocations" :key="Number(location.id)" :value="String(location.id)">{{ location.name || location.code }}</option></select></label>
+            <label class="field">Variation<input v-model="stockForm.quantity" class="input" type="number" step="1" placeholder="Ex. +5 ou -2" @input="stockPreview = null"><small>Saisissez la différence à ajouter ou retirer, jamais le nouveau total.</small></label>
+            <label class="field wide">Motif obligatoire<textarea v-model="stockForm.reason" class="input" rows="2" required @input="stockPreview = null"></textarea></label>
+            <button class="btn ghost" type="submit" :disabled="Number(stockForm.quantity) === 0 || !stockForm.reason.trim() || busy === 'stock-preview'">Prévisualiser l’impact</button>
+          </form>
+          <div v-if="stockPreview" class="stock-impact" aria-live="polite">
+            <strong>Impact avant confirmation</strong>
+            <span>En stock : {{ stockPreview.before?.on_hand }} → {{ stockPreview.after?.on_hand }}</span>
+            <span>Engagé : {{ stockPreview.before?.engaged }} → {{ stockPreview.after?.engaged }}</span>
+            <span>Disponible à la vente : {{ stockPreview.before?.available_to_sell }} → {{ stockPreview.after?.available_to_sell }}</span>
+            <p>{{ stockPreview.explanation }}</p>
+            <button class="btn primary" type="button" :disabled="stockPreview.blocked || busy === 'stock'" @click="createStockMovement">Confirmer la variation</button>
+            <small v-if="stockPreview.blocked" class="catalog-signal catalog-signal--danger">Mouvement refusé : il rendrait le disponible négatif.</small>
+          </div>
+          <footer class="catalog-modal-actions"><button class="btn ghost" type="button" @click="closeInventoryAdjustment">Annuler</button></footer>
         </section>
       </div>
 
@@ -6388,6 +6576,13 @@ onBeforeUnmount(() => {
   gap: .75rem;
 }
 
+.catalog-form-grid > *,
+.offer-wizard-steps > *,
+.catalog-modal :where(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .catalog-form-grid .wide {
   grid-column: 1 / -1;
 }
@@ -6649,10 +6844,16 @@ onBeforeUnmount(() => {
   background: rgba(15, 23, 42, .42);
   padding: 1rem;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+.catalog-modal-backdrop--inventory {
+  z-index: 1090;
 }
 
 .catalog-modal {
+  box-sizing: border-box;
   width: min(920px, 100%);
+  max-width: 100%;
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
@@ -6661,8 +6862,32 @@ onBeforeUnmount(() => {
   padding: 1rem;
 }
 
+.catalog-stock-operation {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
 .catalog-modal--view {
   width: min(1060px, 100%);
+}
+.catalog-modal--inventory {
+  display: grid;
+  gap: 1rem;
+  width: min(640px, 100%);
+}
+.catalog-variant-stock-list {
+  display: grid;
+  gap: .65rem;
+}
+.catalog-variant-stock-list article {
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: .75rem;
 }
 
 .catalog-modal--reference {
@@ -6991,6 +7216,58 @@ onBeforeUnmount(() => {
   padding: .45rem .6rem;
 }
 
+.stock-operation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  padding: .85rem;
+  border: 1px solid #dbe4ef;
+  border-radius: .9rem;
+  background: #f8fafc;
+}
+
+.stock-operation .wide,
+.stock-operation .btn {
+  grid-column: 1 / -1;
+}
+
+.stock-impact {
+  display: grid;
+  gap: .45rem;
+  padding: .85rem;
+  border: 1px solid #93c5fd;
+  border-radius: .9rem;
+  background: #eff6ff;
+}
+
+.offer-wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offer-wizard-steps button {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid #dbe4ef;
+  border-radius: .65rem;
+  background: #fff;
+  font-size: .78rem;
+}
+
+.offer-wizard-steps li.active button { border-color: #2563eb; background: #eff6ff; font-weight: 700; }
+.offer-wizard-steps li.done button { border-color: #86efac; }
+.offer-wizard-panel { min-height: 12rem; align-content: start; }
+.offer-preview { display: grid; gap: .45rem; padding: .85rem; border: 1px solid #93c5fd; border-radius: .8rem; background: #eff6ff; }
+
+@media (max-width: 720px) {
+  .stock-operation { grid-template-columns: 1fr; }
+  .offer-wizard-steps { grid-template-columns: 1fr 1fr; }
+}
+
 .history-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -7040,6 +7317,24 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 720px) {
+  .catalog-products-shell,
+  .catalog-products-panel,
+  .catalog-toolbar,
+  .catalog-search-control {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .catalog-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-products-table.table-wrap,
+  .catalog-offers-table-wrap.table-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
   .catalog-form-grid,
   .catalog-price-grid,
   .option-grid {

@@ -1,6 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import { dirname } from 'node:path';
 import { test, expect, type APIResponse, type Page } from '@playwright/test';
 
@@ -427,7 +426,8 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
       stock_remaining: Number(stockReconciliation.data.reconciliation.remaining_differences_count),
       crm_missing: Number(crmSecond.missing_events), shop_products: Number(finalRebuild.data.projection.products),
     };
-    const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const commit = String(process.env.E2E_BUILD_COMMIT || '').trim().toLowerCase();
+    expect(commit, 'E2E_BUILD_COMMIT identifies the source tested without requiring .git in a release archive').toMatch(/^[a-f0-9]{7,40}$/);
 
     const report = {
       format_version: 2,
