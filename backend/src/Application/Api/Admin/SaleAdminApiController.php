@@ -44,6 +44,8 @@ use App\Modules\Sale\Services\SaleOrderTimelineService;
 use App\Modules\Sale\Services\SaleOrderDossierService;
 use App\Modules\Sale\Services\SaleOrderDocumentService;
 use App\Modules\Sale\Services\SaleDeferredPaymentService;
+use App\Modules\Sale\Services\SaleGiftCardService;
+use App\Modules\Sale\Services\SaleOrderNotificationService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
@@ -88,6 +90,8 @@ final class SaleAdminApiController
         private readonly ?SaleOrderDossierService $orderDossier = null,
         private readonly ?SaleOrderDocumentService $orderDocuments = null,
         private readonly ?SaleDeferredPaymentService $deferredPayments = null,
+        private readonly ?SaleGiftCardService $giftCardsService = null,
+        private readonly ?SaleOrderNotificationService $orderNotifications = null,
     ) {}
 
     public function schema(): Response
@@ -97,7 +101,7 @@ final class SaleAdminApiController
             'module' => 'sale',
             'scope' => 'admin',
             'headless_public' => false,
-            'resources' => ['channels', 'carts', 'orders', 'payments', 'pos', 'stock', 'reports', 'ai_contexts'],
+            'resources' => ['channels', 'carts', 'orders', 'payments', 'gift_cards', 'pos', 'stock', 'reports', 'ai_contexts'],
             'idempotent_actions' => ['cart.add_line', 'checkout.place_order', 'payment.capture', 'payment.confirm', 'pos.complete_sale', 'refund.create'],
         ], 'admin.sale.schema.v1', $site, $languageCode);
     }
@@ -161,40 +165,46 @@ final class SaleAdminApiController
 
     public function exportOrdersCsv(): Response
     {
-        [$site] = $this->authorize('sale.reports.read');
-        return $this->csvResponse($this->importExportReports->ordersCsv((int) $site['id'], $this->request->query), 'sale-orders.csv');
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'orders', $this->importExportReports->ordersCsv((int) $site['id'], $this->request->query), 'sale-orders.csv');
     }
 
     public function exportOrderLinesCsv(): Response
     {
-        [$site] = $this->authorize('sale.reports.read');
+        [$site] = $this->authorize('sale.exports.manage');
         $includePurchase = $this->auth->hasPermission('sale.settings.manage', (int) $site['id'])
             && in_array((string) ($this->request->query['include_purchase'] ?? '0'), ['1', 'true'], true);
-        return $this->csvResponse($this->importExportReports->orderLinesCsv((int) $site['id'], $this->request->query, $includePurchase), 'sale-order-lines.csv');
+        return $this->auditedCsv((int)$site['id'], 'order_lines', $this->importExportReports->orderLinesCsv((int) $site['id'], $this->request->query, $includePurchase), 'sale-order-lines.csv');
     }
 
     public function exportPaymentsCsv(): Response
     {
-        [$site] = $this->authorize('sale.reports.read');
-        return $this->csvResponse($this->importExportReports->paymentsCsv((int) $site['id'], $this->request->query), 'sale-payments.csv');
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'payments', $this->importExportReports->paymentsCsv((int) $site['id'], $this->request->query), 'sale-payments.csv');
     }
 
     public function exportPosSessionsCsv(): Response
     {
-        [$site] = $this->authorize('sale.reports.read');
-        return $this->csvResponse($this->importExportReports->posSessionsCsv((int) $site['id'], $this->request->query), 'sale-pos-sessions.csv');
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'pos_sessions', $this->importExportReports->posSessionsCsv((int) $site['id'], $this->request->query), 'sale-pos-sessions.csv');
     }
 
     public function exportStockMovementsCsv(): Response
     {
-        [$site] = $this->authorize('sale.stock.read');
-        return $this->csvResponse($this->importExportReports->stockMovementsCsv((int) $site['id'], $this->request->query), 'sale-stock-movements.csv');
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'stock_movements', $this->importExportReports->stockMovementsCsv((int) $site['id'], $this->request->query), 'sale-stock-movements.csv');
     }
 
     public function exportReturnsRefundsCsv(): Response
     {
-        [$site] = $this->authorize('sale.reports.read');
-        return $this->csvResponse($this->importExportReports->returnsRefundsCsv((int) $site['id'], $this->request->query), 'sale-returns-refunds.csv');
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'returns_refunds', $this->importExportReports->returnsRefundsCsv((int) $site['id'], $this->request->query), 'sale-returns-refunds.csv');
+    }
+
+    public function exportSalesDashboardCsv(): Response
+    {
+        [$site] = $this->authorize('sale.exports.manage');
+        return $this->auditedCsv((int)$site['id'], 'sales_dashboard', $this->importExportReports->salesDashboardCsv((int)$site['id'],$this->request->query), 'sale-sales-dashboard.csv');
     }
 
     public function previewStockImport(): Response
@@ -244,6 +254,28 @@ final class SaleAdminApiController
         $siteId = (int) $site['id'];
         $actionable = $this->orderDossier?->actionableDashboard($siteId, $languageCode) ?? ['tasks' => [], 'groups' => [], 'total' => 0];
         return $this->ok(['actionable' => $actionable], 'admin.sale.dashboard.v1', $site, $languageCode);
+    }
+
+    public function salesDashboard(): Response
+    {
+        [$site,$languageCode] = $this->authorize('sale.sales.read');
+        return $this->ok(['sales'=>$this->importExportReports->salesDashboard((int)$site['id'],$this->request->query)], 'admin.sale.sales-dashboard.v1', $site, $languageCode);
+    }
+
+    public function documentPolicy(): Response
+    {
+        [$site,$languageCode] = $this->authorize('sale.settings.manage');
+        $service = $this->orderDocuments ?? new SaleOrderDocumentService($this->sale);
+        return $this->ok(['policy'=>$service->policy((int)$site['id'])], 'admin.sale.document-policy.v1', $site, $languageCode);
+    }
+
+    public function updateDocumentPolicy(): Response
+    {
+        [$site,$languageCode] = $this->authorize('sale.settings.manage');
+        try {
+            $service = $this->orderDocuments ?? new SaleOrderDocumentService($this->sale);
+            return $this->ok(['policy'=>$service->updatePolicy((int)$site['id'],$this->payload(),$this->actorId())], 'admin.sale.document-policy.v1', $site, $languageCode);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function channels(): Response
@@ -483,7 +515,7 @@ final class SaleAdminApiController
     {
         [$site, $languageCode] = $this->authorize('sale.orders.read');
         try {
-            $service = $this->orderDossier ?? new SaleOrderDossierService($this->sale, $this->timeline());
+            $service = $this->orderDossier ?? new SaleOrderDossierService($this->sale, $this->timeline(), $this->orderNotifications);
             $dossier = $service->dossier($this->id($id), $languageCode);
             $this->ensureSite((int) $site['id'], (int) $dossier['order']['site_id']);
             foreach ($dossier['state']['actions'] as &$action) {
@@ -498,17 +530,36 @@ final class SaleAdminApiController
 
     public function issueOrderDocument(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('sale.orders.manage');
+        [$site, $languageCode] = $this->authorize('sale.documents.issue');
         try {
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
             $payload = $this->payload();
             $service = $this->orderDocuments ?? new SaleOrderDocumentService($this->sale);
-            $document = $service->issue($this->id($id), (string) ($payload['document_type'] ?? ''), $languageCode, $this->actorId());
+            $document = $service->issue($this->id($id), (string) ($payload['document_type'] ?? ''), $languageCode, $this->actorId(), [
+                'accounting_validated' => ($payload['accounting_validated'] ?? false) === true,
+            ]);
+            if ((string)($document['document_type'] ?? '') === 'order_confirmation') {
+                $this->orderNotifications?->queue((int)$order['id'],'order_confirmed',$languageCode,null,(int)$document['id'],$this->actorId(),'order-confirmed:'.(int)$order['id'].':'.(int)$document['id']);
+            }
             return $this->ok(['document' => $document], 'admin.sale.orders.documents.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function sendOrderDocument(string|int $id, string|int $document_id): Response
+    {
+        [$site,$languageCode] = $this->authorize('sale.documents.resend');
+        try {
+            $order = $this->orders->requireOrder($this->id($id));
+            $this->ensureSite((int)$site['id'], (int)$order['site_id']);
+            $delivery = ($this->orderNotifications ?? throw new SaleValidationException('sale.notification.unavailable'))->queueDocument(
+                (int)$site['id'], (int)$order['id'], $this->id($document_id), $languageCode, $this->actorId(),
+                isset($this->payload()['resend_of_id']) ? $this->id($this->payload()['resend_of_id']) : null
+            );
+            return $this->ok(['delivery'=>$delivery], 'admin.sale.documents.delivery.v1', $site, $languageCode, 202);
+        } catch (Throwable $e) { return $this->domainError($e); }
     }
 
     public function configureDeferredPayment(string|int $id): Response
@@ -535,6 +586,7 @@ final class SaleAdminApiController
             $result = ($this->deferredPayments ?? throw new SalePaymentException('sale.deferred_payment_unavailable'))->markAvailable(
                 $this->id($id), $payload + ['language' => $languageCode, 'idempotency_key' => $this->idempotencyKey($payload)]
             );
+            $this->orderNotifications?->queue((int)$order['id'],'payment_expected',$languageCode,null,null,$this->actorId(),'payment-expected:'.(int)$order['id'].':'.(string)($result['plan']['version']??$result['payment']['id']??'available'));
             return $this->ok($result, 'admin.sale.orders.availability.store.v1', $site, $languageCode);
         } catch (Throwable $e) { return $this->domainError($e); }
     }
@@ -733,7 +785,7 @@ final class SaleAdminApiController
             $order = $this->orders->requireOrder($this->id($id));
             $this->ensureSite((int) $site['id'], (int) $order['site_id']);
             $payload = $this->payload();
-            return $this->ok($this->paymentService->recordManualPayment($this->id($id), (int) ($payload['amount_minor'] ?? 0), $this->actorId(), [
+            $result=$this->paymentService->recordManualPayment($this->id($id), (int) ($payload['amount_minor'] ?? 0), $this->actorId(), [
                 'idempotency_key' => $this->idempotencyKey($payload),
                 'payment_method' => $payload['payment_method'] ?? $payload['provider_key'] ?? 'manual_card',
                 'provider_key' => $payload['provider_key'] ?? null,
@@ -741,7 +793,10 @@ final class SaleAdminApiController
                 'operator_reference' => $payload['operator_reference'] ?? null,
                 'comment' => $payload['comment'] ?? null,
                 'proof_asset_id' => isset($payload['proof_asset_id']) ? (int) $payload['proof_asset_id'] : null,
-            ]), 'admin.sale.orders.payments.store.v1', $site, $languageCode, 201);
+            ]);
+            $updated=$this->orders->requireOrder($this->id($id));
+            if((string)$updated['payment_status']==='paid')$this->orderNotifications?->queue((int)$updated['id'],'payment_received',$languageCode,null,null,$this->actorId(),'payment-received:'.(int)$updated['id'].':'.(int)$updated['paid_total_minor']);
+            return $this->ok($result, 'admin.sale.orders.payments.store.v1', $site, $languageCode, 201);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -1453,6 +1508,42 @@ final class SaleAdminApiController
         return $this->ok(['returns' => $this->db()->all('SELECT r.* FROM sale_returns r INNER JOIN sale_orders o ON o.id = r.order_id WHERE o.site_id = ? ORDER BY r.id DESC', [(int) $site['id']])], 'admin.sale.returns.index.v1', $site, $languageCode);
     }
 
+    public function giftCards(): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.read');
+        return $this->ok(['gift_cards'=>$this->giftCardService()->index((int)$site['id'],$this->request->query)],'admin.sale.gift_cards.index.v1',$site,$languageCode);
+    }
+
+    public function giftCard(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.read');
+        try{return $this->ok(['gift_card'=>$this->giftCardService()->detail((int)$site['id'],$this->id($id))],'admin.sale.gift_cards.show.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function resendGiftCard(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.manage');
+        try{$delivery=$this->giftCardService()->resend((int)$site['id'],$this->id($id),$this->actorId(),SaleStateMachineService::correlationId($this->payload()['correlation_id']??null));return $this->ok(['delivery'=>$delivery],'admin.sale.gift_cards.resend.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function cancelGiftCard(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.manage');
+        try{$payload=$this->payload();$card=$this->giftCardService()->cancel((int)$site['id'],$this->id($id),(string)($payload['reason']??''),$this->actorId(),SaleStateMachineService::correlationId($payload['correlation_id']??null));return $this->ok(['gift_card'=>$card],'admin.sale.gift_cards.cancel.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function previewGiftCardAdjustment(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.manage');
+        try{$p=$this->payload();$preview=$this->giftCardService()->adjust((int)$site['id'],$this->id($id),(int)($p['amount_delta_minor']??0),(string)($p['reason']??''),$this->actorId(),(string)($p['idempotency_key']??'preview'),false,SaleStateMachineService::correlationId($p['correlation_id']??null));return $this->ok(['preview'=>$preview],'admin.sale.gift_cards.adjustment_preview.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function adjustGiftCard(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('sale.gift_cards.manage');
+        try{$p=$this->payload();$adjustment=$this->giftCardService()->adjust((int)$site['id'],$this->id($id),(int)($p['amount_delta_minor']??0),(string)($p['reason']??''),$this->actorId(),(string)($p['idempotency_key']??''),true,SaleStateMachineService::correlationId($p['correlation_id']??null));return $this->ok(['adjustment'=>$adjustment],'admin.sale.gift_cards.adjustments.store.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}
+    }
+
     public function settings(): Response
     {
         [$site, $languageCode] = $this->authorize('sale.settings.manage');
@@ -1500,6 +1591,8 @@ final class SaleAdminApiController
     public function storeFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->createOperation((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
     public function saveFulfillmentLine(string|int $id,string|int $lineId):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['fulfillment'=>$this->fulfillment?->savePreparation((int)$site['id'],$this->id($id),$this->id($lineId),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.lines.update.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
     public function transitionFulfillment(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{$p=$this->payload();return $this->ok(['fulfillment'=>$this->fulfillment?->transitionOperation((int)$site['id'],$this->id($id),(string)($p['status']??''),$p,$this->actorId())??[]],'admin.sale.fulfillments.transition.v1',$site,$languageCode);}catch(Throwable $e){return $this->domainError($e);}}
+    public function storeFulfillmentTrackingEvent(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.fulfillment.manage');try{return $this->ok(['tracking_event'=>$this->fulfillment?->recordTrackingEvent((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())??[]],'admin.sale.fulfillments.tracking_events.store.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
+    public function resendOrderNotification(string|int $id):Response{[$site,$languageCode]=$this->authorize('sale.orders.manage');try{return $this->ok(['notification'=>($this->orderNotifications??throw new SaleValidationException('sale.notification.unavailable'))->resend((int)$site['id'],$this->id($id),$this->actorId())],'admin.sale.order_notifications.resend.v1',$site,$languageCode,201);}catch(Throwable $e){return $this->domainError($e);}}
 
     public function taxesReport(): Response
     {
@@ -1880,7 +1973,16 @@ final class SaleAdminApiController
         return new Response(200, $csv, [
             'Content-Type' => 'text/csv; charset=utf-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
+    }
+
+    private function auditedCsv(int $siteId, string $type, string $csv, string $filename): Response
+    {
+        $rows = max(0, substr_count($csv, "\n") - 1);
+        $this->importExportReports->auditExport($siteId,$type,$this->request->query,$this->actorId(),$rows);
+        return $this->csvResponse($csv,$filename);
     }
 
     /** @return array<string,mixed> */
@@ -2050,6 +2152,11 @@ final class SaleAdminApiController
     private function timeline(): SaleOrderTimelineService
     {
         return $this->timelineService ?? new SaleOrderTimelineService($this->sale);
+    }
+
+    private function giftCardService(): SaleGiftCardService
+    {
+        return $this->giftCardsService ?? throw new SaleBusinessException('sale.gift_card_unavailable');
     }
 
     private function domainError(Throwable $e): Response

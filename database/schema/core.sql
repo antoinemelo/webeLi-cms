@@ -83,6 +83,42 @@ CREATE TABLE IF NOT EXISTS cms_sales_channel_storefronts (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cms_sales_channel_storefront_default ON cms_sales_channel_storefronts(site_id) WHERE is_default=1 AND status='active';
 
+CREATE TABLE cms_shop_configurations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    language_code TEXT NOT NULL,
+    channel_id INTEGER,
+    channel_code TEXT,
+    status TEXT NOT NULL DEFAULT 'inactive' CHECK(status IN ('inactive','activating','active','error')),
+    currency TEXT NOT NULL DEFAULT 'CHF' CHECK(length(currency) = 3 AND currency = upper(currency)),
+    route_path TEXT NOT NULL DEFAULT '/shop' CHECK(route_path = '/shop'),
+    theme_key TEXT NOT NULL DEFAULT 'default',
+    menu_key TEXT NOT NULL DEFAULT 'main',
+    menu_label TEXT NOT NULL DEFAULT 'Boutique',
+    menu_position INTEGER NOT NULL DEFAULT 100,
+    cart_visible INTEGER NOT NULL DEFAULT 1 CHECK(cart_visible IN (0,1)),
+    show_quantities INTEGER NOT NULL DEFAULT 0 CHECK(show_quantities IN (0,1)),
+    last_available_threshold INTEGER NOT NULL DEFAULT 1 CHECK(last_available_threshold >= 0),
+    draft_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(draft_json)),
+    published_json TEXT CHECK(published_json IS NULL OR json_valid(published_json)),
+    config_version INTEGER NOT NULL DEFAULT 1 CHECK(config_version > 0),
+    published_version INTEGER CHECK(published_version IS NULL OR published_version > 0),
+    activated_at TEXT,
+    published_at TEXT,
+    last_rebuild_at TEXT,
+    last_error_code TEXT,
+    last_error_message TEXT,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, language_code),
+    CHECK(channel_code IS NULL OR channel_code GLOB '[a-z0-9_-]*'),
+    FOREIGN KEY(site_id, language_code) REFERENCES site_languages(site_id, language_code) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_cms_shop_configurations_status
+    ON cms_shop_configurations(site_id, status, language_code);
+
 CREATE TABLE site_localizations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -3407,6 +3443,61 @@ CREATE TABLE IF NOT EXISTS storefront_product_projections (
     UNIQUE(site_id,channel_id,locale,product_id), UNIQUE(site_id,channel_id,locale,slug), FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_storefront_products_listing ON storefront_product_projections(site_id,channel_id,locale,collection_id,slug);
+CREATE TABLE IF NOT EXISTS storefront_product_query_index (
+    site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL, product_id INTEGER NOT NULL,
+    slug TEXT NOT NULL, name TEXT NOT NULL, name_sort TEXT NOT NULL, search_text TEXT NOT NULL,
+    product_type TEXT NOT NULL, brand_id INTEGER, brand_slug TEXT, brand_name TEXT,
+    category_id INTEGER, category_slug TEXT, category_name TEXT,
+    regular_price_minor INTEGER, final_price_minor INTEGER, discount_amount_minor INTEGER,
+    discount_percent_bps INTEGER, currency TEXT, availability_status TEXT NOT NULL,
+    newest_at TEXT NOT NULL,
+    PRIMARY KEY(site_id,channel_id,locale,product_id),
+    UNIQUE(site_id,channel_id,locale,slug),
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    CHECK(channel_id>0), CHECK(product_id>0),
+    CHECK(availability_status IN ('in_stock','deliverable','backorder','unavailable','contact_us'))
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_query_search ON storefront_product_query_index(site_id,channel_id,locale,search_text);
+CREATE INDEX IF NOT EXISTS idx_storefront_query_name ON storefront_product_query_index(site_id,channel_id,locale,name_sort,product_id);
+CREATE INDEX IF NOT EXISTS idx_storefront_query_newest ON storefront_product_query_index(site_id,channel_id,locale,newest_at,product_id);
+CREATE INDEX IF NOT EXISTS idx_storefront_query_price ON storefront_product_query_index(site_id,channel_id,locale,currency,final_price_minor,product_id);
+CREATE INDEX IF NOT EXISTS idx_storefront_query_promotion ON storefront_product_query_index(site_id,channel_id,locale,discount_percent_bps,discount_amount_minor,product_id);
+CREATE TABLE IF NOT EXISTS storefront_product_facet_values (
+    site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL, product_id INTEGER NOT NULL,
+    facet_type TEXT NOT NULL, facet_key TEXT NOT NULL, facet_label TEXT NOT NULL, value_key TEXT NOT NULL, value_label TEXT NOT NULL,
+    group_key TEXT NOT NULL DEFAULT '', group_label TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(site_id,channel_id,locale,product_id,facet_type,facet_key,value_key),
+    FOREIGN KEY(site_id,channel_id,locale,product_id)
+        REFERENCES storefront_product_query_index(site_id,channel_id,locale,product_id) ON DELETE CASCADE,
+    CHECK(facet_type IN ('brand','category','group','attribute','availability')),
+    CHECK(trim(facet_key)<>''), CHECK(trim(facet_label)<>''), CHECK(trim(value_key)<>''), CHECK(trim(value_label)<>'')
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_facets_lookup ON storefront_product_facet_values(site_id,channel_id,locale,facet_type,facet_key,value_key,product_id);
+CREATE INDEX IF NOT EXISTS idx_storefront_facets_group ON storefront_product_facet_values(site_id,channel_id,locale,group_key,facet_type,facet_key,sort_order);
+CREATE TABLE IF NOT EXISTS storefront_product_publication_history (
+    site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL, product_id INTEGER NOT NULL,
+    first_published_at TEXT NOT NULL, last_published_at TEXT NOT NULL, is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+    PRIMARY KEY(site_id,channel_id,locale,product_id),
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_publication_newest ON storefront_product_publication_history(site_id,channel_id,locale,is_active,first_published_at,product_id);
+CREATE TABLE IF NOT EXISTS storefront_analytics_daily (
+    site_id INTEGER NOT NULL, locale TEXT NOT NULL, event_date TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK(event_type IN ('product_view','search')), entity_key TEXT NOT NULL,
+    event_count INTEGER NOT NULL DEFAULT 0 CHECK(event_count >= 0), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(site_id,locale,event_date,event_type,entity_key),
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    CHECK(event_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'), CHECK(trim(entity_key)<>'')
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_analytics_window ON storefront_analytics_daily(site_id,locale,event_type,event_date,event_count,entity_key);
+CREATE TABLE IF NOT EXISTS storefront_analytics_dedup (
+    site_id INTEGER NOT NULL, locale TEXT NOT NULL, event_type TEXT NOT NULL CHECK(event_type IN ('product_view','search')),
+    entity_key TEXT NOT NULL, dedupe_hash TEXT NOT NULL, bucket_started_at TEXT NOT NULL, expires_at TEXT NOT NULL,
+    PRIMARY KEY(site_id,locale,event_type,entity_key,dedupe_hash,bucket_started_at),
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    CHECK(length(dedupe_hash)=64)
+);
+CREATE INDEX IF NOT EXISTS idx_storefront_analytics_dedup_expiry ON storefront_analytics_dedup(expires_at);
 CREATE TABLE IF NOT EXISTS storefront_collection_projections (
     id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER NOT NULL, channel_id INTEGER NOT NULL, locale TEXT NOT NULL,
     collection_id INTEGER NOT NULL, slug TEXT NOT NULL, dto_version INTEGER NOT NULL DEFAULT 1,

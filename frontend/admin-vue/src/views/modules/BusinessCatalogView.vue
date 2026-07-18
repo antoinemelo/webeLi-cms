@@ -5,7 +5,7 @@ import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
-import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductContentCandidate, type ProductContentLink, type ProductDetail } from '@/api/businessCatalog';
+import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, type CatalogAttributeValue, type CatalogBulkReport, type CatalogBundleComponent, type CatalogDiscount, type CatalogImportReport, type CatalogProduct, type CatalogProductAsset, type CatalogProductBundle, type CatalogRecord, type CatalogTaxClass, type CatalogVariant, type ProductContentCandidate, type ProductContentLink, type ProductDetail, type ProductRelation, type ProductRelationRule } from '@/api/businessCatalog';
 import { useAdminContextStore } from '@/stores/adminContext';
 import { useI18n } from '@/i18n';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
@@ -98,6 +98,8 @@ const bundleComponentProductRows = ref<CatalogProduct[]>([]);
 const discounts = ref<CatalogDiscount[]>([]);
 const productAssets = ref<CatalogProductAsset[]>([]);
 const productContentLinks = ref<ProductContentLink[]>([]);
+const productRelations = ref<ProductRelation[]>([]);
+const productRelationRules = ref<ProductRelationRule[]>([]);
 const contentCandidates = ref<ProductContentCandidate[]>([]);
 const taxClasses = ref<CatalogTaxClass[]>([]);
 const attributeGroups = ref<CatalogAttributeGroup[]>([]);
@@ -290,6 +292,8 @@ const contentLinkForm = reactive({
   is_canonical: false,
   schema_type: 'Product',
 });
+const productRelationForm = reactive({ search: '', target_product_id: '', relation_type: 'related', sort_order: '0' });
+const productRelationRuleForm = reactive({ relation_type: 'related', match_type: 'category', match_id: '', result_limit: '6', sort_order: '0' });
 const assetUploadFile = ref<File | null>(null);
 const attributeGroupForm = reactive({ id: 0, code: '', name: '', description: '', sort_order: '0' });
 const attributeForm = reactive({
@@ -320,6 +324,8 @@ const adjustmentTypes = ['none', 'amount_delta', 'percent_delta', 'fixed_overrid
 const assetRoles = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'internal'];
 const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
 const contentRelationTypes = ['product_page', 'storytelling', 'faq', 'guide', 'comparison', 'seo', 'related'];
+const productRelationTypes = ['related', 'alternative', 'accessory', 'upsell', 'cross_sell'];
+const productRelationLabels: Record<string, string> = { related: 'Produits liés', alternative: 'Alternatives', accessory: 'Accessoires', upsell: 'Montée en gamme', cross_sell: 'Achat complémentaire' };
 const attributeTypes = ['text', 'textarea', 'rich_text', 'number', 'decimal', 'boolean', 'select', 'multi_select', 'date', 'url', 'file', 'dimension', 'weight', 'color'];
 const colorSwatches = ['#000000', '#334155', '#FFFFFF', '#E11D48', '#EA580C', '#F59E0B', '#16A34A', '#0EA5E9', '#2563EB', '#7C3AED', '#C026D3'];
 const attributeTypeLabels: Record<string, string> = {
@@ -396,6 +402,11 @@ const selectedPrices = computed(() => selectedProduct.value?.prices || []);
 const selectedProductStock = computed(() => selectedProduct.value?.stock || []);
 const selectedOffers = computed(() => (selectedProduct.value?.offers || []).filter((offer) => !offer.archived_at));
 const selectedProductId = computed(() => Number(productData.value?.id || productForm.id || 0));
+const productRelationCandidates = computed(() => {
+  const query = productRelationForm.search.trim().toLocaleLowerCase();
+  return bundleComponentProductRows.value.filter((product) => Number(product.id) !== selectedProductId.value && (!query || `${product.sku_base || ''} ${product.name || ''} ${product.slug || ''}`.toLocaleLowerCase().includes(query))).slice(0, 30);
+});
+const productRelationRuleTargets = computed(() => productRelationRuleForm.match_type === 'group' ? attributeGroups.value : categories.value);
 const exportIncompleteCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ quality: 'incomplete' }));
 const exportPosCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'pos' }));
 const exportEcommerceCsvUrl = computed(() => businessCatalogApi.exportCsvUrl({ channel: 'ecommerce' }));
@@ -589,6 +600,12 @@ const attributeOptionUsesColor = computed(() => {
 const attributeDefinitionWarnings = computed(() => attributes.value
   .filter((attribute) => ['select', 'multi_select'].includes(String(attribute.data_type || '')) && attributeOptions(attribute).length === 0)
   .map((attribute) => `${attribute.name || attribute.code} attend au moins une option.`));
+const attributeFormImpactWarnings = computed(() => {
+  const warnings: string[] = [];
+  if (!attributeForm.is_public && attributeForm.is_filterable) warnings.push('Un attribut filtrable doit être public.');
+  if (!attributeForm.is_public && attributeForm.is_searchable) warnings.push('Un attribut recherchable doit être public.');
+  return warnings;
+});
 const attributeSettingsTitle = computed(() => {
   if (attributeSettingsModal.value === 'groups') return 'Groupes d’attributs';
   if (attributeSettingsModal.value === 'options') return 'Options d’attributs';
@@ -1346,6 +1363,8 @@ function resetProductForm(preserveSelection = false): void {
     selectedVariant.value = null;
     productAssets.value = [];
     productContentLinks.value = [];
+    productRelations.value = [];
+    productRelationRules.value = [];
     contentCandidates.value = [];
     productAttributeValues.value = [];
     variantAttributeValues.value = [];
@@ -2711,6 +2730,10 @@ async function saveAttributeGroup(): Promise<void> {
 
 async function saveAttributeDefinition(): Promise<void> {
   if (!canWrite.value) return;
+  if (attributeFormImpactWarnings.value.length) {
+    setError(new Error(attributeFormImpactWarnings.value.join(' ')), 'Attribut non enregistré.');
+    return;
+  }
   if (!idOrNull(attributeForm.group_id)) {
     setError(new Error('Sélectionner un groupe d’attributs.'), 'Attribut non enregistré.');
     return;
@@ -3025,7 +3048,7 @@ async function selectProduct(product: CatalogProduct): Promise<void> {
     selectedProduct.value = response.data.product;
     fillProductForm(response.data.product);
     selectedVariant.value = selectedProduct.value.variants?.[0] || null;
-    await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows(), loadProductContentLinks(Number(product.id))]);
+    await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows(), loadProductContentLinks(Number(product.id)), loadProductRelations(Number(product.id))]);
     if (selectedVariant.value) await Promise.all([loadVariantStock(selectedVariant.value), loadVariantAttributeValues(Number(selectedVariant.value.id || 0))]);
   } catch (err) {
     setError(err, 'Produit indisponible.');
@@ -3046,6 +3069,60 @@ async function loadProductContentLinks(productId = selectedProductId.value): Pro
   ]);
   productContentLinks.value = linksResponse.data.links || [];
   contentCandidates.value = contentsResponse.data.contents || [];
+}
+
+async function loadProductRelations(productId = selectedProductId.value): Promise<void> {
+  if (productId < 1) {
+    productRelations.value = [];
+    productRelationRules.value = [];
+    return;
+  }
+  const response = await businessCatalogApi.productRelations(productId);
+  productRelations.value = response.data.relations || [];
+  productRelationRules.value = response.data.rules || [];
+}
+
+async function createProductRelation(): Promise<void> {
+  const targetId = Number(productRelationForm.target_product_id || 0);
+  if (!canWrite.value || selectedProductId.value < 1 || targetId < 1) return;
+  busy.value = 'product-relation';
+  try {
+    await businessCatalogApi.createProductRelation(selectedProductId.value, { target_product_id: targetId, relation_type: productRelationForm.relation_type, sort_order: Number(productRelationForm.sort_order || 0) });
+    Object.assign(productRelationForm, { search: '', target_product_id: '', relation_type: 'related', sort_order: '0' });
+    await loadProductRelations();
+    setNotice('Relation produit enregistrée. La projection boutique sera reconstruite.');
+  } catch (err) { setError(err, 'Relation produit non enregistrée.'); } finally { busy.value = ''; }
+}
+
+async function deleteProductRelation(relation: ProductRelation): Promise<void> {
+  if (!canWrite.value || relation.source !== 'manual' || typeof relation.id !== 'number') return;
+  busy.value = `product-relation-${relation.id}`;
+  try { await businessCatalogApi.deleteProductRelation(relation.id); await loadProductRelations(); setNotice('Relation produit supprimée.'); }
+  catch (err) { setError(err, 'Relation produit non supprimée.'); } finally { busy.value = ''; }
+}
+
+async function createProductRelationRule(): Promise<void> {
+  const matchId = Number(productRelationRuleForm.match_id || 0);
+  if (!canWrite.value || selectedProductId.value < 1 || matchId < 1) return;
+  busy.value = 'product-relation-rule';
+  try {
+    await businessCatalogApi.createProductRelationRule(selectedProductId.value, { relation_type: productRelationRuleForm.relation_type, match_type: productRelationRuleForm.match_type, match_id: matchId, result_limit: Number(productRelationRuleForm.result_limit || 6), sort_order: Number(productRelationRuleForm.sort_order || 0) });
+    productRelationRuleForm.match_id = '';
+    await loadProductRelations();
+    setNotice('Règle automatique enregistrée. Seuls les produits publics du même site seront projetés.');
+  } catch (err) { setError(err, 'Règle automatique non enregistrée.'); } finally { busy.value = ''; }
+}
+
+async function deleteProductRelationRule(rule: ProductRelationRule): Promise<void> {
+  if (!canWrite.value || !rule.id) return;
+  busy.value = `product-relation-rule-${rule.id}`;
+  try { await businessCatalogApi.deleteProductRelationRule(rule.id); await loadProductRelations(); setNotice('Règle automatique supprimée.'); }
+  catch (err) { setError(err, 'Règle automatique non supprimée.'); } finally { busy.value = ''; }
+}
+
+function productRelationRuleTargetName(rule: ProductRelationRule): string {
+  const rows = rule.match_type === 'group' ? attributeGroups.value : categories.value;
+  return String(rows.find((row) => Number(row.id) === Number(rule.match_id))?.name || `#${rule.match_id}`);
 }
 
 async function createProductContentLink(): Promise<void> {
@@ -4960,7 +5037,18 @@ onBeforeUnmount(() => {
                   <label class="checkbox-inline"><input v-model="attributeForm.is_filterable" type="checkbox" :disabled="!canWrite"> Filtrable</label>
                   <label class="checkbox-inline"><input v-model="attributeForm.is_searchable" type="checkbox" :disabled="!canWrite"> Recherchable</label>
                 </div>
-                <button class="btn primary wide" type="button" :disabled="!canWrite || !attributeForm.name.trim() || busy === 'attribute'" @click="saveAttributeDefinition">Enregistrer attribut</button>
+                <div class="catalog-quality-strip wide" role="status">
+                  <div>
+                    <strong>Impact public</strong>
+                    <p v-if="!attributeForm.is_public" class="muted">Interne : absent du produit public, de la recherche et des facettes.</p>
+                    <p v-else-if="attributeForm.is_filterable && attributeForm.is_searchable" class="muted">Visible sur le produit, indexé pour la recherche et proposé comme facette après sélection de son groupe.</p>
+                    <p v-else-if="attributeForm.is_filterable" class="muted">Visible sur le produit et proposé comme facette après sélection de son groupe.</p>
+                    <p v-else-if="attributeForm.is_searchable" class="muted">Visible sur le produit et indexé pour la recherche, sans facette.</p>
+                    <p v-else class="muted">Visible sur le produit, sans incidence sur la recherche ni les facettes.</p>
+                  </div>
+                  <span v-for="warning in attributeFormImpactWarnings" :key="warning" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+                </div>
+                <button class="btn primary wide" type="button" :disabled="!canWrite || !attributeForm.name.trim() || attributeFormImpactWarnings.length > 0 || busy === 'attribute'" @click="saveAttributeDefinition">Enregistrer attribut</button>
               </div>
             </section>
 
@@ -5157,6 +5245,43 @@ onBeforeUnmount(() => {
                 <label class="field">Donnée structurée<select v-model="contentLinkForm.schema_type" class="select"><option value="Product">Produit</option><option value="Service">Service</option></select></label>
                 <label class="checkbox-inline"><input v-model="contentLinkForm.is_canonical" type="checkbox"> Contenu canonique</label>
                 <button class="btn primary btn-sm" type="submit" :disabled="busy === 'content-link' || !contentLinkForm.content_entry_id">Lier</button>
+              </form>
+            </section>
+            <section class="catalog-content-links-section" aria-labelledby="product-relations-title">
+              <h3 id="product-relations-title">Produits liés</h3>
+              <p class="muted">Relations ordonnées de cette fiche. Les cibles non publiques ne sont jamais exposées dans la boutique.</p>
+              <div class="catalog-compact-list">
+                <div v-for="relation in productRelations" :key="String(relation.id)" class="catalog-compact-row">
+                  <div>
+                    <strong>{{ relation.target_name || `Produit #${relation.related_product_id}` }}</strong>
+                    <span>{{ productRelationLabels[String(relation.relation_type)] || relation.relation_type }} · ordre {{ relation.sort_order || 0 }} · {{ relation.source === 'automatic' ? 'automatique' : 'manuel' }}<template v-if="relation.target_slug"> · /{{ relation.target_slug }}</template><template v-if="relation.target_status !== 'active'"> · {{ relation.target_status }}</template></span>
+                  </div>
+                  <button v-if="relation.source === 'manual'" class="catalog-icon-button catalog-icon-button--danger" type="button" :disabled="!canWrite || busy === `product-relation-${relation.id}`" aria-label="Retirer la relation produit" title="Retirer" @click="deleteProductRelation(relation)">×</button>
+                </div>
+                <p v-if="productRelations.length === 0" class="muted">Aucun produit lié.</p>
+              </div>
+              <form v-if="canWrite" class="catalog-content-link-form" @submit.prevent="createProductRelation">
+                <label class="field">Rechercher<input v-model.trim="productRelationForm.search" class="input" placeholder="Nom, SKU ou slug"></label>
+                <label class="field">Produit
+                  <select v-model="productRelationForm.target_product_id" class="select" required><option value="">Choisir…</option><option v-for="candidate in productRelationCandidates" :key="candidate.id" :value="String(candidate.id)">{{ candidate.name }} · {{ candidate.sku_base || candidate.slug }} · {{ candidate.status }}</option></select>
+                </label>
+                <label class="field">Type<select v-model="productRelationForm.relation_type" class="select"><option v-for="relationType in productRelationTypes" :key="relationType" :value="relationType">{{ productRelationLabels[relationType] }}</option></select></label>
+                <label class="field">Ordre<input v-model="productRelationForm.sort_order" class="input" type="number" min="0"></label>
+                <button class="btn primary btn-sm" type="submit" :disabled="busy === 'product-relation' || !productRelationForm.target_product_id">Ajouter</button>
+              </form>
+              <h4>Règles automatiques explicites</h4>
+              <p class="muted">Une règle ajoute, dans le même site uniquement, des produits actifs et publics appartenant à une catégorie ou à un groupe.</p>
+              <div class="catalog-compact-list">
+                <div v-for="rule in productRelationRules" :key="rule.id" class="catalog-compact-row"><div><strong>{{ productRelationLabels[String(rule.relation_type)] || rule.relation_type }}</strong><span>{{ rule.match_type === 'group' ? 'Groupe' : 'Catégorie' }} : {{ productRelationRuleTargetName(rule) }} · {{ rule.result_limit }} maximum · ordre {{ rule.sort_order || 0 }}</span></div><button class="catalog-icon-button catalog-icon-button--danger" type="button" :disabled="!canWrite || busy === `product-relation-rule-${rule.id}`" aria-label="Supprimer la règle automatique" title="Supprimer" @click="deleteProductRelationRule(rule)">×</button></div>
+                <p v-if="productRelationRules.length === 0" class="muted">Aucune règle automatique.</p>
+              </div>
+              <form v-if="canWrite" class="catalog-content-link-form" @submit.prevent="createProductRelationRule">
+                <label class="field">Type<select v-model="productRelationRuleForm.relation_type" class="select"><option v-for="relationType in productRelationTypes" :key="relationType" :value="relationType">{{ productRelationLabels[relationType] }}</option></select></label>
+                <label class="field">Correspondance<select v-model="productRelationRuleForm.match_type" class="select" @change="productRelationRuleForm.match_id = ''"><option value="category">Catégorie</option><option value="group">Groupe</option></select></label>
+                <label class="field">Valeur<select v-model="productRelationRuleForm.match_id" class="select" required><option value="">Choisir…</option><option v-for="target in productRelationRuleTargets" :key="target.id" :value="String(target.id)">{{ target.name }}</option></select></label>
+                <label class="field">Maximum<input v-model="productRelationRuleForm.result_limit" class="input" type="number" min="1" max="24"></label>
+                <label class="field">Ordre<input v-model="productRelationRuleForm.sort_order" class="input" type="number" min="0"></label>
+                <button class="btn primary btn-sm" type="submit" :disabled="busy === 'product-relation-rule' || !productRelationRuleForm.match_id">Ajouter la règle</button>
               </form>
             </section>
             <section class="catalog-clickable-section" @click="productViewModalOpen = false; openProductAttributes()">

@@ -163,11 +163,17 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     await expect(addToCart).toHaveAccessibleName(/ajouter au panier/i);
     await addToCart.focus();
     await expect(addToCart).toBeFocused();
-    const cartLineResponse = page.waitForResponse((response) => response.url().includes('/cart/')
-      && response.url().endsWith('/lines') && response.request().method() === 'POST');
+    const cartLineResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.includes('/cart/')
+        && url.pathname.endsWith('/lines')
+        && response.request().method() === 'POST';
+    });
     await page.keyboard.press('Enter');
     expect((await cartLineResponse).status()).toBe(201);
-    await expect(page.locator('[data-cart-drawer]')).toBeVisible();
+    const cartDrawer = page.locator('[data-cart-drawer]');
+    await expect(cartDrawer).toBeVisible();
+    await expect(cartDrawer).toHaveAttribute('aria-busy', 'false');
     const quantityResponse = page.waitForResponse((response) => response.url().includes('/cart/')
       && response.url().includes('/lines/') && response.request().method() === 'PATCH');
     await page.locator('[data-cart-quantity]').fill('2');

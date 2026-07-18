@@ -4,7 +4,7 @@ audience:
   - administrator
   - developer
 status: current
-last_verified: 2026-07-16
+last_verified: 2026-07-17
 source_of_truth: code
 source_paths:
   - frontend/admin-vue/src/router/index.ts
@@ -37,7 +37,8 @@ Cette carte décrit les destinations visibles. Une URL ne constitue jamais une a
 | Marketing | `/business/offers-marketing` | offre sélectionnée | `business.catalog.read` ou permission marketing |
 | Audiences | `/business/offers-marketing/audiences` | Marketing | `business.segment.read` |
 | Réglages Opérations | `/business/settings` | objet affecté | permission de réglage correspondante |
-| Sites E-Commerce | `/sale/settings?section=ecommerce` | Studio ou aperçu existant | `sale.settings.manage` |
+| Sites E-Commerce | `/sale/settings?section=ecommerce` | page système Studio ou `/shop` actif | `sale.settings.manage` |
+| Page système Boutique | `/contents/pages/system-shop?site_id={id}&language_code={code}` | liste Pages ou réglages E-Commerce | `content.read` ; mutation selon action éditoriale |
 
 ## Outils avancés
 

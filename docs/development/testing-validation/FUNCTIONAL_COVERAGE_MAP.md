@@ -40,6 +40,10 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Activités CRM événementielles | projection partielle relisant les commandes | scénario outbox + gate Python + chronologie Vue | DTO v2, désordre, panne CRM, attente/rattachement, confidentialité, rejeu et réconciliation | ajouté pour M7.2 |
 | Segmentation, préférences et consentements CRM | tags et état courant sans historique | scénario métier + gate Python + E2E Business | règles explicables, calcul complet/incrémental, résultat nul, retrait conservé, permissions et FR/EN | ajouté pour M7.3 |
 | Commande invitée vers CRM | preuves M7 dispersées | gate M7.4 + PHP + deux parcours Playwright | 12 scénarios, e-mail vérifié unique, ambiguïtés en revue, panne/rejeu, consentement et mesure UX | ajouté pour M7.4 |
+| Panier public et checkout résilient | stockage client et reprise partiels | contrats Sale + tests PHP/HTTP + gate Chromium point 44 | Shop actif, jeton opaque, version optimiste, conflit multi-onglets, brouillon repris, double soumission et mobile | ajouté pour M8.6 |
+| Bons cadeaux | type produit, politique et événements seulement déclarés | ledger Sale + test PHP + Playwright point 45 | émission après paiement, code non stocké, révélation unique, débit/rejeu, complément, recrédit, remboursement et back-office masqué | ajouté pour M8.7 |
+| Commande, logistique et suivi | références libres et preuves dispersées | snapshots + fulfillments M6 + test PHP point 46 | confirmation automatique, préparation partielle, suivi HTTPS validé, retrait sans fuite du code, notifications idempotentes et suivi invité signé | ajouté pour M8.8 |
+| Shop opérationnel release | preuves 38a–47 dispersées | gate composite Python/Playwright point 48 | reconstruction sans migration, multisite/sous-répertoires, langues, rôles, scénarios A–E, négatifs, UX et empreintes sans données personnelles | ajouté à la qualification release courante |
 
 ## Tests ajoutés
 
@@ -70,6 +74,10 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts`
 - `tools/python/tests/test_crm_guest_order_gate.py`
 - `docs/evaluation/machine-readable/crm-guest-order-gate-m7.json`
+- `tools/php/tests/unit/sale_gift_card_lifecycle_test.php`
+- `frontend/admin-vue/tests/e2e/gift-card-lifecycle-45.spec.ts`
+- `tools/python/tests/test_shop_operational_gate.py`
+- `frontend/admin-vue/tests/e2e/shop-operational-release-gate-48.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

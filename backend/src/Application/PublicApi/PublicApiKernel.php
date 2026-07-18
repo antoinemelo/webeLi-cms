@@ -432,9 +432,9 @@ final class PublicApiKernel
             if (!$site) {
                 throw new \InvalidArgumentException('Site invalide.');
             }
-            return $site + $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+            return $site + $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         }
-        return $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        return $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
     }
 
     /** @param array<string,mixed> $data @param array<string,mixed> $meta */

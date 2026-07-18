@@ -12,6 +12,7 @@ use App\Application\Search\PublicSearchReadRepository;
 use App\Core\Database;
 use App\Application\Business\ProductContentLinkService;
 use App\Application\Business\StorefrontProjectionRepository;
+use App\Application\Commerce\StorefrontMerchandisingService;
 
 final class ResolvePublicRoute
 {
@@ -28,14 +29,23 @@ final class ResolvePublicRoute
         private readonly ?BlockDocumentNormalizer $blocks = null,
         private readonly ?ProductContentLinkService $productContentLinks = null,
         private readonly ?StorefrontProjectionRepository $storefront = null,
+        private readonly ?StorefrontMerchandisingService $merchandising = null,
     ) {
         $this->mediaUrls = new MediaUrlGenerator($db);
     }
 
     public function execute(array $site, string $languageCode, string $path, array $query = []): array
     {
+        $isShopPath = $path === '/shop'
+            || str_starts_with($path, '/shop/products/')
+            || str_starts_with($path, '/shop/collections/');
         if ($storefront = $this->storefrontPayload($site,$languageCode,$path,$query)) {
             return ['type'=>'payload','status'=>200,'payload'=>$storefront];
+        }
+        // /shop is a protected system route. An inactive or unavailable Shop
+        // must never fall through to an ordinary CMS page using the same path.
+        if ($isShopPath) {
+            return ['type'=>'payload','status'=>404,'payload'=>$this->notFoundPayload($site,$languageCode,$path)];
         }
         if ($redirect = $this->routes->findRedirect((int) $site['id'], $path, $languageCode)) {
             return ['type' => 'redirect', 'to' => (string) $redirect['new_path'], 'status' => (int) $redirect['http_code']];
@@ -66,22 +76,121 @@ final class ResolvePublicRoute
     private function storefrontPayload(array $site,string $locale,string $path,array $query): ?array
     {
         if ($this->storefront===null || !($path==='/shop' || str_starts_with($path,'/shop/products/') || str_starts_with($path,'/shop/collections/'))) return null;
-        $siteId=(int)$site['id']; $channel=$this->storefront->defaultChannelId($siteId); if ($channel<1) return null;
+        $siteId=(int)$site['id'];
+        $shop=$this->storefront->activeShop($siteId,$locale);
+        $channel=(int)($shop['channel_id']??0);
+        if ($channel<1) return null;
         if (preg_match('#^/shop/products/([a-z0-9_-]+)$#',$path,$m)) {
             $product=$this->storefront->product($siteId,$channel,$locale,$m[1]); if (!$product) return null;
             $base=$this->basePayload($site,$locale,$path,(string)$product['name']);
-            return $base+['template'=>'storefront-product','storefront_product'=>$product,'entry_title'=>$product['name'],'meta_title'=>$product['name'],'meta_description'=>$product['summary'],'meta_robots'=>$product['seo']['robots'],'canonical'=>localized_absolute_url($product['seo']['canonical'],$locale,(string)$site['base_url']),'json_ld'=>json_encode($product['seo']['json_ld'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),'resource'=>$product];
+            $productLanguages=[];
+            foreach ((array)($product['seo']['hreflang']??[]) as $alternate) {
+                if (!is_array($alternate) || trim((string)($alternate['locale']??''))==='') continue;
+                $code=(string)$alternate['locale'];
+                $relative=(string)($alternate['url']??$path);
+                $absolute=localized_absolute_url($relative,$code,(string)$site['base_url']);
+                $productLanguages[]=['code'=>$code,'hreflang'=>$code,'url'=>$absolute,'absolute_url'=>$absolute,'label'=>strtoupper($code),'is_active'=>$code===$locale,'is_default'=>false];
+            }
+            if ($productLanguages!==[]) {
+                $base['languages']=$productLanguages;
+                $base['language_menu_items']=$productLanguages;
+                $base['x_default_url']=$productLanguages[0]['absolute_url'];
+            }
+            $returnUrl=is_string($query['return']??null) && str_starts_with((string)$query['return'],'/shop') && !str_contains((string)$query['return'],'//')?(string)$query['return']:'/shop';
+            return $base+['template'=>'storefront-product','storefront_product'=>$product,'storefront_return_url'=>$returnUrl,'entry_title'=>$product['name'],'meta_title'=>$product['name'],'meta_description'=>$product['summary'],'meta_robots'=>$product['seo']['robots'],'canonical'=>localized_absolute_url($product['seo']['canonical'],$locale,(string)$site['base_url']),'json_ld'=>json_encode($product['seo']['json_ld'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),'resource'=>$product];
         }
         if (preg_match('#^/shop/collections/([a-z0-9_-]+)$#',$path,$m)) {
             $collection=$this->storefront->collection($siteId,$channel,$locale,$m[1]); if (!$collection) return null;
-            $page=$this->storefront->products($siteId,$channel,$locale,['collection_id'=>$collection['collection_id'],'limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]);
+            $page=$this->storefront->products($siteId,$channel,$locale,array_merge($query,['collection_id'=>$collection['collection_id'],'limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]));
+            $page=$this->decorateCatalogPage($page,$path);
             $base=$this->basePayload($site,$locale,$path,(string)$collection['name']);
-            return $base+['template'=>'storefront-collection','storefront_collection'=>$collection,'storefront_products'=>$page['items'],'pagination'=>$page['pagination'],'entry_title'=>$collection['name'],'meta_title'=>$collection['name'],'meta_description'=>$collection['description'],'meta_robots'=>$collection['seo']['robots'],'canonical'=>localized_absolute_url($collection['seo']['canonical'],$locale,(string)$site['base_url']),'resource'=>['collection'=>$collection,'products'=>$page]];
+            return $base+['template'=>'storefront-collection','storefront_collection'=>$collection,'storefront_products'=>$page['items'],'storefront_catalog'=>$page,'storefront_facets'=>$page['facets'],'storefront_selection'=>$page['selection'],'storefront_sorts'=>$page['sorts'],'pagination'=>$page['pagination'],'entry_title'=>$collection['name'],'meta_title'=>$collection['name'],'meta_description'=>$collection['description'],'meta_robots'=>$this->catalogRobots($query,$collection['seo']['robots']),'canonical'=>localized_absolute_url($collection['seo']['canonical'],$locale,(string)$site['base_url']),'resource'=>['collection'=>$collection,'products'=>$page]];
         }
-        $filters=['q'=>$query['q']??'','sort'=>$query['sort']??'name','limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))];
-        $page=$this->storefront->products($siteId,$channel,$locale,$filters); $base=$this->basePayload($site,$locale,$path,'Boutique');
-        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$this->storefront->collections($siteId,$channel,$locale),'pagination'=>$page['pagination'],'entry_title'=>'Boutique','meta_title'=>'Boutique','meta_description'=>'Catalogue de la boutique','meta_robots'=>'index,follow','canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page]];
+        $filters=array_merge($query,['limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]);
+        $published=is_array($shop['published']??null)?$shop['published']:[];
+        $seo=is_array($published['seo']??null)?$published['seo']:[];
+        $title=trim((string)($published['title']??'')) ?: ($locale==='en'?'Shop':'Boutique');
+        $page=$this->decorateCatalogPage($this->storefront->products($siteId,$channel,$locale,$filters),$path); $base=$this->basePayload($site,$locale,$path,$title);
+        $sections=$this->merchandising?->sections($siteId,$channel,$locale,(array)($published['sections']??[]),$page) ?? [];
+        foreach ($sections as $sectionIndex=>$section) {
+            foreach ((array)($section['items']??[]) as $itemIndex=>$item) {
+                if (is_array($item) && str_starts_with((string)($item['url']??''),'/shop/products/')) {
+                    $sections[$sectionIndex]['items'][$itemIndex]['url_with_return']=(string)$item['url'].'?return='.rawurlencode($page['current_url']);
+                }
+            }
+        }
+        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$this->storefront->collections($siteId,$channel,$locale),'storefront_sections'=>$published['sections']??[],'storefront_merchandising_sections'=>$sections,'storefront_introduction'=>(string)($published['introduction']??''),'storefront_catalog'=>$page,'storefront_facets'=>$page['facets'],'storefront_selection'=>$page['selection'],'storefront_sorts'=>$page['sorts'],'pagination'=>$page['pagination'],'entry_title'=>$title,'meta_title'=>(string)($seo['title']??$title),'meta_description'=>(string)($seo['description']??''),'meta_robots'=>$this->catalogRobots($query,(string)($seo['robots']??'index,follow')),'canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page,'shop'=>$shop,'merchandising_sections'=>$sections]];
     }
+
+    /** @param array<string,mixed> $query */
+    private function catalogRobots(array $query,string $default): string
+    {
+        foreach (['q','sort','brand','brands','category','categories','group','groups','availability','attributes','attr','offset'] as $key) {
+            if (array_key_exists($key,$query) && $query[$key] !== '' && $query[$key] !== []) return 'noindex,follow';
+        }
+        return $default;
+    }
+
+    /** @param array<string,mixed> $page @return array<string,mixed> */
+    private function decorateCatalogPage(array $page,string $path): array
+    {
+        $selection=is_array($page['selection']??null)?$page['selection']:[];
+        $params=$this->catalogQueryParams($selection);
+        $page['reset_url']=$path;
+        $page['current_url']=$this->catalogUrl($path,$params);
+        $page['active_filters']=[];
+        foreach ((array)($page['facets']??[]) as $facetIndex=>$facet) {
+            if (!is_array($facet)) continue;
+            foreach ((array)($facet['options']??[]) as $optionIndex=>$option) {
+                if (!is_array($option)) continue;
+                $next=$params; $key=(string)($facet['key']??''); $value=(string)($option['key']??'');
+                if (($facet['type']??'')==='attribute') {
+                    $values=(array)($next['attributes'][$key]??[]);
+                    $next['attributes'][$key]=$this->toggleCatalogValue($values,$value);
+                    if ($next['attributes'][$key]===[]) unset($next['attributes'][$key]);
+                    if (($next['attributes']??[])===[]) unset($next['attributes']);
+                } else {
+                    $next[$key]=$this->toggleCatalogValue((array)($next[$key]??[]),$value);
+                    if ($next[$key]===[]) unset($next[$key]);
+                    if ($key==='group' && count((array)($next['group']??[]))!==1) unset($next['attributes']);
+                }
+                unset($next['offset']);
+                $url=$this->catalogUrl($path,$next);
+                $page['facets'][$facetIndex]['options'][$optionIndex]['toggle_url']=$url;
+                if (!empty($option['selected'])) $page['active_filters'][]=['label'=>(string)($facet['label']??$key).': '.(string)($option['label']??$value),'remove_url'=>$url];
+            }
+        }
+        $pagination=is_array($page['pagination']??null)?$page['pagination']:[];
+        $offset=(int)($pagination['offset']??0); $limit=max(1,(int)($pagination['limit']??24));
+        if ($offset>0) { $previous=$params; $previous['offset']=max(0,$offset-$limit); if ($previous['offset']===0) unset($previous['offset']); $page['pagination']['previous_url']=$this->catalogUrl($path,$previous); }
+        if (!empty($pagination['has_more'])) { $next=$params; $next['offset']=$offset+$limit; $page['pagination']['next_url']=$this->catalogUrl($path,$next); }
+        $return=$page['current_url'];
+        foreach ((array)($page['items']??[]) as $index=>$item) if (is_array($item)) $page['items'][$index]['url_with_return']=(string)($item['url']??'').'?return='.rawurlencode($return);
+        return $page;
+    }
+
+    /** @param array<string,mixed> $selection @return array<string,mixed> */
+    private function catalogQueryParams(array $selection): array
+    {
+        $params=[];
+        if (($selection['q']??'')!=='') $params['q']=$selection['q'];
+        if (($selection['sort']??'name')!=='name') $params['sort']=$selection['sort'];
+        foreach (['brand','category','group','availability'] as $key) if (($selection[$key]??[])!==[]) $params[$key]=array_values((array)$selection[$key]);
+        if (($selection['attributes']??[])!==[]) $params['attributes']=$selection['attributes'];
+        return $params;
+    }
+
+    /** @param list<string> $values @return list<string> */
+    private function toggleCatalogValue(array $values,string $value): array
+    {
+        $values=array_values(array_map('strval',$values));
+        if (in_array($value,$values,true)) return array_values(array_filter($values,static fn(string $item):bool=>$item!==$value));
+        $values[]=$value; return array_values(array_unique($values));
+    }
+
+    /** @param array<string,mixed> $params */
+    private function catalogUrl(string $path,array $params): string
+    { $query=http_build_query($params,'','&',PHP_QUERY_RFC3986); return $path.($query===''?'':'?'.$query); }
 
     public function entryPayload(array $site, string $languageCode, array $aggregate, bool $isPreview, array $query = []): array
     {
@@ -108,8 +217,10 @@ final class ResolvePublicRoute
             $payload['x_default_url'] = '';
         }
 
+        $commerceProducts = $this->productContentLinks?->publicProductsForContent((int)($site['id']??0),(int)($entry['id']??0),$languageCode) ?? [];
+        $currentProductId=(int)($commerceProducts[0]['product']['id']??$commerceProducts[0]['product']['product_id']??$commerceProducts[0]['product_id']??0);
         $blocks = $this->entryBlocks($aggregate, $site, $languageCode, $query);
-        $blocks = $this->productContentLinks?->hydrateStorefrontBlocks($blocks, (int)($site['id']??0), $languageCode) ?? $blocks;
+        $blocks = $this->productContentLinks?->hydrateStorefrontBlocks($blocks, (int)($site['id']??0), $languageCode, ['current_product_id'=>$currentProductId,'query'=>$query]) ?? $blocks;
         if ($isPreview) {
             $blocks = $this->annotatePreviewBlockStatuses($blocks, $aggregate);
         }
@@ -128,11 +239,6 @@ final class ResolvePublicRoute
         $ogImage = $this->absolutePublicUrl($ogImagePath, $baseUrl);
         $twitterImagePath = $this->seoMediaUrl(is_numeric($aggregate['seo']['twitter_image_media_id'] ?? null) ? (int) $aggregate['seo']['twitter_image_media_id'] : 0, 'open_graph') ?: $ogImage;
         $twitterImage = $this->absolutePublicUrl($twitterImagePath, $baseUrl);
-        $commerceProducts = $this->productContentLinks?->publicProductsForContent(
-            (int) ($site['id'] ?? 0),
-            (int) ($entry['id'] ?? 0),
-            $languageCode
-        ) ?? [];
         $pageJsonLd = $this->jsonLd((string) ($aggregate['seo']['json_ld'] ?? ''), $site, $languageCode, $path, $title, $summary, (string) ($entry['type_key'] ?? 'page'), $entryPublishedAt, $entryUpdatedAt, $payload['breadcrumbs'] ?? [], $blocks, !empty($articleDisplay['include_author_in_schema']) ? $entryAuthorName : '');
         return $payload + [
             'title' => $title,
@@ -1033,6 +1139,15 @@ final class ResolvePublicRoute
         $languages = $this->languageSwitchItems($siteId, $languageCode, $currentPath, (string) ($site['base_url'] ?? ''));
         $siteAssets = $this->siteBrandAssets($siteId, $languageCode);
         $publicUi = $this->publicUiSettings($siteId);
+        $shop = $this->storefront?->activeShop($siteId,$languageCode);
+        $primaryMenu = $this->menuItems($siteId, $languageCode, 'primary', $currentPath);
+        if ($shop && in_array((string)($shop['menu_key']??'main'),['main','primary'],true)) {
+            $primaryMenu = $this->appendShopMenuItem($primaryMenu,$shop,$languageCode,$currentPath);
+        }
+        $footerMenu = $this->menuItems($siteId, $languageCode, 'footer', $currentPath);
+        if ($shop && (string)($shop['menu_key']??'')==='footer') {
+            $footerMenu = $this->appendShopMenuItem($footerMenu,$shop,$languageCode,$currentPath);
+        }
         return [
             'site' => $site,
             'site_localization' => $siteLocalization,
@@ -1040,8 +1155,8 @@ final class ResolvePublicRoute
             'current_path' => $currentPath,
             'ui' => $this->ui($languageCode),
             'home_cards' => $this->homeCards($languageCode),
-            'menu_items' => $this->menuItems($siteId, $languageCode, 'primary', $currentPath),
-            'footer_menu_items' => $this->menuItems($siteId, $languageCode, 'footer', $currentPath),
+            'menu_items' => $primaryMenu,
+            'footer_menu_items' => $footerMenu,
             'footer_top_menu_items' => $this->menuItems($siteId, $languageCode, 'footer_top', $currentPath),
             'footer_bottom_menu_items' => $this->menuItems($siteId, $languageCode, 'footer_bottom', $currentPath),
             'localized_home_url' => localized_path('/', $languageCode),
@@ -1062,6 +1177,12 @@ final class ResolvePublicRoute
             'appearance_css' => (string) ($publicUi['appearance_css'] ?? ''),
             'show_login_shortcut' => (bool) ($publicUi['show_login_shortcut'] ?? false),
             'show_site_title_in_header' => (bool) ($publicUi['show_site_title_in_header'] ?? true),
+            'storefront_cart_visible' => $shop !== null && !empty($shop['cart_visible']),
+            'storefront_channel_id' => $shop['channel_id'] ?? null,
+            'storefront_channel_code' => $shop['channel_code'] ?? null,
+            'theme_override_key' => ($currentPath === '/shop' || str_starts_with($currentPath,'/shop/'))
+                ? ($shop['theme_key'] ?? null)
+                : null,
             'admin_login_url' => admin_url_path('/admin/login'),
             'breadcrumbs' => $this->breadcrumbs($languageCode, $currentPath, $currentTitle),
             'og_image' => absolute_url('/frontend/theme-default/assets/img/cms-hero-1280.png', (string) ($site['base_url'] ?? '')),
@@ -1069,6 +1190,21 @@ final class ResolvePublicRoute
             'og_locale_alternates' => $this->ogLocaleAlternates($languages, $languageCode),
         ];
     }
+
+    /** @param list<array<string,mixed>> $items @param array<string,mixed> $shop @return list<array<string,mixed>> */
+    private function appendShopMenuItem(array $items, array $shop, string $languageCode, string $currentPath): array
+    {
+        $url = localized_path('/shop',$languageCode);
+        foreach ($items as $item) if (is_array($item) && (string)($item['url']??'')===$url) return $items;
+        $items[] = [
+            'id'=>'system-shop-' . (int)$shop['id'],'label'=>(string)($shop['menu_label']??'Boutique'),'url'=>$url,
+            'target'=>'_self','sort_order'=>(int)($shop['menu_position']??100),'is_current'=>$currentPath==='/shop' || str_starts_with($currentPath,'/shop/'),
+            'is_ancestor'=>false,'children'=>[],'css_class'=>'system-shop-menu-item',
+        ];
+        usort($items,static fn(array $a,array $b):int=>((int)($a['sort_order']??0))<=>((int)($b['sort_order']??0)));
+        return $items;
+    }
+
 
     private function menuItems(int $siteId, string $languageCode, string $menuKey, string $currentPath = ''): array
     {

@@ -1,3 +1,2 @@
-<header class="hero"><p class="eyebrow">Storefront</p><h1>{{ entry_title }}</h1></header>
-{% include 'partials/storefront-block.twig' with {block_type:'collection_grid',data:{items:storefront_collections}} only %}
-{% include 'partials/storefront-block.twig' with {block_type:'product_grid',data:{items:storefront_products}} only %}
+<header class="hero"><p class="eyebrow">Storefront</p><h1>{{ entry_title }}</h1>{% if storefront_introduction %}<p>{{ storefront_introduction }}</p>{% endif %}</header>
+{% for section in storefront_merchandising_sections %}{% include 'partials/storefront-merchandising-section.twig' with {section:section} %}{% endfor %}

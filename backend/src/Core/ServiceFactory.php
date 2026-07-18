@@ -25,6 +25,8 @@ use App\Application\Content\ValidateEntryPayload;
 use App\Application\Business\ProductContentLinkService;
 use App\Application\Business\StorefrontProjectionRepository;
 use App\Application\Business\StorefrontProjectionService;
+use App\Application\Commerce\ShopConfigurationService;
+use App\Application\Commerce\StorefrontMerchandisingService;
 use App\Application\Capability\ActionRunRepository;
 use App\Application\Consistency\CrossDatabaseOperationJournal;
 use App\Application\Capability\BlueprintActionContextService;
@@ -201,6 +203,7 @@ use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SaleGiftCardService;
 use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SalePosService;
@@ -209,6 +212,7 @@ use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
 use App\Modules\Sale\Services\SaleOrderDossierService;
 use App\Modules\Sale\Services\SaleOrderDocumentService;
+use App\Modules\Sale\Services\SaleOrderNotificationService;
 use App\Modules\Sale\Services\SaleDeferredPaymentService;
 use App\Modules\Sale\Services\SalesChannelIntegrityService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
@@ -834,7 +838,22 @@ final class ServiceFactory
             $this->saleInventory(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            $this->saleStateMachines()
+            $this->saleStateMachines(),
+            $this->saleGiftCards(),
+            $this->saleOrderDocuments(),
+            $this->saleOrderNotifications(),
+        ));
+    }
+
+    public function saleGiftCards(): SaleGiftCardService
+    {
+        return $this->once('sale_gift_cards', fn() => new SaleGiftCardService(
+            $this->saleDatabaseConnection(),
+            $this->salePayments(),
+            $this->saleOrders(),
+            $this->saleEvents(),
+            (string)($this->config['app']['gift_card_signing_key'] ?? $this->config['app']['preview_signing_key'] ?? 'change-this-gift-card-key'),
+            $this->mailer()
         ));
     }
 
@@ -860,6 +879,7 @@ final class ServiceFactory
             $this->saleDatabaseConnection(),
             $this->saleInventory(),
             $this->saleStateMachines(),
+            $this->saleOrderNotifications(),
         ));
     }
 
@@ -880,7 +900,8 @@ final class ServiceFactory
             $this->saleIdempotency(),
             new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'), (array)($this->config['app']['payments'] ?? [])),
             $this->saleStateMachines(),
-            $this->saleInventory()
+            $this->saleInventory(),
+            $this->saleGiftCards()
         ));
     }
 
@@ -893,7 +914,8 @@ final class ServiceFactory
             $this->saleInventory(),
             $this->saleStateMachines(),
             new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'), (array)($this->config['app']['payments'] ?? [])),
-            $this->logger()
+            $this->logger(),
+            $this->saleGiftCards()
         ));
     }
 
@@ -930,12 +952,21 @@ final class ServiceFactory
         return $this->once('sale_order_dossier', fn() => new SaleOrderDossierService(
             $this->saleDatabaseConnection(),
             $this->saleOrderTimeline(),
+            $this->saleOrderNotifications(),
         ));
     }
 
     public function saleOrderDocuments(): SaleOrderDocumentService
     {
         return $this->once('sale_order_documents', fn() => new SaleOrderDocumentService($this->saleDatabaseConnection()));
+    }
+
+    public function saleOrderNotifications(): SaleOrderNotificationService
+    {
+        return $this->once('sale_order_notifications', fn() => new SaleOrderNotificationService(
+            $this->saleDatabaseConnection(),
+            $this->saleEvents(),
+        ));
     }
 
     public function saleDeferredPayments(): SaleDeferredPaymentService
@@ -1193,6 +1224,25 @@ final class ServiceFactory
             new ProductContentSourceRepository($this->businessDatabaseConnection()->database()),
             $this->businessPublicCatalog(),
             $this->businessCatalogSellables(),
+            $this->saleDatabaseConnection(),
+        ));
+    }
+
+    public function shopConfigurations(): ShopConfigurationService
+    {
+        return $this->once('shop_configurations', fn() => new ShopConfigurationService(
+            $this->coreDb,
+            $this->saleDatabaseConnection(),
+            $this->storefrontProjectionBuilder(),
+            $this->storefrontMerchandising(),
+        ));
+    }
+
+    public function storefrontMerchandising(): StorefrontMerchandisingService
+    {
+        return $this->once('storefront_merchandising', fn() => new StorefrontMerchandisingService(
+            $this->coreDb,
+            (string) ($this->config['app']['preview_signing_key'] ?? 'storefront-analytics'),
         ));
     }
 
@@ -1485,6 +1535,7 @@ final class ServiceFactory
             new BlockDocumentNormalizer(new EditorialBlockSecurityPolicy((array) ($this->config['cms']['editorial_security'] ?? []))),
             $this->productContentLinks(),
             $this->storefrontProjections(),
+            $this->storefrontMerchandising(),
         ));
     }
 

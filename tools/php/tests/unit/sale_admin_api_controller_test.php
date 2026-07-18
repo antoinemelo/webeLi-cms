@@ -68,7 +68,8 @@ try {
         'sale.pos.use', 'sale.pos.manage', 'sale.cash.manage',
         'sale.pos.sessions.open', 'sale.pos.sessions.close', 'sale.pos.discounts.manage',
         'sale.pos.refunds.manage', 'sale.pos.cash.correct', 'sale.pos.receipts.reprint',
-        'sale.stock.read', 'sale.stock.manage', 'sale.inventory.repair', 'sale.reports.read', 'sale.settings.manage',
+        'sale.stock.read', 'sale.stock.manage', 'sale.inventory.repair', 'sale.reports.read', 'sale.sales.read',
+        'sale.exports.manage', 'sale.documents.issue', 'sale.documents.resend', 'sale.settings.manage',
     ];
     foreach ($permissions as $index => $permission) {
         $iam->run('INSERT INTO iam_permissions(id, permission_key, name) VALUES(?, ?, ?)', [$index + 1, $permission, $permission]);

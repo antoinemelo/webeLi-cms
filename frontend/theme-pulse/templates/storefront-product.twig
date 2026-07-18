@@ -1,1 +1,1 @@
-{% set product=storefront_product %}<article class="storefront-product"><h1>{{ product.name }}</h1>{% include 'partials/storefront-block.twig' with {block_type:'product_detail',data:{product:product}} only %}</article>
+{% include '@default/storefront-product.twig' %}

@@ -17,7 +17,10 @@ final class SaleCheckoutService
         private readonly SaleInventoryService $inventory,
         private readonly SaleEventService $events,
         private readonly SaleIdempotencyService $idempotency,
-        private readonly ?SaleStateMachineService $states = null
+        private readonly ?SaleStateMachineService $states = null,
+        private readonly ?SaleGiftCardService $giftCards = null,
+        private readonly ?SaleOrderDocumentService $documents = null,
+        private readonly ?SaleOrderNotificationService $notifications = null,
     ) {}
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -27,6 +30,10 @@ final class SaleCheckoutService
         $request = ['cart_id' => $cartId, 'source' => $payload['source'] ?? 'admin'];
         if (isset($payload['request_fingerprint'])) {
             $request['request_fingerprint'] = (string) $payload['request_fingerprint'];
+        }
+        if (trim((string) ($payload['gift_card_code'] ?? '')) !== '') {
+            // Empreinte uniquement : le code ne rejoint jamais l'idempotency store.
+            $request['gift_card_fingerprint'] = hash('sha256', strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) $payload['gift_card_code']) ?? ''));
         }
         $correlationId = SaleStateMachineService::correlationId($payload['correlation_id'] ?? null);
         return $this->idempotency->run((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request, function () use ($cartId, $payload, $correlationId): array {
@@ -78,6 +85,17 @@ final class SaleCheckoutService
                     $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
                 }
                 $states->convertCart($cartId, (int) $order['id'], $payload['iam_user_id'] ?? null, $correlationId);
+                $giftCode = trim((string) ($payload['gift_card_code'] ?? ''));
+                if ($giftCode !== '') {
+                    if ($this->giftCards === null) throw new SaleValidationException('sale.gift_card_unavailable');
+                    $order['gift_card'] = $this->giftCards->redeemOrder((int)$order['id'],$giftCode,(string)($payload['idempotency_key']??''),$correlationId);
+                    $order = $this->orders->requireOrder((int)$order['id']) + ['gift_card'=>$order['gift_card']];
+                    if ((string)$order['payment_status']==='paid' && (string)$order['status']==='pending_payment') {
+                        $this->inventory->consumeCartReservations($cartId,(int)$order['id']);
+                        $order = $states->transition('order',(int)$order['id'],'confirmed',$payload['iam_user_id']??null,'gift card payment completed',$correlationId) + ['gift_card'=>$order['gift_card']];
+                        $db->run('UPDATE sale_orders SET placed_at=COALESCE(placed_at,CURRENT_TIMESTAMP) WHERE id=?',[(int)$order['id']]);
+                    }
+                }
                 $this->events->emit((int) $cart['site_id'], 'sale.order.placed', 'order', (int) $order['id'], [
                     'site_id' => (int) $cart['site_id'],
                     'order_id' => (int) $order['id'],
@@ -96,6 +114,20 @@ final class SaleCheckoutService
                     'product_ids' => array_values(array_unique(array_map(static fn(array $line): int => (int) ($line['business_product_id'] ?? 0), $lines))),
                     'category_ids' => $this->categoryIds($lines),
                 ], $payload['iam_user_id'] ?? null, $correlationId);
+                if ($this->documents !== null) {
+                    $language = (string)($cart['locale'] ?? 'fr');
+                    $confirmation = $this->documents->issue(
+                        (int)$order['id'], 'order_confirmation', $language,
+                        isset($payload['iam_user_id']) ? (int)$payload['iam_user_id'] : null,
+                        ['order_policy' => is_array($payload['order_policy'] ?? null) ? $payload['order_policy'] : []]
+                    );
+                    $order['confirmation'] = $confirmation;
+                    $this->notifications?->queue(
+                        (int)$order['id'], 'order_confirmed', $language, null, (int)$confirmation['id'],
+                        isset($payload['iam_user_id']) ? (int)$payload['iam_user_id'] : null,
+                        'order-confirmed:'.(int)$order['id'].':'.(int)$confirmation['id']
+                    );
+                }
                 return $order;
             });
         });

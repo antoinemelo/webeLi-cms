@@ -8,6 +8,7 @@ use App\Modules\Sale\Exceptions\SaleValidationException;
 use App\Modules\Sale\Pricing\SalePricingService;
 use App\Modules\Sale\Repositories\SaleCartRepository;
 use App\Modules\Sale\Repositories\SaleChannelRepository;
+use InvalidArgumentException;
 
 final class SaleCartService
 {
@@ -170,6 +171,79 @@ final class SaleCartService
             $this->carts->refreshLineSnapshot($lineId, $fresh, $amounts);
         }
         $this->carts->recalculateTotals($cartId); return $this->carts->cartWithLines($cartId);
+    }
+
+    /**
+     * Revalidates the public cart without changing its version when every
+     * commercial snapshot is still identical. Changes are explicit so the
+     * client can show an understandable before/after instead of silently
+     * replacing a price or an availability.
+     *
+     * @return array{cart:array<string,mixed>,changes:list<array<string,mixed>>}
+     */
+    public function revalidateForDisplay(int $cartId): array
+    {
+        $cart = $this->carts->requireCart($cartId);
+        if ((string) $cart['status'] !== 'active') {
+            return ['cart' => $this->carts->cartWithLines($cartId), 'changes' => []];
+        }
+        $channel = $this->channels->requireChannel((int) $cart['site_id'], (int) $cart['channel_id']);
+        $updates = [];
+        $changes = [];
+        foreach ($this->carts->lines($cartId) as $line) {
+            try {
+                $fresh = $this->catalog->snapshotForVariant(
+                    (int) $cart['site_id'],
+                    (int) ($line['sellable_id'] ?? $line['business_variant_id']),
+                    $this->channels->channelCodeForCatalog($channel),
+                    true,
+                    ['currency' => (string) $cart['currency'], 'stock_location_id' => $this->inventory->locationIdForCart($cart)]
+                );
+                $fresh['availability_state'] = $this->availabilityState($fresh);
+                $amounts = $this->pricing->lineAmounts($fresh);
+            } catch (InvalidArgumentException) {
+                $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+                $fresh = is_array($metadata['snapshot'] ?? null) ? $metadata['snapshot'] : [];
+                $fresh += [
+                    'product_name' => (string) $line['product_name'], 'product_type' => (string) $line['product_type'],
+                    'currency' => (string) $line['currency'], 'tax_class_code' => (string) $line['tax_class_code'],
+                    'tax_rate_basis_points' => (int) $line['tax_rate_basis_points'], 'tax_included' => (bool) $line['tax_included'],
+                    'regular_unit_price_minor' => (int) $line['regular_unit_price_minor'], 'unit_price_minor' => (int) $line['unit_price_minor'],
+                ];
+                $fresh['availability_state'] = 'unavailable';
+                $fresh['availability'] = ['status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false];
+                $amounts = $this->pricing->lineAmounts($fresh);
+            }
+            $before = [
+                'unit_price_minor' => (int) $line['unit_price_minor'],
+                'regular_unit_price_minor' => (int) $line['regular_unit_price_minor'],
+                'availability_state' => (string) $line['availability_state'],
+            ];
+            $after = [
+                'unit_price_minor' => (int) $amounts['unit_price_minor'],
+                'regular_unit_price_minor' => (int) $amounts['regular_unit_price_minor'],
+                'availability_state' => (string) $fresh['availability_state'],
+            ];
+            if ($before !== $after) {
+                $updates[] = [(int) $line['id'], $fresh, $amounts];
+                $changes[] = [
+                    'line_id' => (int) $line['id'], 'product_name' => (string) $line['product_name'],
+                    'before' => $before, 'after' => $after,
+                    'requires_confirmation' => $after['unit_price_minor'] > $before['unit_price_minor'] || $after['availability_state'] === 'unavailable',
+                    'recovery_options' => ['reduce_quantity', 'choose_variant', 'backorder', 'remove_line'],
+                ];
+            }
+        }
+        if ($updates === []) {
+            return ['cart' => $this->carts->cartWithLines($cartId), 'changes' => []];
+        }
+        $this->carts->claimVersion($cartId, (int) $cart['version']);
+        foreach ($updates as [$lineId, $fresh, $amounts]) {
+            $this->carts->refreshLineSnapshot($lineId, $fresh, $amounts);
+        }
+        $this->carts->markCheckoutDirty($cartId);
+        $this->carts->recalculateTotals($cartId);
+        return ['cart' => $this->carts->cartWithLines($cartId), 'changes' => $changes];
     }
 
     /** Merge an anonymous web cart into an authenticated account cart. */

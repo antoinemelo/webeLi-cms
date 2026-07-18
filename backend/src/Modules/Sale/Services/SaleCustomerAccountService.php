@@ -200,6 +200,18 @@ final class SaleCustomerAccountService implements CmsAccountBridge
         return $this->orderPayload($row);
     }
 
+    /** Guest tracking uses the same expiring, revocable proof as order claim. */
+    public function guestOrderByProof(int $siteId, string $proofToken): array
+    {
+        $proof = $this->proof($siteId, $proofToken);
+        $row = $this->saleDb()->one('SELECT * FROM sale_orders WHERE id=? AND site_id=?', [(int)$proof['order_id'],$siteId]);
+        if ($row === null) throw new SaleValidationException('sale.customer.order_not_found');
+        $row['lines'] = $this->saleDb()->all('SELECT * FROM sale_order_lines WHERE order_id=? ORDER BY line_number', [(int)$row['id']]);
+        $payload = $this->orderPayload($row);
+        $payload['access'] = ['kind'=>'signed_claim_proof','expires_at'=>$proof['expires_at'],'revocable'=>true];
+        return $payload;
+    }
+
     /** @return list<array<string,mixed>> */
     public function addresses(int $siteId, int $userId): array
     {
@@ -429,14 +441,43 @@ final class SaleCustomerAccountService implements CmsAccountBridge
     /** @param array<string,mixed> $row @return array<string,mixed> */
     private function orderPayload(array $row):array
     {
-        return ['id'=>(int)$row['id'],'order_number'=>(string)$row['order_number'],'status'=>(string)$row['status'],'payment_status'=>(string)$row['payment_status'],'fulfillment_status'=>(string)$row['fulfillment_status'],'currency'=>(string)$row['currency'],'grand_total_minor'=>(int)$row['grand_total_minor'],'placed_at'=>$row['placed_at']??null,'lines'=>array_map(static fn(array $l):array=>['id'=>(int)$l['id'],'product_name'=>(string)$l['product_name'],'quantity'=>(int)$l['quantity'],'line_total_minor'=>(int)$l['line_total_minor']],$row['lines']??[]),'fulfillments'=>$this->customerFulfillments((int)$row['id'])];
+        return ['id'=>(int)$row['id'],'order_number'=>(string)$row['order_number'],'status'=>(string)$row['status'],'payment_status'=>(string)$row['payment_status'],'fulfillment_status'=>(string)$row['fulfillment_status'],'currency'=>(string)$row['currency'],'grand_total_minor'=>(int)$row['grand_total_minor'],'placed_at'=>$row['placed_at']??null,'next_step'=>$this->customerNextStep($row),'lines'=>array_map(static fn(array $l):array=>['id'=>(int)$l['id'],'product_name'=>(string)$l['product_name'],'variant_name'=>$l['variant_name']??null,'quantity'=>(int)$l['quantity'],'line_total_minor'=>(int)$l['line_total_minor']],$row['lines']??[]),'fulfillments'=>$this->customerFulfillments((int)$row['id']),'documents'=>$this->customerDocuments((int)$row['id']),'timeline'=>$this->customerTimeline((int)$row['id']),'support'=>['route'=>'/contact']];
     }
     /** @return list<array<string,mixed>> */
     private function customerFulfillments(int $orderId):array
     {
-        $rows=$this->saleDb()->all('SELECT f.id,f.fulfillment_number,f.fulfillment_type,f.status,f.tracking_reference,f.pickup_code,f.due_at,f.ready_at,f.shipped_at,f.handed_over_at,f.delivered_at,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE f.order_id=? ORDER BY f.id',[$orderId]);
+        $rows=$this->saleDb()->all('SELECT f.id,f.fulfillment_number,f.fulfillment_type,f.status,f.carrier_code,f.tracking_reference,f.tracking_url,f.due_at,f.ready_at,f.shipped_at,f.handed_over_at,f.delivered_at,f.exception_at,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE f.order_id=? ORDER BY f.id',[$orderId]);
         foreach($rows as &$row)$row['lines']=$this->saleDb()->all('SELECT fl.order_line_id,fl.quantity,fl.prepared_quantity,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[(int)$row['id']]);
         return $rows;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function customerDocuments(int $orderId): array
+    {
+        return $this->saleDb()->all("SELECT id,document_number,document_type,status,language,html_snapshot AS printable_html,issued_at FROM sale_order_documents WHERE order_id=? AND status='issued' ORDER BY issued_at,id",[$orderId]);
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function customerTimeline(int $orderId): array
+    {
+        $rows=$this->saleDb()->all(
+            "SELECT 'order' AS kind,h.to_status AS status,h.created_at AS occurred_at FROM sale_order_status_history h WHERE h.order_id=?
+             UNION ALL
+             SELECT 'fulfillment' AS kind,t.to_status AS status,t.created_at AS occurred_at FROM sale_state_transitions t
+             INNER JOIN sale_fulfillments f ON f.id=t.aggregate_id WHERE t.aggregate_type='fulfillment' AND f.order_id=?
+             ORDER BY occurred_at",[$orderId,$orderId]
+        );
+        $visible=['placed','confirmed','completed','cancelled','allocated','preparing','partially_prepared','ready_for_pickup','shipped','handed_over','delivered','blocked','returned'];
+        return array_values(array_filter($rows,static fn(array $row):bool=>in_array((string)$row['status'],$visible,true)));
+    }
+
+    /** @param array<string,mixed> $order */
+    private function customerNextStep(array $order): string
+    {
+        if((string)$order['status']==='cancelled')return 'order_cancelled';
+        if((string)$order['status']==='completed')return 'order_completed';
+        if(!in_array((string)$order['payment_status'],['paid','authorized'],true))return 'payment_expected';
+        return match((string)$order['fulfillment_status']){'not_required','fulfilled'=>'delivery_completed','partially_fulfilled'=>'partial_delivery','unfulfilled'=>'preparation_pending',default=>'processing'};
     }
     /** @param array<string,mixed> $identity @param array<string,mixed> $profiles @return list<array<string,mixed>> */
     private function divergences(array $identity,array $profiles):array

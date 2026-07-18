@@ -1,1 +1,26 @@
-{"contract":"public.storefront.products.index.v1","kind":"schema","summary":"Lister les projections produit Storefront.","description":"Lit exclusivement core.sqlite, par site, canal et locale. Supporte recherche, collection, tri et pagination.","method":"GET","path":"/api/v1/storefront/products","source":"storefront_product_projections","security":"Public endpoint: publication and channel rules apply.","query_params":{"lang":{"type":"string","required":false},"q":{"type":"string","required":false},"collection_id":{"type":"integer","required":false},"sort":{"type":"string","required":false,"enum":["name","newest"]},"limit":{"type":"integer","required":false},"offset":{"type":"integer","required":false}},"response":{"status":200,"schema":{"type":"object","additionalProperties":true}},"errors":[],"examples":{"response":{"data":{"items":[{"contract":"storefront.product.v1","version":1,"product_id":1,"sellables":[{"sellable_id":1}]}],"pagination":{"total":1,"limit":24,"offset":0,"has_more":false}},"meta":{"contract":"public.storefront.products.index.v1"}}}}
+{
+  "contract": "public.storefront.products.index.v1",
+  "kind": "schema",
+  "summary": "Lister et filtrer les projections produit Storefront.",
+  "description": "Lit exclusivement les projections indexées de core.sqlite, par site, canal et locale. La même requête alimente le SSR et le headless. OR entre les valeurs d’une facette, AND entre les facettes ; les facettes d’attribut ne sont disponibles qu’avec exactement un groupe produit sélectionné.",
+  "method": "GET",
+  "path": "/api/v1/storefront/products",
+  "source": "storefront_product_projections + storefront_product_query_index + storefront_product_facet_values",
+  "security": "Public endpoint: publication and channel rules apply. Internal attributes and exact stock quantities are never projected.",
+  "query_params": {
+    "lang": {"type": "string", "required": false},
+    "q": {"type": "string", "required": false},
+    "collection_id": {"type": "integer", "required": false},
+    "brand": {"type": "array", "items": {"type": "string"}, "required": false},
+    "category": {"type": "array", "items": {"type": "string"}, "required": false},
+    "group": {"type": "array", "items": {"type": "string"}, "required": false},
+    "availability": {"type": "array", "items": {"type": "string", "enum": ["in_stock", "deliverable", "backorder", "unavailable"]}, "required": false},
+    "attributes": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}, "required": false},
+    "sort": {"type": "string", "required": false, "enum": ["relevance", "name", "newest", "price_asc", "price_desc", "promo_amount", "promo_percent"]},
+    "limit": {"type": "integer", "required": false, "minimum": 1, "maximum": 100},
+    "offset": {"type": "integer", "required": false, "minimum": 0}
+  },
+  "response": {"status": 200, "schema": {"type": "object", "additionalProperties": true}},
+  "errors": [{"code": "VALIDATION_FAILED", "status": 422, "description": "Tri Storefront inconnu."}],
+  "examples": {"response": {"data": {"items": [{"contract": "storefront.product.v3", "version": 3, "product_id": 1, "sellables": [{"sellable_id": 1}]}], "selection": {"group": ["textile"], "attributes": {"couleur": ["bleu"]}}, "facets": [{"type": "attribute", "key": "couleur", "options": [{"key": "bleu", "label": "Bleu", "count": 4, "selected": true}]}], "pagination": {"total": 1, "limit": 24, "offset": 0, "page": 1, "pages": 1, "has_more": false}}, "meta": {"contract": "public.storefront.products.index.v1"}}}
+}

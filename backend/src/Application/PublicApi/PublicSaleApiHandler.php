@@ -26,7 +26,9 @@ use App\Modules\Sale\Services\SaleFulfillmentService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use App\Modules\Sale\Services\SaleDeferredPaymentService;
+use App\Modules\Sale\Services\SaleGiftCardService;
 use App\Repository\SiteRepository;
+use App\Application\Business\StorefrontProjectionRepository;
 use InvalidArgumentException;
 use Throwable;
 
@@ -50,6 +52,8 @@ final class PublicSaleApiHandler
         private readonly ?SaleOnlinePaymentService $onlinePayments = null,
         private readonly ?SalePaymentMethodService $paymentMethods = null,
         private readonly ?SaleDeferredPaymentService $deferredPayments = null,
+        private readonly ?StorefrontProjectionRepository $storefront = null,
+        private readonly ?SaleGiftCardService $giftCards = null,
     ) {
         $this->responder = new PublicApiResponder();
     }
@@ -82,6 +86,7 @@ final class PublicSaleApiHandler
                         'requires_explicit_terms_acceptance' => true,
                         'invoice_before_payment' => false,
                     ],
+                    'gift_cards' => ['enabled'=>$this->giftCards !== null,'maximum_per_order'=>1,'gift_card_products_excluded'=>true],
                 ],
                 'fulfillment_methods' => $this->fulfillment?->availableMethods((int) $site['id'], $languageCode) ?? [],
                 'payment_methods' => $paymentMethods,
@@ -119,7 +124,11 @@ final class PublicSaleApiHandler
         try {
             $channel = $this->publicChannel((int) $site['id'], $code);
             $cart = $this->cartByToken($channel, $token);
-            return $this->json(['cart' => $this->cartPayload($cart, true)], 'public.sale.cart.show.v1', $site, $languageCode);
+            $review = $this->cartService->revalidateForDisplay((int) $cart['id']);
+            return $this->json([
+                'cart' => $this->cartPayload($review['cart'], true),
+                'changes' => $review['changes'],
+            ], 'public.sale.cart.show.v1', $site, $languageCode);
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
@@ -221,8 +230,11 @@ final class PublicSaleApiHandler
                 'defer_inventory_until_payment' => $deferredOnAvailability || (bool) ($resolvedPayment['defer_order_until_payment'] ?? false),
                 'payment_reservation_ttl_seconds' => 1800,
                 'request_fingerprint' => hash('sha256', json_encode($this->checkoutRequestPayload($payload), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}'),
+                'gift_card_code' => trim((string)($payload['gift_card']['code'] ?? '')),
+                'order_policy' => $orderPolicy,
             ]);
             $data = ['order' => $this->orderPayload($this->orders->orderWithLines((int) $order['id']))];
+            if(isset($order['gift_card'])) $data['gift_card']=$order['gift_card'];
             if ($deferredOnAvailability) {
                 if ($this->deferredPayments === null) throw new SalePaymentException('sale.deferred_payment_unavailable');
                 $data['deferred_payment'] = $this->deferredPayments->configure((int) $order['id'], [
@@ -235,7 +247,7 @@ final class PublicSaleApiHandler
                     'idempotency_key' => $idempotencyKey . '-deferred',
                     'accepted_at' => gmdate('Y-m-d H:i:s'),
                 ]);
-            } elseif ($createSession) {
+            } elseif ($createSession && (int)$order['paid_total_minor'] < (int)$order['grand_total_minor']) {
                 if ($this->onlinePayments === null) {
                     throw new SalePaymentException('sale.online_payment_unavailable');
                 }
@@ -257,6 +269,26 @@ final class PublicSaleApiHandler
         } catch (Throwable $e) {
             return $this->domainError($e);
         }
+    }
+
+    public function validateGiftCard(string $code): Response
+    {
+        [$site,$languageCode]=$this->context();
+        try{
+            $channel=$this->publicChannel((int)$site['id'],$code);$payload=$this->payload();
+            $token=trim((string)($payload['cart_token']??$payload['token']??''));$cart=$this->cartByToken($channel,$token);
+            $service=$this->giftCards??throw new SaleValidationException('sale.gift_card_unavailable');
+            $requester=(string)($this->request->server['REMOTE_ADDR']??'unknown').'|'.substr((string)($this->request->header('User-Agent')??''),0,160);
+            $result=$service->validatePublic((int)$site['id'],(string)$cart['currency'],(string)($payload['code']??''),(int)$cart['grand_total_minor'],$requester);
+            return $this->json(['gift_card'=>$result],'public.sale.gift_card.validate.v1',$site,$languageCode);
+        }catch(Throwable $e){return $this->domainError($e);}
+    }
+
+    public function claimGiftCard(string $code): Response
+    {
+        [$site,$languageCode]=$this->context();
+        try{$this->publicChannel((int)$site['id'],$code);$payload=$this->payload();$result=($this->giftCards??throw new SaleValidationException('sale.gift_card_unavailable'))->claim((string)($payload['claim_token']??''),(int)$site['id']);return $this->json(['gift_card'=>$result],'public.sale.gift_card.claim.v1',$site,$languageCode);}
+        catch(Throwable $e){return $this->domainError($e);}
     }
 
     public function updateCheckout(string $code, string $token): Response
@@ -372,7 +404,7 @@ final class PublicSaleApiHandler
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
-        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
         if (!preg_match('/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/i', $languageCode)) {
             $languageCode = (string) ($site['default_language_code'] ?? 'fr');
@@ -394,6 +426,14 @@ final class PublicSaleApiHandler
     private function publicChannel(int $siteId, string $code): array
     {
         $code = $this->code($code);
+        if ($this->storefront !== null) {
+            $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
+            $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
+            $shop = $this->storefront->activeShop($siteId, $languageCode);
+            if ($shop === null || (string) ($shop['channel_code'] ?? '') !== $code) {
+                throw new SaleValidationException('sale.public_channel_not_found');
+            }
+        }
         try {
             $channel = $this->channelResolver?->storefront($siteId, $code)
                 ?? $this->channels->requireByCode($siteId, $code);
@@ -502,6 +542,11 @@ final class PublicSaleApiHandler
             'payment' => $pick($payload['payment'] ?? $payload['payment_method'] ?? [], ['code']),
             'terms_accepted' => ($payload['terms_accepted'] ?? false) === true,
             'marketing_consent' => is_bool($payload['marketing_consent'] ?? null) ? $payload['marketing_consent'] : null,
+            'order_policy' => $pick($payload['order_policy'] ?? [], [
+                'payment_timing', 'price_policy', 'deposit_minor', 'expected_availability_at',
+                'payment_window_seconds', 'terms_accepted',
+            ]),
+            'gift_card' => trim((string)($payload['gift_card']['code']??'')) === '' ? null : ['fingerprint'=>hash('sha256',strtoupper(preg_replace('/[^A-Z0-9]/','',(string)$payload['gift_card']['code'])??''))],
         ];
     }
 
@@ -618,6 +663,9 @@ final class PublicSaleApiHandler
     private function linePayload(array $line, ?array $reservation = null): array
     {
         $state = (string) ($line['availability_state'] ?? 'available');
+        $metadata = json_decode((string) ($line['metadata_json'] ?? '{}'), true);
+        $snapshot = is_array($metadata['snapshot'] ?? null) ? $metadata['snapshot'] : [];
+        $mainAsset = is_array($snapshot['main_asset'] ?? null) ? $snapshot['main_asset'] : [];
         $availability = match ($state) {
             'backorder' => ['status' => 'backorder', 'label' => 'Sur commande', 'is_orderable' => true],
             'unavailable', 'contact_us' => ['status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false],
@@ -632,6 +680,8 @@ final class PublicSaleApiHandler
             'barcode' => $line['barcode'] ?? null,
             'product_name' => (string) ($line['product_name'] ?? ''),
             'variant_name' => $line['variant_name'] ?? null,
+            'media_url' => (string) ($snapshot['main_media_url'] ?? $mainAsset['url'] ?? ''),
+            'media_alt' => (string) ($mainAsset['alt_text'] ?? ''),
             'quantity' => (int) ($line['quantity'] ?? 0),
             'unit_price_minor' => (int) ($line['unit_price_minor'] ?? 0),
             'regular_unit_price_minor' => (int) ($line['regular_unit_price_minor'] ?? 0),
@@ -685,6 +735,9 @@ final class PublicSaleApiHandler
     private function domainError(Throwable $e): Response
     {
         if ($e instanceof SaleValidationException) {
+            if ($e->getMessage() === 'sale.gift_card_rate_limited') {
+                return Response::error(ErrorCode::RATE_LIMIT_EXCEEDED, 'Trop de tentatives. Réessayez plus tard.', 429, [], ['Cache-Control'=>'no-store','Retry-After'=>'600']);
+            }
             if ($e->getMessage() === 'sale.cart_version_conflict') {
                 return Response::error(ErrorCode::REVISION_CONFLICT, 'Le panier a été modifié par une autre requête.', 409, ['sale' => [$e->getMessage()]], ['Cache-Control' => 'no-store']);
             }

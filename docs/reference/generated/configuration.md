@@ -35,6 +35,7 @@ generated: true
 | `APP_ENV` | `backend/config/app.php`, `backend/config/security.php`, `backend/src/Application/PublicApi/PublicSaleApiHandler.php`, `backend/src/Modules/Sale/Payments/PaymentProviderRegistry.php`, `backend/src/Security/PreviewSigner.php` |
 | `APP_FALLBACK_LOCALE` | `backend/config/app.php` |
 | `APP_FORM_RELATION_SIGNING_KEY` | `backend/config/app.php` |
+| `APP_GIFT_CARD_SIGNING_KEY` | `backend/config/app.php` |
 | `APP_HEALTH_DB_BUSY_TIMEOUT_MS` | `backend/config/health.php` |
 | `APP_HEALTH_READY_TIMEOUT_MS` | `backend/config/health.php` |
 | `APP_KEY` | `backend/src/Repository/AuthRepository.php` |
@@ -89,6 +90,7 @@ generated: true
 | `BUSINESS_WHATSAPP_API_VERSION` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `BUSINESS_WHATSAPP_ENABLED` | `backend/src/Modules/Business/Messaging/WhatsAppCloudApiProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `BUSINESS_WHATSAPP_PHONE_NUMBER_ID` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
+| `CMS_DATABASE_DIR` | `backend/config/databases.php`, `backend/config/modules.php` |
 | `CMS_TOTP_KEY` | `backend/src/Repository/AuthRepository.php` |
 | `DEC_CMS_AUDIT_INTERNAL` | `tools/python/operations/deployment/d_deploy.py` |
 | `FTP_PASSIVE` | `tools/python/operations/deployment/d11_ci_release.py` |

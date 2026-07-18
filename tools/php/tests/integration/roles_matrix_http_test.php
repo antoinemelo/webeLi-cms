@@ -2,6 +2,21 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../TestHarness.php';
+
+$rolesMatrixDatabaseDir = sys_get_temp_dir() . '/amcms-roles-matrix-db-' . bin2hex(random_bytes(6));
+if (!mkdir($rolesMatrixDatabaseDir, 0775, true) && !is_dir($rolesMatrixDatabaseDir)) {
+    throw new RuntimeException('Unable to create temporary database directory.');
+}
+$sourceDatabaseDir = dirname(__DIR__, 4) . '/storage/database';
+foreach (glob($sourceDatabaseDir . '/*.sqlite') ?: [] as $source) {
+    $target = $rolesMatrixDatabaseDir . '/' . basename($source);
+    $sourceDatabase = new PDO('sqlite:' . $source, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $sourceDatabase->exec("VACUUM INTO " . $sourceDatabase->quote($target));
+}
+putenv('CMS_DATABASE_DIR=' . $rolesMatrixDatabaseDir);
+$_ENV['CMS_DATABASE_DIR'] = $rolesMatrixDatabaseDir;
+$_SERVER['CMS_DATABASE_DIR'] = $rolesMatrixDatabaseDir;
+
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
@@ -14,35 +29,6 @@ if (!function_exists('proc_open')) {
 }
 
 $h = new TestHarness();
-
-/** @return array{dir:string, files:array<string,string>} */
-function roles_matrix_backup_databases(): array
-{
-    $backupDir = sys_get_temp_dir() . '/amcms-roles-matrix-backup-' . bin2hex(random_bytes(6));
-    if (!mkdir($backupDir, 0775, true) && !is_dir($backupDir)) {
-        throw new RuntimeException('Unable to create temporary database backup directory.');
-    }
-    $files = [];
-    foreach (glob(base_path('storage/database/*.sqlite')) ?: [] as $source) {
-        $target = $backupDir . '/' . basename($source);
-        if (!copy($source, $target)) {
-            throw new RuntimeException('Unable to backup database: ' . $source);
-        }
-        $files[$source] = $target;
-    }
-    return ['dir' => $backupDir, 'files' => $files];
-}
-
-/** @param array{dir:string, files:array<string,string>} $backup */
-function roles_matrix_restore_databases(array $backup): void
-{
-    foreach ($backup['files'] as $source => $target) {
-        if (is_file($target)) {
-            copy($target, $source);
-        }
-    }
-    test_remove_tree($backup['dir']);
-}
 
 function roles_matrix_free_port(): int
 {
@@ -57,6 +43,7 @@ function roles_matrix_free_port(): int
             }
         }
     }
+    test_remove_tree($GLOBALS['rolesMatrixDatabaseDir'] ?? '');
     echo "[SKIP] TCP bind unavailable for PHP built-in server\n";
     exit(0);
 }
@@ -95,8 +82,13 @@ function roles_matrix_stop_server(mixed $process): void
 /** @return array{roles:array<string,int>, site_a:int, site_b:int} */
 function roles_matrix_seed_users(): array
 {
-    $core = new PDO('sqlite:' . base_path('storage/database/core.sqlite'), null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-    $iam = new PDO('sqlite:' . base_path('storage/database/iam.sqlite'), null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $databaseDir = $_ENV['CMS_DATABASE_DIR'] ?? $_SERVER['CMS_DATABASE_DIR'] ?? getenv('CMS_DATABASE_DIR');
+    if (!is_string($databaseDir) || trim($databaseDir) === '') {
+        throw new RuntimeException('CMS_DATABASE_DIR is required for the isolated roles matrix fixture.');
+    }
+    $databaseDir = rtrim($databaseDir, DIRECTORY_SEPARATOR);
+    $core = new PDO('sqlite:' . $databaseDir . '/core.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $iam = new PDO('sqlite:' . $databaseDir . '/iam.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
     $sites = $core->query('SELECT id FROM sites WHERE is_active = 1 ORDER BY id LIMIT 2')->fetchAll(PDO::FETCH_COLUMN);
     if (count($sites) < 2) {
@@ -125,6 +117,7 @@ function roles_matrix_seed_users(): array
         'user' => 9107,
     ];
     $passwordHash = password_hash('RoleMatrix123!', PASSWORD_DEFAULT);
+    $iam->exec('DELETE FROM iam_rate_limits');
     $iam->exec('DELETE FROM iam_sessions WHERE user_id BETWEEN 9101 AND 9107');
     $iam->exec('DELETE FROM iam_audit_logs WHERE actor_user_id BETWEEN 9101 AND 9107');
     $iam->exec('DELETE FROM iam_user_site_roles WHERE user_id BETWEEN 9101 AND 9107');
@@ -259,7 +252,15 @@ function roles_matrix_login(string $baseUrl, string $email): RolesMatrixHttpClie
         'Accept' => 'text/html',
     ]);
     if (!in_array($result['status'], [302, 303], true)) {
-        throw new RuntimeException('Login failed for ' . $email . ', status=' . $result['status']);
+        $diagnostic = '';
+        if (preg_match('/<p class="alert alert-error">(.*?)<\/p>/s', $result['body'], $matches) === 1) {
+            $diagnostic = html_entity_decode(strip_tags($matches[1]), ENT_QUOTES, 'UTF-8');
+        }
+        $diagnostic = trim(preg_replace('/\s+/', ' ', $diagnostic) ?? '');
+        throw new RuntimeException(
+            'Login failed for ' . $email . ', status=' . $result['status']
+            . ($diagnostic !== '' ? ', response=' . mb_substr($diagnostic, 0, 240) : '')
+        );
     }
     return $client;
 }
@@ -281,7 +282,6 @@ function roles_matrix_assert_forbidden(TestHarness $h, array $response, string $
     $h->assertSame(403, $response['status'], $message . ' is forbidden');
 }
 
-$backup = roles_matrix_backup_databases();
 $server = null;
 $pipes = [];
 try {
@@ -354,7 +354,9 @@ try {
             fclose($pipes[$idx]);
         }
     }
-    roles_matrix_restore_databases($backup);
+    test_remove_tree($rolesMatrixDatabaseDir);
+    putenv('CMS_DATABASE_DIR');
+    unset($_ENV['CMS_DATABASE_DIR'], $_SERVER['CMS_DATABASE_DIR']);
 }
 
 exit($h->finish('INTEGRATION P1-03 roles matrix HTTP smoke'));

@@ -14104,5 +14104,19 @@ WHERE sm.site_id = public_content_snapshots.site_id
   AND sm.source_published_revision_id = public_content_snapshots.source_published_revision_id
   AND sm.source_revision_checksum_sha256 = public_content_snapshots.source_revision_checksum_sha256;
 
+-- M8.1 : fixture explicite du Shop système français. Les autres langues
+-- restent non initialisées jusqu'à une action Studio puis une activation Ventes.
+INSERT OR REPLACE INTO cms_shop_configurations(
+    site_id,language_code,channel_id,channel_code,status,currency,route_path,theme_key,menu_key,menu_label,menu_position,
+    cart_visible,show_quantities,last_available_threshold,draft_json,published_json,config_version,published_version,
+    activated_at,published_at,last_rebuild_at
+)
+SELECT s.id,'fr',3,'web-main','active','CHF','/shop','default','main','Boutique',100,
+       1,0,1,
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+FROM sites s WHERE s.site_key='main';
+
 COMMIT;
 PRAGMA foreign_keys = ON;

@@ -800,6 +800,132 @@ CREATE TABLE IF NOT EXISTS sale_payment_allocations (
 CREATE INDEX IF NOT EXISTS idx_sale_payment_allocations_order
     ON sale_payment_allocations(order_id);
 
+-- Bons cadeaux : le secret public n'est jamais conserve en clair. Le solde
+-- courant est une projection optimiste du journal immuable ci-dessous.
+CREATE TABLE IF NOT EXISTS sale_gift_card_policies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    currency TEXT NOT NULL CHECK(length(currency)=3 AND currency=upper(currency)),
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled')),
+    expires_after_days INTEGER CHECK(expires_after_days IS NULL OR expires_after_days > 0),
+    maximum_cards_per_order INTEGER NOT NULL DEFAULT 1 CHECK(maximum_cards_per_order = 1),
+    promotions_stack INTEGER NOT NULL DEFAULT 1 CHECK(promotions_stack IN (0,1)),
+    applies_to_tax INTEGER NOT NULL DEFAULT 1 CHECK(applies_to_tax IN (0,1)),
+    applies_to_shipping INTEGER NOT NULL DEFAULT 1 CHECK(applies_to_shipping IN (0,1)),
+    applies_to_gift_card_products INTEGER NOT NULL DEFAULT 0 CHECK(applies_to_gift_card_products = 0),
+    public_attempt_limit INTEGER NOT NULL DEFAULT 12 CHECK(public_attempt_limit BETWEEN 3 AND 100),
+    public_attempt_window_seconds INTEGER NOT NULL DEFAULT 600 CHECK(public_attempt_window_seconds BETWEEN 60 AND 86400),
+    resend_limit INTEGER NOT NULL DEFAULT 3 CHECK(resend_limit BETWEEN 1 AND 20),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(site_id,currency),
+    CHECK(site_id > 0)
+);
+
+CREATE TABLE IF NOT EXISTS sale_gift_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    currency TEXT NOT NULL CHECK(length(currency)=3 AND currency=upper(currency)),
+    public_reference TEXT NOT NULL,
+    code_verifier TEXT NOT NULL,
+    code_last4 TEXT NOT NULL CHECK(length(code_last4)=4),
+    initial_value_minor INTEGER NOT NULL CHECK(initial_value_minor > 0),
+    balance_minor INTEGER NOT NULL CHECK(balance_minor >= 0 AND balance_minor <= initial_value_minor),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','depleted','expired','cancelled')),
+    origin_order_id INTEGER NOT NULL,
+    origin_order_line_id INTEGER NOT NULL,
+    origin_unit_number INTEGER NOT NULL DEFAULT 1 CHECK(origin_unit_number > 0),
+    recipient_name TEXT,
+    recipient_email TEXT,
+    message TEXT,
+    send_at TEXT,
+    issued_at TEXT,
+    expires_at TEXT,
+    cancelled_at TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    correlation_id TEXT,
+    version INTEGER NOT NULL DEFAULT 0 CHECK(version >= 0),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(public_reference),
+    UNIQUE(code_verifier),
+    UNIQUE(origin_order_line_id,origin_unit_number),
+    FOREIGN KEY(origin_order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(origin_order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(site_id > 0),
+    CHECK(trim(public_reference) <> ''),
+    CHECK(length(code_verifier) = 64)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_gift_cards_site_status ON sale_gift_cards(site_id,status,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sale_gift_cards_origin ON sale_gift_cards(origin_order_id,origin_order_line_id);
+
+CREATE TABLE IF NOT EXISTS sale_gift_card_ledger (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gift_card_id INTEGER NOT NULL,
+    entry_type TEXT NOT NULL CHECK(entry_type IN ('issuance','debit','credit','expiration','cancellation','adjustment')),
+    amount_delta_minor INTEGER NOT NULL,
+    balance_after_minor INTEGER NOT NULL CHECK(balance_after_minor >= 0),
+    order_id INTEGER,
+    order_line_id INTEGER,
+    idempotency_key_hash TEXT NOT NULL,
+    correlation_id TEXT,
+    actor_type TEXT NOT NULL DEFAULT 'system' CHECK(actor_type IN ('system','customer','operator')),
+    created_by_iam_user_id INTEGER,
+    reason TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(gift_card_id,idempotency_key_hash),
+    FOREIGN KEY(gift_card_id) REFERENCES sale_gift_cards(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(length(idempotency_key_hash)=64),
+    CHECK(entry_type <> 'issuance' OR amount_delta_minor > 0),
+    CHECK(entry_type NOT IN ('debit','expiration','cancellation') OR amount_delta_minor <= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_gift_card_ledger_card ON sale_gift_card_ledger(gift_card_id,id);
+CREATE INDEX IF NOT EXISTS idx_sale_gift_card_ledger_order ON sale_gift_card_ledger(order_id,id);
+
+CREATE TRIGGER IF NOT EXISTS trg_sale_gift_card_ledger_immutable_update
+BEFORE UPDATE ON sale_gift_card_ledger BEGIN SELECT RAISE(ABORT,'sale.gift_card_ledger_immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_sale_gift_card_ledger_immutable_delete
+BEFORE DELETE ON sale_gift_card_ledger BEGIN SELECT RAISE(ABORT,'sale.gift_card_ledger_immutable'); END;
+
+CREATE TABLE IF NOT EXISTS sale_gift_card_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gift_card_id INTEGER NOT NULL,
+    delivery_type TEXT NOT NULL CHECK(delivery_type IN ('initial','resend','download')),
+    channel TEXT NOT NULL DEFAULT 'secure_claim' CHECK(channel IN ('secure_claim','email')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','claimed','expired','cancelled','failed')),
+    claim_token_hash TEXT NOT NULL,
+    recipient_hint TEXT,
+    expires_at TEXT NOT NULL,
+    claimed_at TEXT,
+    created_by_iam_user_id INTEGER,
+    correlation_id TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(claim_token_hash),
+    FOREIGN KEY(gift_card_id) REFERENCES sale_gift_cards(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(length(claim_token_hash)=64)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_gift_card_deliveries_card ON sale_gift_card_deliveries(gift_card_id,id DESC);
+
+CREATE TABLE IF NOT EXISTS sale_gift_card_public_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    requester_fingerprint TEXT NOT NULL,
+    successful INTEGER NOT NULL DEFAULT 0 CHECK(successful IN (0,1)),
+    attempted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0),
+    CHECK(length(requester_fingerprint)=64)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_gift_card_attempts_window
+    ON sale_gift_card_public_attempts(site_id,requester_fingerprint,attempted_at DESC);
+
 CREATE TABLE IF NOT EXISTS sale_pos_registers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -1257,11 +1383,17 @@ CREATE INDEX IF NOT EXISTS idx_sale_receipts_order
 CREATE TABLE IF NOT EXISTS sale_order_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
+    site_id INTEGER NOT NULL,
     document_number TEXT NOT NULL,
     document_type TEXT NOT NULL CHECK(document_type IN ('order_confirmation','invoice','credit_note','delivery_note','pos_receipt')),
     status TEXT NOT NULL DEFAULT 'issued' CHECK(status IN ('issued','cancelled')),
     language TEXT NOT NULL DEFAULT 'fr' CHECK(language IN ('fr','en')),
     version INTEGER NOT NULL DEFAULT 1 CHECK(version > 0),
+    series_code TEXT,
+    sequence_number INTEGER,
+    document_hash TEXT,
+    policy_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(policy_snapshot_json)),
+    pdf_media_id INTEGER,
     snapshot_json TEXT NOT NULL CHECK(json_valid(snapshot_json)),
     text_snapshot TEXT NOT NULL,
     html_snapshot TEXT NOT NULL,
@@ -1271,13 +1403,70 @@ CREATE TABLE IF NOT EXISTS sale_order_documents (
     cancellation_reason TEXT,
     UNIQUE(order_id, document_type, language, version),
     UNIQUE(document_number),
+    UNIQUE(site_id, document_type, series_code, sequence_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CHECK(trim(document_number) <> ''),
+    CHECK(site_id > 0), CHECK(trim(document_number) <> ''),
     CHECK(status <> 'cancelled' OR (cancelled_at IS NOT NULL AND trim(COALESCE(cancellation_reason,'')) <> ''))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sale_order_documents_order
     ON sale_order_documents(order_id, document_type, issued_at);
+
+-- Politique configurable par site. La validation juridique de son contenu
+-- reste une responsabilite explicite du deploiement.
+CREATE TABLE IF NOT EXISTS sale_document_policies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL UNIQUE,
+    invoice_trigger TEXT NOT NULL DEFAULT 'paid' CHECK(invoice_trigger IN ('paid','validated')),
+    invoice_series TEXT NOT NULL DEFAULT 'INV',
+    credit_note_series TEXT NOT NULL DEFAULT 'CRN',
+    seller_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(seller_snapshot_json)),
+    gift_card_policy TEXT NOT NULL DEFAULT 'unconfigured' CHECK(gift_card_policy IN ('unconfigured','sale','redemption')),
+    legal_notice TEXT,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0), CHECK(trim(invoice_series) <> ''), CHECK(trim(credit_note_series) <> '')
+);
+
+CREATE TABLE IF NOT EXISTS sale_document_sequences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    document_type TEXT NOT NULL CHECK(document_type IN ('order_confirmation','invoice','credit_note','delivery_note','pos_receipt')),
+    series_code TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    next_number INTEGER NOT NULL DEFAULT 1 CHECK(next_number > 0),
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,document_type,series_code,period_key),
+    CHECK(site_id > 0), CHECK(trim(series_code) <> ''), CHECK(trim(period_key) <> '')
+);
+
+CREATE TABLE IF NOT EXISTS sale_admin_export_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    export_type TEXT NOT NULL,
+    filters_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(filters_json)),
+    row_count INTEGER NOT NULL DEFAULT 0 CHECK(row_count >= 0),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK(site_id > 0), CHECK(trim(export_type) <> '')
+);
+CREATE INDEX IF NOT EXISTS idx_sale_admin_export_audit_site ON sale_admin_export_audit(site_id,created_at DESC,id DESC);
+
+CREATE TABLE IF NOT EXISTS sale_document_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL, order_id INTEGER NOT NULL, document_id INTEGER NOT NULL, outbox_id INTEGER,
+    recipient_hash TEXT NOT NULL, language TEXT NOT NULL DEFAULT 'fr' CHECK(language IN ('fr','en')),
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','sent','failed','cancelled')),
+    idempotency_key TEXT NOT NULL, resend_of_id INTEGER, queued_by_iam_user_id INTEGER,
+    queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,idempotency_key),
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(document_id) REFERENCES sale_order_documents(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(outbox_id) REFERENCES sale_outbox(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(resend_of_id) REFERENCES sale_document_deliveries(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_sale_document_deliveries_document ON sale_document_deliveries(document_id,queued_at DESC,id DESC);
 
 CREATE TRIGGER IF NOT EXISTS trg_sale_order_documents_no_delete
 BEFORE DELETE ON sale_order_documents
@@ -1288,9 +1477,11 @@ BEFORE UPDATE ON sale_order_documents
 WHEN NOT (
     OLD.status='issued' AND NEW.status='cancelled'
     AND NEW.cancelled_at IS NOT NULL AND trim(COALESCE(NEW.cancellation_reason,'')) <> ''
-    AND NEW.order_id=OLD.order_id AND NEW.document_number=OLD.document_number
+    AND NEW.order_id=OLD.order_id AND NEW.site_id=OLD.site_id AND NEW.document_number=OLD.document_number
     AND NEW.document_type=OLD.document_type AND NEW.language=OLD.language
-    AND NEW.version=OLD.version AND NEW.snapshot_json=OLD.snapshot_json
+    AND NEW.version=OLD.version AND NEW.series_code IS OLD.series_code AND NEW.sequence_number IS OLD.sequence_number
+    AND NEW.document_hash IS OLD.document_hash AND NEW.policy_snapshot_json=OLD.policy_snapshot_json
+    AND NEW.snapshot_json=OLD.snapshot_json AND NEW.pdf_media_id IS OLD.pdf_media_id
     AND NEW.text_snapshot=OLD.text_snapshot AND NEW.html_snapshot=OLD.html_snapshot
 )
 BEGIN SELECT RAISE(ABORT, 'sale issued documents are immutable'); END;
@@ -1552,7 +1743,10 @@ CREATE TABLE IF NOT EXISTS sale_fulfillments (
     status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','allocated','preparing','partially_prepared','partially_shipped','ready_for_pickup','shipped','handed_over','delivered','blocked','cancelled','returned')),
     shipping_address_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_address_snapshot_json)),
     shipping_method_snapshot_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(shipping_method_snapshot_json)),
+    carrier_code TEXT,
     tracking_reference TEXT,
+    tracking_url TEXT,
+    tracking_validated_at TEXT,
     pickup_code TEXT,
     due_at TEXT,
     operator_proof_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(operator_proof_json)),
@@ -1566,6 +1760,7 @@ CREATE TABLE IF NOT EXISTS sale_fulfillments (
     ready_at TEXT,
     handed_over_at TEXT,
     delivered_at TEXT,
+    exception_at TEXT,
     cancelled_at TEXT,
     UNIQUE(order_id, fulfillment_number),
     FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -1595,6 +1790,27 @@ CREATE TABLE IF NOT EXISTS sale_fulfillment_lines (
     FOREIGN KEY(order_line_id) REFERENCES sale_order_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CHECK(prepared_quantity <= quantity)
 );
+
+-- Les événements transporteur restent distincts de l'état métier du
+-- fulfillment. Seules les données minimales utiles au suivi sont conservées.
+CREATE TABLE IF NOT EXISTS sale_fulfillment_tracking_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fulfillment_id INTEGER NOT NULL,
+    provider_event_id TEXT,
+    event_type TEXT NOT NULL,
+    event_status TEXT NOT NULL CHECK(event_status IN ('information','in_transit','delivered','exception')),
+    details_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(details_json)),
+    occurred_at TEXT NOT NULL,
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by_iam_user_id INTEGER,
+    UNIQUE(fulfillment_id, provider_event_id),
+    FOREIGN KEY(fulfillment_id) REFERENCES sale_fulfillments(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(trim(event_type) <> ''),
+    CHECK(provider_event_id IS NULL OR trim(provider_event_id) <> '')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_fulfillment_tracking_events
+    ON sale_fulfillment_tracking_events(fulfillment_id, occurred_at, id);
 
 CREATE TABLE IF NOT EXISTS sale_state_transitions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1745,6 +1961,7 @@ CREATE TABLE IF NOT EXISTS sale_events (
         'sale.gift_card.redeemed',
         'customer.account.created',
         'sale.invoice.sent',
+        'sale.notification.requested',
         'sale.stock.reserved',
         'sale.stock.consumed',
         'sale.stock.released'
@@ -1791,6 +2008,43 @@ CREATE INDEX IF NOT EXISTS idx_sale_outbox_status_available
 CREATE INDEX IF NOT EXISTS idx_sale_outbox_event
     ON sale_outbox(event_id);
 
+-- Journal consultable des notifications transactionnelles. Le destinataire
+-- n'est pas dupliqué : seule son empreinte est persistée, le transport résout
+-- l'adresse depuis le snapshot de commande au moment du traitement.
+CREATE TABLE IF NOT EXISTS sale_order_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    order_id INTEGER NOT NULL,
+    fulfillment_id INTEGER,
+    document_id INTEGER,
+    outbox_id INTEGER,
+    notification_type TEXT NOT NULL CHECK(notification_type IN (
+        'order_confirmed','payment_expected','payment_received','pickup_ready',
+        'shipment_sent','fulfillment_exception','delivery_completed'
+    )),
+    recipient_hash TEXT NOT NULL,
+    language TEXT NOT NULL DEFAULT 'fr' CHECK(language IN ('fr','en')),
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','sent','failed','cancelled')),
+    idempotency_key TEXT NOT NULL,
+    resend_of_id INTEGER,
+    last_error TEXT,
+    queued_by_iam_user_id INTEGER,
+    queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT,
+    UNIQUE(site_id, idempotency_key),
+    FOREIGN KEY(order_id) REFERENCES sale_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(fulfillment_id) REFERENCES sale_fulfillments(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(document_id) REFERENCES sale_order_documents(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(outbox_id) REFERENCES sale_outbox(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    FOREIGN KEY(resend_of_id) REFERENCES sale_order_notifications(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(trim(recipient_hash) <> ''),
+    CHECK(trim(idempotency_key) <> ''),
+    CHECK(sent_at IS NULL OR status = 'sent')
+);
+
+CREATE INDEX IF NOT EXISTS idx_sale_order_notifications_order
+    ON sale_order_notifications(order_id, queued_at DESC, id DESC);
+
 INSERT OR IGNORE INTO sale_channels (
     site_id,
     code,
@@ -1811,6 +2065,8 @@ INSERT OR IGNORE INTO sale_channels (
 
 INSERT OR IGNORE INTO sale_channel_checkout_configs(channel_id,site_id,cart_enabled,checkout_enabled,guest_checkout_enabled,status)
 SELECT id,site_id,1,1,CASE WHEN channel_kind='storefront' THEN 1 ELSE 0 END,CASE WHEN status='active' THEN 'active' ELSE 'disabled' END FROM sale_channels;
+INSERT OR IGNORE INTO sale_gift_card_policies(site_id,currency,status,expires_after_days)
+SELECT DISTINCT site_id,currency,'active',365 FROM sale_channels WHERE status='active';
 INSERT OR IGNORE INTO sale_stock_locations(site_id,code,name,location_type,status)
 SELECT DISTINCT site_id,'channel-default','Stock canal par défaut','main','active' FROM sale_channels;
 INSERT OR IGNORE INTO sale_inventory_channel_configs(

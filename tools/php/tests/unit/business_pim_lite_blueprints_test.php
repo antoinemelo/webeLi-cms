@@ -123,7 +123,7 @@ $h->assertTrue(in_array('catalog.explain_missing_requirements', $score['ai']['al
 
 $relation = $byKey['business_product_relation'];
 assertPimFields($h, $relation, ['product_id', 'related_product_id', 'relation_type', 'sort_order'], 'business_product_relation');
-assertPimEnum($h, $relation, 'relation_type', ['accessory', 'alternative', 'bundle_candidate', 'replacement', 'upsell', 'cross_sell', 'similar'], 'product relation types are declared');
+assertPimEnum($h, $relation, 'relation_type', ['related', 'accessory', 'alternative', 'bundle_candidate', 'replacement', 'upsell', 'cross_sell', 'similar'], 'product relation types are declared');
 
 $bundle = $byKey['business_product_bundle'];
 assertPimFields($h, $bundle, ['bundle_product_id', 'bundle_variant_id', 'pricing_mode', 'stock_mode', 'is_active'], 'business_product_bundle');

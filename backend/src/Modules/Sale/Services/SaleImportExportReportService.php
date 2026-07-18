@@ -324,6 +324,79 @@ final class SaleImportExportReportService
         ];
     }
 
+    /**
+     * Indicateurs calcules exclusivement depuis les instantanes Sale.
+     * Les definitions sont retournees avec les valeurs pour eviter toute
+     * ambiguite entre chiffre d'affaires brut, net et encaissements.
+     * @param array<string,mixed> $filters @return array<string,mixed>
+     */
+    public function salesDashboard(int $siteId, array $filters = []): array
+    {
+        [$where,$params] = $this->orderWhere($siteId,$filters,'o');
+        $where .= " AND o.status<>'cancelled'";
+        $summary = $this->db()->one(
+            "SELECT COUNT(DISTINCT o.id) orders_count,
+                    COALESCE(SUM(o.subtotal_minor),0) gross_sales_minor,
+                    COALESCE(SUM(o.discount_total_minor),0) discounts_minor,
+                    COALESCE(SUM(o.tax_total_minor),0) taxes_minor,
+                    COALESCE(SUM(o.shipping_total_minor),0) shipping_minor,
+                    COALESCE(SUM(o.grand_total_minor),0) ordered_minor,
+                    COALESCE(SUM(o.grand_total_minor-o.refunded_total_minor),0) net_sales_minor,
+                    COALESCE(SUM(o.paid_total_minor),0) paid_minor,
+                    COALESCE(SUM(o.refunded_total_minor),0) refunded_minor,
+                    CASE WHEN COUNT(o.id)=0 THEN 0 ELSE CAST(ROUND(1.0*SUM(o.grand_total_minor)/COUNT(o.id)) AS INTEGER) END average_order_minor
+             FROM sale_orders o {$where}", $params
+        ) ?? [];
+        $lineWhere = str_replace('WHERE ', 'WHERE ', $where);
+        $line = $this->db()->one(
+            "SELECT COALESCE(SUM(l.quantity),0) units_count,
+                    COALESCE(SUM(CASE WHEN COALESCE(json_extract(l.snapshot_json,'$.product_type'),l.product_type)='gift_card' THEN l.quantity ELSE 0 END),0) gift_card_units,
+                    COALESCE(SUM(CASE WHEN COALESCE(json_extract(l.snapshot_json,'$.product_type'),l.product_type)='gift_card' THEN l.line_total_minor ELSE 0 END),0) gift_card_sales_minor
+             FROM sale_orders o JOIN sale_order_lines l ON l.order_id=o.id {$lineWhere}", $params
+        ) ?? [];
+        $orders = $this->db()->all(
+            "SELECT o.id,o.order_number,o.placed_at,o.source,o.status,o.payment_status,o.fulfillment_status,o.currency,
+                    o.grand_total_minor,o.paid_total_minor,o.refunded_total_minor,c.code channel_code,c.name channel_name
+             FROM sale_orders o JOIN sale_channels c ON c.id=o.channel_id {$where}
+             ORDER BY COALESCE(o.placed_at,o.created_at) DESC,o.id DESC LIMIT 200", $params
+        );
+        $channels = $this->db()->all(
+            "SELECT c.code,c.name,c.channel_type,o.currency,COUNT(*) orders_count,SUM(o.grand_total_minor) ordered_minor,SUM(o.grand_total_minor-o.refunded_total_minor) net_sales_minor
+             FROM sale_orders o JOIN sale_channels c ON c.id=o.channel_id {$where}
+             GROUP BY c.id,o.currency ORDER BY net_sales_minor DESC", $params
+        );
+        return [
+            'scope'=>['site_id'=>$siteId,'filters'=>$filters,'source'=>'immutable_sale_order_snapshots','drilldown_limit'=>200],
+            'definitions'=>[
+                'gross_sales_minor'=>'Sous-total des lignes avant remises, hors livraison.',
+                'ordered_minor'=>'Total commandé, taxes et livraison comprises.',
+                'net_sales_minor'=>'Total commandé diminué des remboursements réussis.',
+                'paid_minor'=>'Montant alloué comme payé aux commandes filtrées.',
+                'average_order_minor'=>'Total commandé divisé par le nombre de commandes.',
+                'gift_card_sales_minor'=>'Valeur des lignes figées dont le type produit est gift_card; le traitement comptable dépend de la politique configurée.',
+            ],
+            'summary'=>array_map('intval', array_merge($summary,$line)),
+            'by_channel'=>$channels,
+            'orders'=>$orders,
+            'supported_filters'=>['date_from','date_to','channel_id','source','status','payment_status','fulfillment_status','currency','payment_method','product_id','variant_id','product_type','category_id','group_id','has_refund'],
+        ];
+    }
+
+    /** @param array<string,mixed> $filters */
+    public function salesDashboardCsv(int $siteId, array $filters = []): string
+    {
+        $report = $this->salesDashboard($siteId,$filters);
+        $rows = [['order_number','placed_at','channel','source','status','payment_status','fulfillment_status','currency','ordered_minor','paid_minor','refunded_minor']];
+        foreach ($report['orders'] as $order) $rows[] = [$order['order_number'],$order['placed_at'],$order['channel_code'],$order['source'],$order['status'],$order['payment_status'],$order['fulfillment_status'],$order['currency'],$order['grand_total_minor'],$order['paid_total_minor'],$order['refunded_total_minor']];
+        return $this->csv($rows);
+    }
+
+    /** @param array<string,mixed> $filters */
+    public function auditExport(int $siteId, string $type, array $filters, int $actorId, int $rowCount): void
+    {
+        $this->db()->run('INSERT INTO sale_admin_export_audit(site_id,export_type,filters_json,row_count,created_by_iam_user_id) VALUES(?,?,?,?,?)', [$siteId,$type,json_encode($filters, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?: '{}',max(0,$rowCount),$actorId > 0 ? $actorId : null]);
+    }
+
     /** @return list<array<string,mixed>> */
     public function taxesReport(int $siteId, array $filters=[]): array
     {
@@ -422,11 +495,32 @@ final class SaleImportExportReportService
     {
         $clauses = [$alias . '.site_id = :site_id'];
         $params = ['site_id' => $siteId];
-        foreach (['channel_id', 'status', 'payment_status', 'source'] as $key) {
+        foreach (['channel_id', 'status', 'payment_status', 'fulfillment_status', 'source', 'currency'] as $key) {
             if (($filters[$key] ?? '') !== '') {
                 $clauses[] = $alias . '.' . $key . ' = :' . $key;
                 $params[$key] = $key === 'channel_id' ? (int) $filters[$key] : (string) $filters[$key];
             }
+        }
+        if (($filters['has_refund'] ?? '') !== '') {
+            $clauses[] = filter_var($filters['has_refund'], FILTER_VALIDATE_BOOLEAN) ? $alias.'.refunded_total_minor>0' : $alias.'.refunded_total_minor=0';
+        }
+        if (trim((string)($filters['payment_method'] ?? '')) !== '') {
+            $clauses[] = "EXISTS(SELECT 1 FROM sale_payment_transactions pt WHERE pt.order_id={$alias}.id AND json_extract(pt.provider_payload_json,'$.provider')=:payment_method)";
+            $params['payment_method'] = trim((string)$filters['payment_method']);
+        }
+        foreach (['product_id','variant_id','product_type','category_id','group_id'] as $lineFilter) {
+            $value = trim((string)($filters[$lineFilter] ?? ''));
+            if ($value === '') continue;
+            $jsonKey = match ($lineFilter) { 'product_id'=>'business_product_id','variant_id'=>'business_variant_id', default=>$lineFilter };
+            $param = 'line_'.$lineFilter;
+            if (in_array($lineFilter, ['category_id','group_id'], true)) {
+                $clauses[] = "EXISTS(SELECT 1 FROM sale_order_lines ol,json_each(json_extract(ol.snapshot_json,'$.{$jsonKey}s')) j WHERE ol.order_id={$alias}.id AND CAST(j.value AS TEXT)=:{$param})";
+            } else {
+                $column = match ($lineFilter) { 'product_id'=>'business_product_id','variant_id'=>'business_variant_id','product_type'=>'product_type', default=>null };
+                $expression = $column === null ? "json_extract(ol.snapshot_json,'$.{$jsonKey}')" : "COALESCE(json_extract(ol.snapshot_json,'$.{$jsonKey}'),ol.{$column})";
+                $clauses[] = "EXISTS(SELECT 1 FROM sale_order_lines ol WHERE ol.order_id={$alias}.id AND CAST({$expression} AS TEXT)=:{$param})";
+            }
+            $params[$param] = $value;
         }
         $date = trim((string) ($filters['date'] ?? ''));
         if ($date !== '') {

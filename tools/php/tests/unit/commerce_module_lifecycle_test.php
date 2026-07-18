@@ -36,6 +36,9 @@ try {
     $routePaths = array_column($routes, 1);
     $h->assertTrue(in_array('/admin/api/sale/ecommerce/shops', $routePaths, true), 'sale exposes the canonical ecommerce site configuration endpoint');
     $h->assertTrue(in_array('/admin/api/commerce/shops', $routePaths, true), 'the former commerce endpoint remains as a compatibility alias');
+    foreach (['/admin/api/sale/ecommerce/shops/{site_id}/{locale}','/admin/api/sale/ecommerce/shops/{site_id}/{locale}/publish','/admin/api/sale/ecommerce/shops/{site_id}/{locale}/activate','/admin/api/sale/ecommerce/shops/{site_id}/{locale}/deactivate','/admin/api/sale/ecommerce/shops/{site_id}/{locale}/repair'] as $path) {
+        $h->assertTrue(in_array($path,$routePaths,true),$path . ' is owned by Sale settings');
+    }
 
     $navigation = $sale?->adminNavigation() ?? [];
     $h->assertTrue(!in_array('/commerce', array_column($navigation, 'route'), true), 'sale does not publish a standalone Commerce menu');

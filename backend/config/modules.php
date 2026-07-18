@@ -1,5 +1,10 @@
 <?php
 
+$databaseDirOverride = $_ENV['CMS_DATABASE_DIR'] ?? $_SERVER['CMS_DATABASE_DIR'] ?? getenv('CMS_DATABASE_DIR');
+$databaseDir = is_string($databaseDirOverride) && trim($databaseDirOverride) !== ''
+    ? rtrim($databaseDirOverride, DIRECTORY_SEPARATOR)
+    : base_path('storage/database');
+
 return [
     // Modules core connus du produit. Ils restent chargés par le noyau éditorial
     // et ne passent pas par le cycle de vie destructif des modules métier.
@@ -52,5 +57,5 @@ return [
     'auto_install_providers' => false,
 
     // Dossier par défaut pour les bases SQLite dédiées aux modules métier.
-    'database_dir' => base_path('storage/database'),
+    'database_dir' => $databaseDir,
 ];

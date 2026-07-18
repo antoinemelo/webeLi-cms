@@ -6,10 +6,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tools.python.commands.e2e import E2E_TIMEOUT_SECONDS
 from tools.python.operations.testing import run_playwright_e2e as harness
 
 
 class E2EHarnessTest(unittest.TestCase):
+    def test_complete_e2e_command_allows_the_measured_release_duration(self) -> None:
+        self.assertEqual(3600, E2E_TIMEOUT_SECONDS)
+
     def test_targeted_e2e_gates_are_mutually_exclusive(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "mutuellement exclusifs"):
             harness.run_playwright({}, headed=False, omnichannel_only=True, usability_only=True)

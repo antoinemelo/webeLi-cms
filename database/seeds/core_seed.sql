@@ -21,6 +21,20 @@ SELECT 3,s.id,d.id,'/',1,'active'
 FROM sites s JOIN site_domains d ON d.site_id=s.id AND d.is_primary=1
 WHERE s.site_key='main';
 
+-- La boutique de démonstration est explicitement publiée et activée en français.
+-- Les autres langues restent inactives jusqu'à une action dans Ventes > Réglages > E-Commerce.
+INSERT INTO cms_shop_configurations(
+    site_id,language_code,channel_id,channel_code,status,currency,route_path,theme_key,menu_key,menu_label,menu_position,
+    cart_visible,show_quantities,last_available_threshold,draft_json,published_json,config_version,published_version,
+    activated_at,published_at,last_rebuild_at
+)
+SELECT s.id,'fr',3,'web-main','active','CHF','/shop','default','main','Boutique',100,
+       1,0,1,
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+FROM sites s WHERE s.site_key='main';
+
 INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json) VALUES
 ('default', 'Default Theme', '2.0.0', 1, 1, '{"path":"frontend/theme-default","supports":{"custom_blocks":true,"seo_meta_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"system","color_background":"#fbfcfe","color_surface":"#ffffff","color_text":"#102033","color_muted":"#627086","color_primary":"#1b5fc1","color_accent":"#ffb21e","main_heading_font_family":"heading","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),
 ('aurora', 'Aurora Fullscreen', '1.0.0', 0, 1, '{"path":"frontend/theme-aurora","supports":{"custom_blocks":true,"seo_meta_preview":true,"fullscreen_hero":true,"theme_preview":true},"appearance_defaults":{"body_font_family":"system","heading_font_family":"serif","color_background":"#fbf7ef","color_surface":"#fffaf2","color_text":"#162026","color_muted":"#66747d","color_primary":"#13242b","color_accent":"#ef8f4e","main_heading_font_family":"arial","main_heading_letter_spacing":"normal","show_site_title_in_header":true}}'),
@@ -53,12 +67,12 @@ INSERT INTO editor_block_types(block_type, label, category, schema_json, sort_or
 ('articles', 'Articles', 'content', '{"fields":["title","limit","category","tag","show_more_button","more_label"],"search":["title","more_label"]}', 130);
 
 INSERT OR IGNORE INTO editor_block_types(block_type,label,category,schema_json,sort_order) VALUES
-('featured_product','Produit vedette','commerce','{"fields":["product_id","layout","show_price","show_availability","cta_label"],"required":["product_id"]}',200),
-('product_card','Carte produit','commerce','{"fields":["product_id","show_price","show_availability","cta_label"],"required":["product_id"]}',201),
-('product_grid','Grille produits','commerce','{"fields":["product_ids","collection_id","columns","limit","sort"],"required_any":[["product_ids","collection_id"]]}',202),
-('collection_grid','Grille collections','commerce','{"fields":["collection_ids","columns","limit"]}',203),
-('product_detail','Détail produit','commerce','{"fields":["product_id","show_media","show_variants","show_description"],"required":["product_id"]}',204),
-('add_to_cart','Ajout au panier','commerce','{"fields":["sellable_id","quantity","label"],"required":["sellable_id"]}',205);
+('featured_product','Produit vedette','commerce','{"fields":["product_id","product_ids","selection_mode","layout","limit","columns","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',200),
+('product_card','Carte produit','commerce','{"fields":["product_id","product_ids","selection_mode","limit","columns","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',201),
+('product_grid','Liste de produits','commerce','{"fields":["selection_mode","product_ids","brand","category","collection_id","group","attribute_code","attribute_values","promotion_rule","relation_type","source_product_id","manual_product_ids","limit","sort","columns","show_price","show_promotion","show_availability","show_cta","pagination","empty_state","empty_message"],"selection_modes":["explicit","brand","category","group","attribute","promotion","new","popular","relation"],"stable_references":["product_ids","source_product_id","manual_product_ids"],"legacy_aliases":{"collection_id":"category"}}',202),
+('collection_grid','Liste de catégories','commerce','{"fields":["collection_ids","columns","limit","empty_state","empty_message"],"stable_references":["collection_ids"]}',203),
+('product_detail','Détail produit','commerce','{"fields":["product_id","product_ids","selection_mode","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',204),
+('add_to_cart','Ajout au panier','commerce','{"fields":["product_id","sellable_id","variant_rule","quantity","label"],"required_any":[["product_id","sellable_id"]],"stable_references":["product_id","sellable_id"],"variant_rules":["default_if_unambiguous","exact_sellable"]}',205);
 
 INSERT INTO content_types(module_id, type_key, name, singular_label, plural_label, has_layout, has_taxonomies, frontend_template)
 SELECT id, 'page', 'Page', 'Page', 'Pages', 1, 1, 'page.twig' FROM modules WHERE module_key='pages';

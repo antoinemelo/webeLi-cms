@@ -32,6 +32,7 @@ from tools.python.lib.release_metadata import load_release_metadata
 from tools.python.qualification.omnichannel_gate import validate_report_file
 from tools.python.qualification.usability_commerce_gate import validate_report_files as validate_usability_reports
 from tools.python.qualification.admin_convergence_gate import validate_report_files as validate_admin_convergence_reports
+from tools.python.qualification.shop_operational_gate import validate_report_files as validate_shop_operational_reports
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 REPORT_DIR = ROOT / "storage" / "qualification"
@@ -68,6 +69,8 @@ E2E_INPUTS = (
     "docs/evaluation/machine-readable/usability-commerce-foundations.json",
     "tools/python/qualification/admin_convergence_gate.py",
     "docs/evaluation/machine-readable/admin-convergence-ux-38e.json",
+    "tools/python/qualification/shop_operational_gate.py",
+    "docs/evaluation/machine-readable/shop-operational-release-48.json",
     "tools/python/qualification/payment_provider_gate.py",
     "tools/python/qualification/inventory_ledger_gate.py",
     "tools/python/qualification/reservation_availability_gate.py",
@@ -161,6 +164,8 @@ def _artifact_hashes() -> dict[str, str]:
         "usability_commerce_foundations": ROOT / "docs/evaluation/machine-readable/usability-commerce-foundations.json",
         "admin_convergence_ux_38e": ROOT / "docs/evaluation/machine-readable/admin-convergence-ux-38e.json",
         "qualification_admin_convergence": ROOT / "storage/qualification/admin-convergence/latest.json",
+        "shop_operational_release_48": ROOT / "docs/evaluation/machine-readable/shop-operational-release-48.json",
+        "qualification_shop_operational": ROOT / "storage/qualification/shop-operational/latest.json",
         "payment_provider_interchangeability": ROOT / "docs/evaluation/machine-readable/sale-payment-provider-interchangeability.json",
         "inventory_ledger": ROOT / "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "stock_reconstruction_m6": ROOT / "docs/evaluation/machine-readable/sale-stock-reconstruction-m6.json",
@@ -186,6 +191,7 @@ def _gate_matrix() -> list[dict[str, object]]:
         {"requirement": "gate E2E omnicanale storefront/POS", "source_steps": ["browser-e2e"], "release_commands": ["tools/cms.py e2e --use-built-assets --omnichannel-only"]},
         {"requirement": "gate utilisabilité Commerce M5-M7", "source_steps": ["commerce-usability-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/usability_commerce_gate.py", "tools/cms.py e2e --use-built-assets --usability-only"]},
         {"requirement": "gate UX convergence admin 38e", "source_steps": ["admin-convergence-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/admin_convergence_gate.py", "tools/cms.py e2e --use-built-assets --admin-convergence-only"]},
+        {"requirement": "gate E2E Shop opérationnel 48", "source_steps": ["shop-operational-gate", "browser-e2e", "performance-baseline"], "release_commands": ["tools/python/qualification/shop_operational_gate.py", "tools/cms.py e2e --use-built-assets --shop-operational-only"]},
         {"requirement": "gate M5 interchangeabilité providers", "source_steps": ["payment-provider-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/payment_provider_gate.py"]},
         {"requirement": "gate M6 ledger stock Sale", "source_steps": ["inventory-ledger-gate", "browser-e2e"], "release_commands": ["tools/python/qualification/inventory_ledger_gate.py"]},
         {"requirement": "gate M6.5 reconstruction et réconciliation", "source_steps": ["stock-reconstruction-gate", "backup-restore", "browser-e2e"], "release_commands": ["tools/python/qualification/stock_reconstruction_gate.py", "tools/cms.py inventory reconcile"]},
@@ -413,6 +419,20 @@ def steps() -> tuple[Step, ...]:
             timeout=60,
         ),
         Step(
+            "shop-operational-gate",
+            "Gate release Shop opérationnel 48",
+            ("complete", "release"),
+            (py, "tools/python/qualification/shop_operational_gate.py", "--static-only"),
+            files=(
+                "docs/evaluation/machine-readable/shop-operational-release-48.json",
+                "docs/evaluation/shop-operational-release-gate-48.md",
+                "tools/python/qualification/shop_operational_gate.py",
+                "frontend/admin-vue/tests/e2e/shop-operational-release-gate-48.spec.ts",
+                "tools/python/operations/testing/run_playwright_e2e.py",
+            ),
+            timeout=60,
+        ),
+        Step(
             "browser-e2e",
             "Tests navigateur Playwright isolés",
             ("release",),
@@ -421,11 +441,13 @@ def steps() -> tuple[Step, ...]:
             files=(
                 "frontend/admin-vue/playwright.config.ts",
                 "frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts",
+                "frontend/admin-vue/tests/e2e/shop-operational-release-gate-48.spec.ts",
                 "frontend/admin-vue/node_modules/@playwright/test/cli.js",
                 "tools/python/operations/testing/run_playwright_e2e.py",
+                "tools/python/qualification/shop_operational_gate.py",
             ),
             action=_browser_e2e_check,
-            timeout=1200,
+            timeout=3600,
         ),
         Step(
             "performance-baseline",
@@ -530,10 +552,12 @@ def _browser_e2e_check() -> tuple[int, str, str]:
     report_file = ROOT / "storage/qualification/omnichannel/latest.json"
     usability_report = ROOT / "storage/qualification/usability/latest.json"
     admin_convergence_report = ROOT / "storage/qualification/admin-convergence/latest.json"
+    shop_operational_report = ROOT / "storage/qualification/shop-operational/latest.json"
     _report, report_errors = validate_report_file(report_file, ROOT)
     usability_errors = validate_usability_reports(runtime_path=usability_report, root=ROOT)
     admin_convergence_errors = validate_admin_convergence_reports(runtime_path=admin_convergence_report, root=ROOT)
-    if USE_CACHE and not report_errors and not usability_errors and not admin_convergence_errors and read_success(cache_file, fingerprint) is not None:
+    shop_operational_errors = validate_shop_operational_reports(runtime_path=shop_operational_report, root=ROOT)
+    if USE_CACHE and not report_errors and not usability_errors and not admin_convergence_errors and not shop_operational_errors and read_success(cache_file, fingerprint) is not None:
         return (
             0,
             browser_stdout
@@ -541,17 +565,18 @@ def _browser_e2e_check() -> tuple[int, str, str]:
             + f"\nEmpreinte: {fingerprint}"
             + f"\nGate omnicanale: {_display_path(report_file)}"
             + f"\nGate utilisabilité: {_display_path(usability_report)}"
-            + f"\nGate convergence admin: {_display_path(admin_convergence_report)}",
+            + f"\nGate convergence admin: {_display_path(admin_convergence_report)}"
+            + f"\nGate Shop opérationnel: {_display_path(shop_operational_report)}",
             "",
         )
 
     command = [sys.executable, str(ROOT / "tools/cms.py"), "e2e", "--use-built-assets"]
     try:
-        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=1200)
+        returncode, stdout, stderr = _execute_bounded(command, cwd=ROOT, timeout=3600)
     except subprocess.TimeoutExpired as exc:
         stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None))
         stderr = _as_text(getattr(exc, "stderr", None))
-        return 124, stdout, stderr + "\nTimeout après 1200s"
+        return 124, stdout, stderr + "\nTimeout après 3600s"
     if returncode == 0:
         write_success(cache_file, fingerprint=fingerprint, step_id="browser-e2e", command=command)
     return returncode, browser_stdout + "\n" + stdout, stderr
@@ -694,7 +719,7 @@ def _e2e_fingerprint() -> str:
         build_fingerprint = str(build_payload.get("fingerprint", ""))
     except (FileNotFoundError, json.JSONDecodeError, OSError):
         build_fingerprint = ""
-    return fingerprint_paths(ROOT, E2E_INPUTS, extra=("browser-e2e-v2", build_fingerprint))
+    return fingerprint_paths(ROOT, E2E_INPUTS, extra=("browser-e2e-v3", build_fingerprint))
 
 
 def _php_lint() -> tuple[int, str, str]:

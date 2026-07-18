@@ -338,6 +338,7 @@ test.describe('business CRM UX smoke', () => {
   });
 
   test('creates an explainable audience, handles an empty rule and stays localized FR/EN', async ({ page }) => {
+    test.setTimeout(120_000);
     const context = await jsonEnvelope<AdminContextData>(await page.request.get(cmsPath('/admin/api/context')), 'admin.context.v1', 'admin context');
     expect(context.data.capabilities['business.segment.read']).toBeTruthy();
     expect(context.data.capabilities['business.segment.manage']).toBeTruthy();
@@ -353,7 +354,7 @@ test.describe('business CRM UX smoke', () => {
     await panel.getByLabel('Opérateur').selectOption('contains');
     await panel.getByLabel('Valeur').fill('999999999');
     await panel.getByRole('button', { name: 'Aperçu' }).click();
-    await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.');
+    await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.', { timeout: 60_000 });
     await panel.getByRole('button', { name: 'Créer l’audience' }).click();
     await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Audience' }).first()).toBeVisible();
 

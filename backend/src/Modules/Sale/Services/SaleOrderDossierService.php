@@ -18,6 +18,7 @@ final class SaleOrderDossierService
     public function __construct(
         private readonly SaleDatabaseConnection $connection,
         private readonly SaleOrderTimelineService $timeline,
+        private readonly ?SaleOrderNotificationService $notifications = null,
     ) {}
 
     /** @return array<string,mixed> */
@@ -65,6 +66,14 @@ final class SaleOrderDossierService
             $fulfillment['shipping_method'] = $this->decode((string) $fulfillment['shipping_method_snapshot_json']);
             $fulfillment['problem'] = $this->decode((string) $fulfillment['problem_json']);
             $fulfillment['operator_proof'] = $this->decode((string) $fulfillment['operator_proof_json']);
+            $fulfillment['tracking_events'] = $this->tableExists('sale_fulfillment_tracking_events')
+                ? $this->db()->all('SELECT id,event_type,event_status,details_json,occurred_at FROM sale_fulfillment_tracking_events WHERE fulfillment_id=? ORDER BY occurred_at,id', [(int)$fulfillment['id']])
+                : [];
+            foreach ($fulfillment['tracking_events'] as &$trackingEvent) {
+                $trackingEvent['details'] = $this->decode((string)$trackingEvent['details_json']);
+                unset($trackingEvent['details_json']);
+            }
+            unset($trackingEvent);
             foreach (['shipping_address_snapshot_json','shipping_method_snapshot_json','problem_json','operator_proof_json'] as $field) unset($fulfillment[$field]);
         }
         unset($fulfillment);
@@ -95,7 +104,7 @@ final class SaleOrderDossierService
             'fulfillment' => ['summary' => $this->fulfillmentSummary($order, $fulfillments, $backorders), 'operations' => $fulfillments, 'backorders' => $backorders],
             'documents' => $documents,
             'returns' => $returns,
-            'messages' => [],
+            'messages' => $this->notifications?->forOrder($orderId) ?? [],
             'timeline' => $this->timeline->timeline($orderId, $language),
             'relation' => [
                 'contact_id' => isset($order['customer_contact_id']) ? (int) $order['customer_contact_id'] : null,

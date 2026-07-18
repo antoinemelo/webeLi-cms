@@ -1405,6 +1405,64 @@ paths:
             schema:
               type: "object"
               additionalProperties: true
+  "/api/v1/customer/order-tracking/{token}":
+    get:
+      operationId: "get_public_customer_order_tracking_show_v1"
+      summary: "Lire le suivi filtré d’une commande invitée avec une preuve opaque expirante et révocable."
+      description: "Lire le suivi filtré d’une commande invitée avec une preuve opaque expirante et révocable."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "token"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "order"
+                additionalProperties: false
+                properties:
+                  order:
+                    type: "object"
+                    required:
+                      - "order_number"
+                      - "status"
+                      - "payment_status"
+                      - "fulfillment_status"
+                      - "next_step"
+                      - "fulfillments"
+                      - "documents"
+                      - "timeline"
+                      - "access"
+                    additionalProperties: true
+        "422":
+          description: "Preuve absente, expirée, consommée ou révoquée."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Preuve absente, expirée, consommée ou révoquée."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
   "/api/v1/customer/orders":
     get:
       operationId: "get_public_customer_orders_index_v1"
@@ -3879,7 +3937,7 @@ paths:
     get:
       operationId: "get_public_sale_cart_show_v1"
       summary: "Lire un panier e-commerce public."
-      description: "Recharge un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé."
+      description: "Recharge et revalide un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé. Les changements commerciaux sont retournés avec un avant/après explicite."
       tags:
         - "Headless v1"
       security: []
@@ -3927,6 +3985,7 @@ paths:
                         tax_total_minor: 0
                         grand_total_minor: 2900
                         lines: []
+                      changes: []
                     meta:
                       contract: "public.sale.cart.show.v1"
                       site_id: 1
@@ -4763,6 +4822,198 @@ paths:
                       type: "boolean"
                   additionalProperties: true
               additionalProperties: true
+  "/api/v1/sale/channels/{code}/gift-cards/claim":
+    post:
+      operationId: "post_public_sale_gift_card_claim_v1"
+      summary: "Révéler une fois un bon cadeau livré."
+      description: "Consomme un jeton chiffré à usage unique puis retourne le code complet uniquement à ce parcours autorisé."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "code"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+            pattern: "^[a-z0-9_-]+$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    additionalProperties: true
+                  meta:
+                    "$ref": "#/components/schemas/PublicMeta"
+              examples:
+                default:
+                  value:
+                    data:
+                      gift_card:
+                        code: "GC-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+                        masked_code: "•••• 7K2P"
+                        initial_value_minor: 10000
+                        balance_minor: 10000
+                        currency: "CHF"
+                        status: "active"
+                        expires_at: "2027-07-17 10:00:00"
+                    meta:
+                      contract: "public.sale.gift_card.claim.v1"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Jeton absent, expiré, déjà consommé ou appartenant à un autre site."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Jeton absent, expiré, déjà consommé ou appartenant à un autre site."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: "object"
+              required:
+                - "data"
+              properties:
+                data:
+                  type: "object"
+                  required:
+                    - "claim_token"
+                  properties:
+                    claim_token:
+                      type: "string"
+                      minLength: 40
+                      maxLength: 512
+                  additionalProperties: false
+              additionalProperties: false
+  "/api/v1/sale/channels/{code}/gift-cards/validate":
+    post:
+      operationId: "post_public_sale_gift_card_validate_v1"
+      summary: "Valider un bon cadeau pour un panier public."
+      description: "Retourne un résultat neutre et le seul montant applicable. Le code complet et le solde hors panier ne sont jamais exposés."
+      tags:
+        - "Headless v1"
+      security:
+        -
+          BearerAuth: []
+      parameters:
+        -
+          name: "code"
+          in: "path"
+          required: true
+          description: ""
+          schema:
+            type: "string"
+            pattern: "^[a-z0-9_-]+$"
+      responses:
+        "200":
+          description: "Réponse normalisée de l'API publique headless v1."
+          content:
+            "application/json":
+              schema:
+                type: "object"
+                required:
+                  - "data"
+                  - "meta"
+                properties:
+                  data:
+                    type: "object"
+                    additionalProperties: true
+                  meta:
+                    "$ref": "#/components/schemas/PublicMeta"
+              examples:
+                default:
+                  value:
+                    data:
+                      gift_card:
+                        valid: true
+                        masked_code: "•••• 7K2P"
+                        applicable_minor: 2900
+                        currency: "CHF"
+                        status: "active"
+                    meta:
+                      contract: "public.sale.gift_card.validate.v1"
+                      site_id: 1
+                      language_code: "fr"
+        "422":
+          description: "Panier, canal ou bon indisponible."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Panier, canal ou bon indisponible."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+        "429":
+          description: "Trop de tentatives dans la fenêtre autorisée."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Trop de tentatives dans la fenêtre autorisée."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: "object"
+              required:
+                - "data"
+              properties:
+                data:
+                  type: "object"
+                  required:
+                    - "cart_token"
+                    - "code"
+                  properties:
+                    cart_token:
+                      type: "string"
+                      pattern: "^[A-Za-z0-9_-]{32,128}$"
+                    code:
+                      type: "string"
+                      minLength: 20
+                      maxLength: 80
+                  additionalProperties: false
+              additionalProperties: false
   "/api/v1/sale/payments/return":
     get:
       operationId: "get_public_sale_payment_return_v1"
@@ -5340,8 +5591,8 @@ paths:
   "/api/v1/storefront/products":
     get:
       operationId: "get_public_storefront_products_index_v1"
-      summary: "Lister les projections produit Storefront."
-      description: "Lit exclusivement core.sqlite, par site, canal et locale. Supporte recherche, collection, tri et pagination."
+      summary: "Lister et filtrer les projections produit Storefront."
+      description: "Lit exclusivement les projections indexées de core.sqlite, par site, canal et locale. La même requête alimente le SSR et le headless. OR entre les valeurs d’une facette, AND entre les facettes ; les facettes d’attribut ne sont disponibles qu’avec exactement un groupe produit sélectionné."
       tags:
         - "Headless v1"
       security: []
@@ -5368,6 +5619,41 @@ paths:
           schema:
             type: "integer"
         -
+          name: "brand"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "array"
+        -
+          name: "category"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "array"
+        -
+          name: "group"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "array"
+        -
+          name: "availability"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "array"
+        -
+          name: "attributes"
+          in: "query"
+          required: false
+          description: ""
+          schema:
+            type: "object"
+        -
           name: "sort"
           in: "query"
           required: false
@@ -5375,8 +5661,13 @@ paths:
           schema:
             type: "string"
             enum:
+              - "relevance"
               - "name"
               - "newest"
+              - "price_asc"
+              - "price_desc"
+              - "promo_amount"
+              - "promo_percent"
         -
           name: "limit"
           in: "query"
@@ -5384,6 +5675,8 @@ paths:
           description: ""
           schema:
             type: "integer"
+            minimum: 1
+            maximum: 100
         -
           name: "offset"
           in: "query"
@@ -5391,6 +5684,7 @@ paths:
           description: ""
           schema:
             type: "integer"
+            minimum: 0
       responses:
         "200":
           description: "Réponse normalisée de l'API publique headless v1."
@@ -5405,24 +5699,58 @@ paths:
                     data:
                       items:
                         -
-                          contract: "storefront.product.v1"
-                          version: 1
+                          contract: "storefront.product.v3"
+                          version: 3
                           product_id: 1
                           sellables:
                             -
                               sellable_id: 1
+                      selection:
+                        group:
+                          - "textile"
+                        attributes:
+                          couleur:
+                            - "bleu"
+                      facets:
+                        -
+                          type: "attribute"
+                          key: "couleur"
+                          options:
+                            -
+                              key: "bleu"
+                              label: "Bleu"
+                              count: 4
+                              selected: true
                       pagination:
                         total: 1
                         limit: 24
                         offset: 0
+                        page: 1
+                        pages: 1
                         has_more: false
                     meta:
                       contract: "public.storefront.products.index.v1"
+        "422":
+          description: "Tri Storefront inconnu."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/PublicApiError"
+              examples:
+                default:
+                  value:
+                    error:
+                      code: "VALIDATION_FAILED"
+                      message: "Tri Storefront inconnu."
+                      details: {}
+                    meta:
+                      contract: "error.v1"
+                      request_id: "20260604120000-abc"
   "/api/v1/storefront/products/{slug}":
     get:
       operationId: "get_public_storefront_products_show_v1"
       summary: "Lire une projection produit Storefront."
-      description: "DTO versionné commun au SSR et au headless, avec sellables, prix, disponibilité, médias, CTA et SEO."
+      description: "DTO v3 commun au SSR et au headless, avec variantes, prix normal/final, promotions, quatre états publics, médias, attributs, CTA conditionnel, contenus liés, livraison, paiement, relations typées et SEO."
       tags:
         - "Headless v1"
       security: []
@@ -5455,9 +5783,14 @@ paths:
                   value:
                     data:
                       product:
-                        contract: "storefront.product.v1"
+                        contract: "storefront.product.v3"
+                        version: 3
                         product_id: 1
                         default_sellable_id: 1
+                        relations: []
+                        commerce:
+                          delivery_methods: []
+                          payment_methods: []
                     meta:
                       contract: "public.storefront.products.show.v1"
         "404":

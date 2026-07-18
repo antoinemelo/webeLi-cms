@@ -140,6 +140,24 @@ export type ProductContentCandidate = Record<string, unknown> & {
   type_key?: string;
   status?: string;
 };
+export type ProductRelation = Record<string, unknown> & {
+  id: number | string;
+  related_product_id?: number;
+  relation_type?: 'related' | 'alternative' | 'accessory' | 'upsell' | 'cross_sell';
+  sort_order?: number;
+  source?: 'manual' | 'automatic';
+  target_name?: string;
+  target_slug?: string;
+  target_status?: string;
+};
+export type ProductRelationRule = Record<string, unknown> & {
+  id: number;
+  relation_type?: ProductRelation['relation_type'];
+  match_type?: 'category' | 'group';
+  match_id?: number;
+  result_limit?: number;
+  sort_order?: number;
+};
 
 export type ProductDetail = Record<string, unknown> & {
   data?: CatalogProduct;
@@ -241,6 +259,21 @@ export const businessCatalogApi = {
   },
   productContentLinks(id: number) {
     return adminApi.get<{ links: ProductContentLink[] }>(`/business/pim/products/${id}/content-links`);
+  },
+  productRelations(id: number) {
+    return adminApi.get<{ relations: ProductRelation[]; rules: ProductRelationRule[] }>(`/business/pim/products/${id}/relations`);
+  },
+  createProductRelation(productId: number, payload: Record<string, unknown>) {
+    return adminApi.post<{ relation: ProductRelation }>(`/business/pim/products/${productId}/relations`, payload);
+  },
+  deleteProductRelation(id: number) {
+    return adminApi.delete<{ deleted: boolean }>(`/business/pim/product-relations/${id}`);
+  },
+  createProductRelationRule(productId: number, payload: Record<string, unknown>) {
+    return adminApi.post<{ rule: ProductRelationRule }>(`/business/pim/products/${productId}/relation-rules`, payload);
+  },
+  deleteProductRelationRule(id: number) {
+    return adminApi.delete<{ deleted: boolean }>(`/business/pim/product-relation-rules/${id}`);
   },
   contentCandidates(query = '') {
     return adminApi.get<{ contents: ProductContentCandidate[] }>('/business/pim/content-candidates', { q: query });

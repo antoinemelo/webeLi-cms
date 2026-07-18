@@ -81,7 +81,7 @@ final class PosCatalogApiHandler
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
-        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
         if (!preg_match('/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/i', $languageCode)) {
             $languageCode = (string) ($site['default_language_code'] ?? 'fr');

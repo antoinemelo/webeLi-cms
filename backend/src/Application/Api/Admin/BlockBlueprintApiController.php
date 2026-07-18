@@ -75,21 +75,18 @@ final class BlockBlueprintApiController
     /** @return list<array<string,mixed>> */
     private function listBlockBlueprints(int $siteId): array
     {
+        $blueprints = NativeFieldBlueprintRegistry::blockBlueprints();
         if ($this->blueprints !== null) {
             $rows = $this->blueprints->list('block', $siteId);
-            $versioned = [];
             foreach ($rows as $row) {
                 $blueprint = $this->blockBlueprintFromVersions((string) ($row['blueprint_key'] ?? ''), $siteId);
                 if ($blueprint !== null) {
-                    $versioned[(string) ($blueprint['key'] ?? $row['blueprint_key'])] = $blueprint;
+                    $blueprints[(string) ($blueprint['key'] ?? $row['blueprint_key'])] = $blueprint;
                 }
             }
-            if ($versioned !== []) {
-                ksort($versioned);
-                return array_values($versioned);
-            }
         }
-        return array_values(NativeFieldBlueprintRegistry::blockBlueprints());
+        ksort($blueprints);
+        return array_values($blueprints);
     }
 
     /** @return array<string,mixed>|null */

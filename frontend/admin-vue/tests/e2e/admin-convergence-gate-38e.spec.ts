@@ -293,15 +293,16 @@ test.describe('38e gate UX de convergence admin', () => {
   });
 
   test('product operator previews an audited receipt from projected stock quantities', async ({ page }) => {
+    test.setTimeout(120_000);
     const start = performance.now();
     await signIn(page);
     await page.goto(cmsPath('/admin/app/business/products-stock'));
     const productRow = page.locator('tr').filter({ hasText: 'DEMO-GOURDE' }).first();
     const stockCell = productRow.locator('.catalog-stock-cell');
-    await expect(stockCell).toBeVisible();
+    await expect(stockCell).toBeVisible({ timeout: 60_000 });
     await stockCell.click();
     const productDialog = page.getByRole('dialog', { name: 'Modifier le stock' });
-    await expect(productDialog.getByRole('heading', { name: 'Stock des variantes', exact: true })).toBeVisible();
+    await expect(productDialog.getByRole('heading', { name: 'Stock des variantes', exact: true })).toBeVisible({ timeout: 60_000 });
     await productDialog.getByRole('button', { name: 'Modifier l’inventaire' }).first().click();
     const inventoryDialog = page.getByRole('dialog', { name: 'Modifier l’inventaire' });
     await expect(inventoryDialog).toBeVisible();

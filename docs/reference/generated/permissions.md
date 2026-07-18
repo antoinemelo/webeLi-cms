@@ -128,7 +128,11 @@ generated: true
 | `sale.cash.manage` |
 | `sale.channels.manage` |
 | `sale.customer_accounts.manage` |
+| `sale.dashboard.export` |
+| `sale.exports.manage` |
 | `sale.fulfillment.manage` |
+| `sale.gift_cards.manage` |
+| `sale.gift_cards.read` |
 | `sale.inventory.approve` |
 | `sale.manage` |
 | `sale.orders.manage` |
@@ -142,6 +146,7 @@ generated: true
 | `sale.refunds.manage` |
 | `sale.reports.read` |
 | `sale.returns.manage` |
+| `sale.sales.read` |
 | `sale.settings.manage` |
 | `sale.status.admin` |
 | `sale.stock.export` |

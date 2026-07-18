@@ -31,7 +31,8 @@ type BlockLock = {
 const nativeBlockTypes: Array<[BlockType, string]> = [
   ['markdown', 'Markdown'], ['richtext', 'Texte enrichi'], ['html_safe', 'HTML sûr'], ['html_raw', 'HTML brut'], ['image', 'Image'], ['video', 'Vidéo'], ['audio', 'Audio'],
   ['iframe', 'Iframe'], ['embed', 'Embed'], ['hero', 'Hero'], ['gallery', 'Galerie'], ['buttons', 'Boutons'], ['card', 'Carte'], ['columns', 'Colonnes'], ['form', 'Formulaire'],
-  ['plan', 'Plan'], ['articles', 'Articles']
+  ['plan', 'Plan'], ['articles', 'Articles'],
+  ['featured_product', 'Produit vedette'], ['product_card', 'Carte produit'], ['product_grid', 'Liste de produits'], ['collection_grid', 'Liste de catégories'], ['product_detail', 'Détail produit'], ['add_to_cart', 'Ajout au panier']
 ];
 const blockTypes = computed<Array<[BlockType, string]>>(() => {
   const allowed = new Set((props.allowedBlockTypes || []).map(String));
@@ -516,6 +517,8 @@ function splitPanelBlock(): EditorialBlock {
               :allowed-block-types="allowedChildBlockTypes().map(([type]) => type)"
               :form-options="formSelectOptions"
               :forms-loading="formsLoading"
+              :site-id="siteId"
+              :language-code="languageCode"
               form-placeholder="Sélectionner un formulaire publié"
             />
 

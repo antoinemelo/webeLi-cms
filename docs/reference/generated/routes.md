@@ -46,6 +46,8 @@ generated: true
 | `DELETE` | `/admin/api/business/pim/attributes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/bundle-components/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/pim/product-relation-rules/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/pim/product-relations/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
@@ -158,6 +160,7 @@ generated: true
 | `GET` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/sellable-variants` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/storefront-blocks/candidates` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/variants/{id}/sellable-snapshot` | API administrative | `backend/routes/api.php` |
@@ -285,6 +288,7 @@ generated: true
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/gift-card` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/updates/manifest.json` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/{path:.+}` | HTML/runtime | `backend/routes/web.php` |
 | `PATCH` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
@@ -411,7 +415,9 @@ generated: true
 | `POST` | `/admin/api/business/pim/products/{id}/assets` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/recalculate-completeness` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/products/{id}/relation-rules` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/storefront-blocks/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/storefront-projections/rebuild` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |

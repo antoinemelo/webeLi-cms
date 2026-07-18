@@ -13,6 +13,7 @@ final class SaleFulfillmentService
         private readonly SaleDatabaseConnection $connection,
         private readonly ?SaleInventoryService $inventory = null,
         private readonly ?SaleStateMachineService $states = null,
+        private readonly ?SaleOrderNotificationService $notifications = null,
     ) {}
 
     /** @return list<array<string,mixed>> */
@@ -104,7 +105,7 @@ final class SaleFulfillmentService
         if ((int)($filters['location_id']??0) > 0) { $where[]='f.stock_location_id=:location'; $params['location']=(int)$filters['location_id']; }
         if (trim((string)($filters['q']??'')) !== '') { $where[]='(f.fulfillment_number LIKE :q OR o.order_number LIKE :q OR f.pickup_code LIKE :q OR o.customer_snapshot_json LIKE :q)'; $params['q']='%'.trim((string)$filters['q']).'%'; }
         $rows=$this->db()->all('SELECT f.*,o.order_number,o.fulfillment_status AS order_fulfillment_status,o.customer_snapshot_json,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f INNER JOIN sale_orders o ON o.id=f.order_id LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE '.implode(' AND ',$where).' ORDER BY CASE f.status WHEN \'blocked\' THEN 0 WHEN \'ready_for_pickup\' THEN 1 WHEN \'partially_prepared\' THEN 2 WHEN \'preparing\' THEN 3 ELSE 4 END,COALESCE(f.due_at,f.created_at),f.id', $params);
-        foreach($rows as &$row){$row['lines']=$this->db()->all('SELECT fl.*,ol.sku,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[(int)$row['id']]);$row['customer']=json_decode((string)$row['customer_snapshot_json'],true)?:[];unset($row['customer_snapshot_json']);$row['next_action']=$this->nextAction((string)$row['status'],(string)$row['fulfillment_type'],$row['lines']);}
+        foreach($rows as &$row){$row['lines']=$this->db()->all('SELECT fl.*,ol.sku,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[(int)$row['id']]);$row['tracking_events']=$this->trackingEvents((int)$row['id']);$row['customer']=json_decode((string)$row['customer_snapshot_json'],true)?:[];unset($row['customer_snapshot_json']);$row['next_action']=$this->nextAction((string)$row['status'],(string)$row['fulfillment_type'],$row['lines']);}
         return $rows;
     }
 
@@ -149,7 +150,12 @@ final class SaleFulfillmentService
             if($current==='blocked'&&$status==='allocated'){$this->states->transition('fulfillment',$fulfillmentId,'allocated',$actorId,'problem resolved');$current='allocated';}
             if($current!==$status)$this->states->transition('fulfillment',$fulfillmentId,$status,$actorId,$status==='blocked'?'preparation problem':'preparation progress');
         }
-        return $this->operation($fulfillmentId,$siteId);
+        $updated=$this->operation($fulfillmentId,$siteId);
+        if($status==='blocked'){
+            $customer=is_array($updated['customer']??null)?$updated['customer']:[];
+            $this->notifications?->queue((int)$updated['order_id'],'fulfillment_exception',(string)($customer['locale']??$customer['language']??'fr'),$fulfillmentId,null,$actorId,'preparation-blocked:'.$fulfillmentId.':'.$lineId.':'.hash('sha256',$problemCode.'|'.$problemNote));
+        }
+        return $updated;
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -167,10 +173,50 @@ final class SaleFulfillmentService
             if($proof==='' || !hash_equals((string)$operation['pickup_code'],$code)) throw new SaleValidationException('sale.fulfillment.handover_proof_required');
             $this->db()->run('UPDATE sale_fulfillments SET operator_proof_json=? WHERE id=?',[json_encode(['proof'=>$proof,'actor_id'=>$actorId,'recorded_at'=>gmdate('c')],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$fulfillmentId]);
         }
-        if($status==='shipped' && trim((string)($payload['tracking_reference']??$operation['tracking_reference']??''))!=='') $this->db()->run('UPDATE sale_fulfillments SET tracking_reference=? WHERE id=?',[trim((string)($payload['tracking_reference']??$operation['tracking_reference'])),$fulfillmentId]);
+        $tracking = $status === 'shipped' ? $this->validatedTracking($payload, $operation) : null;
         if($this->states===null) throw new SaleValidationException('sale.fulfillment.operations_unavailable');
         $this->states->transition('fulfillment',$fulfillmentId,$status,$actorId,(string)($payload['reason']??''),(string)($payload['correlation_id']??''),isset($payload['expected_version'])?(int)$payload['expected_version']:null);
-        return $this->operation($fulfillmentId,$siteId);
+        if ($tracking !== null) {
+            $this->db()->run('UPDATE sale_fulfillments SET carrier_code=?,tracking_reference=?,tracking_url=?,tracking_validated_at=CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END,updated_at=CURRENT_TIMESTAMP WHERE id=?', [$tracking['carrier_code'],$tracking['tracking_reference'],$tracking['tracking_url'],$tracking['tracking_url'],$fulfillmentId]);
+        }
+        $updated = $this->operation($fulfillmentId,$siteId);
+        $notificationType = match($status) {
+            'ready_for_pickup' => 'pickup_ready',
+            'shipped' => 'shipment_sent',
+            'handed_over', 'delivered' => 'delivery_completed',
+            'blocked' => 'fulfillment_exception',
+            default => null,
+        };
+        if ($notificationType !== null) {
+            $customer = is_array($updated['customer'] ?? null) ? $updated['customer'] : [];
+            $this->notifications?->queue((int)$updated['order_id'],$notificationType,(string)($customer['locale']??$customer['language']??'fr'),$fulfillmentId,null,$actorId,'fulfillment:'.$fulfillmentId.':'.$status);
+        }
+        return $updated;
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function recordTrackingEvent(int $siteId, int $fulfillmentId, array $payload, ?int $actorId): array
+    {
+        $operation = $this->operation($fulfillmentId, $siteId);
+        $eventType = strtolower(trim((string)($payload['event_type'] ?? '')));
+        $eventStatus = strtolower(trim((string)($payload['event_status'] ?? 'information')));
+        $providerEventId = trim((string)($payload['provider_event_id'] ?? ''));
+        $occurredAt = trim((string)($payload['occurred_at'] ?? gmdate('Y-m-d H:i:s')));
+        if (!preg_match('/^[a-z0-9][a-z0-9_.:-]{1,79}$/', $eventType) || !in_array($eventStatus,['information','in_transit','delivered','exception'],true) || strtotime($occurredAt) === false) {
+            throw new SaleValidationException('sale.fulfillment.tracking_event_invalid');
+        }
+        $details = [];
+        foreach (['message','location_code'] as $key) if (trim((string)($payload[$key]??'')) !== '') $details[$key] = mb_substr(trim((string)$payload[$key]),0,240);
+        $existing = $providerEventId === '' ? null : $this->db()->one('SELECT * FROM sale_fulfillment_tracking_events WHERE fulfillment_id=? AND provider_event_id=?',[$fulfillmentId,$providerEventId]);
+        if ($existing !== null) return $existing + ['replayed'=>true];
+        $this->db()->run('INSERT INTO sale_fulfillment_tracking_events(fulfillment_id,provider_event_id,event_type,event_status,details_json,occurred_at,created_by_iam_user_id) VALUES(?,?,?,?,?,?,?)',[$fulfillmentId,$providerEventId===''?null:$providerEventId,$eventType,$eventStatus,json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?:'{}',gmdate('Y-m-d H:i:s',strtotime($occurredAt)?:time()),$actorId]);
+        $eventId=$this->db()->lastInsertId();
+        if ($eventStatus === 'exception') {
+            $this->db()->run('UPDATE sale_fulfillments SET exception_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$fulfillmentId]);
+            $customer = is_array($operation['customer'] ?? null) ? $operation['customer'] : [];
+            $this->notifications?->queue((int)$operation['order_id'],'fulfillment_exception',(string)($customer['locale']??$customer['language']??'fr'),$fulfillmentId,null,$actorId,'tracking-exception:'.$fulfillmentId.':'.($providerEventId?:$this->db()->lastInsertId()));
+        }
+        return ($this->db()->one('SELECT * FROM sale_fulfillment_tracking_events WHERE id=?',[$eventId])??[]) + ['replayed'=>false];
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -220,7 +266,7 @@ final class SaleFulfillmentService
     public function approveInventorySession(int $siteId,int $id,?int $actorId):array{if($this->inventory===null)throw new SaleValidationException('sale.inventory_unavailable');$session=$this->inventorySession($id,$siteId);if((string)$session['status']!=='review')throw new SaleValidationException('sale.inventory_count_not_approvable');return $this->db()->transaction(function()use($session,$siteId,$id,$actorId):array{foreach($session['lines'] as $line){$delta=(int)$line['counted_quantity']-(int)$line['expected_quantity'];if($delta===0)continue;if(trim((string)($line['discrepancy_reason']??''))==='')throw new SaleValidationException('sale.inventory_count_discrepancy_reason_required');$this->inventory->adjust($siteId,(int)$line['business_variant_id'],$delta,$line['sku'],'Inventory '.$session['session_number'].': '.$line['discrepancy_reason'],$actorId,(int)$session['stock_location_id'],'inventory_adjustment','inventory:'.$id.':line:'.$line['id']);}$this->db()->run("UPDATE sale_inventory_count_sessions SET status='approved',approved_by_iam_user_id=?,approved_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=?",[$actorId,$id]);return $this->inventorySession($id,$siteId);});}
 
     /** @return array<string,mixed> */
-    private function operation(int $id,int $siteId):array{$row=$this->db()->one('SELECT f.*,o.order_number,o.customer_snapshot_json,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f INNER JOIN sale_orders o ON o.id=f.order_id LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE f.id=? AND o.site_id=?',[$id,$siteId]);if($row===null)throw new SaleValidationException('sale.fulfillment.not_found');$row['lines']=$this->db()->all('SELECT fl.*,ol.sku,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[$id]);$row['customer']=json_decode((string)$row['customer_snapshot_json'],true)?:[];unset($row['customer_snapshot_json']);$row['next_action']=$this->nextAction((string)$row['status'],(string)$row['fulfillment_type'],$row['lines']);return $row;}
+    private function operation(int $id,int $siteId):array{$row=$this->db()->one('SELECT f.*,o.order_number,o.customer_snapshot_json,l.code AS location_code,l.name AS location_name FROM sale_fulfillments f INNER JOIN sale_orders o ON o.id=f.order_id LEFT JOIN sale_stock_locations l ON l.id=f.stock_location_id WHERE f.id=? AND o.site_id=?',[$id,$siteId]);if($row===null)throw new SaleValidationException('sale.fulfillment.not_found');$row['lines']=$this->db()->all('SELECT fl.*,ol.sku,ol.product_name,ol.variant_name FROM sale_fulfillment_lines fl INNER JOIN sale_order_lines ol ON ol.id=fl.order_line_id WHERE fl.fulfillment_id=? ORDER BY fl.id',[$id]);$row['tracking_events']=$this->trackingEvents($id);$row['customer']=json_decode((string)$row['customer_snapshot_json'],true)?:[];unset($row['customer_snapshot_json']);$row['next_action']=$this->nextAction((string)$row['status'],(string)$row['fulfillment_type'],$row['lines']);return $row;}
     /** @return array<string,mixed> */
     private function transfer(int $id,int $siteId):array{$row=$this->db()->one('SELECT * FROM sale_stock_transfers WHERE id=? AND site_id=?',[$id,$siteId]);if($row===null)throw new SaleValidationException('sale.stock_transfer_not_found');$row['lines']=$this->db()->all('SELECT * FROM sale_stock_transfer_lines WHERE transfer_id=? ORDER BY id',[$id]);return $row;}
     /** @return array<string,mixed> */
@@ -229,6 +275,36 @@ final class SaleFulfillmentService
     private function countLines(int $id,bool $hide):array{$rows=$this->db()->all('SELECT c.*,i.business_variant_id,i.sellable_id,i.sku,r.product_name,r.variant_name FROM sale_inventory_count_lines c INNER JOIN sale_inventory_items i ON i.id=c.inventory_item_id LEFT JOIN sale_catalog_variant_refs r ON r.site_id=i.site_id AND r.sellable_id=i.sellable_id WHERE c.session_id=? ORDER BY COALESCE(r.product_name,i.sku),c.id',[$id]);if($hide)foreach($rows as &$row)if($row['counted_quantity']===null)$row['expected_quantity']=null;return $rows;}
     /** @param list<array<string,mixed>> $lines */
     private function nextAction(string $status,string $type,array $lines=[]):string{$complete=$lines!==[];foreach($lines as $line)if((int)($line['prepared_quantity']??0)<(int)($line['quantity']??0)){$complete=false;break;}return match($status){'pending'=>'allocate','allocated','partially_prepared'=>'prepare','preparing'=>$complete?($type==='pickup'?'mark_ready':'ship'):'prepare','ready_for_pickup'=>'hand_over','shipped'=>'confirm_delivery','blocked'=>'resolve_problem',default=>'none'};}
+
+    /** @return list<array<string,mixed>> */
+    private function trackingEvents(int $fulfillmentId): array
+    {
+        $rows=$this->db()->all('SELECT id,provider_event_id,event_type,event_status,details_json,occurred_at,received_at FROM sale_fulfillment_tracking_events WHERE fulfillment_id=? ORDER BY occurred_at,id',[$fulfillmentId]);
+        foreach($rows as &$row){$row['details']=json_decode((string)$row['details_json'],true)?:[];unset($row['details_json']);}
+        return $rows;
+    }
+
+    /** @param array<string,mixed> $payload @param array<string,mixed> $operation @return array<string,string|null> */
+    private function validatedTracking(array $payload, array $operation): array
+    {
+        $carrier = strtolower(trim((string)($payload['carrier_code'] ?? $operation['carrier_code'] ?? 'manual')));
+        $reference = trim((string)($payload['tracking_reference'] ?? $operation['tracking_reference'] ?? ''));
+        $url = trim((string)($payload['tracking_url'] ?? $operation['tracking_url'] ?? ''));
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{1,39}$/',$carrier)) throw new SaleValidationException('sale.fulfillment.carrier_invalid');
+        if ($reference !== '' && (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._ -]{1,99}$/',$reference))) throw new SaleValidationException('sale.fulfillment.tracking_reference_invalid');
+        if ($url !== '') $this->assertSafeTrackingUrl($url,$carrier);
+        return ['carrier_code'=>$carrier,'tracking_reference'=>$reference===''?null:$reference,'tracking_url'=>$url===''?null:$url];
+    }
+
+    private function assertSafeTrackingUrl(string $url,string $carrier): void
+    {
+        if (strlen($url)>500 || filter_var($url,FILTER_VALIDATE_URL)===false) throw new SaleValidationException('sale.fulfillment.tracking_url_invalid');
+        $parts=parse_url($url);$host=strtolower((string)($parts['host']??''));
+        if (($parts['scheme']??'')!=='https'||$host===''||isset($parts['user'])||isset($parts['pass'])||$host==='localhost'||str_ends_with($host,'.local')) throw new SaleValidationException('sale.fulfillment.tracking_url_unsafe');
+        if (filter_var($host,FILTER_VALIDATE_IP)!==false && filter_var($host,FILTER_VALIDATE_IP,FILTER_FLAG_NO_PRIV_RANGE|FILTER_FLAG_NO_RES_RANGE)===false) throw new SaleValidationException('sale.fulfillment.tracking_url_unsafe');
+        $domains=['swiss_post'=>['post.ch'],'post'=>['post.ch'],'dhl'=>['dhl.com'],'ups'=>['ups.com'],'fedex'=>['fedex.com']];
+        if(isset($domains[$carrier])&&!array_filter($domains[$carrier],static fn(string $domain):bool=>$host===$domain||str_ends_with($host,'.'.$domain))) throw new SaleValidationException('sale.fulfillment.tracking_url_carrier_mismatch');
+    }
 
     /** @return list<array<string,mixed>> */
     private function activeRows(int $siteId): array

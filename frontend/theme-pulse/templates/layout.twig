@@ -1,8 +1,10 @@
 <!doctype html>
 <html lang="{{ languageCode|default('fr') }}" class="theme-pulse"{% if is_preview|default(false) %} data-amcms-preview="1"{% endif %}{% if visual_editing|default(false) %} data-amcms-visual="1"{% endif %}{% if theme_preview|default(false) %} data-theme-preview="1"{% endif %}>
 {% include 'partials/head.twig' %}
-<body data-storefront-channel="web-main">
+<body{% if storefront_cart_visible|default(false) %} data-storefront-channel="{{ storefront_channel_code }}"{% endif %}>
+  {% if storefront_cart_visible|default(false) %}
   <button type="button" class="storefront-cart-toggle" data-cart-toggle aria-controls="storefront-cart-drawer" aria-expanded="false" aria-label="Ouvrir le panier">Panier <span data-cart-count aria-live="polite">0</span></button>
+  {% endif %}
   <a class="skip-link" href="#main-content">{{ ui.skip_to_content }}</a>
 
   {% include 'partials/site-header.twig' %}
@@ -25,8 +27,11 @@
 
   {% include 'partials/site-footer.twig' %}
   {% include 'partials/cookie-consent.twig' %}
-  <aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden aria-labelledby="storefront-cart-title"><button type="button" data-cart-close aria-label="Fermer le panier">Fermer</button><h2 id="storefront-cart-title">Votre panier</h2><div data-cart-error role="alert" aria-live="assertive"></div><div data-cart-lines></div><strong data-cart-total></strong><p><a data-cart-checkout href="{{ asset('/cart') }}">Voir le panier</a></p></aside>
-  <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script>
+  {% if storefront_cart_visible|default(false) %}
+    <div class="storefront-cart-backdrop" data-cart-backdrop hidden></div>
+    <aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden role="dialog" aria-modal="true" aria-labelledby="storefront-cart-title" tabindex="-1"><button type="button" data-cart-close aria-label="Fermer le panier">Fermer</button><h2 id="storefront-cart-title">Votre panier</h2><div data-cart-status role="status" aria-live="polite"></div><div data-cart-error role="alert" aria-live="assertive"></div><div data-cart-lines aria-live="polite"></div><div data-cart-summary></div><strong data-cart-total></strong><div class="cart-drawer__actions"><a data-cart-full href="{{ asset('/cart') }}">Voir le panier complet</a><a class="cart-checkout" data-cart-checkout href="{{ asset('/checkout') }}">Passer la commande</a></div></aside>
+    <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script><script src="{{ asset('/frontend/theme-default/assets/js/storefront-product.js') }}" defer></script>
+  {% endif %}
 
   <script src="{{ asset('/frontend/theme-pulse/assets/js/app.js') }}" defer></script>
   <script src="{{ asset('/frontend/theme-pulse/assets/js/cookie-consent.js') }}" defer></script>

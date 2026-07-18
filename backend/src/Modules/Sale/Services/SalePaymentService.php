@@ -19,6 +19,7 @@ final class SalePaymentService
         private readonly ?PaymentProviderRegistry $providers = null,
         private readonly ?SaleStateMachineService $states = null,
         private readonly ?SaleInventoryService $inventory = null,
+        private readonly ?SaleGiftCardService $giftCards = null,
     ) {}
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -129,7 +130,8 @@ final class SalePaymentService
             'payment_status' => (string) $order['payment_status'],
             'iam_user_id' => $iamUserId,
         ], $iamUserId, $correlationId);
-        return ['order' => $order, 'transaction' => $transaction, 'intent' => $intent];
+        $issued = (string)$order['payment_status']==='paid' ? ($this->giftCards?->issuePaidOrder($orderId,$correlationId) ?? []) : [];
+        return ['order' => $order, 'transaction' => $transaction, 'intent' => $intent, 'gift_cards'=>$issued];
     }
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -140,6 +142,10 @@ final class SalePaymentService
         $key = trim((string) $idempotencyKey);
         if ($key === '') {
             throw new SalePaymentException('sale.refund_idempotency_key_required');
+        }
+        if(str_starts_with((string)($tx['provider_transaction_id']??''),'gift-card-ledger-')){
+            if($this->giftCards===null) throw new SalePaymentException('sale.gift_card_unavailable');
+            return $this->giftCards->refundPaymentTransaction($transactionId,$amountMinor,$key,trim((string)$reason)?:'gift card refund',$iamUserId);
         }
         $reasonCode = strtolower(trim((string) ($options['reason_code'] ?? 'customer_request')));
         if (!in_array($reasonCode, ['customer_request', 'return', 'duplicate', 'fraud', 'service_failure', 'commercial_gesture', 'other'], true)) {

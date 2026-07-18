@@ -74,9 +74,13 @@ export type EntryListItem = {
   language_publication_status?: string;
   block_editorial_statuses?: { total: number; draft: number; review: number; ready: number; published: number; archived: number };
   full_path?: string | null;
+  public_href?: string | null;
   created_at?: string;
   updated_at?: string;
   published_at?: string | null;
+  system_kind?: 'shop';
+  system_badge?: string;
+  editor_route?: string;
 };
 
 export type RevisionSummary = { id: number; revision_number?: number; language_code?: string; workflow_status?: string; created_at?: string; updated_at?: string; published_at?: string | null; revision_label?: string; summary?: string; change_notes?: string };
@@ -139,7 +143,7 @@ export type TaxonomyPolicy = Record<string, unknown> & {
   taxonomies?: TaxonomyPolicyItem[];
 };
 
-export type EditorialBlock = { id: string; type: 'markdown'|'richtext'|'html_safe'|'html_raw'|'iframe'|'embed'|'image'|'video'|'audio'|'hero'|'gallery'|'buttons'|'card'|'columns'|'form'|'plan'|'articles'; enabled: boolean; editorial_status?: 'draft'|'review'|'ready'|'published'|'archived'; label?: string; css_class?: string; anchor?: string; data: Record<string, unknown>; sort_order?: number };
+export type EditorialBlock = { id: string; type: 'markdown'|'richtext'|'html_safe'|'html_raw'|'iframe'|'embed'|'image'|'video'|'audio'|'hero'|'gallery'|'buttons'|'card'|'columns'|'form'|'plan'|'articles'|'featured_product'|'product_card'|'product_grid'|'collection_grid'|'product_detail'|'add_to_cart'; enabled: boolean; editorial_status?: 'draft'|'review'|'ready'|'published'|'archived'; label?: string; css_class?: string; anchor?: string; data: Record<string, unknown>; sort_order?: number };
 
 export type SaveDraftPayload = { taxonomy_terms?: Record<string, number[]> };
 

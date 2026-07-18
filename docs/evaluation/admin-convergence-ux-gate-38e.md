@@ -36,7 +36,7 @@ La gate agrège les preuves 38a à 38d et complète les gates 37/38. Elle ne tra
 - **Studio** porte pages, articles, formulaires, SEO et médias.
 - **Opérations** porte Relations, Produits/stock, Offres/marketing et Audiences.
 - **Ventes** porte Commandes, Paiements/factures et POS.
-- **Commerce** gouverne son panneau et, dans un lot ultérieur, l’activation explicite des Shops.
+- **E-Commerce** reste sous Ventes. Au jalon 38e, l’activation explicite des Shops n’était pas encore livrée ; elle est désormais couverte séparément par [l’évaluation 39](shop-system-activation-39.md).
 
 La carte détaillée des destinations et redirections est `docs/reference/admin-convergence-routes.md`. La matrice des rôles et cumuls de permissions est `docs/administration/admin-convergence-roles.md`.
 
@@ -79,7 +79,7 @@ Le rapport runtime collecte pour chacun des huit scénarios : résultat, étapes
 
 ## Limites
 
-Une suite Playwright ne mesure pas la charge cognitive d’un utilisateur réel. Chromium ne couvre pas tous les navigateurs, zooms et lecteurs d’écran. Les paiements externes restent simulés ou testés via providers locaux. L’activation publique d’un Shop site/langue appartient au prompt 39 et n’est pas présentée comme réussie ici.
+Une suite Playwright ne mesure pas la charge cognitive d’un utilisateur réel. Chromium ne couvre pas tous les navigateurs, zooms et lecteurs d’écran. Les paiements externes restent simulés ou testés via providers locaux. L’activation publique d’un Shop site/langue n’est pas une preuve de la gate historique 38e ; sa preuve actuelle appartient à [l’évaluation 39](shop-system-activation-39.md).
 
 La précondition littérale « boutique encore inactive » est contredite pour le site principal de la fixture native : une configuration publique Sale y existe déjà. Le contrôle 38e démontre donc que l’activation/désactivation du **module Commerce laisse l’état Shop existant inchangé** ; il ne prétend pas désactiver cette configuration. Les sites secondaires de la matrice restent affichés « Shop non activé ». L’action explicite d’activation d’un Shop n’existe pas encore et demeure hors périmètre avant 39.
 

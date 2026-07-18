@@ -58,6 +58,10 @@ try {
 
     $order1 = $insertOrder(1, $channelId, 'P13-001', 'alice@example.test');
     $proof1 = $accounts->issueClaimProof($order1);
+    $sale->run("INSERT INTO sale_fulfillments(order_id,fulfillment_number,fulfillment_type,status,pickup_code,correlation_id) VALUES(?,'FUL-PUBLIC-1','pickup','ready_for_pickup','SECRET42','customer-track-proof')",[$order1]);
+    $guestTracking=$accounts->guestOrderByProof(1,$proof1['token']);
+    $h->assertSame('signed_claim_proof',$guestTracking['access']['kind'],'guest tracking requires the existing expiring signed proof instead of a sequential order id');
+    $h->assertTrue(!array_key_exists('pickup_code',$guestTracking['fulfillments'][0]),'public tracking never exposes the pickup verification code');
     $registered = $accounts->registerWithProof(1, $proof1['token'], 'mot-de-passe-solide');
     $user1 = (int) $registered['user']['id'];
     $h->assertTrue($user1 > 0, 'post-purchase proof creates IAM account');
@@ -72,6 +76,8 @@ try {
     $otherOrder = $insertOrder(1, $channelId, 'P13-THIEF', 'victim@example.test');
     $otherProof = $accounts->issueClaimProof($otherOrder);
     $h->expectException(fn() => $accounts->claimForAuthenticatedAccount(1, $user1, $otherProof['token']), SaleValidationException::class, 'account cannot claim another customer order');
+    $sale->run("UPDATE sale_order_claim_proofs SET status='revoked' WHERE order_id=?",[$otherOrder]);
+    $h->expectException(fn()=>$accounts->guestOrderByProof(1,$otherProof['token']),SaleValidationException::class,'revoked guest tracking proof stops working immediately');
 
     $sale->run("INSERT INTO sale_channels(site_id,code,name,channel_type,channel_kind,status,is_public,currency,default_language,tax_mode) VALUES(2,'web-2','Web 2','ecommerce','storefront','active',1,'CHF','fr','tax_included')");
     $channel2 = (int) $sale->lastInsertId();

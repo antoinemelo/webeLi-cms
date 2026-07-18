@@ -110,6 +110,7 @@ $h->assertSame(false, $capabilities['cart.validate']->config['mutates_order'] ??
 $h->assertSame('outbox', $capabilities['order.after_place']->config['transport'] ?? null, 'sale after-order capability uses outbox');
 
 $permissionKeys = array_column($provider->permissions(), 'key');
+$crossDomainPermissionKeys = ['content.read','content.revisions.save','content.publish'];
 foreach ($expectedPermissions as $permission) {
     $h->assertTrue(in_array($permission, $permissionKeys, true), 'sale permission is declared: ' . $permission);
 }
@@ -168,7 +169,14 @@ foreach ($contracts as $contract) {
 
     $permission = (string) ($contract['permission'] ?? '');
     $h->assertTrue(isset($adminRouteKeys[$routeKey]), 'admin sale contract has admin route: ' . $routeKey);
-    $h->assertTrue(in_array($permission, $permissionKeys, true), 'admin sale contract permission exists: ' . $key);
+    $alternatives = array_values(array_filter(array_map('trim',explode('|',$permission))));
+    $h->assertTrue($alternatives !== [], 'admin sale contract declares a permission: ' . $key);
+    foreach ($alternatives as $declaredPermission) {
+        $h->assertTrue(
+            in_array($declaredPermission,$permissionKeys,true) || in_array($declaredPermission,$crossDomainPermissionKeys,true),
+            'admin sale contract permission exists: ' . $key . ' -> ' . $declaredPermission
+        );
+    }
 }
 
 foreach ($adminRouteKeys as $routeKey => $_) {
@@ -179,8 +187,8 @@ foreach ($publicRouteKeys as $routeKey => $_) {
 }
 
 foreach ([
-    ['GET', '/admin/api/sale/export/order-lines.csv', 'admin.sale.export.order_lines.v1', 'sale.reports.read'],
-    ['GET', '/admin/api/sale/export/stock-movements.csv', 'admin.sale.export.stock_movements.v1', 'sale.stock.read'],
+    ['GET', '/admin/api/sale/export/order-lines.csv', 'admin.sale.export.order_lines.v1', 'sale.exports.manage'],
+    ['GET', '/admin/api/sale/export/stock-movements.csv', 'admin.sale.export.stock_movements.v1', 'sale.exports.manage'],
     ['POST', '/admin/api/sale/import/stock/apply', 'admin.sale.import.stock.apply.v1', 'sale.stock.manage'],
     ['POST', '/admin/api/sale/pos/checkout', 'admin.sale.pos.checkout.v1', 'sale.pos.use'],
     ['PATCH', '/admin/api/sale/pos/registers/{id}', 'admin.sale.pos.registers.update.v1', 'sale.pos.manage'],

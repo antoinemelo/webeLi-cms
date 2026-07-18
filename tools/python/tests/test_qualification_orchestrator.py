@@ -46,6 +46,8 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("bundle-stock-strategy-gate", by_profile["release"])
         self.assertIn("admin-convergence-gate", by_profile["complete"])
         self.assertIn("admin-convergence-gate", by_profile["release"])
+        self.assertIn("shop-operational-gate", by_profile["complete"])
+        self.assertIn("shop-operational-gate", by_profile["release"])
         self.assertIn("php-dependencies", by_profile["release"])
         self.assertIn("performance-baseline", by_profile["release"])
         self.assertIn("preflight", by_profile["release"])
@@ -102,6 +104,7 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertEqual((), e2e.env_vars)
         self.assertIn("e2e", e2e.command)
         self.assertIn("--use-built-assets", e2e.command)
+        self.assertEqual(3600, e2e.timeout)
         self.assertIn("tools/python/qualification/performance_baseline.py", registry["performance-baseline"].files)
 
     def test_release_gate_matrix_distinguishes_source_and_release_controls(self):
@@ -114,12 +117,17 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("gate M6 ledger stock Sale", requirements)
         self.assertIn("gate M6.3 bundles et stock composé", requirements)
         self.assertIn("gate UX convergence admin 38e", requirements)
+        self.assertIn("gate E2E Shop opérationnel 48", requirements)
         self.assertEqual(["performance-baseline"], requirements["baseline performance"]["source_steps"])
         self.assertEqual(["browser-e2e"], requirements["gate E2E omnicanale storefront/POS"]["source_steps"])
         self.assertEqual(["payment-provider-gate", "browser-e2e"], requirements["gate M5 interchangeabilité providers"]["source_steps"])
         self.assertEqual(["inventory-ledger-gate", "browser-e2e"], requirements["gate M6 ledger stock Sale"]["source_steps"])
         self.assertEqual(["bundle-stock-strategy-gate", "browser-e2e"], requirements["gate M6.3 bundles et stock composé"]["source_steps"])
         self.assertEqual(["admin-convergence-gate", "browser-e2e"], requirements["gate UX convergence admin 38e"]["source_steps"])
+        self.assertEqual(
+            ["shop-operational-gate", "browser-e2e", "performance-baseline"],
+            requirements["gate E2E Shop opérationnel 48"]["source_steps"],
+        )
         self.assertIn("tools/cms.py validate", requirements["validation statique"]["release_commands"])
         self.assertIn("tools/cms.py backup --restore", requirements["backup/restore et intégrité SQLite"]["release_commands"])
 
@@ -135,6 +143,8 @@ class QualificationOrchestratorTest(unittest.TestCase):
         self.assertIn("tools/python/qualification/reservation_availability_gate.py", E2E_INPUTS)
         self.assertIn("tools/python/qualification/admin_convergence_gate.py", E2E_INPUTS)
         self.assertIn("docs/evaluation/machine-readable/admin-convergence-ux-38e.json", E2E_INPUTS)
+        self.assertIn("tools/python/qualification/shop_operational_gate.py", E2E_INPUTS)
+        self.assertIn("docs/evaluation/machine-readable/shop-operational-release-48.json", E2E_INPUTS)
 
         class Parser:
             def __init__(self) -> None:

@@ -49,6 +49,25 @@ final class BusinessPimApiController
         } catch (InvalidArgumentException $e) { return $this->validation($e); }
     }
 
+    public function storefrontBlockCandidates(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.read');
+        return Response::success([
+            'products'=>$this->contentLinks->storefrontProductCandidates((int)$site['id'],(string)($this->request->query['locale']??$languageCode),(string)($this->request->query['q']??''),(int)($this->request->query['limit']??20)),
+        ],'admin.business.pim.storefront_block_candidates.v1',$this->meta($site,$languageCode));
+    }
+
+    public function previewStorefrontBlock(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.read');
+        $payload=$this->payload();$block=is_array($payload['block']??null)?$payload['block']:[];
+        if($block===[]||!in_array((string)($block['type']??''),['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'],true)){
+            return Response::error(ErrorCode::VALIDATION_FAILED,'Bloc Commerce invalide.',422,['field'=>'block.type']);
+        }
+        $hydrated=$this->contentLinks->hydrateStorefrontBlocks([$block],(int)$site['id'],(string)($payload['locale']??$languageCode),['current_product_id'=>(int)($payload['current_product_id']??0)]);
+        return Response::success(['block'=>$hydrated[0]??$block],'admin.business.pim.storefront_block_preview.v1',$this->meta($site,$languageCode));
+    }
+
     public function priceLists(): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.read');
@@ -86,6 +105,7 @@ final class BusinessPimApiController
         [$site, $languageCode] = $this->authorize('business.catalog.read');
         return Response::success([
             'relations' => $this->relationService()->relations((int) $site['id'], $this->id($id), $this->request->query['type'] ?? null),
+            'rules' => $this->relationService()->rules((int) $site['id'], $this->id($id)),
         ], 'admin.business.pim.product_relations.index.v1', $this->meta($site, $languageCode));
     }
 
@@ -106,6 +126,35 @@ final class BusinessPimApiController
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
         }
+    }
+
+    public function deleteProductRelation(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        return Response::success(
+            ['deleted'=>$this->relationService()->deleteRelation((int)$site['id'],$this->id($id))],
+            'admin.business.pim.product_relations.delete.v1',$this->meta($site,$languageCode)
+        );
+    }
+
+    public function storeProductRelationRule(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        try {
+            return Response::success(
+                ['rule'=>$this->relationService()->saveRule((int)$site['id'],$this->id($id),$this->payload())],
+                'admin.business.pim.product_relation_rules.store.v1',$this->meta($site,$languageCode),201
+            );
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
+
+    public function deleteProductRelationRule(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        return Response::success(
+            ['deleted'=>$this->relationService()->deleteRule((int)$site['id'],$this->id($id))],
+            'admin.business.pim.product_relation_rules.delete.v1',$this->meta($site,$languageCode)
+        );
     }
 
     public function putGiftCardPolicy(string|int $id): Response
@@ -365,8 +414,10 @@ final class BusinessPimApiController
     public function deleteAttributeGroup(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
-        $this->pim->archiveAttributeGroup((int) $site['id'], $this->id($id), $this->actorId());
-        return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attribute_groups.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $this->pim->archiveAttributeGroup((int) $site['id'], $this->id($id), $this->actorId());
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attribute_groups.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
     }
 
     public function attributes(): Response
@@ -399,8 +450,10 @@ final class BusinessPimApiController
     public function deleteAttribute(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
-        $this->pim->archiveAttribute((int) $site['id'], $this->id($id), $this->actorId());
-        return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attributes.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $this->pim->archiveAttribute((int) $site['id'], $this->id($id), $this->actorId());
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attributes.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
     }
 
     public function storeAttributeOption(string|int $id): Response
@@ -427,8 +480,10 @@ final class BusinessPimApiController
     public function deleteAttributeOption(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
-        $this->pim->archiveOption((int) $site['id'], $this->id($id));
-        return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attribute_options.delete.v1', $this->meta($site, $languageCode));
+        try {
+            $this->pim->archiveOption((int) $site['id'], $this->id($id));
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.attribute_options.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
     }
 
     public function productAttributes(string|int $id): Response

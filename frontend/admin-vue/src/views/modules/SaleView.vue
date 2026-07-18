@@ -26,6 +26,13 @@ type Dashboard = {
   open_cash_sessions?: Row[];
   actionable?: { tasks?: Row[]; groups?: Record<string, number>; total?: number };
 };
+type SalesDashboard = {
+  definitions?: Record<string, string>;
+  summary?: Record<string, number>;
+  by_channel?: Row[];
+  orders?: Row[];
+  scope?: Row;
+};
 type OrderDossier = {
   order: Order;
   state: Row & { key?: string; label?: string; next_action?: string; next_action_label?: string; blockers?: string[]; actions?: Row[]; internal?: Row };
@@ -82,6 +89,7 @@ type PaymentSession = Row & {
   captures?: Row[];
 };
 type PaymentExceptionCenter = { health?: string; open_count?: number; pending_operations?: number; groups?: Record<string, number>; items?: Row[] };
+type GiftCard = Row & { id:number; public_reference?:string; masked_code?:string; balance_minor?:number; initial_value_minor?:number; currency?:string; status?:string; origin_order_id?:number; ledger?:Row[] };
 type OrderColumnKey = 'number' | 'relation' | 'date' | 'source' | 'total' | 'payment' | 'fulfillment' | 'status';
 type OrderFilterKey = 'source' | 'status' | 'payment_status';
 type QuickOrderFilterKey = 'all' | 'placed' | 'confirmed' | 'completed' | 'ecommerce' | 'pos' | 'payment_pending' | 'paid';
@@ -98,6 +106,8 @@ const saving = ref(false);
 const error = ref('');
 const notice = ref('');
 const dashboard = ref<Dashboard>({});
+const salesDashboard = ref<SalesDashboard>({});
+const salesFilters = ref({ date_from: '', date_to: '', source: '', payment_status: '', fulfillment_status: '', currency: '' });
 const orders = ref<Order[]>([]);
 const selectedOrder = ref<Order | null>(null);
 const selectedDossier = ref<OrderDossier | null>(null);
@@ -108,6 +118,9 @@ const orderEvents = ref<Row[]>([]);
 const paymentSessions = ref<PaymentSession[]>([]);
 const paymentWebhookEvents = ref<Row[]>([]);
 const paymentExceptionCenter = ref<PaymentExceptionCenter>({});
+const giftCards = ref<GiftCard[]>([]);
+const selectedGiftCard = ref<GiftCard | null>(null);
+const giftCardSearch = ref('');
 const selectedPayment = ref<PaymentSession | null>(null);
 const paymentSearch = ref('');
 const paymentFilter = ref({ status: '', provider: '' });
@@ -128,6 +141,9 @@ const providerStatus = ref<ProviderStatus | null>(null);
 const providerStatuses = computed<ProviderStatus[]>(() => providerStatus.value?.providers ?? (providerStatus.value ? [providerStatus.value] : []));
 const fulfillmentMethods = ref<Row[]>([]);
 const salePolicies = ref<Row>({});
+const documentPolicy = ref<Row>({ invoice_trigger: 'paid', invoice_series: 'INV', credit_note_series: 'CRN', gift_card_policy: 'unconfigured', seller_snapshot: {} });
+const documentSellerName = ref('');
+const documentLegalNotice = ref('');
 const sessions = ref<Row[]>([]);
 const paymentAmount = ref(0);
 const cancelReason = ref('');
@@ -153,6 +169,7 @@ const navigationItems = computed(() => [
   { key: 'dashboard', label: t('sale.tabs.dashboard'), route: '/sale', visible: context.can('sale.read') },
   { key: 'orders', label: t('sale.tabs.orders'), route: '/sale/orders', visible: context.can('sale.orders.read') },
   { key: 'payments', label: t('sale.tabs.paymentsInvoices'), route: '/sale/payments', visible: context.can('sale.payments.read') },
+  { key: 'giftCards', label: t('sale.tabs.giftCards'), route: '/sale/gift-cards', visible: context.can('sale.gift_cards.read') },
   { key: 'pos', label: t('sale.tabs.pos'), route: '/sale/pos', visible: context.can('sale.pos.use') },
   { key: 'settings', label: t('sale.tabs.settings'), route: '/sale/settings', visible: context.can('sale.settings.manage') }
 ]);
@@ -215,6 +232,7 @@ const activeOrderFilterChips = computed<Array<{ key: OrderFilterKey; label: stri
 const activeTab = computed(() => {
   if (route.path.includes('/sale/orders')) return 'orders';
   if (route.path.includes('/sale/payments')) return 'payments';
+  if (route.path.includes('/sale/gift-cards')) return 'giftCards';
   if (route.path.includes('/advanced/stock')) return 'stock';
   if (route.path.includes('/advanced/reservations')) return 'reservations';
   if (route.path.includes('/advanced/logistics')) return 'operations';
@@ -306,6 +324,14 @@ function saleCatalogPdfUrl(channel: Channel): string {
 async function loadDashboard(): Promise<void> {
   const response = await adminApi.get<Dashboard>('/sale/dashboard');
   dashboard.value = response.data;
+  if (context.can('sale.sales.read')) {
+    const sales = await adminApi.get<{ sales: SalesDashboard }>('/sale/sales-dashboard', salesFilters.value);
+    salesDashboard.value = sales.data.sales || {};
+  }
+}
+
+function exportSalesDashboard(): void {
+  window.location.assign(adminApi.href('/sale/export/sales-dashboard.csv', salesFilters.value));
 }
 
 async function loadOrders(): Promise<void> {
@@ -335,12 +361,13 @@ async function loadOrders(): Promise<void> {
 }
 
 async function loadSettings(): Promise<void> {
-  const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse, settingsResponse] = await Promise.all([
+  const [channelResponse, methodResponse, sessionResponse, fulfillmentResponse, settingsResponse, documentPolicyResponse] = await Promise.all([
     adminApi.get<{ channels: Channel[] }>('/sale/channels', { limit: 100 }),
     adminApi.get<{ payment_methods: Row[]; provider_status?: ProviderStatus }>('/sale/payment-methods'),
     adminApi.get<{ sessions: Row[] }>('/sale/reports/pos-sessions'),
     adminApi.get<{ methods: Row[] }>('/sale/fulfillment'),
-    adminApi.get<{ order_policies: Row }>('/sale/settings')
+    adminApi.get<{ order_policies: Row }>('/sale/settings'),
+    adminApi.get<{ policy: Row }>('/sale/document-policy')
   ]);
   channels.value = channelResponse.data.channels || [];
   paymentMethods.value = methodResponse.data.payment_methods || [];
@@ -348,6 +375,18 @@ async function loadSettings(): Promise<void> {
   sessions.value = sessionResponse.data.sessions || [];
   fulfillmentMethods.value = fulfillmentResponse.data.methods || [];
   salePolicies.value = settingsResponse.data.order_policies || {};
+  documentPolicy.value = documentPolicyResponse.data.policy || {};
+  documentSellerName.value = String((documentPolicy.value.seller_snapshot as Row)?.name || '');
+  documentLegalNotice.value = String(documentPolicy.value.legal_notice || '');
+}
+
+async function saveDocumentPolicy(): Promise<void> {
+  saving.value = true; error.value = ''; notice.value = '';
+  try {
+    const response = await adminApi.put<{ policy: Row }>('/sale/document-policy', { ...documentPolicy.value, legal_notice: documentLegalNotice.value.trim(), seller_snapshot: { ...((documentPolicy.value.seller_snapshot as Row) || {}), name: documentSellerName.value.trim() } });
+    documentPolicy.value = response.data.policy || {};
+    notice.value = t('sale.settings.documentPolicySaved');
+  } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
 }
 
 async function loadPayments(): Promise<void> {
@@ -369,6 +408,27 @@ async function loadPayments(): Promise<void> {
   }
   if (selectedPayment.value && !paymentSessions.value.some((payment) => payment.id === selectedPayment.value?.id)) selectedPayment.value = null;
   if (!selectedPayment.value && paymentSessions.value[0]) await selectPayment(paymentSessions.value[0]);
+}
+
+async function loadGiftCards(): Promise<void> {
+  const response=await adminApi.get<{gift_cards:GiftCard[]}>('/sale/gift-cards',{q:giftCardSearch.value||undefined});
+  giftCards.value=response.data.gift_cards||[];
+}
+async function selectGiftCard(card:GiftCard): Promise<void> {
+  const response=await adminApi.get<{gift_card:GiftCard}>(`/sale/gift-cards/${card.id}`);selectedGiftCard.value=response.data.gift_card;
+}
+async function resendGiftCard(): Promise<void> {
+  if(!selectedGiftCard.value||!confirm(t('sale.giftCards.resendConfirm')))return;saving.value=true;error.value='';
+  try{await adminApi.post(`/sale/gift-cards/${selectedGiftCard.value.id}/resend`,{});notice.value=t('sale.giftCards.resent');await selectGiftCard(selectedGiftCard.value);}catch(err){error.value=apiErrorMessage(err);}finally{saving.value=false;}
+}
+async function cancelGiftCard(): Promise<void> {
+  if(!selectedGiftCard.value)return;const reason=window.prompt(t('sale.giftCards.cancelReason'))?.trim();if(!reason)return;saving.value=true;error.value='';
+  try{await adminApi.post(`/sale/gift-cards/${selectedGiftCard.value.id}/cancel`,{reason});notice.value=t('sale.giftCards.cancelled');await loadGiftCards();await selectGiftCard(selectedGiftCard.value);}catch(err){error.value=apiErrorMessage(err);}finally{saving.value=false;}
+}
+async function adjustGiftCard(): Promise<void> {
+  if(!selectedGiftCard.value)return;const raw=window.prompt(t('sale.giftCards.adjustAmount'));if(raw===null)return;const delta=Math.round(Number(raw)*100);const reason=window.prompt(t('sale.giftCards.adjustReason'))?.trim();if(!Number.isFinite(delta)||delta===0||!reason)return;
+  saving.value=true;error.value='';const idempotencyKey=crypto.randomUUID();
+  try{const response=await adminApi.post<{preview:Row}>(`/sale/gift-cards/${selectedGiftCard.value.id}/adjustment-preview`,{amount_delta_minor:delta,reason,idempotency_key:idempotencyKey});if(!confirm(t('sale.giftCards.adjustConfirm',{amount:money(response.data.preview.new_balance_minor,selectedGiftCard.value.currency)})))return;await adminApi.post(`/sale/gift-cards/${selectedGiftCard.value.id}/adjustments`,{amount_delta_minor:delta,reason,idempotency_key:idempotencyKey});notice.value=t('sale.giftCards.adjusted');await loadGiftCards();await selectGiftCard(selectedGiftCard.value);}catch(err){error.value=apiErrorMessage(err);}finally{saving.value=false;}
 }
 
 async function selectPayment(payment: PaymentSession): Promise<void> {
@@ -421,6 +481,7 @@ async function load(): Promise<void> {
     if (activeTab.value === 'dashboard') await loadDashboard();
     if (activeTab.value === 'orders') await loadOrders();
     if (activeTab.value === 'payments') await loadPayments();
+    if (activeTab.value === 'giftCards') await loadGiftCards();
     if (activeTab.value === 'paymentDiagnostics') await loadPayments();
     if (activeTab.value === 'settings') {
       activeSettingsSection.value = settingsSectionFromRoute();
@@ -509,11 +570,28 @@ async function transitionOrderFulfillment(fulfillment: Row, status: string): Pro
   saving.value = true; error.value = '';
   try {
     const payload: Row = { status };
-    if (status === 'shipped') payload.tracking_reference = window.prompt(t('sale.orders.trackingReference')) || '';
-    if (status === 'handed_over') payload.proof = window.prompt(t('sale.orders.handoverProof')) || '';
+    if (status === 'shipped') {
+      payload.tracking_reference = window.prompt(t('sale.orders.trackingReference')) || '';
+      payload.carrier_code = window.prompt(t('sale.orders.carrierCode'), String(fulfillment.carrier_code || 'manual')) || 'manual';
+      payload.tracking_url = window.prompt(t('sale.orders.trackingUrlOptional'), String(fulfillment.tracking_url || '')) || '';
+    }
+    if (status === 'handed_over') {
+      payload.pickup_code = window.prompt(t('sale.orders.pickupCode')) || '';
+      payload.proof = window.prompt(t('sale.orders.handoverProof')) || '';
+    }
     await adminApi.post(`/sale/fulfillments/${fulfillment.id}/transition`, payload);
     notice.value = t('sale.orders.fulfillmentUpdated');
     await refreshOrderAfterFulfillment();
+  } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
+}
+
+async function resendOrderNotification(notification: Row): Promise<void> {
+  if (!notification.id || !confirm(t('sale.orders.notificationResendConfirm'))) return;
+  saving.value = true; error.value = ''; notice.value = '';
+  try {
+    await adminApi.post(`/sale/order-notifications/${notification.id}/resend`, {});
+    notice.value = t('sale.orders.notificationResent');
+    if (selectedOrder.value) await selectOrder(selectedOrder.value);
   } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
 }
 
@@ -542,13 +620,32 @@ function fulfillmentLines(operation: Row): Row[] {
   return Array.isArray(operation.lines) ? operation.lines as Row[] : [];
 }
 
+function fulfillmentTrackingEvents(operation: Row): Row[] {
+  return Array.isArray(operation.tracking_events) ? operation.tracking_events as Row[] : [];
+}
+
+function trackingEventMessage(event: Row): string {
+  const details = event.details && typeof event.details === 'object' && !Array.isArray(event.details) ? event.details as Row : {};
+  return String(details.message || event.event_type || '');
+}
+
 function canIssueDocument(type: string): boolean {
-  if (!selectedOrder.value || !selectedDossier.value) return false;
+  if (!context.can('sale.documents.issue') || !selectedOrder.value || !selectedDossier.value) return false;
   if (type === 'invoice') return selectedOrder.value.payment_status === 'paid';
   if (type === 'credit_note') return Number(selectedOrder.value.refunded_total_minor || 0) > 0;
   if (type === 'delivery_note') return (selectedDossier.value.fulfillment.operations || []).some((item) => ['shipped','handed_over','delivered','returned'].includes(String(item.status)));
   if (type === 'pos_receipt') return selectedOrder.value.source === 'pos' && selectedOrder.value.payment_status === 'paid';
   return selectedOrder.value.status !== 'draft';
+}
+
+async function sendDocument(document: Row): Promise<void> {
+  if (!selectedOrder.value?.id || !document.id) return;
+  saving.value = true; error.value = ''; notice.value = '';
+  try {
+    await adminApi.post(`/sale/orders/${selectedOrder.value.id}/documents/${document.id}/send`, {});
+    notice.value = t('sale.orders.documentQueued');
+    await selectOrder(selectedOrder.value);
+  } catch (err) { error.value = apiErrorMessage(err); } finally { saving.value = false; }
 }
 
 function dossierAction(key: string): Row | undefined {
@@ -923,6 +1020,25 @@ onMounted(load);
           <span class="sale-admin__task-action"><b>{{ (task.state as Row)?.label }}</b><small>{{ (task.state as Row)?.next_action_label }}</small></span>
         </button>
       </section>
+      <section v-if="context.can('sale.sales.read')" class="sale-admin__section sale-sales-dashboard">
+        <div class="sale-admin__section-head"><div><h2>{{ t('sale.dashboard.salesTitle') }}</h2><p>{{ t('sale.dashboard.salesIntro') }}</p></div><button v-if="context.can('sale.exports.manage')" class="btn btn-outline-secondary btn-sm" type="button" @click="exportSalesDashboard">{{ t('sale.dashboard.export') }}</button></div>
+        <form class="sale-sales-dashboard__filters" @submit.prevent="loadDashboard">
+          <label>{{ t('sale.dashboard.from') }}<input v-model="salesFilters.date_from" class="form-control" type="date"></label>
+          <label>{{ t('sale.dashboard.to') }}<input v-model="salesFilters.date_to" class="form-control" type="date"></label>
+          <label>{{ t('common.source') }}<select v-model="salesFilters.source" class="form-select"><option value="">{{ t('common.all') }}</option><option value="ecommerce">E-Commerce</option><option value="pos">POS</option><option value="admin">Admin</option></select></label>
+          <label>{{ t('common.payment') }}<select v-model="salesFilters.payment_status" class="form-select"><option value="">{{ t('common.all') }}</option><option value="pending">{{ statusLabel('pending') }}</option><option value="paid">{{ statusLabel('paid') }}</option><option value="refunded">{{ statusLabel('refunded') }}</option></select></label>
+          <button class="btn btn-primary" type="submit">{{ t('common.apply') }}</button>
+        </form>
+        <div class="sale-sales-dashboard__metrics">
+          <article><small>{{ t('sale.dashboard.orders') }}</small><strong>{{ Number(salesDashboard.summary?.orders_count || 0) }}</strong></article>
+          <article :title="salesDashboard.definitions?.ordered_minor"><small>{{ t('sale.dashboard.ordered') }}</small><strong>{{ money(salesDashboard.summary?.ordered_minor, String((salesDashboard.orders?.[0] as Row)?.currency || 'CHF')) }}</strong></article>
+          <article :title="salesDashboard.definitions?.net_sales_minor"><small>{{ t('sale.dashboard.net') }}</small><strong>{{ money(salesDashboard.summary?.net_sales_minor, String((salesDashboard.orders?.[0] as Row)?.currency || 'CHF')) }}</strong></article>
+          <article :title="salesDashboard.definitions?.paid_minor"><small>{{ t('sale.dashboard.paid') }}</small><strong>{{ money(salesDashboard.summary?.paid_minor, String((salesDashboard.orders?.[0] as Row)?.currency || 'CHF')) }}</strong></article>
+          <article><small>{{ t('sale.dashboard.refunded') }}</small><strong>{{ money(salesDashboard.summary?.refunded_minor, String((salesDashboard.orders?.[0] as Row)?.currency || 'CHF')) }}</strong></article>
+          <article><small>{{ t('sale.dashboard.units') }}</small><strong>{{ Number(salesDashboard.summary?.units_count || 0) }}</strong></article>
+        </div>
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>{{ t('common.number') }}</th><th>{{ t('common.date') }}</th><th>{{ t('common.source') }}</th><th>{{ t('common.total') }}</th><th>{{ t('common.payment') }}</th><th>{{ t('sale.orders.fulfillmentState') }}</th></tr></thead><tbody><tr v-for="order in salesDashboard.orders || []" :key="String(order.id)"><td><button class="sale-table-copy" type="button" @click="openOrder({ id: order.id } as Order)">{{ order.order_number }}</button></td><td>{{ shortDate(order.placed_at) }}</td><td>{{ order.channel_name || statusLabel(order.source) }}</td><td>{{ money(order.grand_total_minor, order.currency) }}</td><td>{{ statusLabel(order.payment_status) }}</td><td>{{ statusLabel(order.fulfillment_status) }}</td></tr><tr v-if="!(salesDashboard.orders || []).length"><td colspan="6" class="text-muted">{{ t('sale.dashboard.noSales') }}</td></tr></tbody></table></div>
+      </section>
     </section>
 
     <section v-if="activeTab === 'orders'" class="sale-admin__panel sale-admin__orders">
@@ -1165,12 +1281,20 @@ onMounted(load);
         <div v-if="!(selectedDossier.fulfillment.operations || []).length" class="text-muted">{{ t('sale.orders.noFulfillment') }}</div>
         <button v-if="dossierActionEnabled('prepare_order') && !(selectedDossier.fulfillment.operations || []).length" class="btn btn-primary" type="button" :disabled="saving" @click="createOrderFulfillment">{{ t('sale.orders.startPreparation') }}</button>
         <section v-for="operation in selectedDossier.fulfillment.operations || []" :key="String(operation.id)" class="sale-order-dossier__operation">
-          <div class="sale-admin__line"><span>{{ operation.fulfillment_number }} · {{ statusLabel(operation.status) }}</span><small>{{ operation.tracking_reference || operation.pickup_code || '' }}</small></div>
+          <div class="sale-admin__line">
+            <span>{{ operation.fulfillment_number }} · {{ statusLabel(operation.status) }}</span>
+            <a v-if="operation.tracking_url" :href="String(operation.tracking_url)" target="_blank" rel="noopener noreferrer">{{ operation.carrier_code || t('sale.orders.tracking') }} · {{ operation.tracking_reference || t('sale.orders.openTracking') }}</a>
+            <small v-else>{{ operation.tracking_reference || operation.pickup_code || '' }}</small>
+          </div>
           <div v-for="line in fulfillmentLines(operation)" :key="String(line.id)" class="sale-admin__line sale-order-dossier__preparation-line">
             <span>{{ line.product_name }} <small>{{ Number(line.prepared_quantity || 0) }}/{{ Number(line.quantity || 0) }} {{ t('sale.orders.prepared') }}</small></span>
             <button v-if="Number(line.prepared_quantity || 0) < Number(line.quantity || 0) && context.can('sale.fulfillment.manage')" class="btn btn-outline-secondary btn-sm" type="button" :disabled="saving" @click="prepareFulfillmentLine(operation, line)">{{ t('sale.orders.markLinePrepared') }}</button>
           </div>
           <button v-if="fulfillmentTransition(operation) && context.can('sale.fulfillment.manage')" class="btn btn-outline-primary btn-sm" type="button" :disabled="saving" @click="transitionOrderFulfillment(operation, fulfillmentTransition(operation))">{{ t(`sale.fulfillment.action.${operation.next_action}`) }}</button>
+          <div v-for="trackingEvent in fulfillmentTrackingEvents(operation)" :key="String(trackingEvent.id)" class="sale-admin__line sale-order-dossier__tracking-event">
+            <span>{{ statusLabel(trackingEvent.event_status) }} · {{ trackingEventMessage(trackingEvent) }}</span>
+            <small>{{ shortDate(trackingEvent.occurred_at) }}</small>
+          </div>
         </section>
         <div v-for="backorder in selectedDossier.fulfillment.backorders || []" :key="String(backorder.id)" class="alert alert-warning py-2">{{ backorder.product_name }} · {{ t('sale.orders.waitingQuantity') }} {{ backorder.quantity }}</div>
 
@@ -1180,10 +1304,19 @@ onMounted(load);
           <span>{{ t(`sale.document.${document.document_type}`) }} <small>{{ document.document_number }}</small></span>
           <small>{{ shortDate(document.issued_at) }}</small>
           <button v-if="document.printable_text" class="btn ghost btn-sm" type="button" @click="viewDocument(document)">{{ t('common.view') }}</button>
+          <button v-if="context.can('sale.documents.resend') && ['invoice','credit_note'].includes(String(document.document_type))" class="btn ghost btn-sm" type="button" :disabled="saving" @click="sendDocument(document)">{{ t('sale.orders.sendDocument') }}</button>
         </div>
         <div class="sale-order-dossier__document-actions">
           <button v-for="type in ['order_confirmation','invoice','credit_note','delivery_note','pos_receipt']" :key="type" class="btn btn-outline-secondary btn-sm" type="button" :disabled="saving || !canIssueDocument(type)" :title="canIssueDocument(type) ? '' : t(`sale.document.blocked.${type}`)" @click="issueDocument(type)">{{ t(`sale.document.issue.${type}`) }}</button>
           <button class="btn btn-outline-secondary btn-sm" type="button" @click="printReceipt">{{ t('sale.orders.printReceipt') }}</button>
+        </div>
+
+        <h3>{{ t('sale.orders.transactionalMessages') }}</h3>
+        <div v-if="!(selectedDossier.messages || []).length" class="text-muted">{{ t('sale.orders.noTransactionalMessages') }}</div>
+        <div v-for="message in selectedDossier.messages || []" :key="String(message.id)" class="sale-admin__line sale-order-dossier__message-row">
+          <span>{{ t(`sale.notification.${message.notification_type}`) }} <small>{{ statusLabel(message.delivery_status) }}</small></span>
+          <small>{{ shortDate(message.queued_at) }}</small>
+          <button v-if="context.can('sale.orders.manage')" class="btn ghost btn-sm" type="button" :disabled="saving" @click="resendOrderNotification(message)">{{ t('sale.orders.resendNotification') }}</button>
         </div>
 
         <div v-if="dossierAction('cancel_order')?.permitted" class="sale-admin__actions-block">
@@ -1305,6 +1438,25 @@ onMounted(load);
       </aside>
     </section>
 
+    <section v-if="activeTab === 'giftCards'" class="sale-admin__panel sale-admin__orders">
+      <section class="sale-admin__section">
+        <BusinessPageHeader :eyebrow="t('sale.title')" :title="t('sale.giftCards.title')" />
+        <div class="sale-admin__toolbar"><input v-model="giftCardSearch" class="form-control" type="search" :placeholder="t('sale.giftCards.search')" @keyup.enter="loadGiftCards"><button class="btn btn-outline-primary" type="button" @click="loadGiftCards">{{ t('common.search') }}</button></div>
+        <div v-if="!giftCards.length" class="text-muted">{{ t('sale.giftCards.empty') }}</div>
+        <button v-for="card in giftCards" :key="card.id" class="sale-admin__list-row sale-gift-card-row" type="button" @click="selectGiftCard(card)">
+          <span><strong>{{ card.public_reference }}</strong><small>{{ card.masked_code }}</small></span><b>{{ money(card.balance_minor, card.currency) }} / {{ money(card.initial_value_minor, card.currency) }}</b><small>{{ statusLabel(card.status) }}</small>
+        </button>
+      </section>
+      <aside v-if="selectedGiftCard" class="sale-admin__detail" role="dialog" aria-modal="false" :aria-label="t('sale.giftCards.detail')">
+        <button class="btn-close" type="button" :aria-label="t('common.close')" @click="selectedGiftCard=null"></button>
+        <h2>{{ selectedGiftCard.public_reference }}</h2><p>{{ selectedGiftCard.masked_code }} · {{ statusLabel(selectedGiftCard.status) }}</p>
+        <div class="sale-admin__line"><span>{{ t('sale.giftCards.balance') }}</span><b>{{ money(selectedGiftCard.balance_minor, selectedGiftCard.currency) }}</b></div>
+        <div class="sale-admin__line"><span>{{ t('sale.giftCards.origin') }}</span><b>#{{ selectedGiftCard.origin_order_id }}</b></div>
+        <div class="sale-admin__actions-block"><button class="btn btn-outline-primary" type="button" :disabled="saving" @click="resendGiftCard">{{ t('sale.giftCards.resend') }}</button><button class="btn btn-outline-secondary" type="button" :disabled="saving || !['active','depleted'].includes(String(selectedGiftCard.status))" @click="adjustGiftCard">{{ t('sale.giftCards.adjust') }}</button><button class="btn btn-outline-danger" type="button" :disabled="saving || ['cancelled','expired'].includes(String(selectedGiftCard.status))" @click="cancelGiftCard">{{ t('sale.giftCards.cancel') }}</button></div>
+        <h3>{{ t('sale.giftCards.ledger') }}</h3><div v-for="entry in selectedGiftCard.ledger || []" :key="String(entry.id)" class="sale-admin__line"><span>{{ statusLabel(String(entry.entry_type)) }}<small>{{ shortDate(entry.created_at) }}</small></span><b>{{ money(entry.amount_delta_minor, selectedGiftCard.currency) }}</b></div>
+      </aside>
+    </section>
+
     <section v-if="activeTab === 'pos'" class="sale-admin__panel sale-admin__pos">
       <SalePosView embedded />
     </section>
@@ -1362,6 +1514,16 @@ onMounted(load);
           <div class="sale-admin__line"><span>{{ t('sale.settings.deposit') }}</span><b>{{ (salePolicies.deposit as Row)?.enabled ? t('common.enabled') : t('common.disabled') }}</b></div>
           <div class="sale-admin__line"><span>{{ t('sale.settings.posDeferred') }}</span><b>{{ (salePolicies.pos_deferred as Row)?.enabled ? t('common.enabled') : t('common.disabled') }}</b></div>
           <small>{{ t('sale.settings.policyExplanation') }}</small>
+          <hr>
+          <h3>{{ t('sale.settings.documentPolicy') }}</h3>
+          <div v-if="documentPolicy.compliance_warning" class="alert alert-warning">{{ t('sale.settings.sellerUnconfigured') }}</div>
+          <label>{{ t('sale.settings.invoiceTrigger') }}<select v-model="documentPolicy.invoice_trigger" class="form-select"><option value="paid">{{ t('sale.settings.triggerPaid') }}</option><option value="validated">{{ t('sale.settings.triggerValidated') }}</option></select></label>
+          <label>{{ t('sale.settings.invoiceSeries') }}<input v-model="documentPolicy.invoice_series" class="form-control" maxlength="16"></label>
+          <label>{{ t('sale.settings.creditSeries') }}<input v-model="documentPolicy.credit_note_series" class="form-control" maxlength="16"></label>
+          <label>{{ t('sale.settings.giftCardPolicy') }}<select v-model="documentPolicy.gift_card_policy" class="form-select"><option value="unconfigured">{{ t('sale.settings.notConfigured') }}</option><option value="sale">{{ t('sale.settings.giftCardAtSale') }}</option><option value="redemption">{{ t('sale.settings.giftCardAtRedemption') }}</option></select></label>
+          <label>{{ t('sale.settings.sellerName') }}<input v-model="documentSellerName" class="form-control"></label>
+          <label>{{ t('sale.settings.legalNotice') }}<textarea v-model="documentLegalNotice" class="form-control" rows="2"></textarea></label>
+          <button class="btn btn-primary" type="button" :disabled="saving" @click="saveDocumentPolicy">{{ t('common.save') }}</button>
         </section>
         <section v-if="activeSettingsSection === 'channels'" class="sale-admin__section">
           <h2>{{ t('sale.settings.channels') }}</h2>
@@ -1918,6 +2080,7 @@ onMounted(load);
 .sale-order-dossier__operation { border: 1px solid #e4e7ec; border-radius: 6px; display: grid; gap: .5rem; padding: .65rem; }
 .sale-order-dossier__preparation-line { align-items: center; }
 .sale-order-dossier__document-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.sale-sales-dashboard{display:grid;gap:1rem}.sale-sales-dashboard__filters{align-items:end;display:grid;gap:.65rem;grid-template-columns:repeat(4,minmax(9rem,1fr)) auto}.sale-sales-dashboard__filters label{display:grid;gap:.3rem}.sale-sales-dashboard__metrics{display:grid;gap:.65rem;grid-template-columns:repeat(6,minmax(0,1fr))}.sale-sales-dashboard__metrics article{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;display:grid;padding:.8rem}.sale-sales-dashboard__metrics strong{font-size:1.25rem}@media(max-width:900px){.sale-sales-dashboard__filters,.sale-sales-dashboard__metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sale-order-dossier__document-row { align-items: center; display: grid; gap: .65rem; grid-template-columns: minmax(0, 1fr) auto auto; }
 .sale-order-modal-backdrop,
 .sale-document-modal-backdrop { background: rgba(15, 23, 42, .52); display: grid; inset: 0; overflow-y: auto; padding: 1rem; place-items: start center; position: fixed; z-index: 1080; }

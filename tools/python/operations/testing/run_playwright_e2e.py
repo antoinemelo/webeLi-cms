@@ -25,12 +25,38 @@ if str(ROOT) not in sys.path:
 from tools.python.qualification.omnichannel_gate import validate_report_file
 from tools.python.qualification.usability_commerce_gate import validate_report_files as validate_usability_reports
 from tools.python.qualification.admin_convergence_gate import validate_report_files as validate_admin_convergence_reports
+from tools.python.qualification.shop_operational_gate import validate_report_files as validate_shop_operational_reports
 
 FRONTEND = ROOT / "frontend" / "admin-vue"
 PLAYWRIGHT_CLI = FRONTEND / "node_modules" / "@playwright" / "test" / "cli.js"
 OMNICHANNEL_REPORT = ROOT / "storage/qualification/omnichannel/latest.json"
 USABILITY_REPORT = ROOT / "storage/qualification/usability/latest.json"
 ADMIN_CONVERGENCE_REPORT = ROOT / "storage/qualification/admin-convergence/latest.json"
+SHOP_OPERATIONAL_REPORT = ROOT / "storage/qualification/shop-operational/latest.json"
+SHOP_OPERATIONAL_SPECS = (
+    "tests/e2e/admin-architecture-navigation.spec.ts",
+    "tests/e2e/admin-convergence-gate-38e.spec.ts",
+    "tests/e2e/business-crm-smoke.spec.ts",
+    "tests/e2e/business-operations-products-stock-offers-38d.spec.ts",
+    "tests/e2e/business-relation-360.spec.ts",
+    "tests/e2e/commerce-usability-gate.spec.ts",
+    "tests/e2e/gift-card-lifecycle-45.spec.ts",
+    "tests/e2e/omnichannel-release-gate.spec.ts",
+    "tests/e2e/order-logistics-tracking-46.spec.ts",
+    "tests/e2e/payment-provider-interchangeability.spec.ts",
+    "tests/e2e/public-cart-checkout-resilience-44.spec.ts",
+    "tests/e2e/public-guest-checkout.spec.ts",
+    "tests/e2e/sale-invoicing-sales-inventory-47.spec.ts",
+    "tests/e2e/sale-order-dossier-38c.spec.ts",
+    "tests/e2e/sale-pos-omnichannel.spec.ts",
+    "tests/e2e/shop-system-activation-39.spec.ts",
+    "tests/e2e/storefront-catalog-search-facets-40.spec.ts",
+    "tests/e2e/storefront-merchandising-popularity-41.spec.ts",
+    "tests/e2e/storefront-product-cards-details-relations-42.spec.ts",
+    "tests/e2e/storefront-projections.spec.ts",
+    "tests/e2e/studio-commerce-blocks-43.spec.ts",
+    "tests/e2e/shop-operational-release-gate-48.spec.ts",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -42,6 +68,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--omnichannel-only", action="store_true", help="Exécute uniquement la gate storefront/POS.")
     parser.add_argument("--usability-only", action="store_true", help="Exécute uniquement la gate d’utilisabilité Commerce M5–M7.")
     parser.add_argument("--admin-convergence-only", action="store_true", help="Exécute uniquement la gate UX de convergence admin 38e.")
+    parser.add_argument("--shop-operational-only", action="store_true", help="Exécute uniquement la gate release du Shop opérationnel.")
     parser.add_argument(
         "--spec",
         action="append",
@@ -101,7 +128,7 @@ def free_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def wait_for_http(url: str, process: subprocess.Popen[bytes], timeout: float = 30.0) -> None:
+def wait_for_http(url: str, process: subprocess.Popen[bytes], timeout: float = 60.0) -> None:
     deadline = time.monotonic() + timeout
     last_error = ""
     while time.monotonic() < deadline:
@@ -175,6 +202,36 @@ def normalize_e2e_site(instance: Path) -> None:
         )
         if cursor.rowcount != 1:
             raise RuntimeError("Le domaine primaire du site main est absent de la base E2E reconstruite.")
+        # The public commerce gates exercise both configured languages. The
+        # isolated seed historically activated only the French system Shop,
+        # which made an English checkout possible only because the SSR page
+        # did not enforce Shop activation. Keep the fixture honest now that
+        # cart and checkout share the canonical Shop availability rule.
+        has_shop_table = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='cms_shop_configurations'"
+        ).fetchone() is not None
+        if has_shop_table:
+            connection.execute(
+                """
+            INSERT INTO cms_shop_configurations(
+                site_id,language_code,channel_id,channel_code,status,currency,route_path,theme_key,
+                menu_key,menu_label,menu_position,cart_visible,show_quantities,last_available_threshold,
+                draft_json,published_json,config_version,published_version,activated_at,published_at,last_rebuild_at
+            )
+            SELECT site_id,'en',channel_id,channel_code,'active',currency,route_path,theme_key,
+                   menu_key,'Shop',menu_position,cart_visible,show_quantities,last_available_threshold,
+                   draft_json,published_json,config_version,published_version,
+                   COALESCE(activated_at,CURRENT_TIMESTAMP),COALESCE(published_at,CURRENT_TIMESTAMP),last_rebuild_at
+            FROM cms_shop_configurations
+            WHERE site_id=(SELECT id FROM sites WHERE site_key='main') AND language_code='fr'
+            ON CONFLICT(site_id,language_code) DO UPDATE SET
+                channel_id=excluded.channel_id,channel_code=excluded.channel_code,status='active',
+                currency=excluded.currency,theme_key=excluded.theme_key,cart_visible=excluded.cart_visible,
+                draft_json=excluded.draft_json,published_json=excluded.published_json,
+                published_version=excluded.published_version,activated_at=COALESCE(cms_shop_configurations.activated_at,CURRENT_TIMESTAMP),
+                published_at=COALESCE(cms_shop_configurations.published_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP
+                """
+            )
         connection.commit()
 
 
@@ -230,10 +287,19 @@ def create_blueprint_e2e_fixtures(instance: Path) -> None:
         )
         connection.execute(
             """
+            INSERT OR IGNORE INTO site_languages(
+                site_id, language_code, locale, url_prefix, hreflang_code,
+                fallback_language_code, is_default, is_active, is_rtl, sort_order
+            ) VALUES(?, 'en', 'en-CH', '/en', 'en-CH', 'fr', 0, 1, 0, 20)
+            """,
+            (secondary_site_id,),
+        )
+        connection.execute(
+            """
             INSERT OR IGNORE INTO site_domains(
                 site_id, host, base_path, scheme, is_primary, is_active,
                 enforce_https, canonical_host_strategy
-            ) VALUES(?, 'e2e-secondary.test', '', 'http', 1, 1, 0, 'none')
+            ) VALUES(?, '127.0.0.1', '/campus', 'http', 1, 1, 0, 'none')
             """,
             (secondary_site_id,),
         )
@@ -358,6 +424,50 @@ def create_e2e_admin(instance: Path, php: str, email: str, password: str) -> Non
         connection.commit()
 
 
+def create_e2e_role_fixtures(instance: Path, php: str, password: str) -> None:
+    """Create the release role matrix without exposing credentials in evidence."""
+    database = instance / "storage/database/iam.sqlite"
+    password_hash = php_password_hash(php, password)
+    definitions = {
+        "e2e_operations": (
+            "Opérations E2E",
+            ("business.catalog.read", "business.catalog.stock.write", "sale.orders.read", "sale.fulfillment.manage", "sale.stock.read"),
+        ),
+        "e2e_finance": (
+            "Finance E2E",
+            ("sale.read", "sale.orders.read", "sale.payments.read", "sale.payments.manage", "sale.reports.read", "sale.sales.read", "sale.documents.issue", "sale.documents.resend", "sale.exports.manage"),
+        ),
+        "e2e_no_permission": ("Sans permission E2E", ()),
+    }
+    users = (
+        ("e2e_editor", "editor"),
+        ("e2e_operations", "e2e_operations"),
+        ("e2e_finance", "e2e_finance"),
+        ("e2e_no_permission", "e2e_no_permission"),
+    )
+    with sqlite3.connect(database) as connection:
+        for role_key, (name, permissions) in definitions.items():
+            connection.execute("INSERT OR IGNORE INTO iam_roles(role_key,name) VALUES(?,?)", (role_key, name))
+            role_id = int(connection.execute("SELECT id FROM iam_roles WHERE role_key=?", (role_key,)).fetchone()[0])
+            for permission in permissions:
+                row = connection.execute("SELECT id FROM iam_permissions WHERE permission_key=?", (permission,)).fetchone()
+                if row is None:
+                    raise RuntimeError(f"Permission E2E absente: {permission}")
+                connection.execute("INSERT OR IGNORE INTO iam_role_permissions(role_id,permission_id) VALUES(?,?)", (role_id, int(row[0])))
+        for index, (account_key, role_key) in enumerate(users, 1):
+            account_email = f"{account_key}@example.test"
+            cursor = connection.execute(
+                """INSERT INTO iam_users(email,email_normalized,password_hash,first_name,last_name,locale,is_active,login_mode,totp_enabled,totp_required)
+                   VALUES(?,?,?,'E2E',?,'fr-CH',1,'password',0,0)""",
+                (account_email, account_email, password_hash, f"Role {index}"),
+            )
+            role = connection.execute("SELECT id FROM iam_roles WHERE role_key=?", (role_key,)).fetchone()
+            if role is None:
+                raise RuntimeError(f"Rôle E2E absent: {role_key}")
+            connection.execute("INSERT INTO iam_user_site_roles(user_id,site_id,role_id) VALUES(?,?,?)", (int(cursor.lastrowid), 1, int(role[0])))
+        connection.commit()
+
+
 class WebhookReceiver(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         length = int(self.headers.get("Content-Length", "0") or 0)
@@ -402,11 +512,11 @@ def require_playwright_chromium() -> None:
 
 def run_playwright(
     environment: dict[str, str], *, headed: bool, omnichannel_only: bool = False, usability_only: bool = False,
-    admin_convergence_only: bool = False, specs: tuple[str, ...] = (),
+    admin_convergence_only: bool = False, shop_operational_only: bool = False, specs: tuple[str, ...] = (),
 ) -> int:
-    if sum((omnichannel_only, usability_only, admin_convergence_only)) > 1:
+    if sum((omnichannel_only, usability_only, admin_convergence_only, shop_operational_only)) > 1:
         raise RuntimeError("Ces modes E2E ciblés sont mutuellement exclusifs.")
-    if specs and any((omnichannel_only, usability_only, admin_convergence_only)):
+    if specs and any((omnichannel_only, usability_only, admin_convergence_only, shop_operational_only)):
         raise RuntimeError("--spec et les modes E2E de gate sont mutuellement exclusifs.")
     node = require_executable("node")
     if not PLAYWRIGHT_CLI.is_file():
@@ -415,11 +525,13 @@ def run_playwright(
     omnichannel_report = Path(environment.get("E2E_OMNICHANNEL_REPORT", str(OMNICHANNEL_REPORT))).resolve()
     usability_report = Path(environment.get("E2E_USABILITY_REPORT", str(USABILITY_REPORT))).resolve()
     convergence_report = Path(environment.get("E2E_ADMIN_CONVERGENCE_REPORT", str(ADMIN_CONVERGENCE_REPORT))).resolve()
-    for report in (omnichannel_report, usability_report, convergence_report):
+    shop_report = Path(environment.get("E2E_SHOP_OPERATIONAL_REPORT", str(SHOP_OPERATIONAL_REPORT))).resolve()
+    for report in (omnichannel_report, usability_report, convergence_report, shop_report):
         report.parent.mkdir(parents=True, exist_ok=True)
-    run_omnichannel = not specs and not usability_only and not admin_convergence_only
-    run_usability = not specs and not omnichannel_only and not admin_convergence_only
-    run_convergence = not specs and not omnichannel_only and not usability_only
+    run_omnichannel = not specs and not usability_only and not admin_convergence_only and not shop_operational_only
+    run_usability = not specs and not omnichannel_only and not admin_convergence_only and not shop_operational_only
+    run_convergence = not specs and not omnichannel_only and not usability_only and not shop_operational_only
+    run_shop = not specs and not omnichannel_only and not usability_only and not admin_convergence_only
     if run_omnichannel:
         omnichannel_report.unlink(missing_ok=True)
         environment["E2E_OMNICHANNEL_REPORT"] = str(omnichannel_report)
@@ -429,6 +541,9 @@ def run_playwright(
     if run_convergence:
         convergence_report.unlink(missing_ok=True)
         environment["E2E_ADMIN_CONVERGENCE_REPORT"] = str(convergence_report)
+    if run_shop:
+        shop_report.unlink(missing_ok=True)
+        environment["E2E_SHOP_OPERATIONAL_REPORT"] = str(shop_report)
     command = [node, str(PLAYWRIGHT_CLI), "test"]
     if omnichannel_only:
         command.append("tests/e2e/omnichannel-release-gate.spec.ts")
@@ -436,11 +551,17 @@ def run_playwright(
         command.append("tests/e2e/commerce-usability-gate.spec.ts")
     elif admin_convergence_only:
         command.append("tests/e2e/admin-convergence-gate-38e.spec.ts")
+    elif shop_operational_only:
+        command.extend(SHOP_OPERATIONAL_SPECS)
     else:
         command.extend(specs)
     if headed:
         command.append("--headed")
-    returncode = subprocess.run(command, cwd=FRONTEND, env=environment, timeout=900).returncode
+    # The operational Shop selection aggregates the long-running canonical
+    # 38a-48 journeys. The complete release suite is larger still; neither is
+    # a single-spec smoke run that can reliably fit the historical 15 minutes.
+    timeout = 3600 if not specs else 900
+    returncode = subprocess.run(command, cwd=FRONTEND, env=environment, timeout=timeout).returncode
     if returncode != 0:
         return returncode
     if run_omnichannel:
@@ -461,12 +582,18 @@ def run_playwright(
             print("Gate E2E UX de convergence admin échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
             return 1
         print(f"Gate E2E UX de convergence admin validée: {convergence_report}")
+    if run_shop:
+        errors = validate_shop_operational_reports(runtime_path=shop_report, root=ROOT)
+        if errors:
+            print("Gate E2E du Shop opérationnel échouée:\n- " + "\n- ".join(errors), file=sys.stderr)
+            return 1
+        print(f"Gate E2E du Shop opérationnel validée: {shop_report}")
     return 0
 
 
 def run_external(
     *, headed: bool, omnichannel_only: bool = False, usability_only: bool = False,
-    admin_convergence_only: bool = False, specs: tuple[str, ...] = (),
+    admin_convergence_only: bool = False, shop_operational_only: bool = False, specs: tuple[str, ...] = (),
 ) -> int | None:
     names = ("E2E_BASE_URL", "E2E_ADMIN_EMAIL", "E2E_ADMIN_PASSWORD")
     provided = [name for name in names if os.environ.get(name, "").strip()]
@@ -480,14 +607,14 @@ def run_external(
     environment.setdefault("E2E_BUILD_COMMIT", source_commit())
     return run_playwright(
         environment, headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only,
-        admin_convergence_only=admin_convergence_only, specs=specs,
+        admin_convergence_only=admin_convergence_only, shop_operational_only=shop_operational_only, specs=specs,
     )
 
 
 def run_isolated(
     *, headed: bool, keep_instance: bool, use_built_assets: bool,
     omnichannel_only: bool = False, usability_only: bool = False, admin_convergence_only: bool = False,
-    specs: tuple[str, ...] = (),
+    shop_operational_only: bool = False, specs: tuple[str, ...] = (),
 ) -> int:
     php = require_executable("php")
     require_executable("node")
@@ -518,6 +645,7 @@ def run_isolated(
         normalize_e2e_site(instance)
         create_blueprint_e2e_fixtures(instance)
         create_e2e_admin(instance, php, email, password)
+        create_e2e_role_fixtures(instance, php, password)
         router = create_php_router(instance)
         receiver_thread.start()
         receiver_started = True
@@ -540,11 +668,12 @@ def run_isolated(
             "E2E_ADMIN_PASSWORD": password,
             "E2E_WEBHOOK_URL": webhook_url,
             "E2E_BUILD_COMMIT": os.environ.get("E2E_BUILD_COMMIT", "").strip() or source_commit(),
+            "E2E_MIGRATIONS_EXECUTED": "0",
         })
         print(f"E2E: CMS {base_url}; récepteur webhook {webhook_url}")
         return run_playwright(
             test_env, headed=headed, omnichannel_only=omnichannel_only, usability_only=usability_only,
-            admin_convergence_only=admin_convergence_only, specs=specs,
+            admin_convergence_only=admin_convergence_only, shop_operational_only=shop_operational_only, specs=specs,
         )
     finally:
         if receiver is not None and receiver_started:
@@ -578,7 +707,7 @@ def main() -> int:
         return subprocess.run([node, str(PLAYWRIGHT_CLI), "install", "chromium"], cwd=FRONTEND).returncode
     external = run_external(
         headed=args.headed, omnichannel_only=args.omnichannel_only, usability_only=args.usability_only,
-        admin_convergence_only=args.admin_convergence_only, specs=specs,
+        admin_convergence_only=args.admin_convergence_only, shop_operational_only=args.shop_operational_only, specs=specs,
     )
     return external if external is not None else run_isolated(
         headed=args.headed,
@@ -587,6 +716,7 @@ def main() -> int:
         omnichannel_only=args.omnichannel_only,
         usability_only=args.usability_only,
         admin_convergence_only=args.admin_convergence_only,
+        shop_operational_only=args.shop_operational_only,
         specs=specs,
     )
 

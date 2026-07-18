@@ -2,9 +2,13 @@
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; }
 .guest-checkout { width: min(1120px, calc(100% - 2rem)); margin: 2rem auto; }
+.checkout-progress { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; list-style: none; }
+.checkout-progress li { background: #e8eef8; border-radius: 999px; padding: .45rem .75rem; font-size: .9rem; }
 .checkout-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 1.5rem; align-items: start; }
 form, aside { background: #fff; border: 1px solid #dce2ea; border-radius: 14px; padding: 1.25rem; box-shadow: 0 8px 30px rgb(26 40 65 / 7%); }
 fieldset { border: 0; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.shipping-address { display: grid; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.checkout-order-policy { grid-column: 1 / -1; margin: .5rem 0 0; padding: 1rem; border: 1px solid #dce2ea; border-radius: 10px; }
 legend { grid-column: 1 / -1; font-size: 1.15rem; font-weight: 700; margin-bottom: .5rem; }
 label { display: grid; gap: .35rem; font-weight: 600; }
 input, select { border: 1px solid #aeb9c8; border-radius: 8px; padding: .75rem; font: inherit; }
@@ -18,6 +22,7 @@ button { border: 0; border-radius: 9px; padding: .85rem 1.25rem; background: #13
 .checkout-bank-instructions p { align-items: center; display: grid; gap: .4rem; grid-template-columns: minmax(7rem,1fr) minmax(8rem,2fr) auto; }
 .checkout-bank-instructions button { padding: .45rem .7rem; margin: .2rem; }
 [data-test-scenarios] { background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px; margin-top: .5rem; padding: .6rem; }
-@media (max-width: 700px) { .guest-checkout { margin: 1rem auto; } .checkout-grid { grid-template-columns: minmax(0, 1fr); } .checkout-grid > *, fieldset > * { min-width: 0; } fieldset { grid-template-columns: minmax(0, 1fr); } input, select { width: 100%; } }
+@media (max-width: 700px) { .guest-checkout { margin: 1rem auto; } .checkout-grid { grid-template-columns: minmax(0, 1fr); } .checkout-grid > *, fieldset > * { min-width: 0; } fieldset,.shipping-address { grid-template-columns: minmax(0, 1fr); } input, select { width: 100%; } }
 @media (max-width: 700px) { .checkout-bank-instructions p { grid-template-columns: 1fr; } }
 @media print { form, .checkout-test-mode, .checkout-bank-instructions button { display: none !important; } .checkout-grid { display: block; } aside { box-shadow: none; } }
+.checkout-gift-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem;align-items:end;margin-bottom:1rem}.checkout-gift-card label{margin:0}.checkout-gift-card [role="status"]{grid-column:1/-1;margin:0;min-height:1.5em}.checkout-gift-card code{display:block;padding:.75rem;border:1px dashed currentColor;font-size:1.05rem;letter-spacing:.06em;overflow-wrap:anywhere}

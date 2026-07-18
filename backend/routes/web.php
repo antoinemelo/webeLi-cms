@@ -7,6 +7,7 @@ return [
     ['GET', '/updates/manifest.json', 'App\Application\Frontend\UpdateManifestController@show'],
     ['GET', '/checkout', 'App\Application\Frontend\PublicSaleCheckoutController@show'],
     ['GET', '/checkout/confirmation', 'App\Application\Frontend\PublicSaleCheckoutController@confirmation'],
+    ['GET', '/gift-card', 'App\Application\Frontend\PublicSaleCheckoutController@giftCard'],
     ['GET', '/cart', 'App\Application\Frontend\PublicStorefrontCartController@show'],
     ['GET', '/account', 'App\Application\Frontend\PublicCustomerAccountController@show'],
     ['GET', '/business/memos/share/{token:[A-Za-z0-9]+}', 'App\Application\Frontend\BusinessMemoShareController@show'],

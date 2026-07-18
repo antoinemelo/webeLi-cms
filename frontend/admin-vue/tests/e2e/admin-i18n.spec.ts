@@ -28,12 +28,12 @@ test.describe('admin i18n FR/EN', () => {
     test.setTimeout(60_000);
     await signIn(page);
     await page.goto(cmsPath('/admin/app/sale'));
-    await expect(page.getByRole('heading', { name: 'Ventes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Ventes/, level: 1 })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Commandes' })).toBeVisible();
 
     await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Sales' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Sales/, level: 1 })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Orders' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'To process' })).toBeVisible();
     await expect(page.locator('body')).not.toContainText('À traiter');

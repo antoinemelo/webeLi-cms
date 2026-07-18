@@ -23,7 +23,7 @@
     "python3 tools/cms.py backup --help",
     "python3 tools/cms.py release --help"
   ],
-  "commit": "31ff57882893e4dc03f597b477e49fe8448b44a2",
+  "commit": "892ba1bed4b8d6c26a65ad5650f8d918bfae9127",
   "confidence": "high",
   "databases": [
     "core",
@@ -44,16 +44,26 @@
     "docs/evaluation/business-crm-review.md",
     "docs/evaluation/evidence-index.md",
     "docs/evaluation/feature-matrix.md",
+    "docs/evaluation/gift-card-lifecycle-45.md",
     "docs/evaluation/latest-release-audit.md",
     "docs/evaluation/limitations.md",
+    "docs/evaluation/m8-9-invoicing-sales-inventory.md",
+    "docs/evaluation/order-logistics-tracking-46.md",
     "docs/evaluation/payment-provider-ux-comparison.md",
     "docs/evaluation/product-scope.md",
+    "docs/evaluation/public-cart-checkout-resilience-44.md",
     "docs/evaluation/release-audit-policy.md",
     "docs/evaluation/reproducible-checks.md",
     "docs/evaluation/rm1-gap-analysis.md",
     "docs/evaluation/sale-inventory-ledger.md",
     "docs/evaluation/sale-module-review.md",
     "docs/evaluation/sale-reservations-availability.md",
+    "docs/evaluation/shop-operational-release-gate-48.md",
+    "docs/evaluation/shop-system-activation-39.md",
+    "docs/evaluation/storefront-catalog-search-facets-40.md",
+    "docs/evaluation/storefront-merchandising-popularity-41.md",
+    "docs/evaluation/storefront-product-cards-details-relations-42.md",
+    "docs/evaluation/studio-commerce-blocks-43.md",
     "docs/evaluation/usability-commerce-foundations.md",
     "docs/evaluation/visual-editor.md"
   ],
@@ -64,9 +74,9 @@
     "tools/cms.py",
     "docs/evaluation/"
   ],
-  "generated_at": "2026-07-16",
+  "generated_at": "2026-07-18",
   "id": "cms-evaluation-manifest",
-  "last_verified": "2026-07-16",
+  "last_verified": "2026-07-18",
   "limitations": [
     "Generated inventories prove source presence and structure, not complete end-to-end usability."
   ],
@@ -90,6 +100,7 @@
     "sale-payment-provider-interchangeability.json",
     "sale-reservations-availability.json",
     "sale-stock-reconstruction-m6.json",
+    "shop-operational-release-48.json",
     "tests.json",
     "usability-commerce-foundations.json",
     "validators.json"

@@ -7,9 +7,13 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import DataTable from '@/components/ui/DataTable.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
+import { adminApi } from '@/api/client';
+import type { EntryListItem } from '@/api/contracts';
+import { useI18n } from '@/i18n';
 
 const props = defineProps<{ typeKey: string }>();
 const router = useRouter();
+const { t } = useI18n();
 const context = useAdminContextStore();
 const entries = useContentEntriesStore();
 const q = ref('');
@@ -35,10 +39,31 @@ const intro = computed(() => {
   return 'Pages structurantes du site, routes canoniques et SEO éditorial.';
 });
 
-const rowCount = computed(() => entries.rows.length);
+const systemRows = ref<EntryListItem[]>([]);
+const rows = computed(() => [...systemRows.value, ...entries.rows]);
+const rowCount = computed(() => rows.value.length);
+let loadSequence = 0;
 
-async function load() { await entries.list({ type: contentType.value, status: status.value, q: q.value }, context.siteId, context.languageCode); }
-function edit(row: Record<string, unknown>) { router.push(`/contents/${props.typeKey}/${row.id}`); }
+async function load() {
+  const sequence = ++loadSequence;
+  if (!context.context) await context.load();
+  if (sequence !== loadSequence) return;
+  const requestedSiteId = Number(context.siteId);
+  const requestedLanguageCode = context.languageCode;
+  await entries.list({ type: contentType.value, status: status.value, q: q.value }, context.siteId, context.languageCode);
+  if (sequence !== loadSequence) return;
+  systemRows.value = [];
+  if (contentType.value !== 'page') return;
+  try {
+    const response = await adminApi.get<{ shops: Array<Record<string, unknown>> }>('/sale/ecommerce/shops');
+    if (sequence !== loadSequence) return;
+    systemRows.value = (response.data.shops || [])
+      .filter(shop => Number(shop.site_id) === requestedSiteId && String(shop.language_code) === requestedLanguageCode && Boolean(shop.is_initialized))
+      .map((shop): EntryListItem => ({ id:0,site_id:Number(shop.site_id),content_type_key:'page',entry_key:'system-shop',title:String((shop.draft as Record<string,unknown>)?.title||'Boutique'),status:Boolean(shop.is_published)?'published':'draft',full_path:Boolean(shop.public_visible)?String(shop.route_path||'/shop'):null,public_href:Boolean(shop.public_visible)?String(shop.preview_path||shop.route_path||'/shop'):null,updated_at:String(shop.updated_at||''),published_at:null,system_kind:'shop',system_badge:'Système — Boutique',editor_route:String(shop.studio_route||'/contents/pages/system-shop') }))
+      .filter(row => status.value === 'all' || row.status === status.value);
+  } catch { /* La liste éditoriale ordinaire reste utilisable sans accès E-Commerce. */ }
+}
+function edit(row: Record<string, unknown>) { router.push(typeof row.editor_route === 'string' ? row.editor_route : `/contents/${props.typeKey}/${row.id}`); }
 function create() { router.push(`/contents/${props.typeKey}/new`); }
 function normalizeSlashPath(value: unknown): string {
   const path = String(value || '').trim();
@@ -83,9 +108,14 @@ function withPublicBasePath(path: string): string {
   return joinSlashPaths(publicBasePath(), path);
 }
 
-function openPath(path: unknown, event: MouseEvent) {
+function publicHref(row: Record<string, unknown>): string {
+  return withPublicBasePath(String(row.public_href || row.full_path || ''));
+}
+
+function openPublicPath(row: Record<string, unknown>, event: MouseEvent): void {
   event.stopPropagation();
-  if (typeof path === 'string' && path) window.open(withPublicBasePath(path), '_blank', 'noopener');
+  const href = publicHref(row);
+  if (href) window.open(href, '_blank', 'noopener');
 }
 
 function blockStatusSummary(row: Record<string, unknown>) {
@@ -158,12 +188,12 @@ watch(() => [context.siteId, context.languageCode, props.typeKey], load);
       {key:'full_path',label:'URL'},
       {key:'updated_at',label:'Modifié',sortable:true}
     ]"
-    :rows="entries.rows as unknown as Record<string, unknown>[]"
+    :rows="rows as unknown as Record<string, unknown>[]"
     empty-message="Aucun contenu ne correspond aux filtres."
   >
     <template #cell-title="{ row }">
       <button class="content-list-title-btn" @click="edit(row)">
-        <span>{{ row.title || `#${row.id}` }}</span>
+        <span>{{ row.title || `#${row.id}` }} <small v-if="row.system_badge" class="badge text-bg-secondary">{{ row.system_kind === 'shop' ? t('shopSystem.listBadge') : row.system_badge }}</small></span>
         <svg class="content-list-title-arrow" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-5 5"/></svg>
       </button>
     </template>
@@ -178,7 +208,7 @@ watch(() => [context.siteId, context.languageCode, props.typeKey], load);
       <span v-else class="muted">—</span>
     </template>
     <template #cell-full_path="{ row }">
-      <button v-if="row.full_path" class="link-button content-list-url-btn" @click="openPath(row.full_path, $event)" :title="withPublicBasePath(String(row.full_path))" target="_blank">
+      <button v-if="row.full_path" type="button" class="link-button content-list-url-btn" :title="publicHref(row)" @click="openPublicPath(row, $event)">
         <code>{{ row.full_path }}</code>
         <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" style="opacity:.5;flex-shrink:0"><path fill="currentColor" d="M4.5 11.5A.5.5 0 0 0 5 12h6a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-1 0v4.793l-6.146-6.147a.5.5 0 1 0-.708.708L9.793 11H5a.5.5 0 0 0-.5.5z"/></svg>
       </button>

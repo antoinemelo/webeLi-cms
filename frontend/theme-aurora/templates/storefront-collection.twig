@@ -1,2 +1,5 @@
 <header class="hero"><p class="eyebrow">Collection</p><h1>{{ storefront_collection.name }}</h1><p>{{ storefront_collection.description }}</p></header>
+<header class="hero"><h1>{{ entry_title }}</h1>{% if storefront_collection.description %}<p>{{ storefront_collection.description }}</p>{% endif %}</header>
+{% include 'partials/storefront-catalog-filters.twig' %}
 {% include 'partials/storefront-block.twig' with {block_type:'product_grid',data:{items:storefront_products}} only %}
+{% include 'partials/storefront-pagination.twig' %}

@@ -25,6 +25,7 @@ final class SaleOnlinePaymentService
         private readonly SaleStateMachineService $states,
         private readonly PaymentProviderRegistry $providers,
         private readonly ?Logger $logger = null,
+        private readonly ?SaleGiftCardService $giftCards = null,
     ) {}
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -32,9 +33,11 @@ final class SaleOnlinePaymentService
     {
         $language = (string) ($options['language'] ?? 'fr');
         $order = $this->orders->requireOrder($orderId);
-        if ((string) $order['status'] !== 'pending_payment' || (string) $order['payment_status'] !== 'pending') {
+        if ((string) $order['status'] !== 'pending_payment' || !in_array((string) $order['payment_status'], ['pending','partially_paid'], true)) {
             throw new SalePaymentException('sale.online_payment_order_not_pending');
         }
+        $amountDue = max(0, (int)$order['grand_total_minor'] - (int)$order['paid_total_minor']);
+        if ($amountDue < 1) throw new SalePaymentException('sale.online_payment_order_not_pending');
         $provider = $this->providers->contract($providerKey);
         if ($provider->version() !== PaymentProviderContractV1::VERSION || !($provider->capabilities()['create_payment_session'] ?? false)) {
             throw new SalePaymentException('sale.payment_provider_contract_unsupported');
@@ -49,10 +52,10 @@ final class SaleOnlinePaymentService
         if ($existing !== null) {
             return $this->publicIntent($existing, null, true, $language);
         }
-        $intent = $this->db()->transaction(function () use ($order, $orderId, $provider, $options, $expiresAt, $returnUrl, $cancelUrl): array {
+        $intent = $this->db()->transaction(function () use ($order, $orderId, $provider, $options, $expiresAt, $returnUrl, $cancelUrl, $amountDue): array {
             $created = $this->payments->createIntent(
                 (int) $order['site_id'], (int) $order['channel_id'], $orderId, $provider->key(),
-                (int) $order['grand_total_minor'], (string) $order['currency'],
+                $amountDue, (string) $order['currency'],
                 isset($options['idempotency_key']) ? (string) $options['idempotency_key'] : null,
                 ['source' => 'ecommerce', 'card_data_stored' => false]
             );
@@ -71,7 +74,7 @@ final class SaleOnlinePaymentService
         try {
             $result = $provider->createPaymentSession([
                 'intent_id' => (int) $intent['id'], 'order_id' => $orderId,
-                'amount_minor' => (int) $order['grand_total_minor'], 'currency' => (string) $order['currency'],
+                'amount_minor' => $amountDue, 'currency' => (string) $order['currency'],
                 'return_url' => $returnUrl, 'cancel_url' => $cancelUrl,
                 'idempotency_key' => $options['idempotency_key'] ?? null,
                 'scenario' => trim((string) ($options['scenario'] ?? '')) ?: null,
@@ -107,8 +110,9 @@ final class SaleOnlinePaymentService
             $this->metric((int) $order['site_id'], 'payment.intent.created', 'info', (int) $intent['id'], ['provider' => $provider->key()]);
             $fresh = $this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $intent;
             $eventType = trim((string) ($result['event_type'] ?? ''));
+            $applied = [];
             if ($eventType !== '') {
-                $this->applyProviderEvent($fresh, [
+                $applied = $this->applyProviderEvent($fresh, [
                     'event_id' => 'provider_create_' . (int) $intent['id'] . '_' . $status,
                     'type' => $eventType, 'provider_reference' => (string) ($result['provider_reference'] ?? ''),
                     'occurred_at' => gmdate('Y-m-d\TH:i:s\Z'), 'amount_minor' => in_array($status, ['authorized','captured'], true) ? (int) $intent['amount_minor'] : 0,
@@ -120,6 +124,7 @@ final class SaleOnlinePaymentService
             $token = isset($result['sandbox_token']) ? (string) $result['sandbox_token'] : (isset($result['test_token']) ? (string) $result['test_token'] : null);
             $public = $this->publicIntent($fresh, $token, false, $language);
             if (isset($result['test_token'])) $public['test_token'] = (string) $result['test_token'];
+            if (isset($applied['gift_cards'])) $public['gift_cards'] = $applied['gift_cards'];
             return $public;
         });
     }
@@ -512,12 +517,15 @@ final class SaleOnlinePaymentService
                 $order = $this->states->transition('order', (int) $order['id'], 'confirmed', null, 'provider payment captured');
                 $this->db()->run('UPDATE sale_orders SET placed_at=COALESCE(placed_at,CURRENT_TIMESTAMP) WHERE id=?', [(int) $order['id']]);
             }
+            $issued = (string)$order['payment_status'] === 'paid' ? ($this->giftCards?->issuePaidOrder((int)$order['id'], (string)($order['correlation_id'] ?? '')) ?? []) : [];
         } elseif (in_array($type, ['payment.failed','payment.cancelled','payment.expired'], true)) {
             $status = match ($type) { 'payment.cancelled' => 'cancelled', 'payment.expired' => 'expired', default => 'failed' };
             $this->setIntent((int) $intent['id'], $status, $providerStatus, (string) $event['occurred_at']);
             $retryable = $type === 'payment.failed';
             $this->db()->run("UPDATE sale_orders SET payment_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", [$retryable ? 'pending' : 'failed', (int) $order['id']]);
-            if (!$retryable && (int) $order['paid_total_minor'] === 0 && (string) $order['status'] === 'pending_payment') {
+            if (!$retryable && (string) $order['status'] === 'pending_payment') {
+                $this->giftCards?->releaseOrderRedemptions((int)$order['id'],'provider payment '.$status,(string)($order['correlation_id']??''));
+                $order = $this->orders->requireOrder((int)$order['id']);
                 if ($order['source_cart_id'] !== null) {
                     $this->inventory->releaseCartReservations((int) $order['source_cart_id'], 'online payment ' . $status);
                 }
@@ -528,7 +536,9 @@ final class SaleOnlinePaymentService
         }
         $attemptStatus = match ($type) { 'payment.captured' => 'succeeded', 'payment.failed' => 'failed', 'payment.cancelled' => 'cancelled', 'payment.expired' => 'timed_out', default => 'pending' };
         $this->db()->run('UPDATE sale_payment_attempts SET status=?,finished_at=CASE WHEN ? IN (\'succeeded\',\'failed\',\'cancelled\',\'timed_out\') THEN CURRENT_TIMESTAMP ELSE finished_at END WHERE payment_intent_id=? AND attempt_number=1', [$attemptStatus, $attemptStatus, (int) $intent['id']]);
-        return ['intent' => $this->publicIntent($this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $intent)];
+        $result=['intent' => $this->publicIntent($this->db()->one('SELECT * FROM sale_payment_intents WHERE id=?', [(int) $intent['id']]) ?? $intent)];
+        if (isset($issued) && $issued !== []) $result['gift_cards']=$issued;
+        return $result;
     }
 
     /** @param array<string,int> $amounts */

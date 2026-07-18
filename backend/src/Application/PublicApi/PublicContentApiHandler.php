@@ -86,18 +86,18 @@ final class PublicContentApiHandler
         $content = is_array($document['content'] ?? null) ? $document['content'] : [];
         $seo = is_array($aggregate['seo'] ?? null) ? $aggregate['seo'] : [];
         $fields = is_array($document['fields'] ?? null) ? $document['fields'] : [];
-        $blocks = is_array($document['blocks'] ?? null) ? $document['blocks'] : [];
-        $blocks = $this->productContentLinks->hydrateStorefrontBlocks($blocks, (int)($entry['site_id']??0), (string)($publication['language_code']??$snapshot['language_code']??''));
-
-        $displayPublishedAt = $this->displayPublishedAt($fields, (string) ($publication['published_at'] ?? $snapshot['published_at'] ?? ''));
-        $displaySettings = $this->articleDisplaySettings($fields, (int) ($entry['site_id'] ?? 0));
-        $authorName = $this->displayAuthorName($fields);
-
         $products = $this->productContentLinks->publicProductsForContent(
             (int) ($entry['site_id'] ?? 0),
             (int) ($entry['id'] ?? 0),
             (string) ($publication['language_code'] ?? $snapshot['language_code'] ?? '')
         );
+        $currentProductId=(int)($products[0]['product']['id']??$products[0]['product']['product_id']??$products[0]['product_id']??0);
+        $blocks = is_array($document['blocks'] ?? null) ? $document['blocks'] : [];
+        $blocks = $this->productContentLinks->hydrateStorefrontBlocks($blocks, (int)($entry['site_id']??0), (string)($publication['language_code']??$snapshot['language_code']??''), ['current_product_id'=>$currentProductId,'query'=>$this->request->query]);
+
+        $displayPublishedAt = $this->displayPublishedAt($fields, (string) ($publication['published_at'] ?? $snapshot['published_at'] ?? ''));
+        $displaySettings = $this->articleDisplaySettings($fields, (int) ($entry['site_id'] ?? 0));
+        $authorName = $this->displayAuthorName($fields);
 
         return [
             'system' => [

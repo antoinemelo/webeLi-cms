@@ -1,0 +1,122 @@
+{
+  "format_version": 1,
+  "gate": "shop-operational.release.48.v1",
+  "status": "defined",
+  "extends": ["38a", "38b", "38c", "38d", "38e", "39", "40", "41", "42", "43", "44", "45", "46", "47"],
+  "single_release_command": "python3 tools/cms.py qualify --profile release",
+  "preparation": {
+    "from_scratch_without_migrations": "covered",
+    "two_sites_distinct_base_paths": "covered",
+    "two_languages": "covered",
+    "role_matrix": "covered",
+    "catalog_fixtures": "covered",
+    "selective_shop_activation": "covered"
+  },
+  "scenarios": {
+    "A_activation_studio": {
+      "tasks": {
+        "inactive_draft": "covered",
+        "explicit_activation": "covered",
+        "system_page_route_menu_cart": "covered",
+        "studio_preview_publish": "covered",
+        "no_cms_product_pages": "covered",
+        "deactivate_reactivate_idempotent": "covered"
+      },
+      "evidence": ["shop-system-activation-39.spec.ts", "studio-commerce-blocks-43.spec.ts"]
+    },
+    "B_product_discovery": {
+      "tasks": {
+        "desktop_mobile": "covered",
+        "search_taxonomies_availability": "covered",
+        "group_attributes": "covered",
+        "sorts": "covered",
+        "merchandising": "covered",
+        "filter_return": "covered",
+        "ssr_api_parity": "covered",
+        "site_language_isolation": "covered"
+      },
+      "evidence": ["storefront-catalog-search-facets-40.spec.ts", "storefront-merchandising-popularity-41.spec.ts", "storefront-projections.spec.ts"]
+    },
+    "C_product_cart": {
+      "tasks": {
+        "keyboard_touch_preview": "covered",
+        "variant_media_price_attributes": "covered",
+        "availability_delivery_payment": "covered",
+        "related_products": "covered",
+        "shop_product_studio_add": "covered",
+        "drawer_quantities": "covered",
+        "price_stock_recovery": "covered"
+      },
+      "evidence": ["storefront-product-cards-details-relations-42.spec.ts", "public-cart-checkout-resilience-44.spec.ts", "studio-commerce-blocks-43.spec.ts"]
+    },
+    "D_purchases": {
+      "tasks": {
+        "guest_optional_account": "covered",
+        "success_decline_recovery": "covered",
+        "idempotent_checkout_webhook": "covered",
+        "gift_card_orders": "covered",
+        "gift_card_partial_payment": "covered",
+        "deferred_on_order": "covered",
+        "expired_authorization_recovery": "covered",
+        "pos_immediate_deferred": "covered"
+      },
+      "evidence": ["public-guest-checkout.spec.ts", "payment-provider-interchangeability.spec.ts", "gift-card-lifecycle-45.spec.ts", "sale-order-dossier-38c.spec.ts", "sale-pos-omnichannel.spec.ts"]
+    },
+    "E_operations_admin": {
+      "tasks": {
+        "confirmation_fulfillment_tracking": "covered",
+        "invoice_send_credit_note": "covered",
+        "return_refund": "covered",
+        "sales_dashboard_export": "covered",
+        "inventory_transfer_rebuild": "covered",
+        "crm_no_implicit_optin": "covered",
+        "relation_360": "covered",
+        "product_stock_correction": "covered",
+        "advanced_permission_boundary": "covered"
+      },
+      "evidence": ["order-logistics-tracking-46.spec.ts", "sale-invoicing-sales-inventory-47.spec.ts", "business-operations-products-stock-offers-38d.spec.ts", "business-relation-360.spec.ts", "admin-convergence-gate-38e.spec.ts"]
+    }
+  },
+  "negative_controls": {
+    "inactive_shop_scope": "covered",
+    "cross_site_product": "covered",
+    "cross_site_order": "covered",
+    "cross_site_metric": "covered",
+    "cross_site_document": "covered",
+    "permission_denied": "covered",
+    "private_incomplete_product": "covered",
+    "unavailable_variant": "covered",
+    "last_item_race": "covered",
+    "invalid_expired_cart_tracking": "covered",
+    "invalid_duplicate_out_of_order_webhook": "covered",
+    "gift_card_abuse": "covered",
+    "dependency_outage": "covered",
+    "stale_projection": "covered",
+    "immutable_invoice_snapshot": "covered",
+    "deferred_invoice_forbidden": "covered",
+    "advanced_api_forbidden": "covered",
+    "no_autonomous_commerce": "covered"
+  },
+  "ux_controls": {
+    "mobile_tablet_desktop": "covered",
+    "keyboard_focus": "covered",
+    "screen_reader_names": "covered",
+    "contrast_not_color_only": "covered",
+    "fr_en": "covered",
+    "loading_empty_error_partial_denied_recovery": "covered",
+    "input_preservation": "covered",
+    "no_dead_end": "covered",
+    "performance_budgets": "covered"
+  },
+  "security": {
+    "contains_pii": false,
+    "contains_secret": false,
+    "contains_token": false,
+    "contains_gift_code": false
+  },
+  "limitations": [
+    "Le rapport statique démontre la couverture et non une exécution release; seul le rapport runtime produit par browser-e2e peut porter le statut passed.",
+    "Les captures restent dans les artefacts Playwright; le rapport ne conserve que leurs empreintes.",
+    "Les exigences fiscales demeurent dépendantes de la politique et de la juridiction configurées."
+  ]
+}

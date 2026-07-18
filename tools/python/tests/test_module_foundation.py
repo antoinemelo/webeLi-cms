@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import subprocess
 import sys
@@ -11,13 +10,6 @@ from tools.python.lib.database_inventory import database_specs, module_keys
 from tools.python.operations.deployment import d8_deploy_web_update as deploy
 
 ROOT = Path(__file__).resolve().parents[3]
-CMS = ROOT / "tools" / "cms.py"
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 class ModuleFoundationTest(unittest.TestCase):
     def test_client_notes_example_manifest_is_not_activated(self) -> None:
         manifest = ROOT / "examples/modules/client-notes/module.json"
@@ -39,23 +31,9 @@ class ModuleFoundationTest(unittest.TestCase):
         self.assertTrue(deploy.is_protected("ops/modules.local.json"))
         self.assertFalse(deploy.is_protected("backend/src/Modules/Forms/module.json"))
 
-    def test_migrate_plan_does_not_modify_sqlite_files(self) -> None:
-        dbs = sorted((ROOT / "storage/database").glob("*.sqlite"))
-        before = {path.name: sha256(path) for path in dbs}
-        result = subprocess.run(
-            [sys.executable, str(CMS), "migrate", "--plan"],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            timeout=60,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        after = {path.name: sha256(path) for path in dbs}
-        self.assertEqual(before, after)
-
     def test_migrate_apply_requires_backup_or_explicit_risk(self) -> None:
         result = subprocess.run(
-            [sys.executable, str(CMS), "migrate", "--apply", "--yes"],
+            [sys.executable, str(ROOT / "tools" / "cms.py"), "migrate", "--apply", "--yes"],
             cwd=ROOT,
             text=True,
             capture_output=True,

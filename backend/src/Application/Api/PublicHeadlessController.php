@@ -73,6 +73,8 @@ final class PublicHeadlessController
     public function salePaymentRetry(string $code, string $token): Response { return $this->sale->retryPayment($code, $token); }
     public function saleCartAbandon(string $code, string $token): Response { return $this->sale->abandonCart($code, $token); }
     public function saleCheckout(string $code): Response { return $this->sale->checkout($code); }
+    public function saleGiftCardValidate(string $code): Response { return $this->sale->validateGiftCard($code); }
+    public function saleGiftCardClaim(string $code): Response { return $this->sale->claimGiftCard($code); }
     public function salePaymentReturn(): Response { return $this->sale->paymentReturn(); }
     public function salePaymentSandbox(string $reference): Response { return $this->sale->sandbox($reference); }
     public function salePaymentSandboxSimulate(string $reference): Response { return $this->sale->simulateSandbox($reference); }
@@ -86,6 +88,7 @@ final class PublicHeadlessController
     public function customerOrderClaim(): Response { return $this->customer->claimOrder(); }
     public function customerOrders(): Response { return $this->customer->orders(); }
     public function customerOrder(string|int $id): Response { return $this->customer->order($id); }
+    public function customerGuestTracking(string $token): Response { return $this->customer->guestTracking($token); }
     public function customerAddresses(): Response { return $this->customer->addresses(); }
     public function customerAddressStore(): Response { return $this->customer->storeAddress(); }
     public function customerReturnStore(string|int $id): Response { return $this->customer->requestReturn($id); }

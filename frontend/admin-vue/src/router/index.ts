@@ -8,6 +8,7 @@ const StudioView = () => import('@/views/StudioView.vue');
 const ImportsExportsView = () => import('@/views/ImportsExportsView.vue');
 const ContentListView = () => import('@/views/content/ContentListView.vue');
 const ContentEditorView = () => import('@/views/content/ContentEditorView.vue');
+const ShopSystemEditorView = () => import('@/views/content/ShopSystemEditorView.vue');
 const MediaLibraryView = () => import('@/views/content/MediaLibraryView.vue');
 const DocsView = () => import('@/views/assets/DocsView.vue');
 const FormsView = () => import('@/views/forms/FormsView.vue');
@@ -66,6 +67,7 @@ export const router = createRouter({
     { path: '/studio', name: 'studio', component: StudioView },
     { path: '/static-exports', redirect: '/imports-exports' },
     { path: '/imports-exports', name: 'imports-exports', component: ImportsExportsView },
+    { path: '/contents/pages/system-shop', name: 'shop-system-edit', component: ShopSystemEditorView },
     { path: '/contents/:typeKey', name: 'content-list', component: ContentListView, props: true },
     { path: '/contents/:typeKey/new', name: 'content-new', component: ContentEditorView, props: true },
     { path: '/contents/:typeKey/:id', name: 'content-edit', component: ContentEditorView, props: true },
@@ -93,6 +95,7 @@ export const router = createRouter({
     { path: '/sale', name: 'sale', component: SaleView },
     { path: '/sale/orders', name: 'sale-orders', component: SaleView },
     { path: '/sale/payments', name: 'sale-payments', component: SaleView },
+    { path: '/sale/gift-cards', name: 'sale-gift-cards', component: SaleView },
     { path: '/sale/stock', redirect: '/sale/advanced/stock' },
     { path: '/sale/reservations', redirect: '/sale/advanced/reservations' },
     { path: '/sale/operations', redirect: '/sale/advanced/logistics' },

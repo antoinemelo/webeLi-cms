@@ -102,11 +102,14 @@ test.describe('38d Opérations, produits, stock, offres et Audiences', () => {
     test.setTimeout(120_000);
     await signIn(page);
     await page.goto(cmsPath('/admin/app/business/products-stock'));
-    const stockCell = page.locator('.catalog-stock-cell').first();
-    await expect(stockCell).toBeVisible();
+    // Gift cards and services legitimately appear before physical products in
+    // the sorted catalogue and expose a non-tracked stock cell. Exercise a
+    // genuinely stock-tracked product so the test proves the inventory path.
+    const stockCell = page.locator('.catalog-stock-cell').filter({ hasText: /disponible/ }).first();
+    await expect(stockCell).toBeVisible({ timeout: 60_000 });
     await stockCell.click();
     const productDialog = page.getByRole('dialog', { name: 'Modifier le stock' });
-    await expect(productDialog).toBeVisible();
+    await expect(productDialog).toBeVisible({ timeout: 60_000 });
     await expect(productDialog.getByLabel('Opération')).toHaveCount(0);
     await expect(productDialog.getByText('Ouvrir le ledger détaillé')).toHaveCount(0);
     const inventoryButton = productDialog.getByRole('button', { name: 'Modifier l’inventaire' }).first();

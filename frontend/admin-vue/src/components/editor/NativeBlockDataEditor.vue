@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { EditorialBlock, FormDefinition, MediaAsset, MediaVariant, NativeBlockBlueprint, NativeFieldDefinition } from '@/api/contracts';
 import MediaPicker from '@/components/editor/MediaPicker.vue';
+import CommerceBlockDataEditor from '@/components/editor/CommerceBlockDataEditor.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 
 defineOptions({ name: 'NativeBlockDataEditor' });
@@ -21,6 +22,8 @@ const props = defineProps<{
   formOptions?: FormDefinition[];
   formsLoading?: boolean;
   formPlaceholder?: string;
+  siteId?: number | null;
+  languageCode?: string;
 }>();
 const emit = defineEmits<{ 'update:modelValue': [value: EditorialBlock] }>();
 
@@ -285,11 +288,13 @@ function itemBlocks(item: any): EditorialBlock[] { return Array.isArray(item?.bl
 function blockSections(): Array<{ key: string; display: string; fields: NativeFieldDefinition[] }> {
   return (blockBlueprint(props.modelValue.type)?.sections || []) as Array<{ key: string; display: string; fields: NativeFieldDefinition[] }>;
 }
+function isSpecializedCommerceBlock(): boolean { return ['featured_product','product_card','product_grid','product_detail','add_to_cart'].includes(props.modelValue.type); }
 </script>
 
 <template>
   <div class="native-block-editor" :class="{ 'native-block-editor--nested': (depth || 0) > 0 }">
-    <section v-for="section in blockSections()" :key="section.key" class="native-blueprint-section">
+    <CommerceBlockDataEditor v-if="isSpecializedCommerceBlock()" :model-value="modelValue" :site-id="siteId" :language-code="languageCode" @update:model-value="$emit('update:modelValue', $event)" />
+    <template v-else><section v-for="section in blockSections()" :key="section.key" class="native-blueprint-section">
       <h3 class="native-blueprint-section__title">{{ section.display }}</h3>
       <div class="block-grid">
         <template v-for="field in section.fields.filter((item) => !isHiddenAssetPeer(item, section.fields))" :key="field.handle">
@@ -429,6 +434,8 @@ function blockSections(): Array<{ key: string; display: string; fields: NativeFi
                       :statuses="statuses"
                       :allowed-block-types="allowedBlocks(blocksField).map(([type]) => type)"
                       :depth="(depth || 0) + 1"
+                      :site-id="siteId"
+                      :language-code="languageCode"
                       @update:model-value="updateNestedBlock(field, itemIndex, childIndex, $event)"
                     />
                   </div>
@@ -443,6 +450,6 @@ function blockSections(): Array<{ key: string; display: string; fields: NativeFi
           </label>
         </template>
       </div>
-    </section>
+    </section></template>
   </div>
 </template>

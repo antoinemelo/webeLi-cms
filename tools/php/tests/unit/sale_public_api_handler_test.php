@@ -88,6 +88,8 @@ try {
         ['PATCH', '/api/v1/sale/channels/web-main/cart/test-token/checkout'],
         ['DELETE', '/api/v1/sale/channels/web-main/cart/test-token'],
         ['POST', '/api/v1/sale/channels/web-main/checkout'],
+        ['POST', '/api/v1/sale/channels/web-main/gift-cards/validate'],
+        ['POST', '/api/v1/sale/channels/web-main/gift-cards/claim'],
         ['POST', '/api/v1/sale/channels/web-main/cart/test-token/payment-retry'],
     ] as [$method, $path]) {
         $h->assertTrue((new Router())->match($method, $path, $routes) !== null, 'sale public ecommerce route is declared: ' . $method . ' ' . $path);
@@ -95,6 +97,7 @@ try {
     $h->assertSame(null, (new Router())->match('GET', '/api/v1/sale/orders', $routes), 'sale public API still has no public order listing');
     $webRoutes = require __DIR__ . '/../../../../backend/routes/web.php';
     $h->assertTrue((new Router())->match('GET', '/checkout', $webRoutes) !== null, 'native guest checkout SSR route is declared');
+    $h->assertTrue((new Router())->match('GET', '/gift-card', $webRoutes) !== null, 'one-time gift card reveal SSR route is declared');
     $h->assertTrue((new Router())->match('GET', '/cart', $webRoutes) !== null, 'native storefront cart route is declared');
     $h->assertTrue((new Router())->match('GET', '/account', $webRoutes) !== null, 'secure customer account SSR route is declared');
     $ssr = (new PublicSaleCheckoutController(new Request('GET', '/checkout', ['channel' => 'web-main', 'cart_token' => str_repeat('A', 43)], [], ['HTTP_HOST' => 'example.test'], [], [])))->show();

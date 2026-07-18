@@ -1,0 +1,15 @@
+{
+  "contract": "public.sale.gift_card.claim.v1",
+  "kind": "schema",
+  "summary": "Révéler une fois un bon cadeau livré.",
+  "description": "Consomme un jeton chiffré à usage unique puis retourne le code complet uniquement à ce parcours autorisé.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/gift-cards/claim",
+  "source": "sale_gift_cards + sale_gift_card_deliveries",
+  "security": "Jeton de révélation AES-256-GCM dont seul le hash est stocké ; isolation obligatoire par site.",
+  "path_params": {"code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$"}},
+  "request_body": {"required": true, "schema": {"type": "object", "required": ["data"], "properties": {"data": {"type": "object", "required": ["claim_token"], "properties": {"claim_token": {"type": "string", "minLength": 40, "maxLength": 512}}, "additionalProperties": false}}, "additionalProperties": false}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {"data": {"type": "object", "additionalProperties": true}, "meta": {"$ref": "#/components/schemas/PublicMeta"}}}},
+  "errors": [{"code": "VALIDATION_FAILED", "status": 422, "description": "Jeton absent, expiré, déjà consommé ou appartenant à un autre site."}],
+  "examples": {"request": {"data": {"claim_token": "opaque-one-time-token"}}, "response": {"data": {"gift_card": {"code": "GC-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX", "masked_code": "•••• 7K2P", "initial_value_minor": 10000, "balance_minor": 10000, "currency": "CHF", "status": "active", "expires_at": "2027-07-17 10:00:00"}}, "meta": {"contract": "public.sale.gift_card.claim.v1", "site_id": 1, "language_code": "fr"}}}
+}

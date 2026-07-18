@@ -130,6 +130,18 @@ python3 tools/cms.py e2e --use-built-assets --usability-only
 
 Le rapport runtime est écrit dans `storage/qualification/usability/latest.json`, avec les captures sous `storage/qualification/usability/captures/`. Il ne contient ni saisie client ni donnée de paiement. La méthode, la revue structurée, les recommandations P0/P1/P2 et ses limites sont documentées dans [Gate d’utilisabilité Commerce M5–M7](../../evaluation/usability-commerce-foundations.md).
 
+## Gate release Shop opérationnel 48
+
+Cette gate agrège les parcours canoniques 38a à 47 sur une instance reconstruite sans migration. Elle exige deux sites sur des chemins distincts, deux langues, la matrice de rôles, une activation Shop sélective, les scénarios métier A à E, les contrôles négatifs et les preuves UX. Elle ne crée pas de suite Commerce parallèle.
+
+```bash
+python3 tools/python/qualification/shop_operational_gate.py --static-only
+python3 tools/cms.py e2e --use-built-assets --shop-operational-only
+python3 tools/python/qualification/shop_operational_gate.py
+```
+
+Le rapport runtime sans donnée personnelle est écrit dans `storage/qualification/shop-operational/latest.json`. Une décision de diffusion requiert toujours `python3 tools/cms.py qualify --profile release`, car les performances, le paquet et l’installation neuve sont des étapes bloquantes du même profil. Voir [Gate release Shop opérationnel — point 48](../../evaluation/shop-operational-release-gate-48.md).
+
 ## Gate M6.5 reconstruction du stock
 
 La porte vérifie le dry-run par défaut, les équations du ledger, les relations réservations/fulfillments/retours/transferts, la cohérence de la projection Business/Shop et la réparation obligatoirement motivée après sauvegarde :

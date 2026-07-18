@@ -12,6 +12,7 @@ use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\PublicCatalogRepository;
 use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Repository\SiteRepository;
+use InvalidArgumentException;
 use Throwable;
 
 final class PublicCatalogApiHandler
@@ -87,29 +88,38 @@ final class PublicCatalogApiHandler
 
     public function storefrontProducts(): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
         if ($channel<1 || $this->storefront===null) return $this->notFound('Projection Storefront indisponible.',[]);
-        $page=$this->storefront->products((int)$site['id'],$channel,$languageCode,$this->filters()+['limit'=>$this->limit(),'offset'=>$this->offset(),'sort'=>$this->request->query['sort']??'name']);
+        try {
+            $page=$this->storefront->products((int)$site['id'],$channel,$languageCode,$this->storefrontFilters()+['limit'=>$this->limit(),'offset'=>$this->offset()]);
+        } catch (InvalidArgumentException $exception) {
+            if ($exception->getMessage() === 'storefront.sort_invalid') return Response::validation(['sort'=>['Tri Storefront invalide.']]);
+            throw $exception;
+        }
         return $this->json($page,'public.storefront.products.index.v1',$site,$languageCode);
     }
 
     public function storefrontProduct(string $slug): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
         $product=$this->storefront?->product((int)$site['id'],$channel,$languageCode,$this->slug($slug));
         return $product ? $this->json(['product'=>$product],'public.storefront.products.show.v1',$site,$languageCode) : $this->notFound('Produit projeté introuvable.',['slug'=>$slug]);
     }
 
     public function storefrontCollections(): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
+        if ($channel<1 || $this->storefront===null) return $this->notFound('Projection Storefront indisponible.',[]);
         return $this->json(['items'=>$this->storefront?->collections((int)$site['id'],$channel,$languageCode)??[]],'public.storefront.collections.index.v1',$site,$languageCode);
     }
 
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
-        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        // App has already resolved and stripped the site's base path. Reusing
+        // that stripped path here would resolve `/campus/api/...` as the main
+        // site and leak its storefront projection into the secondary site.
+        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
         if (!preg_match('/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/i', $languageCode)) {
             $languageCode = (string) ($site['default_language_code'] ?? 'fr');
@@ -373,6 +383,16 @@ final class PublicCatalogApiHandler
             if (array_key_exists($key, $this->request->query)) {
                 $filters[$key] = in_array($key, ['brand_id','category_id','collection_id'], true) ? (int) $this->request->query[$key] : $this->slug((string) $this->request->query[$key]);
             }
+        }
+        return $filters;
+    }
+
+    /** @return array<string,mixed> */
+    private function storefrontFilters(): array
+    {
+        $filters=[];
+        foreach (['q','sort','brand','brands','category','categories','group','groups','availability','attributes','attr','collection_id'] as $key) {
+            if (array_key_exists($key,$this->request->query)) $filters[$key]=$this->request->query[$key];
         }
         return $filters;
     }

@@ -1,0 +1,13 @@
+{% set has_items = section.count|default(0) > 0 %}
+{% if has_items or section.key in ['search', 'catalog'] or section.empty_state == 'message' %}
+<section class="storefront-merchandising storefront-merchandising--{{ section.display|default('grid') }}" data-shop-section="{{ section.key }}">
+  {% if section.key != 'search' %}<header class="storefront-section-heading"><h2>{{ section.title }}</h2>{% if section.view_all_label and has_items %}<a href="{{ section.view_all_url }}">{{ section.view_all_label }}</a>{% endif %}</header>{% endif %}
+  {% if section.key == 'search' %}{% if section.title %}<h2>{{ section.title }}</h2>{% endif %}{% include 'partials/storefront-catalog-filters.twig' %}
+  {% elseif section.key == 'catalog' %}{% include 'partials/storefront-block.twig' with {block_type:'product_grid',data:{items:section.items}} only %}{% include 'partials/storefront-pagination.twig' %}
+  {% elseif section.key in ['promotions','popular','new'] %}{% include 'partials/storefront-block.twig' with {block_type:'product_grid',data:{items:section.items}} only %}
+  {% elseif section.key == 'collections' %}{% include 'partials/storefront-block.twig' with {block_type:'collection_grid',data:{items:section.items}} only %}
+  {% elseif section.key == 'groups' %}<nav class="storefront-merchandising-links" aria-label="{{ section.title }}">{% for item in section.items %}<a href="{{ item.url }}">{{ item.name }} <small>{{ item.product_count }}</small></a>{% endfor %}</nav>
+  {% elseif section.key == 'keywords' %}<nav class="storefront-merchandising-links" aria-label="{{ section.title }}">{% for item in section.items %}<a href="{{ item.url }}">{{ item.keyword }}</a>{% endfor %}</nav>{% endif %}
+  {% if not has_items and section.empty_state == 'message' %}<p class="storefront-empty" role="status">{{ section.empty_message }}</p>{% endif %}
+</section>
+{% endif %}

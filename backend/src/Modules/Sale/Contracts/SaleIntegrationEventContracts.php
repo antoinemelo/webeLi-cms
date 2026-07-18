@@ -35,6 +35,7 @@ final class SaleIntegrationEventContracts
     public const STOCK_CONSUMED = 'sale.stock.consumed';
     public const STOCK_RELEASED = 'sale.stock.released';
     public const INVOICE_SENT = 'sale.invoice.sent';
+    public const NOTIFICATION_REQUESTED = 'sale.notification.requested';
 
     /** @return array<string,array<string,mixed>> */
     public static function payloads(): array
@@ -134,10 +135,10 @@ final class SaleIntegrationEventContracts
                 'optional' => ['iam_user_id'],
             ],
             self::GIFT_CARD_ISSUED => [
-                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'order_line_id', 'amount_minor', 'currency', 'status', 'iam_user_id'],
             ],
             self::GIFT_CARD_REDEEMED => [
-                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'status', 'iam_user_id'],
             ],
             self::CUSTOMER_ACCOUNT_CREATED => [
                 'entity' => 'customer_account',
@@ -163,6 +164,11 @@ final class SaleIntegrationEventContracts
                 'entity' => 'invoice',
                 'required' => ['site_id', 'order_id', 'invoice_id', 'sent_at'],
                 'optional' => ['recipient', 'amount_due_minor', 'currency', 'iam_user_id'],
+            ],
+            self::NOTIFICATION_REQUESTED => [
+                'entity' => 'order_notification',
+                'required' => ['site_id','order_id','order_number','notification_type','language_code','recipient_hash'],
+                'optional' => ['fulfillment_id','document_id'],
             ],
         ];
     }

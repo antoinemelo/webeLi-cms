@@ -43,7 +43,10 @@ Les permissions principales sont :
 - `sale.fulfillment.manage` pour préparer, expédier et remettre une commande ;
 - `sale.transfers.manage` pour piloter un transfert entre emplacements ;
 - `sale.inventory.count` pour saisir un comptage et `sale.inventory.approve` pour valider ses écarts ;
-- `sale.reports.read` pour consulter rapports et exports ;
+- `sale.reports.read` pour consulter les rapports historiques ;
+- `sale.sales.read` pour consulter les indicateurs calculés depuis les instantanés de commandes ;
+- `sale.exports.manage` pour produire un export audité et limité au site ;
+- `sale.documents.issue` et `sale.documents.resend` pour séparer émission et envoi des documents ;
 - `sale.settings.manage` pour gerer les canaux et reglages.
 
 ## Comprendre les canaux

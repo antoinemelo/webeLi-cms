@@ -94,6 +94,13 @@ final class PublicCustomerAccountApiHandler
         });
     }
 
+    public function guestTracking(string $token): Response
+    {
+        return $this->run(function (int $siteId) use ($token): Response {
+            return $this->ok(['order' => $this->accounts->guestOrderByProof($siteId, $token)], 'public.customer.order_tracking.show.v1');
+        });
+    }
+
     public function addresses(): Response
     {
         return $this->run(function (int $siteId): Response {
@@ -124,7 +131,7 @@ final class PublicCustomerAccountApiHandler
     private function run(callable $callback): Response
     {
         try {
-            $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+            $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
             $payload = $this->request->json();
             if ($payload === []) $payload = $this->request->post;
             $payload = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
