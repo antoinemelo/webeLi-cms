@@ -17,6 +17,9 @@ $product = [
         ['media_id'=>10,'type'=>'video','url'=>'/media/demo.mp4','alt'=>'Démonstration du produit','caption'=>'Vidéo de démonstration'],
         ['media_id'=>11,'type'=>'image','url'=>'/media/demo.jpg','alt'=>'Produit de face','caption'=>'Vue de face'],
     ],
+    'documents'=>[
+        ['media_id'=>12,'type'=>'document','url'=>'/media/notice.pdf','title'=>'Notice de montage','caption'=>'Version PDF'],
+    ],
     'sellables'=>[
         ['sellable_id'=>101,'variant_id'=>101,'sku'=>'VIDEO-BLUE','name'=>'Bleu','options'=>[],'price'=>['regular_minor'=>12900,'final_minor'=>9900,'currency'=>'CHF','discount_percent_bps'=>2326],'availability'=>['display_status'=>'available','label'=>'Disponible','tone'=>'success','lead_time_days'=>0],'media'=>[['type'=>'video','url'=>'/media/demo.mp4','alt'=>'Démonstration','caption'=>'Variante bleue']],'orderable'=>true],
         ['sellable_id'=>102,'variant_id'=>102,'sku'=>'VIDEO-RED','name'=>'Rouge','options'=>[],'price'=>['regular_minor'=>12900,'final_minor'=>12900,'currency'=>'CHF','discount_percent_bps'=>0],'availability'=>['display_status'=>'unavailable','label'=>'Indisponible','tone'=>'danger','lead_time_days'=>0],'media'=>[],'orderable'=>false],
@@ -32,6 +35,7 @@ foreach (['default','aurora','pulse'] as $theme) {
     $html = $renderer->render('storefront-product', ['storefront_product'=>$product,'storefront_return_url'=>'/shop','canonical'=>'https://example.test/shop/products/produit-video']);
     $h->assertTrue(str_contains($html, '<video'), $theme . ' renders the canonical video gallery');
     $h->assertTrue(str_contains($html, 'Vidéo de démonstration'), $theme . ' renders the public media caption');
+    $h->assertTrue(str_contains($html, 'Documents à télécharger') && str_contains($html, 'href="/media/notice.pdf"') && str_contains($html, 'Notice de montage'), $theme . ' renders public documents outside the visual gallery');
     $h->assertTrue(str_contains($html, 'data-product-variant'), $theme . ' renders accessible variant selection');
     $h->assertTrue(str_contains($html, 'LinkedIn') && str_contains($html, 'Facebook') && str_contains($html, 'mailto:'), $theme . ' renders social and email sharing');
     $h->assertTrue(str_contains($html,'class="social-share__action social-share__action--linkedin"')&&str_contains($html,'data-copy-url=')&&!str_contains($html,'data-copy-product-url'),$theme.' reuses the page and article sharing component');
@@ -90,9 +94,10 @@ $h->assertSame(localized_path('/shop','fr'),$fallbackPlaced['footer_bottom'][1][
 
 $localizeItem=$routeReflection->getMethod('localizeStorefrontItem');
 $localizeItem->setAccessible(true);
-$localizedItem=$localizeItem->invoke($routeWithoutDependencies,['url'=>'/shop/products/demo','media'=>[['url'=>'/storage/media/demo.jpg']],'sellables'=>[['media'=>[['url'=>'/storage/media/variant.jpg']]]],'relations'=>[['items'=>[['url'=>'/shop/products/related']]]]],'fr');
+$localizedItem=$localizeItem->invoke($routeWithoutDependencies,['url'=>'/shop/products/demo','media'=>[['url'=>'/storage/media/demo.jpg']],'documents'=>[['url'=>'/storage/media/notice.pdf']],'sellables'=>[['media'=>[['url'=>'/storage/media/variant.jpg']]]],'relations'=>[['items'=>[['url'=>'/shop/products/related']]]]],'fr');
 $h->assertTrue(($localizedItem['url']??null)===localized_path('/shop/products/demo','fr')&&($localizedItem['relations'][0]['items'][0]['url']??null)===localized_path('/shop/products/related','fr'),'product and related-product links include the installation and locale base path');
 $h->assertTrue(($localizedItem['media'][0]['url']??null)===public_asset_url_path('/storage/media/demo.jpg')&&($localizedItem['sellables'][0]['media'][0]['url']??null)===public_asset_url_path('/storage/media/variant.jpg'),'product and variant media are localized at the public rendering boundary');
+$h->assertSame(public_asset_url_path('/storage/media/notice.pdf'),$localizedItem['documents'][0]['url']??null,'public product documents include the installation directory');
 $decorateCatalog=$routeReflection->getMethod('decorateCatalogPage');
 $decorateCatalog->setAccessible(true);
 $decorated=$decorateCatalog->invoke($routeWithoutDependencies,['selection'=>[],'facets'=>[],'pagination'=>[],'items'=>[['url'=>'/shop/products/demo']]],'/shop','fr');

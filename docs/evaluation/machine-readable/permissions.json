@@ -3158,22 +3158,6 @@
   {
     "confidence": "high",
     "evidence": [
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
-    ],
-    "id": "permission-media-id-ea6b0fb734",
-    "last_verified": "2026-07-19",
-    "limitations": [
-      "The effective role assignment and site scope must be checked separately."
-    ],
-    "permission": "media.id",
-    "source": [
-      "frontend/admin-vue/src/views/modules/BusinessCatalogView.vue"
-    ],
-    "status": "supported"
-  },
-  {
-    "confidence": "high",
-    "evidence": [
       "backend/src/Application/Configuration/ConfigurationRepository.php"
     ],
     "id": "permission-media-logo-media-id-42feabeed5",

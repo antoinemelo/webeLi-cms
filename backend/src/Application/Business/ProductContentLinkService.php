@@ -255,7 +255,7 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         foreach(['url','canonical_url']as$key)if(isset($product[$key])&&is_string($product[$key]))$product[$key]=localized_path($product[$key],$locale);
         foreach(['category','collection','brand']as$key)if(is_array($product[$key]??null)&&isset($product[$key]['url'])&&is_string($product[$key]['url']))$product[$key]['url']=localized_path($product[$key]['url'],$locale);
         foreach(['image_url','media_url','thumbnail_url']as$key)if(is_string($product[$key]??null))$product[$key]=public_asset_url_path($product[$key]);
-        foreach(['media','images']as$collection)foreach((array)($product[$collection]??[])as$index=>$media){if(!is_array($media))continue;foreach(['url','src','image_url','thumbnail_url']as$key)if(is_string($media[$key]??null))$product[$collection][$index][$key]=public_asset_url_path($media[$key]);}
+        foreach(['media','images','documents']as$collection)foreach((array)($product[$collection]??[])as$index=>$media){if(!is_array($media))continue;foreach(['url','src','image_url','thumbnail_url']as$key)if(is_string($media[$key]??null))$product[$collection][$index][$key]=public_asset_url_path($media[$key]);}
         foreach((array)($product['sellables']??[])as$index=>$sellable)if(is_array($sellable))$product['sellables'][$index]=$this->localizeProductUrls($sellable,$locale);
         return$product;
     }

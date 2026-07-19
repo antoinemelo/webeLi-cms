@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
+import MediaPicker from '@/components/editor/MediaPicker.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { apiErrorMessage } from '@/api/client';
@@ -9,6 +10,7 @@ import { businessCatalogApi, type CatalogAttribute, type CatalogAttributeGroup, 
 import { useAdminContextStore } from '@/stores/adminContext';
 import { useI18n } from '@/i18n';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
+import type { MediaAsset } from '@/api/contracts';
 
 type CatalogTab = 'products' | 'offers';
 type IdValue = number | string | null | undefined;
@@ -294,7 +296,6 @@ const contentLinkForm = reactive({
 });
 const productRelationForm = reactive({ search: '', target_product_id: '', relation_type: 'related', sort_order: '0' });
 const productRelationRuleForm = reactive({ relation_type: 'related', match_type: 'category', match_id: '', result_limit: '6', sort_order: '0' });
-const assetUploadFile = ref<File | null>(null);
 const attributeGroupForm = reactive({ id: 0, code: '', name: '', description: '', sort_order: '0' });
 const attributeForm = reactive({
   id: 0,
@@ -321,7 +322,6 @@ const discountScopes = ['brand', 'category', 'product', 'variant'];
 const discountChannels = ['all', 'ecommerce', 'pos', 'catalogue', 'admin'];
 const movementTypes = ['initial', 'purchase', 'sale', 'adjustment', 'return', 'reservation', 'release'];
 const adjustmentTypes = ['none', 'amount_delta', 'percent_delta', 'fixed_override'];
-const assetRoles = ['main', 'gallery', 'variant', 'thumbnail', 'document', 'technical_sheet', 'internal'];
 const assetChannels = ['all', 'public', 'ecommerce', 'pos', 'catalogue', 'admin', 'pdf'];
 const contentRelationTypes = ['product_page', 'storytelling', 'faq', 'guide', 'comparison', 'seo', 'related'];
 const productRelationTypes = ['related', 'alternative', 'accessory', 'upsell', 'cross_sell'];
@@ -553,20 +553,38 @@ const productPaginationLabel = computed(() => {
   const end = Math.min(start + products.value.length - 1, productTotal.value);
   return `${start}-${end} / ${productTotal.value}`;
 });
-const mainProductAsset = computed(() => productAssets.value.find((asset) => asset.role === 'main' && !asset.variant_id) || null);
 const galleryProductAssets = computed(() => productAssets.value.filter((asset) => ['gallery', 'thumbnail'].includes(String(asset.role || '')) && !asset.variant_id));
 const variantProductAssets = computed(() => productAssets.value.filter((asset) => Boolean(asset.variant_id) || asset.role === 'variant'));
 const documentProductAssets = computed(() => productAssets.value.filter((asset) => ['document', 'technical_sheet'].includes(String(asset.role || ''))));
-const internalProductAssets = computed(() => productAssets.value.filter((asset) => asset.role === 'internal' || asset.is_public === false));
+const internalProductAssets = computed(() => productAssets.value.filter((asset) => asset.role === 'internal'));
+const storefrontProductAssets = computed(() => productAssets.value
+  .filter((asset) => !asset.variant_id && asset.is_public !== false && ['main','gallery','thumbnail'].includes(String(asset.role || '')) && ['all','public','ecommerce'].includes(String(asset.channel_scope || 'all')) && assetIsVisual(asset))
+  .sort((left,right) => (left.role === 'main' ? 0 : 1)-(right.role === 'main' ? 0 : 1) || Number(left.sort_order || 0)-Number(right.sort_order || 0) || Number(left.id || 0)-Number(right.id || 0)));
+const storefrontMainProductAsset = computed(() => storefrontProductAssets.value.find((asset)=>asset.role==='main')||null);
+const mainProductAsset = computed(() => storefrontMainProductAsset.value || productAssets.value.find((asset) => asset.role === 'main' && !asset.variant_id) || null);
+const assetRoleChoices = computed(() => {
+  const choices=assetForm.variant_id?['variant','thumbnail']:['main','gallery','thumbnail','document','technical_sheet','internal'];
+  return choices.includes(assetForm.role)?choices:[assetForm.role,...choices];
+});
+const assetUsageExplanation = computed(() => {
+  if(assetForm.role==='internal')return 'Conservé dans l’administration et jamais envoyé à la boutique.';
+  if(['document','technical_sheet'].includes(assetForm.role))return 'Affiché dans « Documents à télécharger » sur la fiche produit, séparément de la galerie.';
+  if(assetForm.variant_id)return 'Affiché lorsque le visiteur choisit cette variante. À défaut, la variante reprend les images générales du produit.';
+  if(assetForm.role==='main')return 'Première image des cartes catalogue et de la fiche produit.';
+  return 'Ajouté à la galerie générale de la fiche produit.';
+});
+const selectedAssetMedia = computed(() => mediaRows.value.find((media)=>Number(media.id||0)===Number(assetForm.media_id||0))||null);
+const assetNeedsVisualMedia = computed(() => ['main','gallery','variant','thumbnail'].includes(assetForm.role));
+const assetSelectionValid = computed(() => Boolean(assetForm.media_id)&&(!assetNeedsVisualMedia.value||Boolean(selectedAssetMedia.value&&(text(selectedAssetMedia.value.media_type)==='image'||text(selectedAssetMedia.value.media_type)==='video'||text(selectedAssetMedia.value.mime_type).startsWith('image/')||text(selectedAssetMedia.value.mime_type).startsWith('video/')))));
 const assetWarnings = computed(() => {
   const warnings: string[] = [];
-  if (productData.value && !mainProductAsset.value) warnings.push('Aucune image principale.');
+  if (productData.value && !storefrontMainProductAsset.value) warnings.push('Aucune image principale visible dans la boutique.');
   for (const asset of productAssets.value) {
     if (asset.is_public && ['main', 'gallery', 'variant', 'thumbnail'].includes(String(asset.role || '')) && !text(asset.alt_text)) {
       warnings.push(`${assetRoleLabel(asset.role)} public sans texte alternatif.`);
     }
-    if (asset.is_public && ['internal', 'document', 'technical_sheet'].includes(String(asset.role || ''))) {
-      warnings.push(`${assetRoleLabel(asset.role)} marqué public.`);
+    if (asset.is_public && asset.role === 'internal') {
+      warnings.push('Un fichier interne ne doit pas être publié.');
     }
     if (text(asset.expires_at) && new Date(text(asset.expires_at)).getTime() < Date.now()) {
       warnings.push(`${assetRoleLabel(asset.role)} expiré.`);
@@ -913,6 +931,12 @@ function assetMediaLabel(mediaId: IdValue): string {
 function assetPreviewUrl(asset: CatalogProductAsset): string {
   const media = mediaRows.value.find((item) => Number(item.id || 0) === Number(asset.media_id || 0));
   return text(media?.thumbnail_url || media?.public_url || '');
+}
+
+function assetIsVisual(asset: CatalogProductAsset): boolean {
+  const media = mediaRows.value.find((item) => Number(item.id || 0) === Number(asset.media_id || 0));
+  const type=text(media?.media_type);const mime=text(media?.mime_type);
+  return type==='image'||type==='video'||mime.startsWith('image/')||mime.startsWith('video/');
 }
 
 function assetIsImage(asset: CatalogProductAsset): boolean {
@@ -2448,13 +2472,43 @@ function resetAssetForm(asset: CatalogProductAsset | null = null): void {
     media_id: text(asset?.media_id),
     variant_id: text(asset?.variant_id),
     role: text(asset?.role || 'gallery'),
-    channel_scope: text(asset?.channel_scope || 'all'),
+    channel_scope: text(asset?.channel_scope || 'ecommerce'),
     title: text(asset?.title),
     alt_text: text(asset?.alt_text),
     caption: text(asset?.caption),
     sort_order: text(asset?.sort_order || 0),
     is_public: asset ? Boolean(asset.is_public) : true,
   });
+}
+
+function startAssetPreset(preset: 'main'|'gallery'|'variant'|'document'): void {
+  resetAssetForm(null);
+  assetForm.channel_scope=preset==='document'?'all':'ecommerce';
+  assetForm.is_public=true;
+  assetForm.role=preset==='document'?'document':preset;
+  assetForm.variant_id=preset==='variant'&&selectedVariants.value.length?String(selectedVariants.value[0].id):'';
+  const relevant=productAssets.value.filter((asset)=>preset==='variant'?Boolean(asset.variant_id):!asset.variant_id);
+  assetForm.sort_order=String((relevant.reduce((highest,asset)=>Math.max(highest,Number(asset.sort_order||0)),0)||0)+10);
+}
+
+function onAssetVariantChange(): void {
+  if(assetForm.variant_id&&['main','gallery','thumbnail'].includes(assetForm.role))assetForm.role='variant';
+  if(!assetForm.variant_id&&assetForm.role==='variant')assetForm.role=mainProductAsset.value?'gallery':'main';
+}
+
+function onAssetRoleChange(): void {
+  if(assetForm.role==='internal'){assetForm.is_public=false;assetForm.channel_scope='admin';}
+  else if(['document','technical_sheet'].includes(assetForm.role)){assetForm.variant_id='';if(assetForm.channel_scope==='admin')assetForm.channel_scope='all';}
+}
+
+function selectProductMedia(asset: MediaAsset|null): void {
+  if(!asset){assetForm.media_id='';return;}
+  if(!mediaRows.value.some((media)=>Number(media.id)===Number(asset.id)))mediaRows.value=[asset as unknown as CatalogRecord,...mediaRows.value];
+  assetForm.media_id=String(asset.id);
+  if(!assetForm.title)assetForm.title=text(asset.title||asset.original_filename||asset.filename);
+  if(!assetForm.alt_text)assetForm.alt_text=text(asset.alt_text);
+  if(!assetForm.caption)assetForm.caption=text(asset.caption);
+  void loadMediaRows();
 }
 
 function fillAttributeGroupForm(group: CatalogAttributeGroup | null = null): void {
@@ -2883,12 +2937,11 @@ async function saveProductAsset(): Promise<void> {
   if (!canWrite.value || productId < 1) return;
   busy.value = 'asset';
   try {
-    if (assetForm.id > 0) await businessCatalogApi.updateProductAsset(assetForm.id, assetPayload());
-    else await businessCatalogApi.assignProductAsset(productId, assetPayload());
-    await loadProductAssets(productId);
+    const response=assetForm.id > 0?await businessCatalogApi.updateProductAsset(assetForm.id,assetPayload()):await businessCatalogApi.assignProductAsset(productId,assetPayload());
+    await Promise.all([loadProductAssets(productId),loadMediaRows()]);
     await loadCatalog();
     resetAssetForm(null);
-    setNotice('Média produit enregistré.');
+    setNotice(text((response.data as Record<string,unknown>).message)||'Média enregistré et boutique actualisée.');
   } catch (err) {
     setError(err, 'Média produit non enregistré.');
   } finally {
@@ -2901,10 +2954,10 @@ async function archiveProductAsset(asset: CatalogProductAsset): Promise<void> {
   if (!canWrite.value || assetId < 1) return;
   busy.value = `asset-${assetId}`;
   try {
-    await businessCatalogApi.archiveProductAsset(assetId);
+    const response=await businessCatalogApi.archiveProductAsset(assetId);
     await loadProductAssets();
     await loadCatalog();
-    setNotice('Lien média archivé.');
+    setNotice(text((response.data as Record<string,unknown>).message)||'Média retiré et boutique actualisée.');
   } catch (err) {
     setError(err, 'Lien média non archivé.');
   } finally {
@@ -2923,10 +2976,10 @@ async function setMainProductAsset(asset: CatalogProductAsset): Promise<void> {
   if (!canWrite.value || assetId < 1) return;
   busy.value = `asset-${assetId}`;
   try {
-    await businessCatalogApi.setMainProductAsset(assetId);
+    const response=await businessCatalogApi.setMainProductAsset(assetId);
     await loadProductAssets();
     await loadCatalog();
-    setNotice('Image principale définie.');
+    setNotice(text((response.data as Record<string,unknown>).message)||'Image principale définie et boutique actualisée.');
   } catch (err) {
     setError(err, 'Image principale non définie.');
   } finally {
@@ -2938,34 +2991,6 @@ async function setCurrentAssetAsMain(): Promise<void> {
   if (assetForm.id < 1) return;
   await setMainProductAsset({ id: assetForm.id } as CatalogProductAsset);
   assetForm.role = 'main';
-}
-
-function onAssetUploadChange(event: Event): void {
-  const input = event.target as HTMLInputElement;
-  assetUploadFile.value = input.files?.[0] || null;
-}
-
-async function uploadAndAssignAsset(): Promise<void> {
-  const productId = selectedProductId.value;
-  if (!canWrite.value || productId < 1 || !assetUploadFile.value) return;
-  busy.value = 'asset-upload';
-  try {
-    const form = new FormData();
-    form.append('file', assetUploadFile.value);
-    if (assetForm.title) form.append('title', assetForm.title);
-    if (assetForm.alt_text) form.append('alt_text', assetForm.alt_text);
-    const upload = await businessCatalogApi.uploadMedia(form);
-    const mediaId = Number(upload.data.media_id || (upload.data.asset as Record<string, unknown> | undefined)?.id || 0);
-    if (mediaId < 1) throw new Error('media_id_missing');
-    assetForm.media_id = String(mediaId);
-    await saveProductAsset();
-    await loadMediaRows();
-    assetUploadFile.value = null;
-  } catch (err) {
-    setError(err, 'Téléversement média impossible.');
-  } finally {
-    busy.value = '';
-  }
 }
 
 function discountScopeLabel(discount: CatalogDiscount): string {
@@ -5371,12 +5396,40 @@ onBeforeUnmount(() => {
           <div v-if="productModalShows('media')" class="catalog-section catalog-asset-manager">
             <div class="panel__header compact">
               <div>
-                <h3>Médias</h3>
-                <p class="muted">Image principale, galerie, images variantes, documents et fichiers internes.</p>
+                <h3>Images et médias du produit</h3>
+                <p class="muted">Choisissez d’abord l’usage souhaité. Les images publiques sont ensuite répercutées automatiquement dans la boutique.</p>
               </div>
             </div>
             <div v-if="assetWarnings.length" class="catalog-quality-strip">
               <span v-for="warning in assetWarnings" :key="`edit-asset-warning-${warning}`" class="catalog-signal catalog-signal--warning">{{ warning }}</span>
+            </div>
+            <section class="catalog-storefront-media-preview" aria-labelledby="storefront-media-preview-title">
+              <div>
+                <h4 id="storefront-media-preview-title">Aperçu de la galerie boutique</h4>
+                <p class="muted">La première image est utilisée dans les listes de produits. Les médias propres à une variante apparaissent lorsqu’elle est sélectionnée.</p>
+              </div>
+              <div v-if="storefrontProductAssets.length" class="catalog-storefront-media-preview__content">
+                <div class="catalog-storefront-media-preview__main">
+                  <img v-if="assetPreviewUrl(storefrontProductAssets[0]) && assetIsImage(storefrontProductAssets[0])" :src="assetPreviewUrl(storefrontProductAssets[0])" :alt="String(storefrontProductAssets[0].alt_text || '')">
+                  <span v-else aria-hidden="true">▶</span>
+                </div>
+                <div class="catalog-storefront-media-preview__thumbs">
+                  <button v-for="asset in storefrontProductAssets" :key="`preview-${asset.asset_id || asset.id}`" type="button" :aria-label="`Modifier ${assetMediaLabel(asset.media_id)}`" @click="resetAssetForm(asset)">
+                    <img v-if="assetPreviewUrl(asset) && assetIsImage(asset)" :src="assetPreviewUrl(asset)" alt="">
+                    <span v-else>Vidéo</span>
+                  </button>
+                </div>
+              </div>
+              <div v-else class="catalog-storefront-media-preview__empty">
+                <strong>Aucune image visible dans la boutique</strong>
+                <span>Ajoutez une image principale pour rendre les cartes produit immédiatement reconnaissables.</span>
+              </div>
+            </section>
+            <div v-if="!assetForm.id" class="catalog-media-presets" aria-label="Ajouter un média selon son usage">
+              <button type="button" class="catalog-media-preset" @click="startAssetPreset('main')"><strong>Image principale</strong><span>Cartes et première image de la fiche</span></button>
+              <button type="button" class="catalog-media-preset" @click="startAssetPreset('gallery')"><strong>Galerie</strong><span>Photo ou vidéo supplémentaire</span></button>
+              <button type="button" class="catalog-media-preset" :disabled="selectedVariants.length === 0" @click="startAssetPreset('variant')"><strong>Média d’une variante</strong><span>{{ selectedVariants.length ? 'Affiché au choix de la variante' : 'Créez d’abord une variante' }}</span></button>
+              <button type="button" class="catalog-media-preset" @click="startAssetPreset('document')"><strong>Document</strong><span>Notice ou fiche technique, hors galerie</span></button>
             </div>
             <div class="catalog-asset-groups">
               <div class="catalog-asset-group">
@@ -5385,14 +5438,14 @@ onBeforeUnmount(() => {
                   <img v-if="assetPreviewUrl(mainProductAsset) && assetIsImage(mainProductAsset)" :src="assetPreviewUrl(mainProductAsset)" alt="">
                   <div>
                     <strong>{{ assetMediaLabel(mainProductAsset.media_id) }}</strong>
-                    <span>{{ assetChannelLabel(mainProductAsset.channel_scope) }} · {{ mainProductAsset.alt_text || 'Alt manquant' }}</span>
+                    <span>{{ assetChannelLabel(mainProductAsset.channel_scope) }} · {{ mainProductAsset.alt_text || 'Texte alternatif manquant' }}</span>
                   </div>
                   <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(mainProductAsset)">Modifier</button>
                 </div>
-                <p v-else class="muted">Aucune image principale.</p>
+                <button v-else class="catalog-asset-empty-action" type="button" @click="startAssetPreset('main')">+ Ajouter l’image principale</button>
               </div>
               <div class="catalog-asset-group">
-                <h4>Galerie</h4>
+                <h4>Galerie générale</h4>
                 <div v-for="asset in galleryProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
                   <img v-if="assetPreviewUrl(asset) && assetIsImage(asset)" :src="assetPreviewUrl(asset)" alt="">
                   <div>
@@ -5401,10 +5454,10 @@ onBeforeUnmount(() => {
                   </div>
                   <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
                 </div>
-                <p v-if="galleryProductAssets.length === 0" class="muted">Aucune image de galerie.</p>
+                <button v-if="galleryProductAssets.length === 0" class="catalog-asset-empty-action" type="button" @click="startAssetPreset('gallery')">+ Ajouter à la galerie</button>
               </div>
               <div class="catalog-asset-group">
-                <h4>Images variantes</h4>
+                <h4>Médias des variantes</h4>
                 <div v-for="asset in variantProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
                   <img v-if="assetPreviewUrl(asset) && assetIsImage(asset)" :src="assetPreviewUrl(asset)" alt="">
                   <div>
@@ -5413,10 +5466,11 @@ onBeforeUnmount(() => {
                   </div>
                   <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
                 </div>
-                <p v-if="variantProductAssets.length === 0" class="muted">Aucune image variante.</p>
+                <button v-if="variantProductAssets.length === 0 && selectedVariants.length" class="catalog-asset-empty-action" type="button" @click="startAssetPreset('variant')">+ Illustrer une variante</button>
+                <p v-else-if="variantProductAssets.length === 0" class="muted">Aucune variante à illustrer.</p>
               </div>
               <div class="catalog-asset-group">
-                <h4>Documents</h4>
+                <h4>Documents liés</h4>
                 <div v-for="asset in documentProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
                   <div>
                     <strong>{{ assetMediaLabel(asset.media_id) }}</strong>
@@ -5424,9 +5478,10 @@ onBeforeUnmount(() => {
                   </div>
                   <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
                 </div>
-                <p v-if="documentProductAssets.length === 0" class="muted">Aucun document.</p>
+                <button v-if="documentProductAssets.length === 0" class="catalog-asset-empty-action" type="button" @click="startAssetPreset('document')">+ Ajouter un document</button>
               </div>
-              <div class="catalog-asset-group">
+              <details v-if="internalProductAssets.length" class="catalog-asset-group catalog-asset-group--details">
+                <summary>Fichiers internes ({{ internalProductAssets.length }})</summary>
                 <h4>Fichiers internes</h4>
                 <div v-for="asset in internalProductAssets" :key="asset.asset_id || asset.id" class="catalog-asset-card">
                   <div>
@@ -5435,46 +5490,55 @@ onBeforeUnmount(() => {
                   </div>
                   <button class="btn ghost btn-sm" type="button" @click="resetAssetForm(asset)">Modifier</button>
                 </div>
-                <p v-if="internalProductAssets.length === 0" class="muted">Aucun fichier interne.</p>
-              </div>
+              </details>
             </div>
             <div class="catalog-asset-editor">
+              <div class="catalog-asset-editor__head">
+                <div><h4>{{ assetForm.id ? 'Modifier ce média' : 'Ajouter un média' }}</h4><p>{{ assetUsageExplanation }}</p></div>
+                <button v-if="assetForm.id" class="btn ghost btn-sm" type="button" @click="resetAssetForm(null)">Ajouter un autre média</button>
+              </div>
+              <MediaPicker
+                :media-id="Number(assetForm.media_id || 0)"
+                :accept-type="['document','technical_sheet'].includes(assetForm.role) ? 'document' : assetForm.role === 'internal' ? 'any' : 'visual'"
+                :label="['document','technical_sheet'].includes(assetForm.role) ? 'Choisir ou téléverser le document' : 'Choisir ou téléverser l’image ou la vidéo'"
+                help="Vous pouvez rechercher dans la médiathèque ou téléverser un nouveau fichier ici."
+                preferred-set="content"
+                compact
+                :disabled="!canWrite"
+                @update:media-id="assetForm.media_id = $event ? String($event) : ''"
+                @update:alt="assetForm.alt_text = $event"
+                @update:caption="assetForm.caption = $event"
+                @update:title="assetForm.title = $event"
+                @select="selectProductMedia"
+              />
+              <p v-if="assetForm.media_id && !assetSelectionValid" class="notice notice--warning">Ce type de fichier ne peut pas être affiché comme image ou vidéo. Choisissez « Document » ou sélectionnez un média visuel.</p>
               <div class="catalog-form-grid">
-                <label class="field">Média existant
-                  <select v-model="assetForm.media_id" class="select" :disabled="!canWrite">
-                    <option value="">Choisir un média</option>
-                    <option v-for="media in mediaRows" :key="media.id" :value="media.id">{{ text(media.title || media.original_filename || media.filename || media.name) }}</option>
-                  </select>
-                </label>
-                <label class="field">Variante
-                  <select v-model="assetForm.variant_id" class="select" :disabled="!canWrite">
-                    <option value="">Produit</option>
+                <label class="field">S’applique à
+                  <select v-model="assetForm.variant_id" class="select" :disabled="!canWrite" @change="onAssetVariantChange">
+                    <option value="">Toutes les variantes (média général)</option>
                     <option v-for="variant in selectedVariants" :key="variant.id" :value="variant.id">{{ variantDisplayName(variant) }}</option>
                   </select>
                 </label>
-                <label class="field">Rôle
-                  <select v-model="assetForm.role" class="select" :disabled="!canWrite">
-                    <option v-for="role in assetRoles" :key="role" :value="role">{{ assetRoleLabel(role) }}</option>
+                <label class="field">Utilisation
+                  <select v-model="assetForm.role" class="select" :disabled="!canWrite" @change="onAssetRoleChange">
+                    <option v-for="role in assetRoleChoices" :key="role" :value="role">{{ assetRoleLabel(role) }}</option>
                   </select>
                 </label>
-                <label class="field">Canal
+                <label class="field">Visible dans
                   <select v-model="assetForm.channel_scope" class="select" :disabled="!canWrite">
                     <option v-for="channel in assetChannels" :key="channel" :value="channel">{{ assetChannelLabel(channel) }}</option>
                   </select>
                 </label>
-                <label class="field">Titre<input v-model="assetForm.title" class="input" :disabled="!canWrite"></label>
-                <label class="field">Ordre<input v-model="assetForm.sort_order" class="input" :disabled="!canWrite"></label>
-                <label class="field wide">Texte alternatif<input v-model="assetForm.alt_text" class="input" :disabled="!canWrite"></label>
+                <label class="field">Position dans la galerie<input v-model="assetForm.sort_order" class="input" type="number" min="0" step="10" :disabled="!canWrite"><small>Les valeurs les plus petites apparaissent en premier.</small></label>
+                <label class="field wide">Titre interne (optionnel)<input v-model="assetForm.title" class="input" :disabled="!canWrite"></label>
+                <label v-if="assetNeedsVisualMedia" class="field wide">Description de l’image pour l’accessibilité<input v-model="assetForm.alt_text" class="input" :disabled="!canWrite" placeholder="Décrire ce qui est utile pour comprendre l’image"><small>Ce texte est lu par les lecteurs d’écran. Évitez « image de ».</small></label>
                 <label class="field wide">Légende<textarea v-model="assetForm.caption" class="input" rows="2" :disabled="!canWrite"></textarea></label>
-                <label class="checkbox-inline"><input v-model="assetForm.is_public" type="checkbox" :disabled="!canWrite"> Public</label>
-                <label class="field">Téléverser<input class="input" type="file" :disabled="!canWrite" @change="onAssetUploadChange"></label>
+                <label class="checkbox-inline"><input v-model="assetForm.is_public" type="checkbox" :disabled="!canWrite || assetForm.role === 'internal'"> Autoriser la publication hors administration</label>
               </div>
               <div class="catalog-modal-actions">
-                <button class="btn ghost" type="button" @click="resetAssetForm(null)">Nouveau lien</button>
-                <button class="btn ghost" type="button" :disabled="!canWrite || !assetForm.id" @click="archiveCurrentAsset">Archiver le lien</button>
-                <button class="btn ghost" type="button" :disabled="!canWrite || !assetForm.id" @click="setCurrentAssetAsMain">Définir principale</button>
-                <button class="btn ghost" type="button" :disabled="!canWrite || !assetUploadFile || busy === 'asset-upload'" @click="uploadAndAssignAsset">Téléverser et lier</button>
-                <button class="btn primary" type="button" :disabled="!canWrite || !assetForm.media_id || busy === 'asset'" @click="saveProductAsset">Enregistrer média</button>
+                <button v-if="assetForm.id" class="btn ghost" type="button" :disabled="!canWrite || busy === `asset-${assetForm.id}`" @click="archiveCurrentAsset">Retirer du produit</button>
+                <button v-if="assetForm.id && !assetForm.variant_id && assetNeedsVisualMedia && assetForm.role !== 'main'" class="btn ghost" type="button" :disabled="!canWrite" @click="setCurrentAssetAsMain">Utiliser comme image principale</button>
+                <button class="btn primary" type="button" :disabled="!canWrite || !assetSelectionValid || busy === 'asset'" @click="saveProductAsset">{{ busy === 'asset' ? 'Actualisation…' : assetForm.id ? 'Enregistrer et actualiser la boutique' : 'Ajouter et actualiser la boutique' }}</button>
               </div>
             </div>
           </div>
@@ -6891,6 +6955,35 @@ onBeforeUnmount(() => {
   gap: .75rem;
 }
 
+.catalog-storefront-media-preview {
+  align-items: start;
+  background: linear-gradient(135deg, #f8fafc, #eff6ff);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: minmax(13rem, .8fr) minmax(16rem, 1.2fr);
+  padding: .8rem;
+}
+
+.catalog-storefront-media-preview h4,
+.catalog-storefront-media-preview p { margin: 0; }
+
+.catalog-storefront-media-preview__content { display: grid; gap: .5rem; grid-template-columns: minmax(8rem, 1fr) minmax(7rem, .7fr); }
+.catalog-storefront-media-preview__main { align-items: center; aspect-ratio: 4 / 3; background: #fff; border: 1px solid #dbeafe; border-radius: 8px; display: flex; justify-content: center; overflow: hidden; }
+.catalog-storefront-media-preview__main img { height: 100%; object-fit: contain; width: 100%; }
+.catalog-storefront-media-preview__thumbs { align-content: start; display: grid; gap: .35rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.catalog-storefront-media-preview__thumbs button { aspect-ratio: 1; background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; cursor: pointer; overflow: hidden; padding: 0; }
+.catalog-storefront-media-preview__thumbs img { height: 100%; object-fit: cover; width: 100%; }
+.catalog-storefront-media-preview__empty { background: #fff; border: 1px dashed #93c5fd; border-radius: 8px; display: grid; gap: .25rem; padding: 1rem; }
+.catalog-storefront-media-preview__empty span { color: #64748b; }
+
+.catalog-media-presets { display: grid; gap: .5rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.catalog-media-preset { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #0f172a; cursor: pointer; display: grid; gap: .2rem; padding: .65rem; text-align: left; }
+.catalog-media-preset:hover,.catalog-media-preset:focus-visible { border-color: #2563eb; box-shadow: 0 0 0 2px #dbeafe; }
+.catalog-media-preset:disabled { cursor: not-allowed; opacity: .55; }
+.catalog-media-preset span { color: #64748b; font-size: .78rem; }
+
 .panel__header.compact {
   margin: 0;
 }
@@ -6921,6 +7014,9 @@ onBeforeUnmount(() => {
   font-size: .88rem;
   margin: 0;
 }
+
+.catalog-asset-group--details summary { cursor: pointer; font-size: .88rem; font-weight: 700; }
+.catalog-asset-empty-action { background: #fff; border: 1px dashed #94a3b8; border-radius: 7px; color: #1d4ed8; cursor: pointer; padding: .65rem; text-align: left; }
 
 .catalog-asset-card {
   align-items: center;
@@ -6958,6 +7054,16 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   background: #eff6ff;
   padding: .75rem;
+}
+
+.catalog-asset-editor__head { align-items: start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: .75rem; }
+.catalog-asset-editor__head h4,.catalog-asset-editor__head p { margin: 0; }
+.catalog-asset-editor__head p { color: #475569; font-size: .85rem; }
+
+@media (max-width: 760px) {
+  .catalog-storefront-media-preview { grid-template-columns: 1fr; }
+  .catalog-media-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .catalog-asset-editor__head { flex-direction: column; }
 }
 
 .catalog-modal-backdrop {

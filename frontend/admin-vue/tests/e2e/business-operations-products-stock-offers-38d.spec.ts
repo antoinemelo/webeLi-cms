@@ -119,6 +119,25 @@ test.describe('38d Opérations, produits, stock, offres et Audiences', () => {
     await expect(productDialog).toBeAttached();
   });
 
+  test('guides product media by storefront usage and reuses the visual library', async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page);
+    await page.goto(cmsPath('/admin/app/business/products-stock'));
+    const productRow=page.locator('.catalog-table-row:not(.is-archived)').first();
+    await expect(productRow).toBeVisible({ timeout: 60_000 });
+    await productRow.locator('.catalog-row-menu-summary').click();
+    await productRow.getByRole('button',{name:'Médias',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Modifier les médias'});
+    await expect(dialog.getByRole('heading',{name:'Images et médias du produit'})).toBeVisible();
+    await expect(dialog.getByRole('heading',{name:'Aperçu de la galerie boutique'})).toBeVisible();
+    await expect(dialog.getByRole('button',{name:/Image principale Cartes/})).toBeVisible();
+    await expect(dialog.getByRole('button',{name:'Médiathèque'})).toBeVisible();
+    await expect(dialog.getByRole('button',{name:'Upload'})).toBeVisible();
+    await dialog.getByRole('button',{name:/Document Notice/}).click();
+    await expect(dialog.getByText('Affiché dans « Documents à télécharger »')).toBeVisible();
+    await expect(dialog.getByText('Choisir ou téléverser le document')).toBeVisible();
+  });
+
   test('returns unit quantities and purchase/sale valuations from the real inventory API', async ({ page }) => {
     await signIn(page);
     const response = await page.request.get(cmsPath('/admin/api/business/catalog/inventory?limit=100'), { headers: { 'X-Contract-Version': 'admin-api-v1' } });

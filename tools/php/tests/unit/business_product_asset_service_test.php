@@ -48,6 +48,18 @@ try {
     $h->assertSame('thumbnail', $assigned['role'], 'assigned asset keeps role');
     $h->assertSame('ecommerce', $assigned['channel_scope'], 'assigned asset keeps channel scope');
 
+    $db->run('UPDATE business_storefront_projection_invalidations SET processed_at = CURRENT_TIMESTAMP WHERE processed_at IS NULL');
+    $updated = $assets->updateAsset((int) $assigned['asset_id'], [
+        'site_id' => 1,
+        'role' => 'variant',
+        'caption' => 'Nouvelle légende publique',
+    ]);
+    $h->assertSame('variant', $updated['role'], 'updateAsset persists a guided storefront role');
+    $h->assertTrue(
+        (int) ($db->one("SELECT COUNT(*) c FROM business_storefront_projection_invalidations WHERE processed_at IS NULL AND reason = 'media'")['c'] ?? 0) > 0,
+        'updating product media invalidates the Storefront projection'
+    );
+
     $ecommerceAssets = $assets->listAssetsForProduct($productId, [
         'variant_id' => $variantId,
         'include_product_assets' => true,
@@ -58,7 +70,12 @@ try {
     $h->assertTrue(in_array(6, $mediaIds, true), 'listAssetsForProduct returns newly assigned ecommerce asset');
     $h->assertTrue(in_array(4, $mediaIds, true), 'listAssetsForProduct includes product fallback assets');
 
-    $assets->archiveAsset((int) $assigned['asset_id']);
+    $db->run('UPDATE business_storefront_projection_invalidations SET processed_at = CURRENT_TIMESTAMP WHERE processed_at IS NULL');
+    $assets->archiveAsset((int) $assigned['asset_id'], 1);
+    $h->assertTrue(
+        (int) ($db->one("SELECT COUNT(*) c FROM business_storefront_projection_invalidations WHERE processed_at IS NULL AND reason = 'media'")['c'] ?? 0) > 0,
+        'archiving product media invalidates the Storefront projection'
+    );
     $afterArchive = $assets->listAssetsForProduct($productId, [
         'variant_id' => $variantId,
         'include_product_assets' => true,
@@ -79,6 +96,15 @@ try {
         InvalidArgumentException::class,
         'invalid product asset role is rejected'
     );
+    $otherVariant=(int)($db->one("SELECT v.id FROM business_product_variants v WHERE v.product_id<>? ORDER BY v.id LIMIT 1",[$productId])['id']??0);
+    $h->expectException(
+        fn()=>$assets->assignAsset(['site_id'=>1,'product_id'=>$productId,'variant_id'=>$otherVariant,'media_id'=>8,'role'=>'variant']),
+        InvalidArgumentException::class,
+        'a product media link cannot target a variant owned by another product'
+    );
+    $internal=$assets->assignAsset(['site_id'=>1,'product_id'=>$productId,'media_id'=>9,'role'=>'internal','channel_scope'=>'ecommerce','is_public'=>true]);
+    $h->assertSame(false,$internal['is_public'],'an internal file is always kept private');
+    $h->assertSame('admin',$internal['channel_scope'],'an internal file is always scoped to administration');
 } finally {
     $db = null;
     gc_collect_cycles();

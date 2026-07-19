@@ -23,6 +23,21 @@ final class StorefrontProjectionService
         private readonly ?SaleDatabaseConnection $saleConnection = null,
     ) {}
 
+    /** @return list<array{products:int,collections:int,channel_id:int,locale:string}> */
+    public function rebuildActiveStorefronts(int $siteId): array
+    {
+        $configurations=$this->core->all(
+            "SELECT language_code,channel_id FROM cms_shop_configurations WHERE site_id=? AND status='active' ORDER BY language_code",
+            [$siteId]
+        );
+        $results=[];
+        foreach($configurations as $configuration){
+            $channelId=(int)($configuration['channel_id']??0);
+            $results[]=$this->rebuild($siteId,$channelId>0?$channelId:null,(string)$configuration['language_code']);
+        }
+        return $results;
+    }
+
     /** @return array{products:int,collections:int,channel_id:int,locale:string} */
     public function rebuild(int $siteId, ?int $channelId = null, string $locale = 'fr'): array
     {
@@ -124,16 +139,19 @@ final class StorefrontProjectionService
             'include_not_sellable' => true,
         ]);
         $assets = array_values(array_filter(array_map(fn(array $asset): ?array => $this->media($asset,$siteId), (array) ($source['assets'] ?? []))));
+        $visualAssets = array_values(array_filter($assets, static fn(array $media): bool =>
+            in_array((string)($media['role']??''), ['main','gallery','variant','thumbnail'], true)
+            && in_array((string)($media['type']??''), ['image','video'], true)
+        ));
+        $productMedia = array_values(array_filter($visualAssets, static fn(array $media): bool => (int)($media['variant_id']??0)===0));
+        $documentAssets=array_values(array_filter($assets,static fn(array $media):bool=>(int)($media['variant_id']??0)===0&&in_array((string)($media['role']??''),['document','technical_sheet'],true)));
         $sellables = [];
         foreach ($result['items'] as $item) {
             $regular=(int)$item['regular_sale_price_minor']; $final=(int)$item['sale_price_minor']; $discount=max(0,$regular-$final);
             $availability=$this->publicAvailability((array)($item['availability']??[]),(float)($item['metadata']['available_quantity']??0),$siteId,$locale);
             $variantId=(int)$item['business_variant_id'];
-            $variantMedia=array_values(array_filter($assets,static fn(array $media):bool=>(int)($media['variant_id']??0)===$variantId));
-            if ($variantMedia===[]) {
-                $main=$this->media(is_array($item['main_asset']??null)?$item['main_asset']:null,$siteId);
-                if ($main!==null) $variantMedia=[$main];
-            }
+            $variantMedia=array_values(array_filter($visualAssets,static fn(array $media):bool=>(int)($media['variant_id']??0)===$variantId));
+            if ($variantMedia===[]) $variantMedia=$productMedia;
             $orderable=!empty($item['is_sellable'])&&!empty($availability['is_orderable']);
             $sellables[] = [
                 'contract' => 'storefront.sellable.v2', 'sellable_id' => (int) $item['sellable_id'],
@@ -158,7 +176,10 @@ final class StorefrontProjectionService
         $price=is_array($primary['price']??null)?$primary['price']:null;
         $availability=is_array($primary['availability']??null)?$primary['availability']:$this->publicAvailability(['status'=>'unavailable','is_orderable'=>false],0,$siteId,$locale);
         $offers=[]; foreach($sellables as $sellable) $offers[]=['@type'=>'Offer','sku'=>$sellable['sku'],'priceCurrency'=>$sellable['price']['currency'],'price'=>number_format($sellable['price']['final_minor']/100,2,'.',''),'availability'=>!empty($sellable['orderable'])?'https://schema.org/InStock':'https://schema.org/OutOfStock','url'=>$canonical.'?variant='.$sellable['sellable_id']];
-        $jsonLd = ['@context'=>'https://schema.org','@type'=>($product['type']??'')==='service'?'Service':'Product','name'=>$product['name'],'description'=>(string)($product['short_description']??''),'url'=>$canonical,'image'=>array_values(array_column($assets,'url')),'brand'=>!empty($product['brand_name'])?['@type'=>'Brand','name'=>$product['brand_name']]:null,'offers'=>$offers];
+        $displayMedia=$productMedia;
+        if($displayMedia===[])foreach($sellables as$sellable)if(($sellable['media']??[])!==[]){$displayMedia=(array)$sellable['media'];break;}
+        $jsonLdImages=array_values(array_map(static fn(array $media):string=>(string)$media['url'],array_filter($displayMedia,static fn(array $media):bool=>($media['type']??'')==='image')));
+        $jsonLd = ['@context'=>'https://schema.org','@type'=>($product['type']??'')==='service'?'Service':'Product','name'=>$product['name'],'description'=>(string)($product['short_description']??''),'url'=>$canonical,'image'=>$jsonLdImages,'brand'=>!empty($product['brand_name'])?['@type'=>'Brand','name'=>$product['brand_name']]:null,'offers'=>$offers];
         $hreflang=[]; foreach($this->core->all('SELECT language_code FROM site_languages WHERE site_id=? AND is_active=1 ORDER BY is_default DESC,sort_order,language_code',[$siteId]) as $language) $hreflang[]=['locale'=>(string)$language['language_code'],'url'=>$canonical];
         return [
             'contract' => 'storefront.product.v3', 'version' => 3, 'product_id' => $productId, 'site_id' => $siteId, 'channel_id' => $channelId, 'locale' => $locale,
@@ -168,7 +189,7 @@ final class StorefrontProjectionService
             'description' => (string) ($product['description'] ?? ''), 'brand' => ['brand_id' => isset($product['brand_id']) ? (int) $product['brand_id'] : null, 'name' => $product['brand_name'] ?? null, 'slug' => $product['brand_slug'] ?? null],
             'collection' => ['collection_id' => isset($product['category_id']) ? (int) $product['category_id'] : null, 'name' => $product['category_name'] ?? null, 'slug' => $product['category_slug'] ?? null],
             'groups' => $groups, 'attributes' => $attributes, 'updated_at' => (string) ($product['updated_at'] ?? gmdate('c')),
-            'media' => $assets, 'sellables' => $sellables, 'default_sellable_id' => $primary['sellable_id']??null, 'sku'=>$primary['sku']??null, 'price' => $price, 'availability' => $availability,
+            'media' => $displayMedia, 'documents'=>$documentAssets, 'sellables' => $sellables, 'default_sellable_id' => $primary['sellable_id']??null, 'sku'=>$primary['sku']??null, 'price' => $price, 'availability' => $availability,
             'cta' => !empty($primary['cta'])?($primary['cta']+['label'=>$locale==='en'?'Add to cart':'Ajouter au panier']):null, 'url' => $canonical,
             'commerce'=>$this->commerceInformation($siteId,$channelId,$locale,(int)($price['final_minor']??0)),
             'content'=>$this->linkedContent($siteId,$productId,$locale),

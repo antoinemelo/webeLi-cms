@@ -2085,6 +2085,10 @@ CREATE TRIGGER IF NOT EXISTS trg_business_sellable_variant_update AFTER UPDATE O
 END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation AFTER INSERT ON business_product_assets BEGIN
  INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'media' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation_update AFTER UPDATE ON business_product_assets BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'media' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation_delete AFTER DELETE ON business_product_assets BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,OLD.product_id,'media' FROM business_products p WHERE p.id=OLD.product_id; END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_visibility_invalidation_update AFTER UPDATE ON business_product_channel_visibility BEGIN
  INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) VALUES(NEW.site_id,NEW.product_id,'visibility'); END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_price_invalidation_delete AFTER DELETE ON business_product_base_prices BEGIN

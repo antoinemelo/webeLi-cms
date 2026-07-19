@@ -1,1 +1,0 @@
-import{$ as e,St as t,bt as n,it as r,lt as i}from"./index-Db4JbR-J.js";var a=r({__name:`StatusBadge`,props:{status:{}},setup(r){return(a,o)=>(i(),e(`span`,{class:n([`badge`,r.status||`draft`])},t(r.status||`draft`),3))}});export{a as t};

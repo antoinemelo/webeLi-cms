@@ -36,6 +36,7 @@ generated: true
 | `database/migrations/business/0013_relation_360.sql` | `0013_relation_360` |
 | `database/migrations/business/0014_stock_ledger_immutability.sql` | `0014_stock_ledger_immutability` |
 | `database/migrations/business/0015_storefront_product_relations.sql` | `0015_storefront_product_relations` |
+| `database/migrations/business/0016_storefront_asset_update_invalidation.sql` | `0016_storefront_asset_update_invalidation` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |

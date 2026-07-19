@@ -436,6 +436,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/business/0016_storefront_asset_update_invalidation.sql"
+    ],
+    "id": "database-source-database-migrations-business-0016-storefront-asset-update-invalidation-sql-ae09f64a00",
+    "kind": "migration",
+    "last_verified": "2026-07-19",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/business/0016_storefront_asset_update_invalidation.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/cookies/0001_baseline.sql"
     ],
     "id": "database-source-database-migrations-cookies-0001-baseline-sql-66184d89c4",

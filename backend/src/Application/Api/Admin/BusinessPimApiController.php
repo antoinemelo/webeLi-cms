@@ -21,6 +21,7 @@ use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
 use App\Security\Authorization;
 use InvalidArgumentException;
+use Throwable;
 
 final class BusinessPimApiController
 {
@@ -313,7 +314,8 @@ final class BusinessPimApiController
         try {
             $payload = $this->payload() + ['site_id' => (int) $site['id'], 'product_id' => $this->id($id), 'actor_iam_user_id' => $this->actorId()];
             $asset = $this->assets->assignAsset($payload);
-            return Response::success(['asset' => $asset, 'message' => 'Actif produit ajouté.'], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode), 201);
+            $refresh=$this->refreshStorefront((int)$site['id']);
+            return Response::success(['asset' => $asset,'storefront_refresh'=>$refresh,'message'=>$this->assetMessage('Média ajouté.',$refresh)], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode), 201);
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
         }
@@ -323,11 +325,12 @@ final class BusinessPimApiController
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
         try {
-            $asset = $this->assets->updateAsset($this->id($id), $this->payload() + ['actor_iam_user_id' => $this->actorId()]);
+            $asset = $this->assets->updateAsset($this->id($id), $this->payload() + ['site_id'=>(int)$site['id'],'actor_iam_user_id' => $this->actorId()]);
             if ((int) ($asset['site_id'] ?? 0) !== (int) $site['id']) {
                 return $this->notFound('Actif produit introuvable.', $id);
             }
-            return Response::success(['asset' => $asset, 'message' => 'Actif produit mis à jour.'], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode));
+            $refresh=$this->refreshStorefront((int)$site['id']);
+            return Response::success(['asset' => $asset,'storefront_refresh'=>$refresh,'message'=>$this->assetMessage('Média mis à jour.',$refresh)], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
         }
@@ -336,15 +339,40 @@ final class BusinessPimApiController
     public function deleteAsset(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
-        $this->assets->archiveAsset($this->id($id));
-        return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id)], 'admin.business.pim.product_assets.delete.v1', $this->meta($site, $languageCode));
+        try{
+            $this->assets->archiveAsset($this->id($id),(int)$site['id']);
+            $refresh=$this->refreshStorefront((int)$site['id']);
+            return Response::success(['deleted' => true, 'archived' => true, 'id' => $this->id($id),'storefront_refresh'=>$refresh,'message'=>$this->assetMessage('Média retiré.',$refresh)], 'admin.business.pim.product_assets.delete.v1', $this->meta($site, $languageCode));
+        }catch(InvalidArgumentException $e){return $this->validation($e);}
     }
 
     public function setMainAsset(string|int $id): Response
     {
         [$site, $languageCode] = $this->authorize('business.catalog.write');
         $asset = $this->pim->setMainAsset((int) $site['id'], $this->id($id), $this->actorId());
-        return $asset ? Response::success(['asset' => $asset, 'message' => 'Actif principal défini.'], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode)) : $this->notFound('Actif produit introuvable.', $id);
+        if(!$asset)return $this->notFound('Média produit introuvable.', $id);
+        $refresh=$this->refreshStorefront((int)$site['id']);
+        return Response::success(['asset'=>$asset,'storefront_refresh'=>$refresh,'message'=>$this->assetMessage('Image principale définie.',$refresh)], 'admin.business.pim.product_assets.show.v1', $this->meta($site, $languageCode));
+    }
+
+    /** @return array<string,mixed> */
+    private function refreshStorefront(int $siteId): array
+    {
+        if($this->storefrontProjections===null)return ['status'=>'queued'];
+        try{
+            $rebuilds=$this->storefrontProjections->rebuildActiveStorefronts($siteId);
+            return $rebuilds===[]?['status'=>'inactive','rebuilds'=>[]]:['status'=>'rebuilt','rebuilds'=>$rebuilds];
+        }catch(Throwable $e){return ['status'=>'queued','reason'=>$e->getMessage()];}
+    }
+
+    /** @param array<string,mixed> $refresh */
+    private function assetMessage(string $message,array $refresh): string
+    {
+        return $message.match((string)($refresh['status']??'')){
+            'rebuilt'=>' La boutique a été actualisée dans toutes ses langues actives.',
+            'inactive'=>' La boutique étant inactive pour ce site, le média reste prêt pour sa prochaine activation.',
+            default=>' La modification sera publiée lors de la prochaine reconstruction de la boutique.',
+        };
     }
 
     public function productBundle(string|int $id): Response

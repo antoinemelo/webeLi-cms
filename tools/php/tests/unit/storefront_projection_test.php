@@ -46,6 +46,17 @@ try {
     $page=$repo->products(1,3,'fr',['limit'=>100]);
     $h->assertSame($result['products'],count($page['items']),'headless repository reads the exact core projection set');
     $product=array_values(array_filter($page['items'],static fn(array $item):bool=>($item['type']??'')==='physical'&&!empty($item['default_sellable_id'])))[0]??$page['items'][0];
+    $variantMediaId=9001;
+    $documentMediaId=9002;
+    $business->run("INSERT INTO business_product_assets(site_id,product_id,variant_id,media_id,role,title,alt_text,caption,sort_order,is_public,channel_scope) VALUES(1,?,?,?,'variant','Vue de variante','Variante en situation','Visuel propre à la variante',20,1,'ecommerce')",[(int)$product['product_id'],(int)$product['default_sellable_id'],$variantMediaId]);
+    $business->run("INSERT INTO business_product_assets(site_id,product_id,media_id,role,title,caption,sort_order,is_public,channel_scope) VALUES(1,?,?, 'technical_sheet','Notice produit','Document de test',30,1,'ecommerce')",[(int)$product['product_id'],$documentMediaId]);
+    $builder->rebuild(1,3,'fr');
+    $product=$repo->product(1,3,'fr',(string)$product['slug']);
+    $h->assertTrue(!in_array($variantMediaId,array_column((array)$product['media'],'media_id'),true),'a variant visual never leaks into the product-level gallery');
+    $h->assertTrue(!in_array($documentMediaId,array_column((array)$product['media'],'media_id'),true),'a public document never leaks into the visual gallery');
+    $h->assertTrue(in_array($documentMediaId,array_column((array)$product['documents'],'media_id'),true),'public product documents have a dedicated Storefront collection');
+    $matchingSellable=array_values(array_filter((array)$product['sellables'],static fn(array $sellable):bool=>(int)($sellable['variant_id']??0)===(int)$product['default_sellable_id']))[0]??[];
+    $h->assertTrue(in_array($variantMediaId,array_column((array)($matchingSellable['media']??[]),'media_id'),true),'a variant visual is exposed only on its matching sellable');
     $h->assertSame('storefront.product.v3',$product['contract'],'product DTO is explicitly versioned');
     $h->assertSame(3,(int)$product['version'],'product DTO version matches its v3 contract');
     $h->assertTrue((int)$product['default_sellable_id']>0,'product DTO exposes a stable default sellable');
@@ -125,6 +136,8 @@ try {
     $h->expectException(static fn()=>$repo->products(1,3,'fr',['sort'=>'sql_magic']),InvalidArgumentException::class,'an unknown public sort is rejected explicitly');
 
     $core->run("INSERT INTO cms_shop_configurations(site_id,language_code,channel_id,status,published_json) VALUES(1,'fr',3,'active','{}')");
+    $activeRebuilds=$builder->rebuildActiveStorefronts(1);
+    $h->assertSame(['fr'],array_column($activeRebuilds,'locale'),'media refresh rebuilds every active Shop language and excludes inactive languages');
     $apiQuery=['q'=>'Noir','group'=>['textile'],'attributes'=>['couleur'=>['noir']],'sort'=>'relevance','limit'=>10];
     $apiRequest=new Request('GET','/api/v1/storefront/products',$apiQuery,[],['HTTP_HOST'=>'shop.test'],[],[]);
     $apiHandler=new PublicCatalogApiHandler($apiRequest,new SiteRepository($core,['cms'=>['default_site_key'=>'main']]),new PublicCatalogRepository($business),new CatalogPricingService($pricingRepo),null,$repo);
