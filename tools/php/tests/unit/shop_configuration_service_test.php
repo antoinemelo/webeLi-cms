@@ -46,7 +46,7 @@ try {
     $core->run("INSERT INTO site_languages(site_id,language_code,locale,url_prefix,is_default,is_active,sort_order) VALUES(1,'fr','fr-CH','',1,1,1),(1,'en','en-GB','/en',0,1,2),(2,'en','en-GB','',1,1,1)");
     $core->run("INSERT INTO site_domains(id,site_id,host,is_primary) VALUES(1,1,'main.test',1),(2,2,'second.test',1)");
     $core->run("INSERT INTO themes(theme_key,name,version,is_default,is_active,config_json) VALUES('default','Default','1.0.0',1,1,'{}')");
-    $core->run("INSERT INTO menus(site_id,menu_key,name,menu_location) VALUES(1,'main','Main','primary'),(2,'main','Main','primary')");
+    $core->run("INSERT INTO menus(site_id,menu_key,name,menu_location) VALUES(1,'main','Main','primary'),(1,'footer_top','Footer legal','footer_top'),(1,'footer_bottom','Footer secondary','footer_bottom'),(2,'main','Main','primary')");
 
     $saleConnection = new SaleDatabaseConnection($salePath);
     $channels = new SaleChannelRepository($saleConnection);
@@ -56,6 +56,9 @@ try {
     $builder = new StorefrontProjectionService($core,$business,new ProductContentSourceRepository($business),new PublicCatalogRepository($business),$sellables);
     $service = new ShopConfigurationService($core,$saleConnection,$builder,new StorefrontMerchandisingService($core,'shop-test'));
     $public = new StorefrontProjectionRepository($core);
+
+    $menuLocations = array_column($service->menuLocations(1), 'key');
+    $h->assertSame(['primary','footer_top','footer_bottom'],$menuLocations,'Shop Studio exposes the active header and both real footer locations');
 
     $initial = $service->configuration(1,'fr');
     $h->assertSame('not_initialized',$initial['status'],'opening settings does not initialize or publish a Shop');
@@ -67,7 +70,12 @@ try {
     $h->assertSame('Best offers',$englishDefaults['draft']['sections'][2]['title']??null,'merchandising titles are localized independently per Shop language');
     $h->assertSame(0,(int)($core->one('SELECT COUNT(*) c FROM cms_shop_configurations')['c']??0),'read-only matrix performs no write');
 
+    $cacheDirectory=base_path('storage/cache/twig');
+    if (!is_dir($cacheDirectory)) mkdir($cacheDirectory,0775,true);
+    $cacheMarker=$cacheDirectory.'/shop-configuration-test.cache';
+    file_put_contents($cacheMarker,'stale');
     $draft = $service->saveDraft(1,'fr',['channel_id'=>3,'title'=>'Boutique système','introduction'=>'Bienvenue','menu_label'=>'Produits','cart_visible'=>true],7);
+    $h->assertTrue(!is_file($cacheMarker),'saving Shop configuration invalidates the public Twig runtime cache');
     $h->assertSame('inactive',$draft['status'],'saving Studio draft keeps public Shop inactive');
     $h->assertSame(0,$public->defaultChannelId(1,'fr'),'headless projection is hidden before explicit activation');
     $published = $service->publish(1,'fr',7);
@@ -78,9 +86,17 @@ try {
     $h->assertSame('active',$active['status'],'explicit activation makes the Shop active');
     $h->assertSame(3,$public->defaultChannelId(1,'fr'),'active locale resolves its configured storefront channel');
     $h->assertSame('Boutique système',$public->activeShop(1,'fr')['published']['title']??null,'public page reads the published system-page snapshot');
-    $service->activate(1,'fr',7);
+    $core->run("UPDATE cms_shop_configurations SET last_rebuild_at=NULL WHERE site_id=1 AND language_code='fr'");
+    $replayed = $service->activate(1,'fr',7);
+    $h->assertTrue(!empty($replayed['last_rebuild_at']),'replayed activation repairs an active Shop whose projections are not marked as rebuilt');
     $h->assertSame(1,(int)($core->one('SELECT COUNT(*) c FROM cms_shop_configurations WHERE site_id=1 AND language_code=\'fr\'')['c']??0),'replayed activation does not duplicate configuration');
     $h->assertSame(1,(int)($core->one('SELECT COUNT(*) c FROM cms_sales_channel_storefronts WHERE site_id=1 AND channel_id=3')['c']??0),'replayed activation does not duplicate channel mapping');
+
+    $service->saveDraft(1,'fr',['channel_id'=>3,'title'=>'Boutique système','menu_key'=>'footer_bottom'],7);
+    $core->run("UPDATE cms_shop_configurations SET last_rebuild_at=NULL WHERE site_id=1 AND language_code='fr'");
+    $republished = $service->publish(1,'fr',7);
+    $h->assertTrue(!empty($republished['last_rebuild_at']),'publishing an active Shop rebuilds its public catalogue projections');
+    $h->assertSame('footer_bottom',$republished['menu_key'],'Shop configuration accepts an available concrete footer location');
 
     $service->saveDraft(1,'en',['channel_id'=>3,'title'=>'Shop','currency'=>'CHF'],7);
     $service->publish(1,'en',7);

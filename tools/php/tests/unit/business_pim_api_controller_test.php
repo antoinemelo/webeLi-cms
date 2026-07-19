@@ -507,9 +507,9 @@ try {
         'advanced catalog administrator passes both permission guards before the optional projection service validation'
     );
     $h->assertSame(200,$controllerFor(2,'GET','/admin/api/business/pim/storefront-blocks/candidates',['locale'=>'fr'])->storefrontBlockCandidates()->status(),'catalog reader can search projected products for Studio');
-    $previewResponse=$controllerFor(2,'POST','/admin/api/business/pim/storefront-blocks/preview',[],['locale'=>'fr','block'=>['type'=>'product_grid','data'=>['selection_mode'=>'new']]])->previewStorefrontBlock();
+    $previewResponse=$controllerFor(2,'POST','/admin/api/business/pim/storefront-blocks/preview',[],['locale'=>'fr','block'=>['type'=>'commerce_product_list','data'=>['selection_mode'=>'new']]])->previewStorefrontBlock();
     $h->assertSame(200,$previewResponse->status(),'catalog reader can preview a Commerce block');
-    $h->assertSame('product_grid',json_decode($previewResponse->body(),true)['data']['block']['type']??null,'Commerce preview preserves the stable block identifier');
+    $h->assertSame('commerce_product_list',json_decode($previewResponse->body(),true)['data']['block']['type']??null,'Commerce preview preserves the stable block identifier');
     $h->expectException(fn()=>$controllerFor(3,'GET','/admin/api/business/pim/storefront-blocks/candidates')->storefrontBlockCandidates(),ApiException::class,'user without catalog read cannot search Studio Commerce candidates');
 
     $h->expectException(

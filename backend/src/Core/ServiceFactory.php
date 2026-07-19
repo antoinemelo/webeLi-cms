@@ -23,6 +23,7 @@ use App\Application\Content\UnpublishContentEntry;
 use App\Application\Content\ArchiveDeleteContentEntry;
 use App\Application\Content\ValidateEntryPayload;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorytellingService;
 use App\Application\Business\StorefrontProjectionRepository;
 use App\Application\Business\StorefrontProjectionService;
 use App\Application\Commerce\ShopConfigurationService;
@@ -1209,6 +1210,11 @@ final class ServiceFactory
             new ProductContentSourceRepository($this->businessDatabaseConnection()->database()),
             new SqlCmsContentSource($this->coreDb),
         ));
+    }
+
+    public function storytellings(): StorytellingService
+    {
+        return $this->once('business_storytellings', fn() => new StorytellingService($this->coreDb));
     }
 
     public function storefrontProjections(): StorefrontProjectionRepository

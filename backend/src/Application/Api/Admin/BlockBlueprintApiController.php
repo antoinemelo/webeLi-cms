@@ -6,6 +6,7 @@ namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
 use App\Application\Blueprint\BlueprintRepository;
+use App\Application\Business\StorefrontProjectionRepository;
 use App\Application\Schema\NativeFieldBlueprintRegistry;
 use App\Core\ErrorCode;
 use App\Core\Request;
@@ -22,6 +23,7 @@ final class BlockBlueprintApiController
         private readonly AuthRepository $auth,
         private readonly Authorization $authorization,
         private readonly ?BlueprintRepository $blueprints = null,
+        private readonly ?StorefrontProjectionRepository $storefront = null,
     ) {}
 
     public function index(): Response
@@ -34,7 +36,7 @@ final class BlockBlueprintApiController
         return Response::success([
             'schema_version' => 1,
             'source_of_truth' => $this->hasVersionedBlockBlueprints((int) $site['id']) ? 'blueprint_versions' : 'native_registry_fallback',
-            'blueprints' => $this->listBlockBlueprints((int) $site['id']),
+            'blueprints' => $this->listBlockBlueprints((int) $site['id'],$lang),
             'fieldsets' => NativeFieldBlueprintRegistry::fieldsets(),
             'field_types' => NativeFieldBlueprintRegistry::fieldTypes(),
         ], 'admin.block_blueprints.index.v1', AdminApiContract::meta($site, $lang));
@@ -47,7 +49,7 @@ final class BlockBlueprintApiController
         $this->authorization->require('content.read', (int) $site['id']);
         $lang = AdminApiContract::language($this->request, $this->sites, $site);
         $type = strtolower(trim($type));
-        $blueprint = $this->blockBlueprint($type, (int) $site['id']);
+        $blueprint = $this->blockBlueprint($type, (int) $site['id'],$lang);
         if ($blueprint === null) {
             return Response::error(ErrorCode::VALIDATION_FAILED, 'Blueprint de bloc introuvable.', 404, ['type' => $type]);
         }
@@ -73,7 +75,7 @@ final class BlockBlueprintApiController
     }
 
     /** @return list<array<string,mixed>> */
-    private function listBlockBlueprints(int $siteId): array
+    private function listBlockBlueprints(int $siteId,string $languageCode): array
     {
         $blueprints = NativeFieldBlueprintRegistry::blockBlueprints();
         if ($this->blueprints !== null) {
@@ -85,15 +87,24 @@ final class BlockBlueprintApiController
                 }
             }
         }
+        foreach (['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'] as $retired) unset($blueprints[$retired]);
+        if (!$this->commerceActive($siteId,$languageCode)) {
+            foreach (['commerce_product','commerce_product_variants','commerce_product_list','storytelling'] as $commerce) unset($blueprints[$commerce]);
+        }
         ksort($blueprints);
         return array_values($blueprints);
     }
 
     /** @return array<string,mixed>|null */
-    private function blockBlueprint(string $type, int $siteId): ?array
+    private function blockBlueprint(string $type, int $siteId,string $languageCode): ?array
     {
+        if (in_array($type,['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'],true)) return null;
+        if (in_array($type,['commerce_product','commerce_product_variants','commerce_product_list','storytelling'],true) && !$this->commerceActive($siteId,$languageCode)) return null;
         return $this->blockBlueprintFromVersions($type, $siteId) ?? NativeFieldBlueprintRegistry::blockBlueprint($type);
     }
+
+    private function commerceActive(int $siteId,string $languageCode): bool
+    { return $this->storefront?->activeShop($siteId,$languageCode)!==null; }
 
     /** @return array<string,mixed>|null */
     private function blockBlueprintFromVersions(string $type, int $siteId): ?array

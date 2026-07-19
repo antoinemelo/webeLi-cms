@@ -32,7 +32,7 @@ SELECT s.id,'fr',3,'web-main','active','CHF','/shop','default','main','Boutique'
        1,0,1,
        '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
        '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
-       1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+       1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,NULL
 FROM sites s WHERE s.site_key='main';
 
 INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json) VALUES
@@ -67,12 +67,10 @@ INSERT INTO editor_block_types(block_type, label, category, schema_json, sort_or
 ('articles', 'Articles', 'content', '{"fields":["title","limit","category","tag","show_more_button","more_label"],"search":["title","more_label"]}', 130);
 
 INSERT OR IGNORE INTO editor_block_types(block_type,label,category,schema_json,sort_order) VALUES
-('featured_product','Produit vedette','commerce','{"fields":["product_id","product_ids","selection_mode","layout","limit","columns","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',200),
-('product_card','Carte produit','commerce','{"fields":["product_id","product_ids","selection_mode","limit","columns","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',201),
-('product_grid','Liste de produits','commerce','{"fields":["selection_mode","product_ids","brand","category","collection_id","group","attribute_code","attribute_values","promotion_rule","relation_type","source_product_id","manual_product_ids","limit","sort","columns","show_price","show_promotion","show_availability","show_cta","pagination","empty_state","empty_message"],"selection_modes":["explicit","brand","category","group","attribute","promotion","new","popular","relation"],"stable_references":["product_ids","source_product_id","manual_product_ids"],"legacy_aliases":{"collection_id":"category"}}',202),
-('collection_grid','Liste de catégories','commerce','{"fields":["collection_ids","columns","limit","empty_state","empty_message"],"stable_references":["collection_ids"]}',203),
-('product_detail','Détail produit','commerce','{"fields":["product_id","product_ids","selection_mode","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit"],"stable_references":["product_id","product_ids"]}',204),
-('add_to_cart','Ajout au panier','commerce','{"fields":["product_id","sellable_id","variant_rule","quantity","label"],"required_any":[["product_id","sellable_id"]],"stable_references":["product_id","sellable_id"],"variant_rules":["default_if_unambiguous","exact_sellable"]}',205);
+('commerce_product','Produit ou variante','commerce','{"fields":["product_id","sellable_id","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id","sellable_id"]}',200),
+('commerce_product_variants','Variantes d’un produit','commerce','{"fields":["product_id","columns","limit","pagination","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id"]}',201),
+('commerce_product_list','Liste de produits','commerce','{"fields":["selection_mode","product_ids","brand","category","group","attribute_code","attribute_values","promotion_rule","relation_type","source_product_id","manual_product_ids","window_days","limit","sort","columns","pagination","show_price","show_promotion","show_availability","show_cta","empty_state","empty_message"],"selection_modes":["explicit","brand","category","group","attribute","promotion","new","popular","relation"],"stable_references":["product_ids","source_product_id","manual_product_ids"]}',202),
+('storytelling','Storytelling','commerce','{"fields":["storytelling_id"],"required":["storytelling_id"],"stable_references":["storytelling_id"]}',203);
 
 INSERT INTO content_types(module_id, type_key, name, singular_label, plural_label, has_layout, has_taxonomies, frontend_template)
 SELECT id, 'page', 'Page', 'Page', 'Pages', 1, 1, 'page.twig' FROM modules WHERE module_key='pages';
@@ -291,13 +289,3 @@ ON CONFLICT(site_id, resource_type, resource_subtype, language_code) WHERE resou
 
 
 INSERT INTO site_settings(site_id, namespace, setting_key, value_json, is_public) VALUES (1, 'api', 'cors_allowed_origins', '[]', 0);
-
--- Product 1 is the deterministic first Business demo product (vol-decouverte).
--- The cross-database reference is validated and projected by b0_db_seed.py.
-INSERT OR IGNORE INTO business_product_content_links(
-    site_id, product_id, content_entry_id, relation_type, locale, is_canonical, status, seo_config_json
-)
-SELECT 1, 1, ce.id, 'storytelling', NULL, 1, 'active', '{"schema_type":"Service"}'
-FROM content_entries ce
-WHERE ce.site_id = 1 AND ce.entry_key = 'home'
-LIMIT 1;

@@ -21,11 +21,15 @@
     reduced: 'Réduire la quantité', choose: 'Choisir une autre variante', priceChanged: 'Prix actualisé', was: 'auparavant',
   };
   const storageKey = `amcms.cart.${channel}`;
-  const prefix = (() => {
+  const detectedPrefix = (() => {
     const script = [...document.scripts].find((item) => item.src.includes('/frontend/theme-default/'));
     return script ? new URL(script.src).pathname.split('/frontend/')[0] : '';
   })();
-  const endpoint = (path) => `${prefix}/api/v1/sale/channels/${encodeURIComponent(channel)}${path}`;
+  const prefix = (document.body.dataset.appBasePath || detectedPrefix).replace(/\/$/, '');
+  const apiBase = document.body.dataset.storefrontApiBase || `${prefix}/api/v1/sale/channels/${encodeURIComponent(channel)}`;
+  const cartUrl = document.body.dataset.storefrontCartUrl || `${prefix}/cart`;
+  const checkoutUrl = document.body.dataset.storefrontCheckoutUrl || `${prefix}/checkout`;
+  const endpoint = (path) => `${apiBase.replace(/\/$/, '')}${path}`;
   const token = () => localStorage.getItem(storageKey) || '';
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const money = (minor, currency = 'CHF') => new Intl.NumberFormat(lang, { style: 'currency', currency }).format(Number(minor || 0) / 100);
@@ -102,10 +106,10 @@
     });
     document.querySelectorAll('[data-cart-total]').forEach((node) => { node.textContent = value && lines.length ? `${labels.total} : ${money(value.grand_total_minor, value.currency)}` : ''; });
     document.querySelectorAll('[data-cart-checkout]').forEach((link) => {
-      link.href = value && lines.length ? `${prefix}/checkout?channel=${encodeURIComponent(channel)}&cart_token=${encodeURIComponent(token())}&lang=${encodeURIComponent(lang)}` : '#';
+      link.href = value && lines.length ? `${checkoutUrl}?channel=${encodeURIComponent(channel)}&cart_token=${encodeURIComponent(token())}&lang=${encodeURIComponent(lang)}` : '#';
       link.toggleAttribute('aria-disabled', !(value && lines.length) || pendingChanges.some((change) => change.requires_confirmation));
     });
-    document.querySelectorAll('[data-cart-full]').forEach((link) => { link.href = `${prefix}/cart?lang=${encodeURIComponent(lang)}`; });
+    document.querySelectorAll('[data-cart-full]').forEach((link) => { link.href = `${cartUrl}?lang=${encodeURIComponent(lang)}`; });
   };
 
   const showChanges = (changes) => {

@@ -82,6 +82,7 @@ export const router = createRouter({
     { path: '/business/products-stock', name: 'business-products-stock', component: BusinessCrmView, props: { initialTab: 'products' } },
     { path: '/business/inventory', name: 'business-inventory', component: BusinessCrmView, props: { initialTab: 'inventory' } },
     { path: '/business/offers-marketing', name: 'business-offers-marketing', component: BusinessCrmView, props: { initialTab: 'offers' } },
+    { path: '/business/offers-marketing/storytelling', name: 'business-storytelling', component: BusinessCrmView, props: { initialTab: 'storytelling' } },
     { path: '/business/offers-marketing/audiences', name: 'business-audiences', component: BusinessCrmView, props: { initialTab: 'segments' } },
     { path: '/business/offers-marketing/campaigns', name: 'business-campaigns', component: BusinessCrmView, props: { initialTab: 'messages' } },
     { path: '/business/settings', name: 'business-settings', component: BusinessCrmView, props: { initialTab: 'settings' } },

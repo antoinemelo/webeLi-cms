@@ -18,7 +18,7 @@ final class BlockDocumentNormalizer
 {
     public function __construct(private readonly ?EditorialBlockSecurityPolicy $security = null) {}
     /** @var list<string> */
-    public const SUPPORTED_TYPES = ['markdown', 'richtext', 'html_safe', 'html_raw', 'iframe', 'embed', 'image', 'video', 'audio', 'hero', 'gallery', 'buttons', 'card', 'columns', 'form', 'plan', 'articles', 'featured_product', 'product_card', 'product_grid', 'collection_grid', 'product_detail', 'add_to_cart'];
+    public const SUPPORTED_TYPES = ['markdown', 'richtext', 'html_safe', 'html_raw', 'iframe', 'embed', 'image', 'video', 'audio', 'hero', 'gallery', 'buttons', 'card', 'columns', 'form', 'plan', 'articles', 'commerce_product', 'commerce_product_variants', 'commerce_product_list', 'storytelling'];
 
     /** @return list<string> */
     public static function supportedTypes(): array
@@ -192,17 +192,16 @@ final class BlockDocumentNormalizer
             if ($type === 'form' && trim((string) ($data['form_key'] ?? '')) === '') {
                 $errors[] = $prefix . ' : clé formulaire obligatoire.';
             }
-            if (in_array($type,['featured_product','product_card','product_detail'],true) && (int)($data['product_id']??0)<1) {
+            if (in_array($type,['commerce_product','commerce_product_variants'],true) && (int)($data['product_id']??0)<1) {
                 $errors[]=$prefix.' : produit obligatoire.';
             }
-            if ($type==='product_grid') {
+            if ($type==='commerce_product_list') {
                 $mode=(string)($data['selection_mode']??'explicit');
                 if($mode==='explicit'&&$this->integerList($data['product_ids']??[])===[])$errors[]=$prefix.' : au moins un produit explicite est obligatoire.';
                 if(in_array($mode,['brand','category','group'],true)&&trim((string)($data[$mode]??''))==='')$errors[]=$prefix.' : critère '.$mode.' obligatoire.';
                 if($mode==='attribute'&&(trim((string)($data['attribute_code']??''))===''||$this->stringList($data['attribute_values']??[])===[]))$errors[]=$prefix.' : attribut public et valeur obligatoires.';
             }
-            if($type==='collection_grid'&&$this->integerList($data['collection_ids']??[])===[])$errors[]=$prefix.' : au moins une catégorie est obligatoire.';
-            if($type==='add_to_cart'&&(int)($data['product_id']??0)<1&&(int)($data['sellable_id']??0)<1)$errors[]=$prefix.' : produit ou vendable obligatoire.';
+            if($type==='storytelling'&&(int)($data['storytelling_id']??0)<1)$errors[]=$prefix.' : storytelling obligatoire.';
             if ($type === 'hero' && trim((string) ($data['title'] ?? '')) !== '' && (string) ($data['heading_level'] ?? 'h2') === 'h1') {
                 $h1Count++;
             }
@@ -362,10 +361,10 @@ final class BlockDocumentNormalizer
             'form' => ['form_key' => $this->safeKey((string) ($data['form_key'] ?? '')), 'title' => trim((string) ($data['title'] ?? '')), 'intro' => trim((string) ($data['intro'] ?? '')), 'layout' => $this->choice($data['layout'] ?? '', ['default','compact','card'], 'default')],
             'plan' => ['title' => trim((string) ($data['title'] ?? 'Plan')), 'source' => $this->choice($data['source'] ?? '', ['pages','articles','taxonomies'], 'pages'), 'taxonomy_key' => $this->safeOptionalKey((string) ($data['taxonomy_key'] ?? '')), 'limit' => max(1, min(50, (int) ($data['limit'] ?? 8))), 'show_pagination' => !array_key_exists('show_pagination', $data) || $this->bool($data['show_pagination']), 'page_param' => $this->safeOptionalKey((string) ($data['page_param'] ?? ''))],
             'articles' => ['title' => trim((string) ($data['title'] ?? 'Articles')), 'limit' => max(1, min(24, (int) ($data['limit'] ?? 3))), 'category' => $this->safeSlug((string) ($data['category'] ?? '')), 'tag' => $this->safeSlug((string) ($data['tag'] ?? '')), 'show_more_button' => !array_key_exists('show_more_button', $data) || $this->bool($data['show_more_button']), 'more_label' => trim((string) ($data['more_label'] ?? ''))],
-            'featured_product', 'product_card', 'product_detail' => $this->commerceProductData($data,false),
-            'product_grid' => $this->commerceProductData($data,true),
-            'collection_grid' => ['collection_ids'=>$this->integerList($data['collection_ids']??[]),'columns'=>max(1,min(6,(int)($data['columns']??3))),'limit'=>max(1,min(100,(int)($data['limit']??12))),'empty_state'=>$this->choice($data['empty_state']??'',['hide','message'],'message'),'empty_message'=>trim((string)($data['empty_message']??'Aucune catégorie à afficher.'))],
-            'add_to_cart' => ['product_id'=>($id=(int)($data['product_id']??0))>0?$id:null,'sellable_id'=>($sellableId=(int)($data['sellable_id']??0))>0?$sellableId:null,'variant_rule'=>$this->choice($data['variant_rule']??'',['default_if_unambiguous','exact_sellable'],'default_if_unambiguous'),'quantity'=>max(1,min(100,(int)($data['quantity']??1))),'label'=>trim((string)($data['label']??'Ajouter au panier'))],
+            'commerce_product' => array_replace($this->commerceProductData($data,false),['sellable_id'=>($sellableId=(int)($data['sellable_id']??0))>0?$sellableId:null]),
+            'commerce_product_variants' => $this->commerceProductData($data,true),
+            'commerce_product_list' => $this->commerceProductData($data,true),
+            'storytelling' => ['storytelling_id'=>($storyId=(int)($data['storytelling_id']??0))>0?$storyId:null],
             default => [],
         };
     }
@@ -388,10 +387,9 @@ final class BlockDocumentNormalizer
             'columns' => count(array_filter(is_array($data['columns'] ?? null) ? $data['columns'] : [], fn($column): bool => is_array($column) && count(is_array($column['blocks'] ?? null) ? $column['blocks'] : []) > 0)) < 1,
             'form' => trim((string) ($data['form_key'] ?? '')) === '',
             'plan', 'articles' => false,
-            'featured_product', 'product_card', 'product_detail' => (int)($data['product_id']??0)<1,
-            'product_grid' => match((string)($data['selection_mode']??'explicit')){'explicit'=>$this->integerList($data['product_ids']??[])===[],'brand','category','group'=>trim((string)($data[(string)$data['selection_mode']]??''))==='','attribute'=>trim((string)($data['attribute_code']??''))===''||$this->stringList($data['attribute_values']??[])===[],default=>false},
-            'collection_grid' => $this->integerList($data['collection_ids']??[])===[],
-            'add_to_cart' => (int)($data['product_id']??0)<1&&(int)($data['sellable_id']??0)<1,
+            'commerce_product', 'commerce_product_variants' => (int)($data['product_id']??0)<1,
+            'commerce_product_list' => match((string)($data['selection_mode']??'explicit')){'explicit'=>$this->integerList($data['product_ids']??[])===[],'brand','category','group'=>trim((string)($data[(string)$data['selection_mode']]??''))==='','attribute'=>trim((string)($data['attribute_code']??''))===''||$this->stringList($data['attribute_values']??[])===[],default=>false},
+            'storytelling' => (int)($data['storytelling_id']??0)<1,
             default => true,
         };
     }

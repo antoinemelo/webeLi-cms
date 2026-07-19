@@ -44,6 +44,7 @@ $tests = [
     'unit/sale_fulfillment_tax_test.php',
     'unit/sales_channel_contract_test.php',
     'unit/storefront_projection_test.php',
+    'unit/storytelling_service_test.php',
     'unit/storefront_product_rendering_test.php',
     'unit/storefront_merchandising_test.php',
     'unit/sale_idempotency_service_test.php',

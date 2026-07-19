@@ -106,19 +106,10 @@ def normalize_seed_sql(sql_path: Path, sql: str) -> str:
 
 
 def rebuild_seed_product_content_projections() -> None:
-    """Materialise les liens CMS/PIM seedes sans lecture inter-base au runtime."""
+    """Materialise les éventuels liens CMS/PIM seedés sans lecture inter-base au runtime."""
     with connect_sqlite(CORE_DB) as core, connect_sqlite(BUSINESS_DB) as business:
         core.row_factory = sqlite3.Row
         business.row_factory = sqlite3.Row
-        core.execute(
-            """
-            INSERT OR IGNORE INTO business_product_content_links(
-                site_id,product_id,content_entry_id,relation_type,locale,is_canonical,status,seo_config_json
-            )
-            SELECT 1,1,ce.id,'storytelling',NULL,1,'active','{"schema_type":"Service"}'
-            FROM content_entries ce WHERE ce.site_id=1 AND ce.entry_key='home' LIMIT 1
-            """
-        )
         links = core.execute(
             "SELECT * FROM business_product_content_links WHERE status='active' ORDER BY id"
         ).fetchall()
@@ -1746,6 +1737,31 @@ def rebuild_public_projections(required: bool = True) -> int:
     return proc.returncode
 
 
+def rebuild_storefront_projections(required: bool = True) -> int:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
+        message = f"{php_error or 'backend/bin/console introuvable'}: le catalogue public de la boutique n'est pas reconstruit."
+        if required:
+            print(f"ERREUR: {message}", file=sys.stderr)
+            return 2
+        print(f"AVERTISSEMENT: {message}")
+        return 0
+
+    proc = subprocess.run([php, str(CONSOLE), "storefront:rebuild"], cwd=str(BASE), env=cms_subprocess_env(), text=True, capture_output=True)
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr, end="")
+    if proc.returncode != 0:
+        print("ERREUR: projections du catalogue public non reconstruites après le seed.", file=sys.stderr)
+    return proc.returncode
+
+
 def sync_php_modules(required: bool = True) -> int:
     try:
         php = resolve_php_binary()
@@ -2275,6 +2291,10 @@ def main() -> int:
             return code
 
         code = rebuild_public_projections(required=not args.allow_missing_php)
+        if code != 0:
+            return code
+
+        code = rebuild_storefront_projections(required=not args.allow_missing_php)
         if code != 0:
             return code
 

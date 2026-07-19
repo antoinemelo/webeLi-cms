@@ -191,7 +191,7 @@ final class NativeFieldBlueprintRegistry
                         'fields' => [
                             self::field('label', 'text', 'Nom de la colonne'),
                             self::field('width', 'select', 'Largeur', ['default' => 'auto', 'config' => ['options' => self::options(['auto' => 'Automatique', '25' => '25 %', '33' => '33 %', '50' => '50 %', '66' => '66 %', '75' => '75 %', '100' => '100 %'])]]),
-                            self::field('blocks', 'replicator', 'Sous-blocs', ['config' => ['mode' => 'blocks', 'allowed_block_types' => ['markdown', 'richtext', 'html_safe', 'iframe', 'embed', 'card', 'image', 'buttons', 'video', 'form', 'articles', 'featured_product', 'product_card', 'product_grid', 'collection_grid', 'product_detail', 'add_to_cart'], 'disallowed_block_types' => ['columns']]]),
+                            self::field('blocks', 'replicator', 'Sous-blocs', ['config' => ['mode' => 'blocks', 'allowed_block_types' => ['markdown', 'richtext', 'html_safe', 'iframe', 'embed', 'card', 'image', 'buttons', 'video', 'form', 'articles', 'commerce_product', 'commerce_product_variants', 'commerce_product_list', 'storytelling'], 'disallowed_block_types' => ['columns']]]),
                         ],
                     ]]),
                 ],
@@ -249,34 +249,14 @@ final class NativeFieldBlueprintRegistry
             'articles' => self::makeBlockBlueprint('articles', 'Articles', [[
                 'key' => 'content', 'display' => 'Articles', 'fields' => [self::field('title', 'text', 'Titre'), self::field('limit', 'integer', 'Limite'), self::field('category', 'slug', 'Catégorie'), self::field('tag', 'slug', 'Tag')],
             ]], ['title' => 'Articles', 'limit' => 3, 'category' => '', 'tag' => '', 'show_more_button' => true]),
-            'featured_product' => self::commerceProductBlock('featured_product', 'Produit vedette', false, ['layout' => 'featured', 'limit' => 1]),
-            'product_card' => self::commerceProductBlock('product_card', 'Carte produit', false, ['layout' => 'card', 'limit' => 1]),
-            'product_grid' => self::commerceProductBlock('product_grid', 'Liste de produits', true),
-            'product_detail' => self::commerceProductBlock('product_detail', 'Détail produit', false, ['layout' => 'detail', 'limit' => 1]),
-            'collection_grid' => self::makeBlockBlueprint('collection_grid', 'Liste de catégories', [[
-                'key' => 'selection', 'display' => 'Sélection', 'fields' => [
-                    self::field('collection_ids', 'json', 'Catégories sélectionnées', ['instructions' => 'Références stables de catégories, dans l’ordre éditorial.']),
-                    self::field('limit', 'integer', 'Nombre maximal', ['default' => 12, 'width' => 50, 'validate' => ['min' => 1, 'max' => 100]]),
-                    self::field('columns', 'integer', 'Colonnes', ['default' => 3, 'width' => 50, 'validate' => ['min' => 1, 'max' => 6]]),
+            'commerce_product' => self::commerceSingleBlock(),
+            'commerce_product_variants' => self::commerceVariantsBlock(),
+            'commerce_product_list' => self::commerceProductListBlock(),
+            'storytelling' => self::makeBlockBlueprint('storytelling', 'Storytelling', [[
+                'key'=>'selection','display'=>'Storytelling Marketing','fields'=>[
+                    self::field('storytelling_id','integer','Storytelling',['required'=>true,'instructions'=>'Sélectionnez un storytelling publié pour ce site et cette langue.']),
                 ],
-            ], [
-                'key' => 'display', 'display' => 'Affichage', 'fields' => [
-                    self::field('empty_state', 'select', 'État vide', ['default' => 'message', 'config' => ['options' => self::options(['hide' => 'Masquer le bloc', 'message' => 'Afficher un message'])]]),
-                    self::field('empty_message', 'text', 'Message vide', ['default' => 'Aucune catégorie à afficher.', 'localizable' => true]),
-                ],
-            ]], ['collection_ids' => [], 'limit' => 12, 'columns' => 3, 'empty_state' => 'message', 'empty_message' => 'Aucune catégorie à afficher.']),
-            'add_to_cart' => self::makeBlockBlueprint('add_to_cart', 'Ajout au panier', [[
-                'key' => 'selection', 'display' => 'Produit vendable', 'fields' => [
-                    self::field('product_id', 'integer', 'Produit', ['instructions' => 'Référence stable. Si plusieurs variantes sont possibles, le bouton ouvre la fiche produit.']),
-                    self::field('sellable_id', 'integer', 'Vendable précis', ['instructions' => 'Optionnel. Référence stable d’une variante ou d’un produit simple vendable.']),
-                    self::field('variant_rule', 'select', 'Règle de variante', ['default' => 'default_if_unambiguous', 'config' => ['options' => self::options(['default_if_unambiguous' => 'Ajouter seulement si le choix est sans ambiguïté', 'exact_sellable' => 'Exiger le vendable indiqué'])]]),
-                ],
-            ], [
-                'key' => 'display', 'display' => 'Bouton', 'fields' => [
-                    self::field('quantity', 'integer', 'Quantité', ['default' => 1, 'width' => 50, 'validate' => ['min' => 1, 'max' => 100]]),
-                    self::field('label', 'text', 'Libellé', ['default' => 'Ajouter au panier', 'width' => 50, 'localizable' => true]),
-                ],
-            ]], ['product_id' => null, 'sellable_id' => null, 'variant_rule' => 'default_if_unambiguous', 'quantity' => 1, 'label' => 'Ajouter au panier']),
+            ]],['storytelling_id'=>null]),
         ];
     }
 
@@ -349,6 +329,53 @@ final class NativeFieldBlueprintRegistry
             'key' => 'media', 'display' => $title, 'fields' => [self::field('media_id', 'assets', $title), self::field('src', 'link', 'URL'), self::field('title', 'text', 'Titre'), self::field('caption', 'markdown', 'Légende')],
         ]], ['media_id' => 0, 'src' => '', 'title' => '', 'caption' => '']);
     }
+
+    /** @param array<string,mixed> $overrides @return array<string,mixed> */
+    private static function commerceSingleBlock(): array
+    {
+        return self::makeBlockBlueprint('commerce_product','Produit ou variante',[[
+            'key'=>'selection','display'=>'Produit vendu','fields'=>[
+                self::field('product_id','integer','Produit',['required'=>true,'instructions'=>'Produit public de la boutique active.']),
+                self::field('sellable_id','integer','Variante précise',['instructions'=>'Optionnel : laissez vide pour présenter le produit avec sa variante par défaut.']),
+            ],
+        ],self::commerceDisplayFields(false)],array_replace(self::commerceDisplayDefaults(),['columns'=>1,'limit'=>1,'product_id'=>null,'sellable_id'=>null]));
+    }
+
+    private static function commerceVariantsBlock(): array
+    {
+        return self::makeBlockBlueprint('commerce_product_variants','Variantes d’un produit',[[
+            'key'=>'selection','display'=>'Produit','fields'=>[
+                self::field('product_id','integer','Produit',['required'=>true,'instructions'=>'Toutes les variantes publiques de ce produit seront proposées.']),
+                self::field('limit','integer','Variantes par page',['default'=>12,'width'=>50,'validate'=>['min'=>1,'max'=>100]]),
+                self::field('columns','integer','Colonnes',['default'=>3,'width'=>50,'validate'=>['min'=>1,'max'=>6]]),
+                self::field('pagination','toggle','Pagination',['default'=>false]),
+            ],
+        ],self::commerceDisplayFields(false)],array_replace(self::commerceDisplayDefaults(),['product_id'=>null,'limit'=>12,'columns'=>3,'pagination'=>false]));
+    }
+
+    private static function commerceProductListBlock(): array
+    { return self::commerceProductBlock('commerce_product_list','Liste de produits',true); }
+
+    /** @return array<string,mixed> */
+    private static function commerceDisplayFields(bool $withGrid=true): array
+    {
+        $fields=[];
+        if($withGrid){
+            $fields[] = self::field('limit','integer','Éléments par page',['default'=>12,'width'=>50,'validate'=>['min'=>1,'max'=>100]]);
+            $fields[] = self::field('columns','integer','Colonnes',['default'=>3,'width'=>50,'validate'=>['min'=>1,'max'=>6]]);
+            $fields[] = self::field('pagination','toggle','Pagination',['default'=>false]);
+        }
+        return ['key'=>'display','display'=>'Affichage','fields'=>array_merge($fields,[
+            self::field('show_price','toggle','Prix',['default'=>true]),self::field('show_promotion','toggle','Promotion',['default'=>true]),
+            self::field('show_availability','toggle','Disponibilité',['default'=>true]),self::field('show_cta','toggle','Actions produit',['default'=>true]),
+            self::field('empty_state','select','État vide',['default'=>'message','config'=>['options'=>self::options(['hide'=>'Masquer le bloc','message'=>'Afficher un message'])]]),
+            self::field('empty_message','text','Message vide',['default'=>'Aucun produit à afficher.','localizable'=>true]),
+        ])];
+    }
+
+    /** @return array<string,mixed> */
+    private static function commerceDisplayDefaults(): array
+    { return ['show_price'=>true,'show_promotion'=>true,'show_availability'=>true,'show_cta'=>true,'empty_state'=>'message','empty_message'=>'Aucun produit à afficher.']; }
 
     /** @param array<string,mixed> $overrides @return array<string,mixed> */
     private static function commerceProductBlock(string $key, string $title, bool $multiple, array $overrides = []): array

@@ -1299,6 +1299,31 @@ CREATE TABLE editor_block_types (
     sort_order INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE business_storytellings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    language_code TEXT NOT NULL,
+    storytelling_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    eyebrow TEXT NOT NULL DEFAULT '',
+    body_markdown TEXT NOT NULL DEFAULT '',
+    image_media_id INTEGER,
+    image_alt TEXT NOT NULL DEFAULT '',
+    cta_label TEXT NOT NULL DEFAULT '',
+    cta_url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published')),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id,language_code,storytelling_key),
+    FOREIGN KEY(site_id) REFERENCES sites(id) ON DELETE CASCADE,
+    FOREIGN KEY(site_id,language_code) REFERENCES site_languages(site_id,language_code) ON DELETE CASCADE,
+    FOREIGN KEY(image_media_id) REFERENCES media_assets(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_business_storytellings_context ON business_storytellings(site_id,language_code,status,title);
+
 CREATE TABLE public_content_snapshots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,

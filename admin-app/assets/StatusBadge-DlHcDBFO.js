@@ -1,0 +1,1 @@
+import{$ as e,St as t,bt as n,it as r,lt as i}from"./index-DuyD_ytf.js";var a=r({__name:`StatusBadge`,props:{status:{}},setup(r){return(a,o)=>(i(),e(`span`,{class:n([`badge`,r.status||`draft`])},t(r.status||`draft`),3))}});export{a as t};

@@ -411,6 +411,7 @@ final class App
                 $services->businessPriceLists(),
                 $services->businessCommercialRelations(),
                 $services->storefrontProjectionBuilder(),
+                $services->storytellings(),
             ),
             BusinessMessagingApiController::class => new BusinessMessagingApiController(
                 $this->request,
@@ -480,7 +481,7 @@ final class App
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),
-            BlockBlueprintApiController::class => new BlockBlueprintApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->blueprints()),
+            BlockBlueprintApiController::class => new BlockBlueprintApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->blueprints(), $services->storefrontProjections()),
             BlueprintApiController::class => new BlueprintApiController($this->request, $services->auth(), $services->sites(), $services->authorization(), $services->blueprints(), $services->getBlueprintEditorSchema()),
             ConfigurationApiController::class => new ConfigurationApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), new ConfigurationRepository($services->coreDatabase())),
             MultisiteApiController::class => new MultisiteApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), new MultisiteRepository($services->coreDatabase())),

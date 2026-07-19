@@ -6,7 +6,7 @@ import { useAdminContextStore } from '@/stores/adminContext';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import { useI18n } from '@/i18n';
 
-type Option = { key?: string; channel_id?: number; code?: string; name: string; currency?: string; status?: string; is_public?: boolean };
+type Option = { key?: string; channel_id?: number; code?: string; name: string; currency?: string; status?: string; is_public?: boolean; location?: string };
 type Section = { key: string; enabled: boolean; title: string; limit: number; display: 'grid'|'carousel'|'list'|'chips'; rule: string; empty_state: 'hide'|'message'; empty_message: string; view_all_label: string; window_days: number; manual_product_ids: number[]; manual_ids?: string };
 type SectionPreview = { key: string; count: number; explanation: string; fallback_used?: boolean; items?: Array<{name?:string;keyword?:string}> };
 type ShopConfiguration = {
@@ -14,7 +14,7 @@ type ShopConfiguration = {
   menu_key: string; menu_label: string; menu_position: number; cart_visible: boolean; show_quantities: boolean;
   last_available_threshold: number; draft: { title?: string; introduction?: string; seo?: { title?: string; description?: string; robots?: string }; sections?: Section[]; analytics?: {dedupe_minutes?:number;retention_days?:number} };
   published_version?: number|null; config_version: number; is_initialized: boolean; preview?: { sections: SectionPreview[]; total_products: number };
-  channels: Option[]; themes: Option[]; permissions: { edit: boolean; publish: boolean; activate: boolean };
+  channels: Option[]; themes: Option[]; menu_locations: Option[]; permissions: { edit: boolean; publish: boolean; activate: boolean };
 };
 
 const route = useRoute(); const router = useRouter(); const context = useAdminContextStore();
@@ -40,7 +40,10 @@ async function load(): Promise<void> {
   try {
     const response = await adminApi.get<ShopConfiguration>(`/sale/ecommerce/shops/${siteId.value}/${locale.value}`);
     source.value = response.data; const d = response.data.draft || {};
-    Object.assign(form,{ channel_id:Number(response.data.channel_id||0),currency:response.data.currency||'CHF',theme_key:response.data.theme_key||'default',menu_key:response.data.menu_key||'main',menu_label:response.data.menu_label||'Boutique',menu_position:Number(response.data.menu_position||100),cart_visible:Boolean(response.data.cart_visible),show_quantities:Boolean(response.data.show_quantities),last_available_threshold:Number(response.data.last_available_threshold||1),title:d.title||'Boutique',introduction:d.introduction||'',seo_title:d.seo?.title||d.title||'Boutique',seo_description:d.seo?.description||'',seo_robots:d.seo?.robots||'index,follow',analytics:{dedupe_minutes:Number(d.analytics?.dedupe_minutes||30),retention_days:Number(d.analytics?.retention_days||90)},sections:(d.sections||[]).map(section=>({...section,manual_ids:(section.manual_product_ids||[]).join(', ')})) });
+    const availableMenus = response.data.menu_locations || [];
+    const storedMenu = response.data.menu_key || 'main';
+    const resolvedMenu = availableMenus.some(menu=>menu.key===storedMenu) ? storedMenu : (storedMenu==='main'&&availableMenus.some(menu=>menu.key==='primary')?'primary':storedMenu);
+    Object.assign(form,{ channel_id:Number(response.data.channel_id||0),currency:response.data.currency||'CHF',theme_key:response.data.theme_key||'default',menu_key:resolvedMenu,menu_label:response.data.menu_label||'Boutique',menu_position:Number(response.data.menu_position||100),cart_visible:Boolean(response.data.cart_visible),show_quantities:Boolean(response.data.show_quantities),last_available_threshold:Number(response.data.last_available_threshold||1),title:d.title||'Boutique',introduction:d.introduction||'',seo_title:d.seo?.title||d.title||'Boutique',seo_description:d.seo?.description||'',seo_robots:d.seo?.robots||'index,follow',analytics:{dedupe_minutes:Number(d.analytics?.dedupe_minutes||30),retention_days:Number(d.analytics?.retention_days||90)},sections:(d.sections||[]).map(section=>({...section,manual_ids:(section.manual_product_ids||[]).join(', ')})) });
     dirty.value = false;
   } catch (err) { error.value = apiErrorMessage(err,t('shopSystem.loadError')); }
   finally { loading.value = false; }
@@ -113,11 +116,10 @@ onMounted(load);
         <label class="field"><span>{{ t('shopSystem.field.channel') }}</span><select v-model.number="form.channel_id" class="select" required><option :value="0" disabled>{{ t('shopSystem.select') }}</option><option v-for="channel in source.channels" :key="channel.channel_id" :value="channel.channel_id">{{ channel.name }} · {{ channel.code }} · {{ channel.currency }}{{ channel.status!=='active'||!channel.is_public?` — ${t('shopSystem.notPublishable')}`:'' }}</option></select></label>
         <label class="field"><span>{{ t('shopSystem.field.currency') }}</span><input v-model="form.currency" class="input" required pattern="[A-Z]{3}" maxlength="3"></label>
         <label class="field"><span>{{ t('shopSystem.field.theme') }}</span><select v-model="form.theme_key" class="select"><option v-for="theme in source.themes" :key="theme.key" :value="theme.key">{{ theme.name }}</option></select></label>
-        <label class="field"><span>{{ t('shopSystem.field.menu') }}</span><select v-model="form.menu_key" class="select"><option value="main">{{ t('shopSystem.menu.main') }}</option><option value="footer">{{ t('shopSystem.menu.footer') }}</option></select></label>
+        <label class="field"><span>{{ t('shopSystem.field.menu') }}</span><select v-model="form.menu_key" class="select"><option v-for="menu in source.menu_locations" :key="menu.key" :value="menu.key">{{ menu.name }} · {{ menu.location }}</option></select></label>
         <label class="field"><span>{{ t('shopSystem.field.menuLabel') }}</span><input v-model="form.menu_label" class="input" maxlength="80"></label>
         <label class="field"><span>{{ t('shopSystem.field.position') }}</span><input v-model.number="form.menu_position" class="input" type="number" min="0" max="1000"></label>
         <label class="check"><input v-model="form.cart_visible" type="checkbox"> {{ t('shopSystem.field.cartVisible') }}</label>
-        <label class="check"><input v-model="form.show_quantities" type="checkbox"> {{ t('shopSystem.field.showQuantities') }}</label>
         <label class="field"><span>{{ t('shopSystem.field.threshold') }}</span><input v-model.number="form.last_available_threshold" class="input" type="number" min="0" max="9999"></label>
       </section>
     </form>

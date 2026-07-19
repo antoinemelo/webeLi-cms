@@ -82,6 +82,7 @@ final class ResolvePublicRoute
         if ($channel<1) return null;
         if (preg_match('#^/shop/products/([a-z0-9_-]+)$#',$path,$m)) {
             $product=$this->storefront->product($siteId,$channel,$locale,$m[1]); if (!$product) return null;
+            $product=$this->localizeStorefrontItem($product,$locale);
             $base=$this->basePayload($site,$locale,$path,(string)$product['name']);
             $productLanguages=[];
             foreach ((array)($product['seo']['hreflang']??[]) as $alternate) {
@@ -96,13 +97,14 @@ final class ResolvePublicRoute
                 $base['language_menu_items']=$productLanguages;
                 $base['x_default_url']=$productLanguages[0]['absolute_url'];
             }
-            $returnUrl=is_string($query['return']??null) && str_starts_with((string)$query['return'],'/shop') && !str_contains((string)$query['return'],'//')?(string)$query['return']:'/shop';
+            $returnUrl=$this->storefrontReturnUrl($query['return']??null,$locale);
             return $base+['template'=>'storefront-product','storefront_product'=>$product,'storefront_return_url'=>$returnUrl,'entry_title'=>$product['name'],'meta_title'=>$product['name'],'meta_description'=>$product['summary'],'meta_robots'=>$product['seo']['robots'],'canonical'=>localized_absolute_url($product['seo']['canonical'],$locale,(string)$site['base_url']),'json_ld'=>json_encode($product['seo']['json_ld'],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE),'resource'=>$product];
         }
         if (preg_match('#^/shop/collections/([a-z0-9_-]+)$#',$path,$m)) {
             $collection=$this->storefront->collection($siteId,$channel,$locale,$m[1]); if (!$collection) return null;
+            $collection=$this->localizeStorefrontItem($collection,$locale);
             $page=$this->storefront->products($siteId,$channel,$locale,array_merge($query,['collection_id'=>$collection['collection_id'],'limit'=>max(1,min(100,(int)($query['limit']??24))),'offset'=>max(0,(int)($query['offset']??0))]));
-            $page=$this->decorateCatalogPage($page,$path);
+            $page=$this->decorateCatalogPage($page,$path,$locale);
             $base=$this->basePayload($site,$locale,$path,(string)$collection['name']);
             return $base+['template'=>'storefront-collection','storefront_collection'=>$collection,'storefront_products'=>$page['items'],'storefront_catalog'=>$page,'storefront_facets'=>$page['facets'],'storefront_selection'=>$page['selection'],'storefront_sorts'=>$page['sorts'],'pagination'=>$page['pagination'],'entry_title'=>$collection['name'],'meta_title'=>$collection['name'],'meta_description'=>$collection['description'],'meta_robots'=>$this->catalogRobots($query,$collection['seo']['robots']),'canonical'=>localized_absolute_url($collection['seo']['canonical'],$locale,(string)$site['base_url']),'resource'=>['collection'=>$collection,'products'=>$page]];
         }
@@ -110,16 +112,17 @@ final class ResolvePublicRoute
         $published=is_array($shop['published']??null)?$shop['published']:[];
         $seo=is_array($published['seo']??null)?$published['seo']:[];
         $title=trim((string)($published['title']??'')) ?: ($locale==='en'?'Shop':'Boutique');
-        $page=$this->decorateCatalogPage($this->storefront->products($siteId,$channel,$locale,$filters),$path); $base=$this->basePayload($site,$locale,$path,$title);
+        $page=$this->decorateCatalogPage($this->storefront->products($siteId,$channel,$locale,$filters),$path,$locale); $base=$this->basePayload($site,$locale,$path,$title);
         $sections=$this->merchandising?->sections($siteId,$channel,$locale,(array)($published['sections']??[]),$page) ?? [];
         foreach ($sections as $sectionIndex=>$section) {
             foreach ((array)($section['items']??[]) as $itemIndex=>$item) {
-                if (is_array($item) && str_starts_with((string)($item['url']??''),'/shop/products/')) {
+                if (is_array($item) && (int)($item['product_id']??0)>0 && (string)($item['url']??'')!=='') {
                     $sections[$sectionIndex]['items'][$itemIndex]['url_with_return']=(string)$item['url'].'?return='.rawurlencode($page['current_url']);
                 }
             }
         }
-        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$this->storefront->collections($siteId,$channel,$locale),'storefront_sections'=>$published['sections']??[],'storefront_merchandising_sections'=>$sections,'storefront_introduction'=>(string)($published['introduction']??''),'storefront_catalog'=>$page,'storefront_facets'=>$page['facets'],'storefront_selection'=>$page['selection'],'storefront_sorts'=>$page['sorts'],'pagination'=>$page['pagination'],'entry_title'=>$title,'meta_title'=>(string)($seo['title']??$title),'meta_description'=>(string)($seo['description']??''),'meta_robots'=>$this->catalogRobots($query,(string)($seo['robots']??'index,follow')),'canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page,'shop'=>$shop,'merchandising_sections'=>$sections]];
+        $collections=array_map(fn(array $item):array=>$this->localizeStorefrontItem($item,$locale),$this->storefront->collections($siteId,$channel,$locale));
+        return $base+['template'=>'storefront-shop','storefront_products'=>$page['items'],'storefront_collections'=>$collections,'storefront_sections'=>$published['sections']??[],'storefront_merchandising_sections'=>$sections,'storefront_introduction'=>(string)($published['introduction']??''),'storefront_catalog'=>$page,'storefront_facets'=>$page['facets'],'storefront_selection'=>$page['selection'],'storefront_sorts'=>$page['sorts'],'pagination'=>$page['pagination'],'entry_title'=>$title,'meta_title'=>(string)($seo['title']??$title),'meta_description'=>(string)($seo['description']??''),'meta_robots'=>$this->catalogRobots($query,(string)($seo['robots']??'index,follow')),'canonical'=>localized_absolute_url('/shop',$locale,(string)$site['base_url']),'resource'=>['products'=>$page,'shop'=>$shop,'merchandising_sections'=>$sections]];
     }
 
     /** @param array<string,mixed> $query */
@@ -132,10 +135,11 @@ final class ResolvePublicRoute
     }
 
     /** @param array<string,mixed> $page @return array<string,mixed> */
-    private function decorateCatalogPage(array $page,string $path): array
+    private function decorateCatalogPage(array $page,string $path,string $locale): array
     {
         $selection=is_array($page['selection']??null)?$page['selection']:[];
         $params=$this->catalogQueryParams($selection);
+        $path=localized_path($path,$locale);
         $page['reset_url']=$path;
         $page['current_url']=$this->catalogUrl($path,$params);
         $page['active_filters']=[];
@@ -165,8 +169,40 @@ final class ResolvePublicRoute
         if ($offset>0) { $previous=$params; $previous['offset']=max(0,$offset-$limit); if ($previous['offset']===0) unset($previous['offset']); $page['pagination']['previous_url']=$this->catalogUrl($path,$previous); }
         if (!empty($pagination['has_more'])) { $next=$params; $next['offset']=$offset+$limit; $page['pagination']['next_url']=$this->catalogUrl($path,$next); }
         $return=$page['current_url'];
-        foreach ((array)($page['items']??[]) as $index=>$item) if (is_array($item)) $page['items'][$index]['url_with_return']=(string)($item['url']??'').'?return='.rawurlencode($return);
+        foreach ((array)($page['items']??[]) as $index=>$item) if (is_array($item)) {
+            $item=$this->localizeStorefrontItem($item,$locale);
+            $item['url_with_return']=(string)($item['url']??'').'?return='.rawurlencode($return);
+            $page['items'][$index]=$item;
+        }
         return $page;
+    }
+
+    /** @param array<string,mixed> $item @return array<string,mixed> */
+    private function localizeStorefrontItem(array $item,string $locale): array
+    {
+        if (is_string($item['url']??null) && str_starts_with($item['url'],'/shop')) {
+            $item['url']=localized_path($item['url'],$locale);
+        }
+        foreach ((array)($item['relations']??[]) as $relationIndex=>$relation) {
+            if (!is_array($relation)) continue;
+            foreach ((array)($relation['items']??[]) as $relatedIndex=>$related) {
+                if (is_array($related)) $item['relations'][$relationIndex]['items'][$relatedIndex]=$this->localizeStorefrontItem($related,$locale);
+            }
+        }
+        return $item;
+    }
+
+    private function storefrontReturnUrl(mixed $candidate,string $locale): string
+    {
+        $publicShop=localized_path('/shop',$locale);
+        if (!is_string($candidate) || str_contains($candidate,'//')) return $publicShop;
+        if ($candidate==='/shop' || str_starts_with($candidate,'/shop?') || str_starts_with($candidate,'/shop/')) {
+            return localized_path($candidate,$locale);
+        }
+        if ($candidate===$publicShop || str_starts_with($candidate,$publicShop.'?') || str_starts_with($candidate,$publicShop.'/')) {
+            return $candidate;
+        }
+        return $publicShop;
     }
 
     /** @param array<string,mixed> $selection @return array<string,mixed> */
@@ -1141,13 +1177,12 @@ final class ResolvePublicRoute
         $publicUi = $this->publicUiSettings($siteId);
         $shop = $this->storefront?->activeShop($siteId,$languageCode);
         $primaryMenu = $this->menuItems($siteId, $languageCode, 'primary', $currentPath);
-        if ($shop && in_array((string)($shop['menu_key']??'main'),['main','primary'],true)) {
-            $primaryMenu = $this->appendShopMenuItem($primaryMenu,$shop,$languageCode,$currentPath);
-        }
         $footerMenu = $this->menuItems($siteId, $languageCode, 'footer', $currentPath);
-        if ($shop && (string)($shop['menu_key']??'')==='footer') {
-            $footerMenu = $this->appendShopMenuItem($footerMenu,$shop,$languageCode,$currentPath);
-        }
+        $footerTopMenu = $this->menuItems($siteId, $languageCode, 'footer_top', $currentPath);
+        $footerBottomMenu = $this->menuItems($siteId, $languageCode, 'footer_bottom', $currentPath);
+        $placedMenus = $this->placeShopMenuItem($primaryMenu,$footerMenu,$footerTopMenu,$footerBottomMenu,$shop,$languageCode,$currentPath);
+        $primaryMenu=$placedMenus['primary']; $footerMenu=$placedMenus['footer'];
+        $footerTopMenu=$placedMenus['footer_top']; $footerBottomMenu=$placedMenus['footer_bottom'];
         return [
             'site' => $site,
             'site_localization' => $siteLocalization,
@@ -1157,8 +1192,8 @@ final class ResolvePublicRoute
             'home_cards' => $this->homeCards($languageCode),
             'menu_items' => $primaryMenu,
             'footer_menu_items' => $footerMenu,
-            'footer_top_menu_items' => $this->menuItems($siteId, $languageCode, 'footer_top', $currentPath),
-            'footer_bottom_menu_items' => $this->menuItems($siteId, $languageCode, 'footer_bottom', $currentPath),
+            'footer_top_menu_items' => $footerTopMenu,
+            'footer_bottom_menu_items' => $footerBottomMenu,
             'localized_home_url' => localized_path('/', $languageCode),
             'localized_search_url' => localized_path('/search', $languageCode),
             'sitemap_url' => localized_absolute_url('/sitemap.xml', $languageCode, (string) ($site['base_url'] ?? '')),
@@ -1203,6 +1238,25 @@ final class ResolvePublicRoute
         ];
         usort($items,static fn(array $a,array $b):int=>((int)($a['sort_order']??0))<=>((int)($b['sort_order']??0)));
         return $items;
+    }
+
+    /** @return array{primary:array,footer:array,footer_top:array,footer_bottom:array} */
+    private function placeShopMenuItem(array $primary,array $footer,array $footerTop,array $footerBottom,?array $shop,string $languageCode,string $currentPath): array
+    {
+        if ($shop === null) return ['primary'=>$primary,'footer'=>$footer,'footer_top'=>$footerTop,'footer_bottom'=>$footerBottom];
+        $target = (string) ($shop['menu_key'] ?? 'main');
+        if (in_array($target,['main','primary'],true)) {
+            $primary=$this->appendShopMenuItem($primary,$shop,$languageCode,$currentPath);
+        } elseif ($target === 'footer_top') {
+            $footerTop=$this->appendShopMenuItem($footerTop,$shop,$languageCode,$currentPath);
+        } elseif ($target === 'footer_bottom') {
+            $footerBottom=$this->appendShopMenuItem($footerBottom,$shop,$languageCode,$currentPath);
+        } elseif ($target === 'footer') {
+            if ($footerBottom !== []) $footerBottom=$this->appendShopMenuItem($footerBottom,$shop,$languageCode,$currentPath);
+            elseif ($footerTop !== []) $footerTop=$this->appendShopMenuItem($footerTop,$shop,$languageCode,$currentPath);
+            else $footer=$this->appendShopMenuItem($footer,$shop,$languageCode,$currentPath);
+        }
+        return ['primary'=>$primary,'footer'=>$footer,'footer_top'=>$footerTop,'footer_bottom'=>$footerBottom];
     }
 
 

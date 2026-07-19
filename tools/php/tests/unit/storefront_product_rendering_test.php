@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Core\Renderer;
+use App\Application\Frontend\ResolvePublicRoute;
 
 $h = new TestHarness();
 $product = [
@@ -33,16 +34,54 @@ foreach (['default','aurora','pulse'] as $theme) {
     $h->assertTrue(str_contains($html, 'Vidéo de démonstration'), $theme . ' renders the public media caption');
     $h->assertTrue(str_contains($html, 'data-product-variant'), $theme . ' renders accessible variant selection');
     $h->assertTrue(str_contains($html, 'LinkedIn') && str_contains($html, 'Facebook') && str_contains($html, 'mailto:'), $theme . ' renders social and email sharing');
-    $grid=$renderer->render('partials/storefront-block',['block_type'=>'product_grid','data'=>['items'=>[$product],'columns'=>2,'show_price'=>false,'show_promotion'=>false,'show_availability'=>false,'show_cta'=>false,'selection'=>['missing_product_ids'=>[999],'pages'=>1]]]);
+    $h->assertTrue(str_contains($html,'class="social-share__action social-share__action--linkedin"')&&str_contains($html,'data-copy-url=')&&!str_contains($html,'data-copy-product-url'),$theme.' reuses the page and article sharing component');
+    $grid=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product_list','data'=>['commerce_available'=>true,'items'=>[$product],'columns'=>2,'show_price'=>false,'show_promotion'=>false,'show_availability'=>false,'show_cta'=>false,'selection'=>['missing_product_ids'=>[999],'pages'=>1]]]);
     $h->assertTrue(str_contains($grid,'data-product-id="42"')&&str_contains($grid,'--storefront-columns:2'),$theme.' renders projected Commerce blocks with their configured layout');
     $h->assertTrue(!str_contains($grid,'99.00')&&!str_contains($grid,'data-storefront-add-to-cart')&&!str_contains($grid,'Disponible'),$theme.' respects card visibility options');
-    $redirect=$renderer->render('partials/storefront-block',['block_type'=>'add_to_cart','data'=>['product'=>$product,'requires_variant_choice'=>true,'label'=>'Choisir']]);
-    $h->assertTrue(str_contains($redirect,'href="/shop/products/produit-video"')&&!str_contains($redirect,'data-storefront-add-to-cart'),$theme.' redirects ambiguous variant selection to the product detail');
-    $direct=$renderer->render('partials/storefront-block',['block_type'=>'add_to_cart','data'=>['resolved'=>['product'=>$product,'sellable'=>$product['sellables'][0]],'quantity'=>2,'label'=>'Ajouter']]);
-    $h->assertTrue(str_contains($direct,'data-sellable-id="101"')&&str_contains($direct,'data-quantity="2"'),$theme.' uses the shared Sale cart contract for an explicit sellable');
-    $empty=$renderer->render('partials/storefront-block',['block_type'=>'product_grid','data'=>['items'=>[],'empty_state'=>'message','empty_message'=>'Sélection indisponible','selection'=>['missing_product_ids'=>[],'pages'=>0]]]);
+    $inactive=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product','data'=>['commerce_available'=>false,'items'=>[$product]]]);
+    $h->assertSame('',trim($inactive),$theme.' does not render a Commerce block when Shop is inactive for the context');
+    $story=$renderer->render('partials/storefront-block',['block_type'=>'storytelling','data'=>['commerce_available'=>true,'storytelling'=>['title'=>'Notre histoire','eyebrow'=>'Découvrir','body_markdown'=>'Un **récit** utile.','cta_label'=>'Voir','cta_url'=>'/shop']]]);
+    $h->assertTrue(str_contains($story,'Notre histoire')&&str_contains($story,'<strong>récit</strong>')&&str_contains($story,'href="/shop"'),$theme.' renders a published Storytelling through the shared block contract');
+    $empty=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product_list','data'=>['commerce_available'=>true,'items'=>[],'empty_state'=>'message','empty_message'=>'Sélection indisponible','selection'=>['missing_product_ids'=>[],'pages'=>0]]]);
     $h->assertTrue(str_contains($empty,'Sélection indisponible')&&!str_contains($empty,'storefront_product_projections'),$theme.' renders a configured empty state without technical leakage');
+    $layout=$renderer->render('layout',['languageCode'=>'fr','content'=>'<p>Contenu</p>','storefront_cart_visible'=>true,'storefront_channel_code'=>'web-main','menu_items'=>[],'footer_menu_items'=>[],'footer_top_menu_items'=>[],'footer_bottom_menu_items'=>[],'site'=>['name'=>'Test'],'site_localization'=>['site_title'=>'Test'],'ui'=>['skip_to_content'=>'Contenu','main_navigation'=>'Navigation','home'=>'Accueil','menu'=>'Menu','footer_navigation'=>'Pied de page','cart'=>'Panier','open_cart'=>'Ouvrir le panier']]);
+    $headerStart=strpos($layout,'<header');$cartToggle=strpos($layout,'data-cart-toggle');$navigation=strpos($layout,'id="site-navigation"');$headerEnd=strpos($layout,'</header>');
+    $h->assertTrue($headerStart!==false&&$cartToggle!==false&&$headerEnd!==false&&$headerStart<$cartToggle&&$cartToggle<$headerEnd,$theme.' renders the cart control inside the navigation header');
+    $h->assertTrue($navigation!==false&&$cartToggle<$navigation&&str_contains($layout,'cart-header.css'),$theme.' keeps the cart control outside the collapsible mobile navigation');
+    $h->assertTrue(substr_count($layout,'data-cart-toggle')===1&&str_contains($layout,'class="bi bi-bag"'),$theme.' renders one compact Bootstrap-style bag icon instead of a floating text button');
+    $h->assertTrue(str_contains($layout,'data-storefront-api-base="'.public_api_url_path('sale/channels/web-main').'"')&&str_contains($layout,'data-storefront-cart-url="'.localized_path('/cart','fr').'"'),$theme.' gives the cart client explicit installation-aware API and page URLs');
 }
+
+$cartCss=(string)file_get_contents(dirname(__DIR__,4).'/frontend/theme-default/assets/css/cart.css');
+$h->assertTrue(!str_contains($cartCss,'.storefront-cart-toggle{position:fixed')&&str_contains($cartCss,'.storefront-cart-toggle .bi-bag'),'cart styles keep the bag icon in navigation flow rather than fixing it at page bottom');
+$cartJs=(string)file_get_contents(dirname(__DIR__,4).'/frontend/theme-default/assets/js/storefront-cart.js');
+$h->assertTrue(str_contains($cartJs,'dataset.storefrontApiBase')&&str_contains($cartJs,'const endpoint = (path) => `${apiBase.replace'),'cart requests use the server-provided API base instead of relying on script-path detection');
+
+$routeReflection=new ReflectionClass(ResolvePublicRoute::class);
+$routeWithoutDependencies=$routeReflection->newInstanceWithoutConstructor();
+$placeShop=$routeReflection->getMethod('placeShopMenuItem');
+$placeShop->setAccessible(true);
+$existingItem=[['id'=>1,'label'=>'Existant','url'=>'/existing','sort_order'=>10]];
+$shopMenu=['id'=>9,'menu_key'=>'footer_bottom','menu_label'=>'Boutique','menu_position'=>20];
+$placed=$placeShop->invoke($routeWithoutDependencies,$existingItem,[],$existingItem,$existingItem,$shopMenu,'fr','/');
+$h->assertSame(localized_path('/shop','fr'),$placed['footer_bottom'][1]['url']??null,'concrete footer-bottom placement injects the Shop into the rendered footer-bottom collection');
+$h->assertSame(1,count($placed['primary']),'footer placement leaves primary navigation unchanged');
+$shopMenu['menu_key']='footer';
+$fallbackPlaced=$placeShop->invoke($routeWithoutDependencies,$existingItem,[],$existingItem,$existingItem,$shopMenu,'fr','/');
+$h->assertSame(localized_path('/shop','fr'),$fallbackPlaced['footer_bottom'][1]['url']??null,'legacy generic footer placement selects an actually available footer-bottom collection');
+
+$localizeItem=$routeReflection->getMethod('localizeStorefrontItem');
+$localizeItem->setAccessible(true);
+$localizedItem=$localizeItem->invoke($routeWithoutDependencies,['url'=>'/shop/products/demo','relations'=>[['items'=>[['url'=>'/shop/products/related']]]]],'fr');
+$h->assertTrue(($localizedItem['url']??null)===localized_path('/shop/products/demo','fr')&&($localizedItem['relations'][0]['items'][0]['url']??null)===localized_path('/shop/products/related','fr'),'product and related-product links include the installation and locale base path');
+$decorateCatalog=$routeReflection->getMethod('decorateCatalogPage');
+$decorateCatalog->setAccessible(true);
+$decorated=$decorateCatalog->invoke($routeWithoutDependencies,['selection'=>[],'facets'=>[],'pagination'=>[],'items'=>[['url'=>'/shop/products/demo']]],'/shop','fr');
+$h->assertTrue(($decorated['current_url']??null)===localized_path('/shop','fr')&&str_starts_with((string)($decorated['items'][0]['url_with_return']??''),localized_path('/shop/products/demo','fr').'?return='),'catalog and product return links include the installation and locale base path');
+$returnUrl=$routeReflection->getMethod('storefrontReturnUrl');
+$returnUrl->setAccessible(true);
+$publicReturn=localized_path('/shop?q=demo','fr');
+$h->assertTrue($returnUrl->invoke($routeWithoutDependencies,'/shop?q=demo','fr')===$publicReturn&&$returnUrl->invoke($routeWithoutDependencies,$publicReturn,'fr')===$publicReturn,'product return navigation accepts both canonical and already-prefixed safe Shop URLs');
 
 $renderer = new Renderer(dirname(__DIR__, 4) . '/frontend/theme-default/templates');
 $missing = $product;
@@ -57,4 +96,4 @@ $englishDetail=$renderer->render('storefront-product',['storefront_product'=>$en
 $h->assertTrue(str_contains($englishCard,'Enriched preview')&&str_contains($englishCard,'View full details'),'canonical card localizes its interaction labels from DTO locale');
 $h->assertTrue(str_contains($englishDetail,'Delivery and payment')&&str_contains($englishDetail,'Add to cart'),'canonical detail localizes its commercial controls from DTO locale');
 
-exit($h->finish('UNIT storefront product rendering 42'));
+exit($h->finish('UNIT storefront product rendering'));

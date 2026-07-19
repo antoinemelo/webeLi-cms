@@ -141,6 +141,7 @@ generated: true
 | `blueprints` | id, blueprint_key, resource_type, site_id, legacy_content_type_id, label, description, is_active, active_version_id, created_at, updated_at |
 | `business_product_content_links` | id, site_id, product_id, content_entry_id, relation_type, locale, is_canonical, status, seo_config_json, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `business_product_public_projections` | id, link_id, site_id, product_id, content_entry_id, relation_type, locale, is_canonical, is_active, product_json, structured_data_json, source_product_updated_at, projected_at |
+| `business_storytellings` | id, site_id, language_code, storytelling_key, title, eyebrow, body_markdown, image_media_id, image_alt, cta_label, cta_url, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
 | `cms_sales_channel_storefronts` | id, channel_id, site_id, domain_id, route_prefix, is_default, status, created_at, updated_at |
 | `cms_shop_configurations` | id, site_id, language_code, channel_id, channel_code, status, currency, route_path, theme_key, menu_key, menu_label, menu_position, cart_visible, show_quantities, last_available_threshold, draft_json, published_json, config_version, published_version, activated_at, published_at, last_rebuild_at, last_error_code, last_error_message, updated_by_iam_user_id, created_at, updated_at |
 | `configuration_revisions` | id, site_id, group_key, value_json, updated_by_iam_user_id, created_at |

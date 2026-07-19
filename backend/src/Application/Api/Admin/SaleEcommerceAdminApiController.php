@@ -59,6 +59,7 @@ final class SaleEcommerceAdminApiController
                 'channel_name' => $channel['name'] ?? null,
                 'channel_code' => $channel['code'] ?? null,
                 'channels' => $channelsBySite[$siteId] ?? [],
+                'menu_locations' => $this->shops->menuLocations($siteId),
                 'studio_route' => '/contents/pages/system-shop?site_id=' . $siteId . '&language_code=' . rawurlencode($locale),
                 'preview_path' => !empty($config['public_visible']) ? $previewPath : null,
                 'expected_preview_path' => $previewPath,
@@ -89,6 +90,7 @@ final class SaleEcommerceAdminApiController
             $this->shops->configuration($siteId, $locale) + [
                 'channels'=>$this->shops->channels($siteId),
                 'themes'=>$this->themes(),
+                'menu_locations'=>$this->shops->menuLocations($siteId),
                 'permissions'=>$this->permissionContract($siteId),
             ],
             'admin.sale.ecommerce.shops.show.v1',

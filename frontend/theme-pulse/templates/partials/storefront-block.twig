@@ -1,17 +1,30 @@
 {% set items = data.items|default([]) %}{% set commerce_en = data.language_code|default('fr')|slice(0,2) == 'en' %}
-{% if block_type in ['featured_product','product_card','product_detail'] %}{% set items = data.product ? [data.product] : [] %}{% endif %}
-{% if block_type == 'collection_grid' %}
-<section class="storefront-grid storefront-grid--collections" data-storefront-block="collection-grid" style="--storefront-columns:{{ data.columns|default(3) }}">
-  {% for item in items %}<article class="storefront-card"><h2><a href="{{ item.url }}">{{ item.name }}</a></h2>{% if item.description %}<p>{{ item.description }}</p>{% endif %}<small>{{ item.product_count }} produit(s)</small></article>{% endfor %}
-</section>
-{% if items is empty and data.empty_state|default('message') == 'message' %}<p class="storefront-empty">{{ data.empty_message|default('Aucune catégorie à afficher.') }}</p>{% endif %}
-{% elseif block_type == 'add_to_cart' %}
-  {% set resolved = data.resolved|default(null) %}{% if resolved %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ resolved.sellable.sellable_id }}" data-quantity="{{ data.quantity|default(1) }}">{{ data.label|default('Ajouter au panier') }}</button>{% elseif data.requires_variant_choice|default(false) and data.product %}<a class="btn btn--primary" href="{{ data.product.url }}">{{ data.label|default('Choisir une variante') }}</a>{% endif %}
-{% else %}
-<section class="storefront-grid storefront-grid--products" data-storefront-block="{{ block_type }}" style="--storefront-columns:{{ data.columns|default(3) }}">
-  {% for item in items %}{% include 'partials/storefront-product-card.twig' with {item:item,display:{price:data.show_price is defined ? data.show_price : true,promotion:data.show_promotion is defined ? data.show_promotion : true,availability:data.show_availability is defined ? data.show_availability : true,cta:data.show_cta is defined ? data.show_cta : true}} only %}{% endfor %}
-  {% for missing in data.selection.missing_product_ids|default([]) %}<article class="storefront-card storefront-card--empty" aria-hidden="true"></article>{% endfor %}
-</section>
-{% if items is empty and data.empty_state|default('message') == 'message' %}<p class="storefront-empty">{{ data.empty_message|default('Aucun produit à afficher.') }}</p>{% endif %}
-{% if data.pagination|default(false) and data.selection.pages|default(0) > 1 %}<nav class="storefront-pagination" aria-label="Pagination">{% if data.selection.page > 1 %}<a href="?{{ data.selection.page_param }}={{ data.selection.page - 1 }}">{{ commerce_en ? 'Previous' : 'Précédent' }}</a>{% endif %}<span>{{ data.selection.page }} / {{ data.selection.pages }}</span>{% if data.selection.page < data.selection.pages %}<a href="?{{ data.selection.page_param }}={{ data.selection.page + 1 }}">{{ commerce_en ? 'Next' : 'Suivant' }}</a>{% endif %}</nav>{% endif %}
+{% set gated = block_type in ['commerce_product','commerce_product_variants','commerce_product_list','storytelling'] %}
+{% if not gated or data.commerce_available|default(false) %}
+  {% if block_type == 'storytelling' %}
+    {% set story = data.storytelling|default(null) %}
+    {% if story %}
+      <section class="storytelling-block" data-storefront-block="storytelling">
+        {% if story.image_url|default('') %}<figure class="storytelling-block__media"><img src="{{ story.image_url }}" alt="{{ story.image_alt|default('') }}" loading="lazy"></figure>{% endif %}
+        <div class="storytelling-block__content">
+          {% if story.eyebrow|default('') %}<p class="eyebrow">{{ story.eyebrow }}</p>{% endif %}
+          <h2>{{ story.title }}</h2>
+          {% if story.body_markdown|default('') %}<div class="prose">{{ story.body_markdown|markdown_to_html|raw }}</div>{% endif %}
+          {% if story.cta_label|default('') and story.cta_url|default('') %}<a class="btn btn--primary" href="{{ story.cta_url }}">{{ story.cta_label }}</a>{% endif %}
+        </div>
+      </section>
+    {% endif %}
+  {% elseif block_type == 'collection_grid' %}
+    <section class="storefront-grid storefront-grid--collections" data-storefront-block="collection-grid" style="--storefront-columns:{{ data.columns|default(3) }}">
+      {% for item in items %}<article class="storefront-card"><h2><a href="{{ item.url }}">{{ item.name }}</a></h2>{% if item.description %}<p>{{ item.description }}</p>{% endif %}<small>{{ item.product_count }} produit(s)</small></article>{% endfor %}
+    </section>
+    {% if items is empty and data.empty_state|default('message') == 'message' %}<p class="storefront-empty">{{ data.empty_message|default('Aucune catégorie à afficher.') }}</p>{% endif %}
+  {% else %}
+    <section class="storefront-grid storefront-grid--products" data-storefront-block="{{ block_type }}" style="--storefront-columns:{{ data.columns|default(block_type == 'commerce_product' ? 1 : 3) }}">
+      {% for item in items %}{% include 'partials/storefront-product-card.twig' with {item:item,display:{price:data.show_price is defined ? data.show_price : true,promotion:data.show_promotion is defined ? data.show_promotion : true,availability:data.show_availability is defined ? data.show_availability : true,cta:data.show_cta is defined ? data.show_cta : true}} only %}{% endfor %}
+      {% for missing in data.selection.missing_product_ids|default([]) %}<article class="storefront-card storefront-card--empty" aria-hidden="true"></article>{% endfor %}
+    </section>
+    {% if items is empty and data.empty_state|default('message') == 'message' %}<p class="storefront-empty">{{ data.empty_message|default('Aucun produit à afficher.') }}</p>{% endif %}
+    {% if data.pagination|default(false) and data.selection.pages|default(0) > 1 %}<nav class="storefront-pagination" aria-label="Pagination">{% if data.selection.page > 1 %}<a href="?{{ data.selection.page_param }}={{ data.selection.page - 1 }}">{{ commerce_en ? 'Previous' : 'Précédent' }}</a>{% endif %}<span>{{ data.selection.page }} / {{ data.selection.pages }}</span>{% if data.selection.page < data.selection.pages %}<a href="?{{ data.selection.page_param }}={{ data.selection.page + 1 }}">{{ commerce_en ? 'Next' : 'Suivant' }}</a>{% endif %}</nav>{% endif %}
+  {% endif %}
 {% endif %}

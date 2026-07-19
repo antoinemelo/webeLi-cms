@@ -14,6 +14,7 @@ import SaleIdentityReviewView from './SaleIdentityReviewView.vue';
 import FormLinkReviewView from './business/FormLinkReviewView.vue';
 import OperationsInventoryView from './business/OperationsInventoryView.vue';
 import BusinessSegmentsPanel from './business/BusinessSegmentsPanel.vue';
+import BusinessStorytellingPanel from './business/BusinessStorytellingPanel.vue';
 import RelationHeader from './business/RelationHeader.vue';
 import RelationInfoCard from './business/RelationInfoCard.vue';
 import RelationLinkedEntities from './business/RelationLinkedEntities.vue';
@@ -25,7 +26,7 @@ import QuickCreateMemoDrawer from './business/QuickCreateMemoDrawer.vue';
 import QuickCreateRelationDrawer from './business/QuickCreateRelationDrawer.vue';
 import SendMessageDrawer from './business/SendMessageDrawer.vue';
 
-type BusinessTab = 'dashboard' | 'relations' | 'segments' | 'messages' | 'products' | 'inventory' | 'offers' | 'settings';
+type BusinessTab = 'dashboard' | 'relations' | 'segments' | 'messages' | 'products' | 'inventory' | 'offers' | 'storytelling' | 'settings';
 type LegacyBusinessTab = 'companies' | 'contacts' | 'memos' | 'mailing' | 'messaging';
 type RelationsPanel = 'main' | 'memos';
 type BusinessModal = '' | 'relation' | 'memo' | 'import' | 'export' | 'message' | 'consent' | 'archive' | 'delete';
@@ -79,7 +80,7 @@ const canReviewProfiles = computed(() => context.can('business.advanced_tools.ma
 const { t } = useI18n();
 const normalizeBusinessTab = (tab?: BusinessTab | LegacyBusinessTab): BusinessTab => {
   if (tab === 'dashboard') return 'dashboard';
-  if (tab === 'segments' || tab === 'messages' || tab === 'products' || tab === 'inventory' || tab === 'offers' || tab === 'settings') return tab;
+  if (tab === 'segments' || tab === 'messages' || tab === 'products' || tab === 'inventory' || tab === 'offers' || tab === 'storytelling' || tab === 'settings') return tab;
   if (tab === 'mailing') return 'messages';
   if (tab === 'messaging') return 'messages';
   return 'relations';
@@ -142,6 +143,7 @@ const navigationItems = computed(() => [
 ]);
 const marketingNavigationItems = computed(() => [
   { key: 'offers', label: t('business.marketing.offers'), route: '/business/offers-marketing', visible: canCatalogRead.value },
+  { key: 'storytelling', label: t('business.marketing.storytelling'), route: '/business/offers-marketing/storytelling', visible: canCatalogRead.value },
   { key: 'segments', label: t('business.marketing.audiences'), route: '/business/offers-marketing/audiences', visible: canSegmentRead.value },
   { key: 'messages', label: t('business.marketing.campaigns'), route: '/business/offers-marketing/campaigns', visible: canMessagesAccess.value }
 ]);
@@ -2024,7 +2026,7 @@ onBeforeUnmount(() => {
 
     <ModuleSecondaryNavigation :label="`${t('common.mainNavigation')} ${t('business.title')}`" :items="navigationItems" />
     <ModuleSecondaryNavigation
-      v-if="['offers', 'segments', 'messages'].includes(activeTab)"
+      v-if="['offers', 'storytelling', 'segments', 'messages'].includes(activeTab)"
       :label="t('business.tabs.offersMarketing')"
       :items="marketingNavigationItems"
       variant="compact"
@@ -2135,6 +2137,8 @@ onBeforeUnmount(() => {
     <section v-if="activeTab === 'segments'">
       <BusinessSegmentsPanel />
     </section>
+
+    <BusinessStorytellingPanel v-if="activeTab === 'storytelling'" />
 
 
     <Teleport to="body">

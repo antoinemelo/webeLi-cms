@@ -107,6 +107,7 @@ try {
     $cartPage = (new PublicStorefrontCartController())->show();
     $h->assertSame(200, $cartPage->status(), 'native storefront cart page renders');
     $h->assertTrue(str_contains($cartPage->body(), 'data-cart-page'), 'storefront cart page exposes the accessible cart root');
+    $h->assertTrue(str_contains($cartPage->body(),'data-storefront-api-base="'.public_api_url_path('sale/channels/web-main').'"'),'standalone cart page exposes the installation-aware public Sale API base');
     $accountPage = (new PublicCustomerAccountController())->show();
     $h->assertSame(200, $accountPage->status(), 'customer account SSR renders');
     $h->assertTrue(str_contains($accountPage->body(), 'data-customer-account'), 'customer account SSR exposes the secure client root');

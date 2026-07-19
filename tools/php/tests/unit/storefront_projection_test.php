@@ -144,13 +144,13 @@ try {
 
     $contentLinks=new ProductContentLinkService($core,new ProductContentSourceRepository($business),new SqlCmsContentSource($core));
     $hydrated=$contentLinks->hydrateStorefrontBlocks([
-        ['type'=>'product_card','data'=>['product_id'=>$product['product_id'],'show_price'=>true]],
-        ['type'=>'add_to_cart','data'=>['sellable_id'=>$product['default_sellable_id'],'quantity'=>1]],
-        ['type'=>'product_grid','data'=>['product_ids'=>[$product['product_id']],'limit'=>4]],
+        ['type'=>'commerce_product','data'=>['product_id'=>$product['product_id'],'show_price'=>true]],
+        ['type'=>'commerce_product','data'=>['product_id'=>$product['product_id'],'sellable_id'=>$product['default_sellable_id']]],
+        ['type'=>'commerce_product_list','data'=>['product_ids'=>[$product['product_id']],'limit'=>4]],
     ],1,'fr');
-    $h->assertSame($product['product_id'],$hydrated[0]['data']['product']['product_id'],'CMS product card hydrates from core only');
-    $h->assertSame($product['default_sellable_id'],$hydrated[1]['data']['resolved']['sellable']['sellable_id'],'add-to-cart block resolves a sellable reference');
-    $h->assertSame(1,count($hydrated[2]['data']['items']),'product grid stores references and receives runtime DTOs');
+    $h->assertSame($product['product_id'],$hydrated[0]['data']['items'][0]['product_id'],'single product block hydrates from core only');
+    $h->assertSame($product['default_sellable_id'],$hydrated[1]['data']['items'][0]['selected_sellable_id'],'single product block resolves an explicit variant');
+    $h->assertSame(1,count($hydrated[2]['data']['items']),'product list stores references and receives runtime DTOs');
 
     $selectionModes=[
         ['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]],
@@ -163,33 +163,31 @@ try {
     $attribute=(array)($product['attributes'][0]??[]); if($attribute!==[]&&($attribute['values']??[])!==[])$selectionModes[]=['selection_mode'=>'attribute','attribute_code'=>(string)($attribute['code']??''),'attribute_values'=>[(string)($attribute['values'][0]['key']??'')]];
     $selectionModes[]=['selection_mode'=>'promotion','promotion_rule'=>'percent'];
     if(count($publicFixtureProducts)===2)$selectionModes[]=['selection_mode'=>'relation','source_product_id'=>(int)$publicFixtureProducts[0]['id'],'relation_type'=>'related'];
-    $selectionBlocks=array_map(static fn(array$data):array=>['type'=>'product_grid','data'=>$data+['limit'=>20,'manual_product_ids'=>[$product['product_id']]]],$selectionModes);
+    $selectionBlocks=array_map(static fn(array$data):array=>['type'=>'commerce_product_list','data'=>$data+['limit'=>20,'manual_product_ids'=>[$product['product_id']]]],$selectionModes);
     $selected=$contentLinks->hydrateStorefrontBlocks($selectionBlocks,1,'fr');
     foreach($selectionModes as$index=>$configuration){
         $h->assertSame($configuration['selection_mode'],$selected[$index]['data']['selection']['mode'],'commerce block hydrates the '.$configuration['selection_mode'].' selection mode');
         $h->assertSame($product['product_id'],$selected[$index]['data']['items'][0]['product_id']??null,'ordered manual override remains first for '.$configuration['selection_mode']);
     }
     $core->run('UPDATE storefront_product_projections SET is_indexable=0 WHERE site_id=1 AND channel_id=3 AND locale=\'fr\' AND product_id=?',[(int)$product['product_id']]);
-    $missing=$contentLinks->hydrateStorefrontBlocks([['type'=>'product_grid','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],1,'fr');
+    $missing=$contentLinks->hydrateStorefrontBlocks([['type'=>'commerce_product_list','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],1,'fr');
     $h->assertSame([$product['product_id']],$missing[0]['data']['selection']['missing_product_ids'],'removed explicit product becomes an explained missing reference');
     $h->assertSame([],$missing[0]['data']['items'],'removed explicit product never leaks its old DTO');
     $core->run('UPDATE storefront_product_projections SET is_indexable=1 WHERE site_id=1 AND channel_id=3 AND locale=\'fr\' AND product_id=?',[(int)$product['product_id']]);
-    $ambiguousProduct=null;foreach($page['items']as$item){$orderable=array_values(array_filter((array)($item['sellables']??[]),static fn(array$s):bool=>!empty($s['orderable'])));if(count($orderable)>1){$ambiguousProduct=$item;break;}}
-    if(is_array($ambiguousProduct)){
-        $ambiguous=$contentLinks->hydrateStorefrontBlocks([['type'=>'add_to_cart','data'=>['product_id'=>$ambiguousProduct['product_id']]]],1,'fr');
-        $h->assertTrue(!empty($ambiguous[0]['data']['requires_variant_choice']),'add-to-cart redirects when several variants require a visitor choice');
-        $h->assertSame(null,$ambiguous[0]['data']['resolved'],'add-to-cart never picks an arbitrary variant');
-    }
-    foreach(['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart']as$blockType)$h->assertTrue(NativeFieldBlueprintRegistry::blockBlueprint($blockType)!==null,$blockType.' is available as a native Studio Blueprint');
-    $normalizer=new BlockDocumentNormalizer();$normalizedCommerce=$normalizer->normalize([['id'=>'commerce-test','type'=>'product_grid','editorial_status'=>'published','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']],'items'=>[$product],'selection'=>['count'=>1],'resolved'=>['forbidden'=>'runtime']]]]);
-    $h->assertSame('product_grid',$normalizedCommerce[0]['type'],'editorial normalizer preserves the historical Commerce block identifier');
+    $variantBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'commerce_product_variants','data'=>['product_id'=>$product['product_id'],'limit'=>20]]],1,'fr');
+    $h->assertSame(count($product['sellables']),count($variantBlock[0]['data']['items']),'variant block exposes every public variant of one product');
+    foreach(['commerce_product','commerce_product_variants','commerce_product_list','storytelling']as$blockType)$h->assertTrue(NativeFieldBlueprintRegistry::blockBlueprint($blockType)!==null,$blockType.' is available as a native Studio Blueprint');
+    foreach(['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart']as$blockType)$h->assertSame(null,NativeFieldBlueprintRegistry::blockBlueprint($blockType),$blockType.' is retired from the native Studio library');
+    $normalizer=new BlockDocumentNormalizer();$normalizedCommerce=$normalizer->normalize([['id'=>'commerce-test','type'=>'commerce_product_list','editorial_status'=>'published','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']],'items'=>[$product],'selection'=>['count'=>1],'resolved'=>['forbidden'=>'runtime']]]]);
+    $h->assertSame('commerce_product_list',$normalizedCommerce[0]['type'],'editorial normalizer preserves the new Commerce block identifier');
     $h->assertSame([$product['product_id']],$normalizedCommerce[0]['data']['product_ids'],'editorial normalizer persists stable product references');
     $h->assertTrue(!isset($normalizedCommerce[0]['data']['items'],$normalizedCommerce[0]['data']['selection'],$normalizedCommerce[0]['data']['resolved']),'editorial normalizer strips every runtime projection DTO before revision storage');
     $h->assertSame([],$normalizer->validateForPublication($normalizedCommerce),'a valid Commerce block passes the CMS publication contract');
-    $englishBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'product_grid','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],1,'en');
-    $h->assertSame('en',$englishBlock[0]['data']['items'][0]['locale']??null,'Commerce blocks isolate hydration by requested language');
-    $foreignSiteBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'product_grid','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],2,'fr');
-    $h->assertTrue(!isset($foreignSiteBlock[0]['data']['items']),'Commerce blocks never reuse a projection from another site');
+    $englishBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'commerce_product_list','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],1,'en');
+    $h->assertSame(false,$englishBlock[0]['data']['commerce_available'],'Commerce blocks are disabled when Shop is inactive for the requested language');
+    $h->assertSame([],$englishBlock[0]['data']['items'],'an inactive language never falls back to another Storefront projection');
+    $foreignSiteBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'commerce_product_list','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],2,'fr');
+    $h->assertSame(false,$foreignSiteBlock[0]['data']['commerce_available'],'Commerce blocks never reuse a projection from another site');
     foreach(['default','aurora','pulse']as$theme){$template=(string)file_get_contents(__DIR__.'/../../../../frontend/theme-'.$theme.'/templates/partials/storefront-block.twig');$h->assertTrue(str_contains($template,'data-storefront-block'),$theme.' theme renders the shared Commerce block contract');}
 
     $variant=(int)$product['default_sellable_id'];

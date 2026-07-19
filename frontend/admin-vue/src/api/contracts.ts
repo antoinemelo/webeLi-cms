@@ -143,7 +143,7 @@ export type TaxonomyPolicy = Record<string, unknown> & {
   taxonomies?: TaxonomyPolicyItem[];
 };
 
-export type EditorialBlock = { id: string; type: 'markdown'|'richtext'|'html_safe'|'html_raw'|'iframe'|'embed'|'image'|'video'|'audio'|'hero'|'gallery'|'buttons'|'card'|'columns'|'form'|'plan'|'articles'|'featured_product'|'product_card'|'product_grid'|'collection_grid'|'product_detail'|'add_to_cart'; enabled: boolean; editorial_status?: 'draft'|'review'|'ready'|'published'|'archived'; label?: string; css_class?: string; anchor?: string; data: Record<string, unknown>; sort_order?: number };
+export type EditorialBlock = { id: string; type: 'markdown'|'richtext'|'html_safe'|'html_raw'|'iframe'|'embed'|'image'|'video'|'audio'|'hero'|'gallery'|'buttons'|'card'|'columns'|'form'|'plan'|'articles'|'commerce_product'|'commerce_product_variants'|'commerce_product_list'|'storytelling'; enabled: boolean; editorial_status?: 'draft'|'review'|'ready'|'published'|'archived'; label?: string; css_class?: string; anchor?: string; data: Record<string, unknown>; sort_order?: number };
 
 export type SaveDraftPayload = { taxonomy_terms?: Record<string, number[]> };
 

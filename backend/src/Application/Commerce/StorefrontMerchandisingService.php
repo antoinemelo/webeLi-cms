@@ -61,6 +61,7 @@ final class StorefrontMerchandisingService
             } elseif ($key==='search') {
                 $explanation=$locale==='en'?'Search, contextual facets and public catalogue sorting.':'Recherche, facettes contextuelles et tris du catalogue public.';
             }
+            $items=$this->publicItems($items,$locale);
             $empty=(string)($configuration['empty_state']??'hide');
             if (!in_array($empty,['hide','message'],true)) $empty='hide';
             $result[]=[
@@ -68,7 +69,7 @@ final class StorefrontMerchandisingService
                 'limit'=>$limit,'display'=>(string)($configuration['display']??'grid'),'rule'=>(string)($configuration['rule']??'automatic'),
                 'items'=>array_values($items),'count'=>count($items),'empty_state'=>$empty,
                 'empty_message'=>(string)($configuration['empty_message']??($locale==='en'?'Nothing to show yet.':'Aucun élément à afficher pour le moment.')),
-                'view_all_label'=>(string)($configuration['view_all_label']??''),'view_all_url'=>$this->viewAllUrl($key),
+                'view_all_label'=>(string)($configuration['view_all_label']??''),'view_all_url'=>localized_path($this->viewAllUrl($key),$locale),
                 'explanation'=>$explanation,'fallback_used'=>$fallback,
             ];
         }
@@ -214,6 +215,27 @@ final class StorefrontMerchandisingService
 
     private function viewAllUrl(string $key): string
     { return match($key){'promotions'=>'/shop?sort=promo_percent','new'=>'/shop?sort=newest',default=>'/shop'}; }
+
+    /** @param list<array<string,mixed>> $items @return list<array<string,mixed>> */
+    private function publicItems(array $items,string $locale): array
+    {
+        return array_values(array_map(fn(array $item):array=>$this->publicItem($item,$locale),$items));
+    }
+
+    /** @param array<string,mixed> $item @return array<string,mixed> */
+    private function publicItem(array $item,string $locale): array
+    {
+        if (is_string($item['url']??null) && str_starts_with($item['url'],'/shop')) {
+            $item['url']=localized_path($item['url'],$locale);
+        }
+        foreach ((array)($item['relations']??[]) as $relationIndex=>$relation) {
+            if (!is_array($relation)) continue;
+            foreach ((array)($relation['items']??[]) as $relatedIndex=>$related) {
+                if (is_array($related)) $item['relations'][$relationIndex]['items'][$relatedIndex]=$this->publicItem($related,$locale);
+            }
+        }
+        return $item;
+    }
 
     /** @return array<string,mixed> */
     private function sectionDefaults(string $key,string $locale): array

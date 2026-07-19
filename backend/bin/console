@@ -7,7 +7,7 @@ require_once __DIR__ . '/../bootstrap/runtime.php';
 $config = require __DIR__ . '/../bootstrap/config.php';
 $cmd = $argv[1] ?? 'help';
 
-$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | inventory:reconcile [--site=1] [--repair --reason=<texte>] [--only=1,2] [--correction=id:quantite] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:reservations [site_id] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
+$commandList = 'Commands: route:list | migrate | modules:sync | rebuild | projections:rebuild | storefront:rebuild | search:reindex | seo:audit | static:export [--dry-run] [--site=<handle>] [--lang=<code>|--all-languages] [--route=<path>] [--output=<path>] | inventory:reconcile [--site=1] [--repair --reason=<texte>] [--only=1,2] [--correction=id:quantite] [--output=<path>] | content:publish-scheduled | payments:reconcile [site_id] | payments:retry [site_id] [limit] | worker:reservations [site_id] | worker:outbox [limit] | worker:ai [limit] | webhooks:dispatch [limit] | queue:stats | log:tail | test:smoke | system:smoke';
 if (in_array($cmd, ['help', '--help', '-h'], true)) {
     echo $commandList . "\n";
     exit(0);
@@ -88,6 +88,21 @@ switch ($cmd) {
         App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
         $services->projections()->rebuildAll();
         echo "Projections rebuilt\n";
+        break;
+
+    case 'storefront:rebuild':
+        App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
+        $rebuilt = [];
+        foreach ($coreDb->all("SELECT site_id,language_code FROM cms_shop_configurations WHERE status='active' AND published_json IS NOT NULL ORDER BY site_id,language_code") as $shop) {
+            $result = $services->shopConfigurations()->activate((int) $shop['site_id'], (string) $shop['language_code'], 0, true);
+            $rebuilt[] = [
+                'site_id' => (int) $shop['site_id'],
+                'locale' => (string) $shop['language_code'],
+                'products' => (int) ($result['rebuild']['products'] ?? 0),
+                'collections' => (int) ($result['rebuild']['collections'] ?? 0),
+            ];
+        }
+        echo json_encode(['status'=>'ok','shops'=>$rebuilt], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
         break;
 
     case 'seo:audit':

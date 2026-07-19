@@ -6,6 +6,7 @@ namespace App\Application\Commerce;
 
 use App\Application\Business\StorefrontProjectionService;
 use App\Core\Database;
+use App\Core\RuntimeCachePurger;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use InvalidArgumentException;
 use RuntimeException;
@@ -66,6 +67,42 @@ final class ShopConfigurationService
         ));
     }
 
+    /** @return list<array{key:string,name:string,location:string}> */
+    public function menuLocations(int $siteId): array
+    {
+        $rows = $this->core->all(
+            "SELECT menu_key,name,menu_location FROM menus WHERE site_id=? AND is_active=1
+             ORDER BY CASE
+                WHEN menu_location IN ('header','main','primary') THEN 0
+                WHEN menu_location='footer_top' THEN 1
+                WHEN menu_location='footer_bottom' THEN 2
+                WHEN menu_location='footer' THEN 3
+                ELSE 4 END,menu_key",
+            [$siteId]
+        );
+        $locations = [];
+        foreach ($rows as $row) {
+            $rawLocation = strtolower(trim((string) ($row['menu_location'] ?? '')));
+            $rawKey = strtolower(trim((string) ($row['menu_key'] ?? '')));
+            $location = match (true) {
+                in_array($rawLocation, ['header','main','primary'], true) => 'primary',
+                in_array($rawLocation, ['footer_top','footer_bottom','footer'], true) => $rawLocation,
+                in_array($rawKey, ['main','primary','footer_top','footer_bottom','footer'], true) => $rawKey === 'main' ? 'primary' : $rawKey,
+                default => '',
+            };
+            if ($location === '' || isset($locations[$location])) continue;
+            $locations[$location] = [
+                'key' => $location,
+                'name' => trim((string) ($row['name'] ?? '')) ?: $location,
+                'location' => $rawLocation !== '' ? $rawLocation : $location,
+            ];
+        }
+        if ($locations === []) {
+            $locations['primary'] = ['key'=>'primary','name'=>'Navigation principale','location'=>'header'];
+        }
+        return array_values($locations);
+    }
+
     /** @param array<string,mixed> $input @return array<string,mixed> */
     public function saveDraft(int $siteId, string $locale, array $input, int $actorId): array
     {
@@ -101,6 +138,10 @@ final class ShopConfigurationService
         $themeKey = $this->key($input['theme_key'] ?? $existing['theme_key'] ?? 'default');
         $this->requireTheme($themeKey);
         $menuKey = $this->key($input['menu_key'] ?? $existing['menu_key'] ?? 'main');
+        $availableMenuKeys = array_column($this->menuLocations($siteId), 'key');
+        if (!in_array($menuKey, array_values(array_unique(array_merge($availableMenuKeys, ['main','footer']))), true)) {
+            throw new InvalidArgumentException('shop.menu_invalid');
+        }
         $menuLabel = $this->text($input['menu_label'] ?? $existing['menu_label'] ?? $title, 80);
         $json = $this->json($draft);
 
@@ -125,6 +166,7 @@ final class ShopConfigurationService
                 $json,$actorId > 0 ? $actorId : null,
             ]
         );
+        RuntimeCachePurger::purgeTwigCache();
         return $this->configuration($siteId, $locale);
     }
 
@@ -137,6 +179,26 @@ final class ShopConfigurationService
              published_at=CURRENT_TIMESTAMP,updated_by_iam_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
             [$actorId > 0 ? $actorId : null, (int) $row['id']]
         );
+        if ((string) $row['status'] === 'active') {
+            $channelId = (int) ($row['channel_id'] ?? 0);
+            $this->requireChannel($siteId, $channelId, true);
+            try {
+                $this->projections->rebuild($siteId, $channelId, $locale);
+                $this->core->run(
+                    'UPDATE cms_shop_configurations SET last_rebuild_at=CURRENT_TIMESTAMP,last_error_code=NULL,last_error_message=NULL WHERE id=?',
+                    [(int) $row['id']]
+                );
+            } catch (Throwable $e) {
+                $this->core->run(
+                    "UPDATE cms_shop_configurations SET status='error',last_error_code='projection_rebuild_failed',
+                     last_error_message='La reconstruction du catalogue a échoué. Utilisez Réparer.',updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    [(int) $row['id']]
+                );
+                RuntimeCachePurger::purgeTwigCache();
+                throw new RuntimeException('shop.activation_failed', 0, $e);
+            }
+        }
+        RuntimeCachePurger::purgeTwigCache();
         return $this->configuration($siteId, $locale);
     }
 
@@ -144,7 +206,6 @@ final class ShopConfigurationService
     public function activate(int $siteId, string $locale, int $actorId, bool $force = false): array
     {
         $row = $this->requireConfiguration($siteId, $locale);
-        if (!$force && (string) $row['status'] === 'active' && empty($row['last_error_code'])) return $this->contract($row);
         if ($row['published_json'] === null || (int) ($row['published_version'] ?? 0) < 1) {
             throw new InvalidArgumentException('shop.publish_required');
         }
@@ -176,6 +237,7 @@ final class ShopConfigurationService
                  updated_by_iam_user_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
                 [$actorId > 0 ? $actorId : null,(int)$row['id']]
             );
+            RuntimeCachePurger::purgeTwigCache();
             return $this->configuration($siteId, $locale) + ['rebuild' => $result, 'channel' => $channel];
         } catch (Throwable $e) {
             $this->core->run(
@@ -185,6 +247,7 @@ final class ShopConfigurationService
                 [$actorId > 0 ? $actorId : null,(int)$row['id']]
             );
             $this->restoreActiveChannelMapping($siteId, (int) $row['id']);
+            RuntimeCachePurger::purgeTwigCache();
             throw new RuntimeException('shop.activation_failed', 0, $e);
         }
     }
@@ -202,6 +265,7 @@ final class ShopConfigurationService
             );
             $this->restoreActiveChannelMapping($siteId, (int) $row['id']);
         });
+        RuntimeCachePurger::purgeTwigCache();
         return $this->configuration($siteId, $locale);
     }
 

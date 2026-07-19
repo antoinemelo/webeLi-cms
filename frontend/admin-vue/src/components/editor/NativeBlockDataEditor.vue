@@ -288,7 +288,7 @@ function itemBlocks(item: any): EditorialBlock[] { return Array.isArray(item?.bl
 function blockSections(): Array<{ key: string; display: string; fields: NativeFieldDefinition[] }> {
   return (blockBlueprint(props.modelValue.type)?.sections || []) as Array<{ key: string; display: string; fields: NativeFieldDefinition[] }>;
 }
-function isSpecializedCommerceBlock(): boolean { return ['featured_product','product_card','product_grid','product_detail','add_to_cart'].includes(props.modelValue.type); }
+function isSpecializedCommerceBlock(): boolean { return ['commerce_product','commerce_product_variants','commerce_product_list','storytelling'].includes(props.modelValue.type); }
 </script>
 
 <template>

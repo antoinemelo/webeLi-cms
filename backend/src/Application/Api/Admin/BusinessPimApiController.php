@@ -6,6 +6,7 @@ namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorytellingService;
 use App\Application\Business\StorefrontProjectionService;
 use App\Core\ErrorCode;
 use App\Core\Request;
@@ -36,6 +37,7 @@ final class BusinessPimApiController
         private readonly ?CatalogPriceListService $priceLists = null,
         private readonly ?CatalogCommercialRelationService $commercialRelations = null,
         private readonly ?StorefrontProjectionService $storefrontProjections = null,
+        private readonly ?StorytellingService $storytellings = null,
     ) {}
 
     public function rebuildStorefrontProjections(): Response
@@ -61,11 +63,43 @@ final class BusinessPimApiController
     {
         [$site,$languageCode]=$this->authorize('business.catalog.read');
         $payload=$this->payload();$block=is_array($payload['block']??null)?$payload['block']:[];
-        if($block===[]||!in_array((string)($block['type']??''),['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'],true)){
+        if($block===[]||!in_array((string)($block['type']??''),['commerce_product','commerce_product_variants','commerce_product_list','storytelling'],true)){
             return Response::error(ErrorCode::VALIDATION_FAILED,'Bloc Commerce invalide.',422,['field'=>'block.type']);
         }
         $hydrated=$this->contentLinks->hydrateStorefrontBlocks([$block],(int)$site['id'],(string)($payload['locale']??$languageCode),['current_product_id'=>(int)($payload['current_product_id']??0)]);
         return Response::success(['block'=>$hydrated[0]??$block],'admin.business.pim.storefront_block_preview.v1',$this->meta($site,$languageCode));
+    }
+
+    public function storytellings(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.read');
+        try {
+            $result=$this->storytellingService()->list((int)$site['id'],(string)($this->request->query['language_code']??$languageCode));
+            return Response::success($result,'admin.business.storytellings.index.v1',$this->meta($site,$languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
+
+    public function storeStorytelling(): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        try {
+            $payload=$this->payload();
+            return Response::success(['storytelling'=>$this->storytellingService()->create((int)$site['id'],(string)($payload['language_code']??$languageCode),$payload,$this->actorId())],'admin.business.storytellings.show.v1',$this->meta($site,$languageCode),201);
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
+
+    public function updateStorytelling(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        try {
+            return Response::success(['storytelling'=>$this->storytellingService()->update((int)$site['id'],$this->id($id),$this->payload(),$this->actorId())],'admin.business.storytellings.show.v1',$this->meta($site,$languageCode));
+        } catch (InvalidArgumentException $e) { return $this->validation($e); }
+    }
+
+    public function deleteStorytelling(string|int $id): Response
+    {
+        [$site,$languageCode]=$this->authorize('business.catalog.write');
+        return Response::success(['deleted'=>$this->storytellingService()->delete((int)$site['id'],$this->id($id)),'id'=>$this->id($id)],'admin.business.storytellings.delete.v1',$this->meta($site,$languageCode));
     }
 
     public function priceLists(): Response
@@ -716,6 +750,12 @@ final class BusinessPimApiController
             throw new InvalidArgumentException('business.catalog.relation_service_unavailable');
         }
         return $this->commercialRelations;
+    }
+
+    private function storytellingService(): StorytellingService
+    {
+        if ($this->storytellings===null) throw new InvalidArgumentException('business.storytelling_service_unavailable');
+        return $this->storytellings;
     }
 
     /** @return array<string,mixed> */

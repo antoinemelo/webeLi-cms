@@ -49,8 +49,13 @@ try {
     $h->assertTrue(!in_array($second,array_column($percent[0]['items'],'product_id'),true),'an unavailable offer is never presented as a best promotion');
     $new=$service->sections(1,3,'fr',[$configuration('new',['rule'=>'first_published'])],['items'=>[]]);
     $h->assertTrue(count($new[0]['items'])>0,'new products derive from recorded first e-commerce publication history');
+    $h->assertTrue(str_starts_with((string)($new[0]['items'][0]['url']??''),localized_path('/shop/products/','fr')),'new-product links include the installation and locale base path');
     $groups=$service->sections(1,3,'fr',[$configuration('groups')],['items'=>[]]);
     $h->assertTrue(count($groups[0]['items'])>0 && (int)$groups[0]['items'][0]['product_count']>0,'a public group is emitted only with applicable public products');
+    $h->assertTrue(str_starts_with((string)($groups[0]['items'][0]['url']??''),localized_path('/shop','fr').'?group'),'product-group tags include the installation and locale base path');
+    $h->assertSame(localized_path('/shop','fr'),$groups[0]['view_all_url']??null,'group View all link includes the installation and locale base path');
+    $collections=$service->sections(1,3,'fr',[$configuration('collections')],['items'=>[]]);
+    $h->assertTrue(str_starts_with((string)($collections[0]['items'][0]['url']??''),localized_path('/shop/collections/','fr')),'collection links include the installation and locale base path');
 
     $server=['REQUEST_METHOD'=>'GET','REMOTE_ADDR'=>'192.0.2.42','HTTP_USER_AGENT'=>'Mozilla/5.0 Test Browser','HTTP_ACCEPT_LANGUAGE'=>'fr-CH'];
     $h->assertTrue($service->recordProductView(1,'fr',$first,$server),'first valid public product view increments an aggregate');
@@ -62,6 +67,7 @@ try {
     $h->assertSame(false,$service->recordSearch(1,'fr','sans résultat',0,$server),'a zero-result search never feeds popularity');
     $keywords=$service->sections(1,3,'fr',[$configuration('keywords',['window_days'=>30])],['items'=>[]]);
     $h->assertSame('gourde bleue',$keywords[0]['items'][0]['keyword']??null,'popular keywords are normalized and site-language scoped');
+    $h->assertTrue(str_starts_with((string)($keywords[0]['items'][0]['url']??''),localized_path('/shop','fr').'?q='),'popular-keyword links include the installation and locale base path');
     $popular=$service->sections(1,3,'fr',[$configuration('popular',['rule'=>'views','window_days'=>30])],['items'=>[]]);
     $h->assertSame($first,(int)($popular[0]['items'][0]['product_id']??0),'valid product detail views drive the popular selection');
     $h->assertSame(false,(bool)$popular[0]['fallback_used'],'real audience data disables the deterministic fallback');
@@ -80,4 +86,4 @@ try {
     $plan=$core->all("EXPLAIN QUERY PLAN SELECT entity_key,SUM(event_count) FROM storefront_analytics_daily WHERE site_id=1 AND locale='fr' AND event_type='search' AND event_date>='2026-01-01' GROUP BY entity_key");
     $h->assertTrue(str_contains(strtolower(json_encode($plan)?:''),'idx_storefront_analytics_window'),'windowed popularity query uses its composite index');
 } finally { $core=$business=null; test_remove_tree($coreDir); test_remove_tree($businessDir); }
-exit($h->finish('UNIT storefront merchandising and privacy 41'));
+exit($h->finish('UNIT storefront merchandising and privacy'));

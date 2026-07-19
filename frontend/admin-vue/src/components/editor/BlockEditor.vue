@@ -32,11 +32,13 @@ const nativeBlockTypes: Array<[BlockType, string]> = [
   ['markdown', 'Markdown'], ['richtext', 'Texte enrichi'], ['html_safe', 'HTML sûr'], ['html_raw', 'HTML brut'], ['image', 'Image'], ['video', 'Vidéo'], ['audio', 'Audio'],
   ['iframe', 'Iframe'], ['embed', 'Embed'], ['hero', 'Hero'], ['gallery', 'Galerie'], ['buttons', 'Boutons'], ['card', 'Carte'], ['columns', 'Colonnes'], ['form', 'Formulaire'],
   ['plan', 'Plan'], ['articles', 'Articles'],
-  ['featured_product', 'Produit vedette'], ['product_card', 'Carte produit'], ['product_grid', 'Liste de produits'], ['collection_grid', 'Liste de catégories'], ['product_detail', 'Détail produit'], ['add_to_cart', 'Ajout au panier']
+  ['commerce_product', 'Produit ou variante'], ['commerce_product_variants', 'Variantes d’un produit'], ['commerce_product_list', 'Liste de produits'], ['storytelling', 'Storytelling']
 ];
+const commerceBlockTypes = new Set<BlockType>(['commerce_product', 'commerce_product_variants', 'commerce_product_list', 'storytelling']);
+const availableCommerceBlocks = ref(new Set<BlockType>());
 const blockTypes = computed<Array<[BlockType, string]>>(() => {
   const allowed = new Set((props.allowedBlockTypes || []).map(String));
-  return allowed.size > 0 ? nativeBlockTypes.filter(([type]) => allowed.has(type)) : nativeBlockTypes;
+  return nativeBlockTypes.filter(([type]) => (!commerceBlockTypes.has(type) || availableCommerceBlocks.value.has(type)) && (allowed.size === 0 || allowed.has(type)));
 });
 const statuses: Array<[EditorialStatus, string]> = [
   ['draft', 'Brouillon'], ['review', 'Relecture'], ['published', 'Publié'], ['archived', 'Archivé']
@@ -200,11 +202,13 @@ async function loadFormOptions() {
 }
 async function loadBlockBlueprints() {
   try {
-    const res = await adminApi.get<BlockBlueprintIndex>('/block-blueprints');
+    const res = await adminApi.get<BlockBlueprintIndex>('/block-blueprints', { site_id: props.siteId || undefined, language_code: props.languageCode || undefined });
     blockBlueprints.value = Array.isArray(res.data.blueprints) ? res.data.blueprints : [];
+    availableCommerceBlocks.value = new Set(blockBlueprints.value.map((blueprint) => blueprint.key).filter((key): key is BlockType => commerceBlockTypes.has(key as BlockType)));
     fieldsets.value = res.data.fieldsets && typeof res.data.fieldsets === 'object' ? res.data.fieldsets : {};
   } catch {
     blockBlueprints.value = [];
+    availableCommerceBlocks.value = new Set();
     fieldsets.value = {};
   }
 }
@@ -363,6 +367,7 @@ onMounted(() => {
   void loadBlockBlueprints();
   void refreshBlockLocks();
 });
+watch(() => [props.siteId, props.languageCode], () => { void loadBlockBlueprints(); });
 onBeforeUnmount(() => {
   const blockId = activeLockBlockId.value;
   stopLockHeartbeat();

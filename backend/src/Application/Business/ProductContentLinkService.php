@@ -48,13 +48,12 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         if(!$this->db->tableExists('storefront_product_projections'))return[];
         $channelId=0;
         if($this->db->tableExists('cms_shop_configurations'))$channelId=(int)($this->db->one("SELECT channel_id FROM cms_shop_configurations WHERE site_id=? AND language_code=? AND status='active' AND published_json IS NOT NULL LIMIT 1",[$siteId,$locale])['channel_id']??0);
-        if($channelId<1)$channelId=(int)($this->db->one("SELECT channel_id FROM cms_sales_channel_storefronts WHERE site_id=? AND is_default=1 AND status='active' LIMIT 1",[$siteId])['channel_id']??0);
         if($channelId<1)return[];
         $needle=mb_strtolower(trim($query));$result=[];$limit=max(1,min(50,$limit));
         foreach($this->db->all('SELECT dto_json FROM storefront_product_projections WHERE site_id=? AND channel_id=? AND locale=? AND is_indexable=1 ORDER BY slug',[$siteId,$channelId,$locale])as$row){
             $dto=json_decode((string)$row['dto_json'],true)?:[];$sku=(string)($dto['sku']??'');
             if($needle!==''&&!str_contains(mb_strtolower((string)($dto['name']??'').' '.$sku),$needle))continue;
-            $result[]=['product_id'=>(int)($dto['product_id']??0),'name'=>(string)($dto['name']??''),'sku'=>$sku,'image'=>(string)($dto['media'][0]['url']??''),'status'=>'published','status_label'=>$locale==='en'?'Published':'Publié','availability'=>(string)($dto['availability']['label']??''),'availability_status'=>(string)($dto['availability']['display_status']??''),'channel_id'=>$channelId,'locale'=>$locale,'projected'=>true,'admin_url'=>'/admin/app/business/products?product_id='.(int)($dto['product_id']??0)];
+            $result[]=['product_id'=>(int)($dto['product_id']??0),'name'=>(string)($dto['name']??''),'sku'=>$sku,'image'=>(string)($dto['media'][0]['url']??''),'sellables'=>array_values(array_map(static fn(array $sellable):array=>['sellable_id'=>(int)($sellable['sellable_id']??0),'name'=>(string)($sellable['name']??''),'sku'=>(string)($sellable['sku']??''),'orderable'=>!empty($sellable['orderable'])],array_filter((array)($dto['sellables']??[]),'is_array'))),'status'=>'published','status_label'=>$locale==='en'?'Published':'Publié','availability'=>(string)($dto['availability']['label']??''),'availability_status'=>(string)($dto['availability']['display_status']??''),'channel_id'=>$channelId,'locale'=>$locale,'projected'=>true,'admin_url'=>'/admin/app/business/products?product_id='.(int)($dto['product_id']??0)];
             if(count($result)>=$limit)break;
         }
         return$result;
@@ -162,32 +161,22 @@ final class ProductContentLinkService implements ProductContentProjectionPort
      */
     public function hydrateStorefrontBlocks(array $blocks, int $siteId, string $locale, array $context = []): array
     {
-        if (!$this->db->tableExists('storefront_product_projections')) return $blocks;
-        $channelId=(int)($context['channel_id']??0);
-        if ($channelId<1 && $this->db->tableExists('cms_shop_configurations')) {
-            $channelId=(int)($this->db->one("SELECT channel_id FROM cms_shop_configurations WHERE site_id=? AND language_code=? AND status='active' AND published_json IS NOT NULL LIMIT 1",[$siteId,$locale])['channel_id']??0);
-        }
-        if ($channelId<1) $channelId=(int)($this->db->one("SELECT channel_id FROM cms_sales_channel_storefronts WHERE site_id=? AND is_default=1 AND status='active' LIMIT 1",[$siteId])['channel_id']??0);
-        if ($channelId<1) return $blocks;
+        $activeChannelId=0;
+        if ($this->db->tableExists('cms_shop_configurations')) $activeChannelId=(int)($this->db->one("SELECT channel_id FROM cms_shop_configurations WHERE site_id=? AND language_code=? AND status='active' AND published_json IS NOT NULL LIMIT 1",[$siteId,$locale])['channel_id']??0);
+        $channelId=(int)($context['channel_id']??$activeChannelId);
+        if ($activeChannelId<1||$channelId!==$activeChannelId) return $this->unavailableCommerceBlocks($blocks);
 
-        $products=[]; $sellables=[]; $newest=[];
-        $projectionSql=$this->db->tableExists('storefront_product_query_index')
+        $products=[]; $newest=[];
+        $projectionSql=$this->db->tableExists('storefront_product_projections')&&$this->db->tableExists('storefront_product_query_index')
             ? 'SELECT p.dto_json,q.newest_at FROM storefront_product_projections p LEFT JOIN storefront_product_query_index q ON q.site_id=p.site_id AND q.channel_id=p.channel_id AND q.locale=p.locale AND q.product_id=p.product_id WHERE p.site_id=? AND p.channel_id=? AND p.locale=? AND p.is_indexable=1 ORDER BY p.slug'
-            : 'SELECT dto_json,NULL newest_at FROM storefront_product_projections WHERE site_id=? AND channel_id=? AND locale=? AND is_indexable=1 ORDER BY slug';
-        foreach ($this->db->all($projectionSql,[$siteId,$channelId,$locale]) as $row) {
+            : ($this->db->tableExists('storefront_product_projections')?'SELECT dto_json,NULL newest_at FROM storefront_product_projections WHERE site_id=? AND channel_id=? AND locale=? AND is_indexable=1 ORDER BY slug':'');
+        foreach ($projectionSql!==''?$this->db->all($projectionSql,[$siteId,$channelId,$locale]):[] as $row) {
             $dto=json_decode((string)$row['dto_json'],true)?:[]; $productId=(int)($dto['product_id']??0);
             if ($productId<1) continue;
+            $dto=$this->localizeProductUrls($dto,$locale);
             $products[$productId]=$dto;$newest[$productId]=(string)($row['newest_at']??$dto['updated_at']??'');
-            foreach ((array)($dto['sellables']??[]) as $sellable) {
-                if (!is_array($sellable)) continue;
-                $sellables[(int)($sellable['sellable_id']??0)]=['product'=>$dto,'sellable'=>$sellable];
-            }
         }
-        $collections=[];
-        if ($this->db->tableExists('storefront_collection_projections')) foreach ($this->db->all('SELECT dto_json FROM storefront_collection_projections WHERE site_id=? AND channel_id=? AND locale=? ORDER BY slug',[$siteId,$channelId,$locale]) as $row) {
-            $dto=json_decode((string)$row['dto_json'],true)?:[]; $collections[(int)($dto['collection_id']??0)]=$dto;
-        }
-        $runtime=['site_id'=>$siteId,'channel_id'=>$channelId,'locale'=>$locale,'products'=>$products,'sellables'=>$sellables,'collections'=>$collections,'newest'=>$newest,'context'=>$context];
+        $runtime=['site_id'=>$siteId,'channel_id'=>$channelId,'locale'=>$locale,'products'=>$products,'newest'=>$newest,'context'=>$context];
         foreach ($blocks as $index=>$block) if (is_array($block)) $blocks[$index]=$this->hydrateStorefrontBlock($block,$runtime);
         return $blocks;
     }
@@ -197,31 +186,68 @@ final class ProductContentLinkService implements ProductContentProjectionPort
     {
         $type=(string)($block['type']??$block['block_type']??''); $data=is_array($block['data']??null)?$block['data']:[];
         $products=(array)$runtime['products'];
-        if (in_array($type,['featured_product','product_card','product_detail'],true)) {
-            $productId=(int)($data['product_id']??((array)($data['product_ids']??[]))[0]??0);
-            $data['product']=$products[$productId]??null;
-            $data['selection']=['mode'=>'explicit','count'=>$data['product']===null?0:1,'missing_product_ids'=>$productId>0&&!isset($products[$productId])?[$productId]:[]];
-        } elseif ($type==='product_grid') {
+        if ($type==='commerce_product') {
+            $productId=(int)($data['product_id']??0); $product=$products[$productId]??null; $sellableId=(int)($data['sellable_id']??0);
+            if(is_array($product)&&$sellableId>0)$product=$this->productForSellable($product,$sellableId);
+            $data['items']=$product===null?[]:[$product];
+            $data['selection']=['mode'=>'explicit','count'=>count($data['items']),'total'=>count($data['items']),'missing_product_ids'=>$productId>0&&$product===null?[$productId]:[]];
+        } elseif ($type==='commerce_product_variants') {
+            $productId=(int)($data['product_id']??0);$product=$products[$productId]??null;$all=[];
+            if(is_array($product))foreach((array)($product['sellables']??[])as$sellable)if(is_array($sellable))$all[]=$this->productForSellable($product,(int)($sellable['sellable_id']??0));
+            $all=array_values(array_filter($all));$pageParam=(string)($data['page_param']??('commerce_variants_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')))));
+            $page=!empty($data['pagination'])?max(1,(int)($runtime['context']['query'][$pageParam]??1)):1;$limit=max(1,min(100,(int)($data['limit']??12)));$total=count($all);
+            $data['items']=array_slice($all,($page-1)*$limit,$limit);$data['page_param']=$pageParam;
+            $data['selection']=['mode'=>'variants','count'=>count($data['items']),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$total===0?0:(int)ceil($total/$limit),'page_param'=>$pageParam,'missing_product_ids'=>$productId>0&&$product===null?[$productId]:[]];
+        } elseif ($type==='commerce_product_list') {
             $pageParam=(string)($data['page_param']??('commerce_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')))));
             if(!empty($data['pagination'])&&isset($runtime['context']['query'][$pageParam]))$data['page']=max(1,(int)$runtime['context']['query'][$pageParam]);
             $data['page_param']=$pageParam;
             [$items,$selection]=$this->selectStorefrontProducts($data,$runtime);
             $data['items']=$items; $data['selection']=$selection;
-        } elseif ($type==='collection_grid') {
-            $ids=$this->integerList($data['collection_ids']??[]); $collections=(array)$runtime['collections'];
-            $items=$ids===[]?array_values($collections):array_values(array_filter(array_map(static fn(int $id):?array=>$collections[$id]??null,$ids)));
-            $limit=max(1,min(100,(int)($data['limit']??12))); $data['items']=array_slice($items,0,$limit);
-            $data['selection']=['mode'=>'explicit','count'=>count($data['items']),'total'=>count($items),'missing_collection_ids'=>array_values(array_filter($ids,static fn(int $id):bool=>!isset($collections[$id])))];
-        } elseif ($type==='add_to_cart') {
-            $data=$this->resolveAddToCart($data,$runtime);
+        } elseif ($type==='storytelling') {
+            $storyId=(int)($data['storytelling_id']??0);$story=null;
+            if($storyId>0&&$this->db->tableExists('business_storytellings'))$story=$this->db->one("SELECT s.*,m.public_path,m.path AS media_path FROM business_storytellings s LEFT JOIN media_assets m ON m.id=s.image_media_id AND m.site_id=s.site_id WHERE s.id=? AND s.site_id=? AND s.language_code=? AND s.status='published' LIMIT 1",[$storyId,(int)$runtime['site_id'],(string)$runtime['locale']]);
+            if($story!==null){$path=(string)($story['public_path']??$story['media_path']??'');$story['image_url']=$path!==''?url_path('/storage/media/'.ltrim($path,'/')):'';$cta=(string)($story['cta_url']??'');if(str_starts_with($cta,'/'))$story['cta_url']=localized_path($cta,(string)$runtime['locale']);}
+            $data['storytelling']=$story;
         }
         // Commerce blocks remain supported inside native Columns blocks.
         if (is_array($data['columns']??null)) foreach ($data['columns'] as $columnIndex=>$column) {
             if (!is_array($column)||!is_array($column['blocks']??null)) continue;
             $data['columns'][$columnIndex]['blocks']=$this->hydrateStorefrontBlocks((array)$column['blocks'],(int)$runtime['site_id'],(string)$runtime['locale'],(array)$runtime['context']+['channel_id'=>(int)$runtime['channel_id']]);
         }
-        if(in_array($type,['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'],true))$data['language_code']=(string)$runtime['locale'];
+        if(in_array($type,['commerce_product','commerce_product_variants','commerce_product_list','storytelling'],true)){$data['language_code']=(string)$runtime['locale'];$data['commerce_available']=true;}
         $block['data']=$data; return $block;
+    }
+
+    /** @param list<array<string,mixed>> $blocks @return list<array<string,mixed>> */
+    private function unavailableCommerceBlocks(array $blocks): array
+    {
+        foreach($blocks as$index=>$block){if(!is_array($block))continue;$type=(string)($block['type']??'');$data=is_array($block['data']??null)?$block['data']:[];
+            if(in_array($type,['commerce_product','commerce_product_variants','commerce_product_list','storytelling'],true)){$data['commerce_available']=false;$data['items']=[];$data['storytelling']=null;$block['data']=$data;}
+            if($type==='columns'&&is_array($data['columns']??null))foreach($data['columns']as$columnIndex=>$column)if(is_array($column)&&is_array($column['blocks']??null))$block['data']['columns'][$columnIndex]['blocks']=$this->unavailableCommerceBlocks($column['blocks']);
+            $blocks[$index]=$block;
+        }return$blocks;
+    }
+
+    /** @param array<string,mixed> $product @return array<string,mixed>|null */
+    private function productForSellable(array $product,int $sellableId): ?array
+    {
+        foreach((array)($product['sellables']??[])as$sellable){if(!is_array($sellable)||(int)($sellable['sellable_id']??0)!==$sellableId)continue;
+            $copy=$product;$copy['selected_sellable_id']=$sellableId;$copy['name']=(string)$product['name'].((string)($sellable['name']??'')!==''?' — '.(string)$sellable['name']:'');
+            $copy['sku']=$sellable['sku']??$copy['sku']??null;$copy['price']=$sellable['price']??$copy['price']??null;$copy['availability']=$sellable['availability']??$copy['availability']??null;
+            if(!empty($sellable['media']))$copy['media']=$sellable['media'];
+            $label=str_starts_with((string)($product['locale']??'fr'),'en')?'Add to cart':'Ajouter au panier';
+            $copy['cta']=!empty($sellable['orderable'])?['sellable_id'=>$sellableId,'label'=>$label]:null;
+            return$copy;
+        }return null;
+    }
+
+    /** @param array<string,mixed> $product @return array<string,mixed> */
+    private function localizeProductUrls(array $product,string $locale): array
+    {
+        foreach(['url','canonical_url']as$key)if(isset($product[$key])&&is_string($product[$key]))$product[$key]=localized_path($product[$key],$locale);
+        foreach(['category','collection','brand']as$key)if(is_array($product[$key]??null)&&isset($product[$key]['url'])&&is_string($product[$key]['url']))$product[$key]['url']=localized_path($product[$key]['url'],$locale);
+        return$product;
     }
 
     /** @param array<string,mixed> $data @param array<string,mixed> $runtime @return array{0:list<array<string,mixed>>,1:array<string,mixed>} */
@@ -268,20 +294,6 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         $total=count($items); $limit=max(1,min(100,(int)($data['limit']??12))); $page=max(1,(int)($data['page']??1)); $offset=!empty($data['pagination'])?($page-1)*$limit:0;
         $items=array_slice($items,$offset,$limit);
         return [$items,['mode'=>$mode,'count'=>count($items),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$total===0?0:(int)ceil($total/$limit),'page_param'=>(string)($data['page_param']??'commerce_page'),'missing_product_ids'=>$missing,'site_id'=>(int)$runtime['site_id'],'channel_id'=>(int)$runtime['channel_id'],'locale'=>(string)$runtime['locale']]];
-    }
-
-    /** @param array<string,mixed> $data @param array<string,mixed> $runtime @return array<string,mixed> */
-    private function resolveAddToCart(array $data,array $runtime): array
-    {
-        $sellables=(array)$runtime['sellables']; $products=(array)$runtime['products']; $sellableId=(int)($data['sellable_id']??0); $productId=(int)($data['product_id']??0);
-        $resolved=$sellableId>0?($sellables[$sellableId]??null):null; $product=$resolved['product']??($products[$productId]??null);
-        if ($resolved!==null && empty($resolved['sellable']['orderable'])) $resolved=null;
-        $orderable=[]; if(is_array($product))foreach((array)($product['sellables']??[])as$sellable)if(is_array($sellable)&&!empty($sellable['orderable']))$orderable[]=$sellable;
-        if($resolved===null&&$sellableId<1&&count($orderable)===1)$resolved=['product'=>$product,'sellable'=>$orderable[0]];
-        $data['resolved']=$resolved; $data['product']=$product;
-        $data['requires_variant_choice']=$resolved===null&&is_array($product)&&count($orderable)>1;
-        $data['selection']=['mode'=>'sellable','count'=>$resolved===null?0:1,'missing_product_ids'=>$productId>0&&!isset($products[$productId])?[$productId]:[],'missing_sellable_ids'=>$sellableId>0&&!isset($sellables[$sellableId])?[$sellableId]:[]];
-        return $data;
     }
 
     /** @return list<int> */
