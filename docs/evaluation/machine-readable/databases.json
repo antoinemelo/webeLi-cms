@@ -752,6 +752,24 @@
   {
     "confidence": "high",
     "evidence": [
+      "database/migrations/core/086_storefront_block_labels_and_actions.sql"
+    ],
+    "id": "database-source-database-migrations-core-086-storefront-block-labels-and-actions-sql-bcc25d5dcf",
+    "kind": "migration",
+    "last_verified": "2026-07-19",
+    "limitations": [
+      "This describes the schema source, not the contents of a deployed database."
+    ],
+    "source": [
+      "database/migrations/core/086_storefront_block_labels_and_actions.sql"
+    ],
+    "status": "supported",
+    "tables": [],
+    "views": []
+  },
+  {
+    "confidence": "high",
+    "evidence": [
       "database/migrations/forms/0001_baseline.sql"
     ],
     "id": "database-source-database-migrations-forms-0001-baseline-sql-5d5340a785",

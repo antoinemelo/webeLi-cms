@@ -85,7 +85,7 @@
     const expiry = line.reservation?.expires_at
       ? ` · ${lang === 'en' ? 'reserved until' : 'réservé jusqu’à'} ${new Date(`${line.reservation.expires_at}Z`).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })}` : '';
     const mediaValue = line.media_url || line.image_url || line.thumbnail_url;
-    const media = mediaValue && String(mediaValue).startsWith('/') ? `${prefix}${mediaValue}` : mediaValue;
+    const media = mediaValue && String(mediaValue).startsWith('/') && prefix && mediaValue !== prefix && !String(mediaValue).startsWith(`${prefix}/`) ? `${prefix}${mediaValue}` : mediaValue;
     return `<article class="cart-line" data-line-id="${Number(line.id)}">
       ${media ? `<img class="cart-line__media" src="${escapeHtml(media)}" alt="${escapeHtml(line.media_alt || '')}">` : ''}
       <div class="cart-line__content"><strong>${escapeHtml(line.product_name)}</strong>${variant ? `<small>${variant}</small>` : ''}

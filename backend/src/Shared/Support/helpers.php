@@ -47,6 +47,21 @@ function asset_path(string $path): string
     return url_path($path);
 }
 
+function public_asset_url_path(string $url): string
+{
+    $url = trim($url);
+    if ($url === '' || !str_starts_with($url, '/') || str_starts_with($url, '//')) {
+        return $url;
+    }
+
+    $base = app_base_path();
+    if ($base !== '' && ($url === $base || str_starts_with($url, $base . '/'))) {
+        return $url;
+    }
+
+    return url_path($url);
+}
+
 function current_site_base_path(): string
 {
     $basePath = (string) ($_SERVER['CMS_SITE_BASE_PATH'] ?? '');
@@ -61,7 +76,20 @@ function public_api_url_path(string $path = ''): string
 {
     $path = trim($path);
     $apiPath = '/api/v1' . ($path !== '' ? '/' . ltrim($path, '/') : '');
-    return url_path(current_site_base_path() . $apiPath);
+    $appBase = app_base_path();
+    $siteBase = current_site_base_path();
+
+    if ($siteBase === '') {
+        $prefix = $appBase;
+    } elseif ($appBase === '' || $siteBase === $appBase || str_starts_with($siteBase, $appBase . '/')) {
+        $prefix = $siteBase;
+    } elseif (str_starts_with($appBase, $siteBase . '/')) {
+        $prefix = $appBase;
+    } else {
+        $prefix = $appBase . $siteBase;
+    }
+
+    return $prefix . $apiPath;
 }
 
 function admin_url_path(string $path = '/admin/app'): string

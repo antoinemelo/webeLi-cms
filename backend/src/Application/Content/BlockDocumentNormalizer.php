@@ -413,6 +413,7 @@ final class BlockDocumentNormalizer
             'columns'=>max(1,min(6,(int)($data['columns']??($multiple?3:1)))),'show_price'=>!array_key_exists('show_price',$data)||$this->bool($data['show_price']),
             'show_promotion'=>!array_key_exists('show_promotion',$data)||$this->bool($data['show_promotion']),'show_availability'=>!array_key_exists('show_availability',$data)||$this->bool($data['show_availability']),
             'show_cta'=>!array_key_exists('show_cta',$data)||$this->bool($data['show_cta']),'pagination'=>$multiple&&$this->bool($data['pagination']??false),
+            'view_label'=>mb_substr(trim((string)($data['view_label']??'')),0,80),'cart_label'=>mb_substr(trim((string)($data['cart_label']??'')),0,80),
             'page_param'=>$this->safeOptionalKey((string)($data['page_param']??'')),'empty_state'=>$this->choice($data['empty_state']??'',['hide','message'],'message'),'empty_message'=>trim((string)($data['empty_message']??'Aucun produit à afficher.')),
         ];
     }

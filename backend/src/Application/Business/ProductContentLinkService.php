@@ -53,7 +53,7 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         foreach($this->db->all('SELECT dto_json FROM storefront_product_projections WHERE site_id=? AND channel_id=? AND locale=? AND is_indexable=1 ORDER BY slug',[$siteId,$channelId,$locale])as$row){
             $dto=json_decode((string)$row['dto_json'],true)?:[];$sku=(string)($dto['sku']??'');
             if($needle!==''&&!str_contains(mb_strtolower((string)($dto['name']??'').' '.$sku),$needle))continue;
-            $result[]=['product_id'=>(int)($dto['product_id']??0),'name'=>(string)($dto['name']??''),'sku'=>$sku,'image'=>(string)($dto['media'][0]['url']??''),'sellables'=>array_values(array_map(static fn(array $sellable):array=>['sellable_id'=>(int)($sellable['sellable_id']??0),'name'=>(string)($sellable['name']??''),'sku'=>(string)($sellable['sku']??''),'orderable'=>!empty($sellable['orderable'])],array_filter((array)($dto['sellables']??[]),'is_array'))),'status'=>'published','status_label'=>$locale==='en'?'Published':'Publié','availability'=>(string)($dto['availability']['label']??''),'availability_status'=>(string)($dto['availability']['display_status']??''),'channel_id'=>$channelId,'locale'=>$locale,'projected'=>true,'admin_url'=>'/admin/app/business/products?product_id='.(int)($dto['product_id']??0)];
+            $result[]=['product_id'=>(int)($dto['product_id']??0),'name'=>(string)($dto['name']??''),'sku'=>$sku,'image'=>public_asset_url_path((string)($dto['media'][0]['url']??'')),'sellables'=>array_values(array_map(static fn(array $sellable):array=>['sellable_id'=>(int)($sellable['sellable_id']??0),'name'=>(string)($sellable['name']??''),'sku'=>(string)($sellable['sku']??''),'orderable'=>!empty($sellable['orderable'])],array_filter((array)($dto['sellables']??[]),'is_array'))),'status'=>'published','status_label'=>$locale==='en'?'Published':'Publié','availability'=>(string)($dto['availability']['label']??''),'availability_status'=>(string)($dto['availability']['display_status']??''),'channel_id'=>$channelId,'locale'=>$locale,'projected'=>true,'admin_url'=>url_path('/admin/app/business/products?product_id='.(int)($dto['product_id']??0))];
             if(count($result)>=$limit)break;
         }
         return$result;
@@ -194,12 +194,15 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         } elseif ($type==='commerce_product_variants') {
             $productId=(int)($data['product_id']??0);$product=$products[$productId]??null;$all=[];
             if(is_array($product))foreach((array)($product['sellables']??[])as$sellable)if(is_array($sellable))$all[]=$this->productForSellable($product,(int)($sellable['sellable_id']??0));
-            $all=array_values(array_filter($all));$pageParam=(string)($data['page_param']??('commerce_variants_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')))));
-            $page=!empty($data['pagination'])?max(1,(int)($runtime['context']['query'][$pageParam]??1)):1;$limit=max(1,min(100,(int)($data['limit']??12)));$total=count($all);
+            $all=array_values(array_filter($all));$pageParam=trim((string)($data['page_param']??''));
+            if($pageParam==='')$pageParam='commerce_variants_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')));
+            $page=!empty($data['pagination'])?max(1,(int)($runtime['context']['query'][$pageParam]??1)):1;$limit=max(1,min(100,(int)($data['limit']??12)));$total=count($all);$pages=$total===0?0:(int)ceil($total/$limit);
+            if($pages>0)$page=min($page,$pages);
             $data['items']=array_slice($all,($page-1)*$limit,$limit);$data['page_param']=$pageParam;
-            $data['selection']=['mode'=>'variants','count'=>count($data['items']),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$total===0?0:(int)ceil($total/$limit),'page_param'=>$pageParam,'missing_product_ids'=>$productId>0&&$product===null?[$productId]:[]];
+            $data['selection']=['mode'=>'variants','count'=>count($data['items']),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$pages,'page_param'=>$pageParam,'missing_product_ids'=>$productId>0&&$product===null?[$productId]:[]];
         } elseif ($type==='commerce_product_list') {
-            $pageParam=(string)($data['page_param']??('commerce_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')))));
+            $pageParam=trim((string)($data['page_param']??''));
+            if($pageParam==='')$pageParam='commerce_'.preg_replace('/[^a-z0-9_]/','_',strtolower((string)($block['id']??'page')));
             if(!empty($data['pagination'])&&isset($runtime['context']['query'][$pageParam]))$data['page']=max(1,(int)$runtime['context']['query'][$pageParam]);
             $data['page_param']=$pageParam;
             [$items,$selection]=$this->selectStorefrontProducts($data,$runtime);
@@ -214,6 +217,10 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         if (is_array($data['columns']??null)) foreach ($data['columns'] as $columnIndex=>$column) {
             if (!is_array($column)||!is_array($column['blocks']??null)) continue;
             $data['columns'][$columnIndex]['blocks']=$this->hydrateStorefrontBlocks((array)$column['blocks'],(int)$runtime['site_id'],(string)$runtime['locale'],(array)$runtime['context']+['channel_id'=>(int)$runtime['channel_id']]);
+        }
+        if(in_array($type,['commerce_product_variants','commerce_product_list'],true)&&!empty($data['pagination'])){
+            $anchor=$this->commerceBlockAnchor($block);$data['block_anchor']=$anchor;
+            $data['selection']=array_replace((array)($data['selection']??[]),$this->paginationLinks((array)($data['selection']??[]),(array)($runtime['context']['query']??[]),(string)($data['page_param']??''),$anchor));
         }
         if(in_array($type,['commerce_product','commerce_product_variants','commerce_product_list','storytelling'],true)){$data['language_code']=(string)$runtime['locale'];$data['commerce_available']=true;}
         $block['data']=$data; return $block;
@@ -247,6 +254,9 @@ final class ProductContentLinkService implements ProductContentProjectionPort
     {
         foreach(['url','canonical_url']as$key)if(isset($product[$key])&&is_string($product[$key]))$product[$key]=localized_path($product[$key],$locale);
         foreach(['category','collection','brand']as$key)if(is_array($product[$key]??null)&&isset($product[$key]['url'])&&is_string($product[$key]['url']))$product[$key]['url']=localized_path($product[$key]['url'],$locale);
+        foreach(['image_url','media_url','thumbnail_url']as$key)if(is_string($product[$key]??null))$product[$key]=public_asset_url_path($product[$key]);
+        foreach(['media','images']as$collection)foreach((array)($product[$collection]??[])as$index=>$media){if(!is_array($media))continue;foreach(['url','src','image_url','thumbnail_url']as$key)if(is_string($media[$key]??null))$product[$collection][$index][$key]=public_asset_url_path($media[$key]);}
+        foreach((array)($product['sellables']??[])as$index=>$sellable)if(is_array($sellable))$product['sellables'][$index]=$this->localizeProductUrls($sellable,$locale);
         return$product;
     }
 
@@ -291,9 +301,34 @@ final class ProductContentLinkService implements ProductContentProjectionPort
         if ($mode==='popular') $items=$this->popularProductsFirst($items,(int)$runtime['site_id'],(string)$runtime['locale'],max(1,min(365,(int)($data['window_days']??30))),(array)($runtime['newest']??[]));
         elseif ($sort!=='manual' && !($mode==='explicit'&&$manual===[])) $this->sortProducts($items,$sort,(array)($runtime['newest']??[]));
         if($manual!==[])$items=$this->manualProductsFirst($items,$manual,$products);
-        $total=count($items); $limit=max(1,min(100,(int)($data['limit']??12))); $page=max(1,(int)($data['page']??1)); $offset=!empty($data['pagination'])?($page-1)*$limit:0;
+        $total=count($items); $limit=max(1,min(100,(int)($data['limit']??12))); $page=max(1,(int)($data['page']??1));$pages=$total===0?0:(int)ceil($total/$limit);if($pages>0)$page=min($page,$pages);$offset=!empty($data['pagination'])?($page-1)*$limit:0;
         $items=array_slice($items,$offset,$limit);
-        return [$items,['mode'=>$mode,'count'=>count($items),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$total===0?0:(int)ceil($total/$limit),'page_param'=>(string)($data['page_param']??'commerce_page'),'missing_product_ids'=>$missing,'site_id'=>(int)$runtime['site_id'],'channel_id'=>(int)$runtime['channel_id'],'locale'=>(string)$runtime['locale']]];
+        return [$items,['mode'=>$mode,'count'=>count($items),'total'=>$total,'limit'=>$limit,'page'=>$page,'pages'=>$pages,'page_param'=>(string)($data['page_param']??'commerce_page'),'missing_product_ids'=>$missing,'site_id'=>(int)$runtime['site_id'],'channel_id'=>(int)$runtime['channel_id'],'locale'=>(string)$runtime['locale']]];
+    }
+
+    /** @param array<string,mixed> $block */
+    private function commerceBlockAnchor(array $block): string
+    {
+        $candidate=trim((string)($block['anchor']??''));
+        if($candidate==='')$candidate='commerce-'.(string)($block['id']??'products');
+        $candidate=trim((string)preg_replace('/[^a-zA-Z0-9_-]+/','-',$candidate),'-');
+        return $candidate!==''?$candidate:'commerce-products';
+    }
+
+    /** @param array<string,mixed> $selection @param array<string,mixed> $query @return array<string,mixed> */
+    private function paginationLinks(array $selection,array $query,string $pageParam,string $anchor): array
+    {
+        $page=max(1,(int)($selection['page']??1));$pages=max(0,(int)($selection['pages']??0));$links=[];
+        for($number=1;$number<=$pages;$number++)$links[]=['page'=>$number,'current'=>$number===$page,'url'=>$this->paginationUrl($query,$pageParam,$number,$anchor)];
+        return ['links'=>$links,'previous_url'=>$page>1?$this->paginationUrl($query,$pageParam,$page-1,$anchor):null,'next_url'=>$page<$pages?$this->paginationUrl($query,$pageParam,$page+1,$anchor):null];
+    }
+
+    /** @param array<string,mixed> $query */
+    private function paginationUrl(array $query,string $pageParam,int $page,string $anchor): string
+    {
+        if($page<=1)unset($query[$pageParam]);else$query[$pageParam]=$page;
+        $encoded=http_build_query($query,'','&',PHP_QUERY_RFC3986);
+        return ($encoded!==''?'?'.$encoded:'').'#'.rawurlencode($anchor);
     }
 
     /** @return list<int> */

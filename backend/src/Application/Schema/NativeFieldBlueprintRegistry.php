@@ -333,7 +333,7 @@ final class NativeFieldBlueprintRegistry
     /** @param array<string,mixed> $overrides @return array<string,mixed> */
     private static function commerceSingleBlock(): array
     {
-        return self::makeBlockBlueprint('commerce_product','Produit ou variante',[[
+        return self::makeBlockBlueprint('commerce_product','Variante produit',[[
             'key'=>'selection','display'=>'Produit vendu','fields'=>[
                 self::field('product_id','integer','Produit',['required'=>true,'instructions'=>'Produit public de la boutique active.']),
                 self::field('sellable_id','integer','Variante précise',['instructions'=>'Optionnel : laissez vide pour présenter le produit avec sa variante par défaut.']),
@@ -343,7 +343,7 @@ final class NativeFieldBlueprintRegistry
 
     private static function commerceVariantsBlock(): array
     {
-        return self::makeBlockBlueprint('commerce_product_variants','Variantes d’un produit',[[
+        return self::makeBlockBlueprint('commerce_product_variants','Variantes produit',[[
             'key'=>'selection','display'=>'Produit','fields'=>[
                 self::field('product_id','integer','Produit',['required'=>true,'instructions'=>'Toutes les variantes publiques de ce produit seront proposées.']),
                 self::field('limit','integer','Variantes par page',['default'=>12,'width'=>50,'validate'=>['min'=>1,'max'=>100]]),
@@ -354,7 +354,7 @@ final class NativeFieldBlueprintRegistry
     }
 
     private static function commerceProductListBlock(): array
-    { return self::commerceProductBlock('commerce_product_list','Liste de produits',true); }
+    { return self::commerceProductBlock('commerce_product_list','Produits',true); }
 
     /** @return array<string,mixed> */
     private static function commerceDisplayFields(bool $withGrid=true): array
@@ -368,6 +368,8 @@ final class NativeFieldBlueprintRegistry
         return ['key'=>'display','display'=>'Affichage','fields'=>array_merge($fields,[
             self::field('show_price','toggle','Prix',['default'=>true]),self::field('show_promotion','toggle','Promotion',['default'=>true]),
             self::field('show_availability','toggle','Disponibilité',['default'=>true]),self::field('show_cta','toggle','Actions produit',['default'=>true]),
+            self::field('view_label','text','Libellé du bouton Voir',['default'=>'','localizable'=>true,'instructions'=>'Optionnel. Le libellé standard est utilisé si ce champ est vide.']),
+            self::field('cart_label','text','Libellé du bouton Ajouter au panier',['default'=>'','localizable'=>true,'instructions'=>'Optionnel. Le libellé standard est utilisé si ce champ est vide.']),
             self::field('empty_state','select','État vide',['default'=>'message','config'=>['options'=>self::options(['hide'=>'Masquer le bloc','message'=>'Afficher un message'])]]),
             self::field('empty_message','text','Message vide',['default'=>'Aucun produit à afficher.','localizable'=>true]),
         ])];
@@ -375,7 +377,7 @@ final class NativeFieldBlueprintRegistry
 
     /** @return array<string,mixed> */
     private static function commerceDisplayDefaults(): array
-    { return ['show_price'=>true,'show_promotion'=>true,'show_availability'=>true,'show_cta'=>true,'empty_state'=>'message','empty_message'=>'Aucun produit à afficher.']; }
+    { return ['show_price'=>true,'show_promotion'=>true,'show_availability'=>true,'show_cta'=>true,'view_label'=>'','cart_label'=>'','empty_state'=>'message','empty_message'=>'Aucun produit à afficher.']; }
 
     /** @param array<string,mixed> $overrides @return array<string,mixed> */
     private static function commerceProductBlock(string $key, string $title, bool $multiple, array $overrides = []): array
@@ -387,7 +389,7 @@ final class NativeFieldBlueprintRegistry
             'selection_mode' => 'explicit', 'product_id' => null, 'product_ids' => [], 'brand' => '', 'category' => '', 'group' => '',
             'attribute_code' => '', 'attribute_values' => [], 'promotion_rule' => 'percent', 'relation_type' => 'related', 'source_product_id' => null,
             'manual_product_ids' => [], 'window_days' => 30, 'limit' => $multiple ? 12 : 1, 'sort' => 'name', 'columns' => $multiple ? 3 : 1,
-            'show_price' => true, 'show_promotion' => true, 'show_availability' => true, 'show_cta' => true,
+            'show_price' => true, 'show_promotion' => true, 'show_availability' => true, 'show_cta' => true, 'view_label' => '', 'cart_label' => '',
             'pagination' => false, 'empty_state' => 'message', 'empty_message' => 'Aucun produit à afficher.',
         ], $overrides);
         return self::makeBlockBlueprint($key, $title, [[

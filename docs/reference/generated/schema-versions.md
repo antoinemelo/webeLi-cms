@@ -52,6 +52,7 @@ generated: true
 | `database/migrations/core/083_studio_commerce_blocks.sql` | `083_studio_commerce_blocks` |
 | `database/migrations/core/084_remove_demo_home_product_link.sql` | `084_remove_demo_home_product_link` |
 | `database/migrations/core/085_storytelling_and_studio_commerce_blocks.sql` | `085_storytelling_and_studio_commerce_blocks` |
+| `database/migrations/core/086_storefront_block_labels_and_actions.sql` | `086_storefront_block_labels_and_actions` |
 | `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |

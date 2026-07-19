@@ -220,7 +220,9 @@ return [
     // reste pratique et peut être forcé avec APP_AUTO_MAINTENANCE=1.
     'auto_maintenance' => $boolEnv('APP_AUTO_MAINTENANCE', !$isProduction),
     'public_module_routes' => $boolEnv('APP_PUBLIC_MODULE_ROUTES', !$isProduction),
-    'public_api_module_routes' => $boolEnv('APP_PUBLIC_API_MODULE_ROUTES', !$isProduction),
+    // Les routes Sale publiques sont nécessaires au panier du Storefront natif.
+    // Le canal, le site et la langue restent contrôlés par les handlers publics.
+    'public_api_module_routes' => $boolEnv('APP_PUBLIC_API_MODULE_ROUTES', true),
     'admin_module_routes' => $boolEnv('APP_ADMIN_MODULE_ROUTES', true),
     'start_session_for_public' => $boolEnv('APP_START_SESSION_FOR_PUBLIC', false),
 ];

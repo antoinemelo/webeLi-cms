@@ -302,8 +302,9 @@ Vente prepare aussi une API e-commerce publique minimale sous
 routes API publiques de modules sont activees cote configuration et que le canal
 vise est explicitement `channel_type=ecommerce`, `status=active` et
 `is_public=1`. Le seed de développement/test rend `web-main` actif et public.
-En production, `APP_PUBLIC_API_MODULE_ROUTES` reste désactivé par défaut et doit
-être activé explicitement pour charger ces routes.
+`APP_PUBLIC_API_MODULE_ROUTES` est activé par défaut car le Storefront natif
+utilise ces routes pour son panier. Les contrôleurs refusent néanmoins tout
+canal qui n'est pas de type `ecommerce`, actif et public dans le contexte visé.
 
 Les endpoints declares sont :
 

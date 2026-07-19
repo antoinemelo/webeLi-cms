@@ -38,6 +38,9 @@ foreach (['default','aurora','pulse'] as $theme) {
     $grid=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product_list','data'=>['commerce_available'=>true,'items'=>[$product],'columns'=>2,'show_price'=>false,'show_promotion'=>false,'show_availability'=>false,'show_cta'=>false,'selection'=>['missing_product_ids'=>[999],'pages'=>1]]]);
     $h->assertTrue(str_contains($grid,'data-product-id="42"')&&str_contains($grid,'--storefront-columns:2'),$theme.' renders projected Commerce blocks with their configured layout');
     $h->assertTrue(!str_contains($grid,'99.00')&&!str_contains($grid,'data-storefront-add-to-cart')&&!str_contains($grid,'Disponible'),$theme.' respects card visibility options');
+    $pagedGrid=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product_list','data'=>['commerce_available'=>true,'items'=>[$product],'columns'=>2,'view_label'=>'Découvrir','cart_label'=>'Commander','pagination'=>true,'block_anchor'=>'commerce-products-home','selection'=>['missing_product_ids'=>[],'page'=>1,'pages'=>2,'links'=>[['page'=>1,'current'=>true,'url'=>'#commerce-products-home'],['page'=>2,'current'=>false,'url'=>'?commerce_products_home=2#commerce-products-home']],'previous_url'=>null,'next_url'=>'?commerce_products_home=2#commerce-products-home']]]);
+    $h->assertTrue(str_contains($pagedGrid,'id="commerce-products-home"')&&str_contains($pagedGrid,'href="?commerce_products_home=2#commerce-products-home"')&&str_contains($pagedGrid,'aria-current="page"'),$theme.' renders active numbered pagination links anchored to the product block');
+    $h->assertTrue(str_contains($pagedGrid,'>Découvrir</a>')&&str_contains($pagedGrid,'>Commander</button>'),$theme.' renders custom compact product action labels');
     $inactive=$renderer->render('partials/storefront-block',['block_type'=>'commerce_product','data'=>['commerce_available'=>false,'items'=>[$product]]]);
     $h->assertSame('',trim($inactive),$theme.' does not render a Commerce block when Shop is inactive for the context');
     $story=$renderer->render('partials/storefront-block',['block_type'=>'storytelling','data'=>['commerce_available'=>true,'storytelling'=>['title'=>'Notre histoire','eyebrow'=>'Découvrir','body_markdown'=>'Un **récit** utile.','cta_label'=>'Voir','cta_url'=>'/shop']]]);
@@ -57,6 +60,21 @@ $h->assertTrue(!str_contains($cartCss,'.storefront-cart-toggle{position:fixed')&
 $cartJs=(string)file_get_contents(dirname(__DIR__,4).'/frontend/theme-default/assets/js/storefront-cart.js');
 $h->assertTrue(str_contains($cartJs,'dataset.storefrontApiBase')&&str_contains($cartJs,'const endpoint = (path) => `${apiBase.replace'),'cart requests use the server-provided API base instead of relying on script-path detection');
 
+$hadEnv=array_key_exists('APP_BASE_PATH',$_ENV);$oldEnv=$_ENV['APP_BASE_PATH']??null;
+$hadServer=array_key_exists('APP_BASE_PATH',$_SERVER);$oldServer=$_SERVER['APP_BASE_PATH']??null;
+$hadSiteBase=array_key_exists('CMS_SITE_BASE_PATH',$_SERVER);$oldSiteBase=$_SERVER['CMS_SITE_BASE_PATH']??null;
+$oldProcess=getenv('APP_BASE_PATH');
+$_ENV['APP_BASE_PATH']='/mod';$_SERVER['APP_BASE_PATH']='/mod';$_SERVER['CMS_SITE_BASE_PATH']='/mod';putenv('APP_BASE_PATH=/mod');
+$h->assertSame('/mod/api/v1/sale/channels/web-main',public_api_url_path('sale/channels/web-main'),'public Sale API URLs never duplicate an installation directory already exposed as the site base');
+$h->assertSame('/mod/storage/media/product.jpg',public_asset_url_path('/storage/media/product.jpg'),'public product media includes the installation directory');
+$h->assertSame('/mod/storage/media/product.jpg',public_asset_url_path('/mod/storage/media/product.jpg'),'already localized public media is not prefixed twice');
+$_SERVER['CMS_SITE_BASE_PATH']='/site-a';
+$h->assertSame('/mod/site-a/api/v1/sale/channels/web-main',public_api_url_path('sale/channels/web-main'),'public Sale API URLs combine distinct installation and multisite paths');
+if($hadEnv)$_ENV['APP_BASE_PATH']=$oldEnv;else unset($_ENV['APP_BASE_PATH']);
+if($hadServer)$_SERVER['APP_BASE_PATH']=$oldServer;else unset($_SERVER['APP_BASE_PATH']);
+if($hadSiteBase)$_SERVER['CMS_SITE_BASE_PATH']=$oldSiteBase;else unset($_SERVER['CMS_SITE_BASE_PATH']);
+$oldProcess===false?putenv('APP_BASE_PATH'):putenv('APP_BASE_PATH='.$oldProcess);
+
 $routeReflection=new ReflectionClass(ResolvePublicRoute::class);
 $routeWithoutDependencies=$routeReflection->newInstanceWithoutConstructor();
 $placeShop=$routeReflection->getMethod('placeShopMenuItem');
@@ -72,8 +90,9 @@ $h->assertSame(localized_path('/shop','fr'),$fallbackPlaced['footer_bottom'][1][
 
 $localizeItem=$routeReflection->getMethod('localizeStorefrontItem');
 $localizeItem->setAccessible(true);
-$localizedItem=$localizeItem->invoke($routeWithoutDependencies,['url'=>'/shop/products/demo','relations'=>[['items'=>[['url'=>'/shop/products/related']]]]],'fr');
+$localizedItem=$localizeItem->invoke($routeWithoutDependencies,['url'=>'/shop/products/demo','media'=>[['url'=>'/storage/media/demo.jpg']],'sellables'=>[['media'=>[['url'=>'/storage/media/variant.jpg']]]],'relations'=>[['items'=>[['url'=>'/shop/products/related']]]]],'fr');
 $h->assertTrue(($localizedItem['url']??null)===localized_path('/shop/products/demo','fr')&&($localizedItem['relations'][0]['items'][0]['url']??null)===localized_path('/shop/products/related','fr'),'product and related-product links include the installation and locale base path');
+$h->assertTrue(($localizedItem['media'][0]['url']??null)===public_asset_url_path('/storage/media/demo.jpg')&&($localizedItem['sellables'][0]['media'][0]['url']??null)===public_asset_url_path('/storage/media/variant.jpg'),'product and variant media are localized at the public rendering boundary');
 $decorateCatalog=$routeReflection->getMethod('decorateCatalogPage');
 $decorateCatalog->setAccessible(true);
 $decorated=$decorateCatalog->invoke($routeWithoutDependencies,['selection'=>[],'facets'=>[],'pagination'=>[],'items'=>[['url'=>'/shop/products/demo']]],'/shop','fr');

@@ -20,11 +20,11 @@ APP_ENV=production
 APP_DEBUG=0
 APP_AUTO_MAINTENANCE=0
 APP_PUBLIC_MODULE_ROUTES=0
-APP_PUBLIC_API_MODULE_ROUTES=0
+APP_PUBLIC_API_MODULE_ROUTES=1
 APP_ADMIN_MODULE_ROUTES=1
 ```
 
-4. Configurer `APP_BASE_PATH` et `APP_PUBLIC_BASE_URL`.
+4. Configurer `APP_BASE_PATH` et `APP_PUBLIC_BASE_URL`. Les routes API publiques des modules doivent rester actives pour le panier de la boutique native ; chaque canal public demeure contrôlé par son site, sa langue et son état d’activation.
 5. Installer les dépendances Composer/Twig et Vue/node_modules aux emplacements déclarés si nécessaire.
 6. Pointer idéalement le document root sur `backend/public` ou conserver le `index.php` racine qui relaie vers `backend/public/index.php`.
 7. Donner les droits d’écriture :

@@ -57,7 +57,7 @@ Un canal definit le contexte de vente :
 - `pos` : vente en caisse ;
 - `ecommerce` : API publique optionnelle, inactive tant qu'un canal n'est pas actif et public.
 
-Les canaux portent la devise, le mode de taxe et l'etat public. Le seed de développement installe `admin-manual`, `pos-main` et un canal `web-main` actif/public afin de permettre les tests e-commerce. En production, les routes API publiques des modules restent désactivées tant que `APP_PUBLIC_API_MODULE_ROUTES=1` n'est pas configuré explicitement.
+Les canaux portent la devise, le mode de taxe et l'etat public. Le seed de développement installe `admin-manual`, `pos-main` et un canal `web-main` actif/public afin de permettre les tests e-commerce. Les routes API publiques des modules sont actives par défaut car le panier Storefront les utilise ; seuls les canaux e-commerce actifs et publics du site et de la langue demandés répondent.
 
 ## À traiter
 

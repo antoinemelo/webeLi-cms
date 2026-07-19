@@ -39,6 +39,8 @@ use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\SiteRepository;
 
 $h = new TestHarness();
+$appConfig=require __DIR__.'/../../../../backend/config/app.php';
+$h->assertSame(true,$appConfig['public_api_module_routes']??false,'native Storefront deployments load the public Sale routes required by cart and checkout');
 [$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/business.sql');
 [$saleDir, $salePath, $saleDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/sale.sql');
 $coreDir = sys_get_temp_dir() . '/amcms-sale-public-core-' . bin2hex(random_bytes(6));

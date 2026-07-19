@@ -91,7 +91,7 @@ Le schema installe trois canaux :
 - `web-main`, actif et public pour les scénarios de développement/test.
 
 Un canal ne peut etre public que s'il est de type `ecommerce`.
-L'exposition en production reste en plus contrôlée par `APP_PUBLIC_API_MODULE_ROUTES`, désactivé par défaut dans cet environnement.
+L'exposition reste contrôlée par `APP_PUBLIC_API_MODULE_ROUTES`, activé par défaut pour permettre au panier Storefront natif de fonctionner. Le canal doit en plus être de type `ecommerce`, actif et public dans le contexte du site et de la langue.
 
 ## Migrations
 

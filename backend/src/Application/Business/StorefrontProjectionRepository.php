@@ -85,12 +85,33 @@ final class StorefrontProjectionRepository
     private function decode(array $row): array
     {
         $dto=json_decode((string)$row['dto_json'],true)?:[];
+        $dto=$this->localizeMediaUrls($dto);
         if (($dto['contract']??null)==='storefront.product.v3') {
             $generatedAt=(string)($dto['projection']['generated_at']??'');
             $timestamp=$generatedAt!==''?strtotime($generatedAt):false;
             $dto['projection']['state']=$timestamp===false||$timestamp<time()-86400?'delayed':'current';
         }
         return $dto;
+    }
+
+    /** @param array<string,mixed> $item @return array<string,mixed> */
+    private function localizeMediaUrls(array $item): array
+    {
+        foreach (['image_url','media_url','thumbnail_url'] as $key) {
+            if (is_string($item[$key]??null)) $item[$key]=public_asset_url_path($item[$key]);
+        }
+        foreach (['media','images'] as $collection) {
+            foreach ((array)($item[$collection]??[]) as $index=>$media) {
+                if (!is_array($media)) continue;
+                foreach (['url','src','image_url','thumbnail_url'] as $key) {
+                    if (is_string($media[$key]??null)) $item[$collection][$index][$key]=public_asset_url_path($media[$key]);
+                }
+            }
+        }
+        foreach ((array)($item['sellables']??[]) as $index=>$sellable) {
+            if (is_array($sellable)) $item['sellables'][$index]=$this->localizeMediaUrls($sellable);
+        }
+        return $item;
     }
 
     /** @return array<string,mixed> */

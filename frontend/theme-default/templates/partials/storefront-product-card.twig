@@ -1,4 +1,4 @@
-{% set media=item.media|default([]) %}{% set price=item.price|default(null) %}{% set availability=item.availability|default(null) %}{% set en=item.locale|default('fr')|slice(0,2) == 'en' %}{% set display=display|default({price:true,promotion:true,availability:true,cta:true}) %}
+{% set media=item.media|default([]) %}{% set price=item.price|default(null) %}{% set availability=item.availability|default(null) %}{% set en=item.locale|default('fr')|slice(0,2) == 'en' %}{% set display=display|default({price:true,promotion:true,availability:true,cta:true}) %}{% set view_label=display.view_label|default('')|trim %}{% set cart_label=display.cart_label|default('')|trim %}
 <article class="storefront-card" data-product-id="{{ item.product_id }}">
   <a class="storefront-card__media" href="{{ item.url_with_return|default(item.url) }}" aria-label="{{ en ? 'View' : 'Voir' }} {{ item.name }}">
     {% if media %}<img src="{{ media[0].url }}" alt="{{ media[0].alt|default(item.name) }}" width="800" height="600" loading="lazy">
@@ -10,8 +10,8 @@
   {% if availability and display.availability %}<p class="storefront-availability storefront-availability--{{ availability.tone|default('neutral') }}" data-availability="{{ availability.display_status|default(availability.status) }}"><span aria-hidden="true">{% if availability.display_status == 'available' %}●{% elseif availability.display_status == 'last_available' %}◐{% elseif availability.display_status == 'on_order' %}◷{% else %}○{% endif %}</span> {{ availability.label|default(availability.status) }}</p>{% endif %}
   {% if item.projection.state|default('current') == 'delayed' %}<p class="storefront-projection-warning" role="status">{{ en ? 'Information is being updated.' : 'Informations en cours d’actualisation.' }}</p>{% endif %}
   {% if display.cta %}<div class="storefront-card__actions">
-    <a class="btn btn--ghost" href="{{ item.url_with_return|default(item.url) }}">{{ en ? 'View' : 'Voir' }}</a>
-    {% if item.cta|default(null) %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ item.cta.sellable_id }}" data-quantity="1">{{ item.cta.label|default('Ajouter au panier') }}</button>{% endif %}
+    <a class="btn btn--ghost" href="{{ item.url_with_return|default(item.url) }}">{{ view_label ?: (en ? 'View' : 'Voir') }}</a>
+    {% if item.cta|default(null) %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ item.cta.sellable_id }}" data-quantity="1">{{ cart_label ?: item.cta.label|default(en ? 'Add to cart' : 'Ajouter au panier') }}</button>{% endif %}
   </div>{% endif %}
   <details class="storefront-card__preview" data-product-preview>
     <summary>{{ en ? 'Enriched preview' : 'Aperçu enrichi' }}</summary>

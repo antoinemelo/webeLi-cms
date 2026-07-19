@@ -470,6 +470,7 @@
   width: 100%;
   min-height: 320px;
   border: 0;
+  overflow: hidden;
   background: #fff;
 }
 .visual-preview-loading {

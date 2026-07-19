@@ -32,7 +32,7 @@ const nativeBlockTypes: Array<[BlockType, string]> = [
   ['markdown', 'Markdown'], ['richtext', 'Texte enrichi'], ['html_safe', 'HTML sûr'], ['html_raw', 'HTML brut'], ['image', 'Image'], ['video', 'Vidéo'], ['audio', 'Audio'],
   ['iframe', 'Iframe'], ['embed', 'Embed'], ['hero', 'Hero'], ['gallery', 'Galerie'], ['buttons', 'Boutons'], ['card', 'Carte'], ['columns', 'Colonnes'], ['form', 'Formulaire'],
   ['plan', 'Plan'], ['articles', 'Articles'],
-  ['commerce_product', 'Produit ou variante'], ['commerce_product_variants', 'Variantes d’un produit'], ['commerce_product_list', 'Liste de produits'], ['storytelling', 'Storytelling']
+  ['commerce_product', 'Variante produit'], ['commerce_product_variants', 'Variantes produit'], ['commerce_product_list', 'Produits'], ['storytelling', 'Storytelling']
 ];
 const commerceBlockTypes = new Set<BlockType>(['commerce_product', 'commerce_product_variants', 'commerce_product_list', 'storytelling']);
 const availableCommerceBlocks = ref(new Set<BlockType>());

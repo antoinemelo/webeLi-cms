@@ -151,6 +151,13 @@ try {
     $h->assertSame($product['product_id'],$hydrated[0]['data']['items'][0]['product_id'],'single product block hydrates from core only');
     $h->assertSame($product['default_sellable_id'],$hydrated[1]['data']['items'][0]['selected_sellable_id'],'single product block resolves an explicit variant');
     $h->assertSame(1,count($hydrated[2]['data']['items']),'product list stores references and receives runtime DTOs');
+    $pagedFirst=$contentLinks->hydrateStorefrontBlocks([['id'=>'products-home','type'=>'commerce_product_list','data'=>['selection_mode'=>'new','limit'=>1,'pagination'=>true,'page_param'=>'']]],1,'fr',['query'=>['campaign'=>'summer']]);
+    $pageParam=(string)($pagedFirst[0]['data']['page_param']??'');
+    $h->assertTrue($pageParam!==''&&($pagedFirst[0]['data']['selection']['pages']??0)>1,'Commerce pagination replaces an empty stored parameter with a stable block-specific parameter');
+    $h->assertTrue(str_contains((string)($pagedFirst[0]['data']['selection']['next_url']??''),'campaign=summer')&&str_ends_with((string)($pagedFirst[0]['data']['selection']['next_url']??''),'#commerce-products-home'),'Commerce pagination preserves the page query and returns to its own block');
+    $pagedSecond=$contentLinks->hydrateStorefrontBlocks([['id'=>'products-home','type'=>'commerce_product_list','data'=>['selection_mode'=>'new','limit'=>1,'pagination'=>true,'page_param'=>'']]],1,'fr',['query'=>['campaign'=>'summer',$pageParam=>2]]);
+    $h->assertSame(2,$pagedSecond[0]['data']['selection']['page']??null,'a numbered Commerce pagination link selects the requested product page');
+    $h->assertTrue(($pagedFirst[0]['data']['items'][0]['product_id']??0)!==($pagedSecond[0]['data']['items'][0]['product_id']??0),'the next Commerce page contains the next projected product rather than repeating page one');
 
     $selectionModes=[
         ['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]],
@@ -178,9 +185,11 @@ try {
     $h->assertSame(count($product['sellables']),count($variantBlock[0]['data']['items']),'variant block exposes every public variant of one product');
     foreach(['commerce_product','commerce_product_variants','commerce_product_list','storytelling']as$blockType)$h->assertTrue(NativeFieldBlueprintRegistry::blockBlueprint($blockType)!==null,$blockType.' is available as a native Studio Blueprint');
     foreach(['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart']as$blockType)$h->assertSame(null,NativeFieldBlueprintRegistry::blockBlueprint($blockType),$blockType.' is retired from the native Studio library');
-    $normalizer=new BlockDocumentNormalizer();$normalizedCommerce=$normalizer->normalize([['id'=>'commerce-test','type'=>'commerce_product_list','editorial_status'=>'published','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']],'items'=>[$product],'selection'=>['count'=>1],'resolved'=>['forbidden'=>'runtime']]]]);
+    $normalizer=new BlockDocumentNormalizer();$normalizedCommerce=$normalizer->normalize([['id'=>'commerce-test','type'=>'commerce_product_list','editorial_status'=>'published','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']],'view_label'=>'Découvrir','cart_label'=>'Commander','items'=>[$product],'selection'=>['count'=>1],'resolved'=>['forbidden'=>'runtime']]]]);
     $h->assertSame('commerce_product_list',$normalizedCommerce[0]['type'],'editorial normalizer preserves the new Commerce block identifier');
     $h->assertSame([$product['product_id']],$normalizedCommerce[0]['data']['product_ids'],'editorial normalizer persists stable product references');
+    $h->assertSame('Découvrir',$normalizedCommerce[0]['data']['view_label'],'editorial normalizer persists a custom compact product view label');
+    $h->assertSame('Commander',$normalizedCommerce[0]['data']['cart_label'],'editorial normalizer persists a custom compact product cart label');
     $h->assertTrue(!isset($normalizedCommerce[0]['data']['items'],$normalizedCommerce[0]['data']['selection'],$normalizedCommerce[0]['data']['resolved']),'editorial normalizer strips every runtime projection DTO before revision storage');
     $h->assertSame([],$normalizer->validateForPublication($normalizedCommerce),'a valid Commerce block passes the CMS publication contract');
     $englishBlock=$contentLinks->hydrateStorefrontBlocks([['type'=>'commerce_product_list','data'=>['selection_mode'=>'explicit','product_ids'=>[$product['product_id']]]]],1,'en');
