@@ -20,6 +20,7 @@ return [
         'forms',
         'business',
         'sale',
+        'accounting',
         // Shell applicatif activé pour publier l'entrée de navigation dans Modules.
         // L'IA elle-même reste désactivée par défaut dans ai.sqlite (ai.enabled = false).
         'ai-assistant',
@@ -32,6 +33,7 @@ return [
         App\Modules\Forms\FormsModuleProvider::class,
         App\Modules\Business\BusinessModuleProvider::class,
         App\Modules\Sale\SaleModuleProvider::class,
+        App\Modules\Accounting\AccountingModuleProvider::class,
         App\Modules\AiAssistant\AiAssistantModuleProvider::class,
         // App\Modules\Example\ExampleModuleProvider::class,
     ],
@@ -44,6 +46,7 @@ return [
         base_path('backend/src/Modules/Forms/module.json'),
         base_path('backend/src/Modules/Business/module.json'),
         base_path('backend/src/Modules/Sale/module.json'),
+        base_path('backend/src/Modules/Accounting/module.json'),
         base_path('backend/src/Modules/AiAssistant/module.json'),
     ],
 

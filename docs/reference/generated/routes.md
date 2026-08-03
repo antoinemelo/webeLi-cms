@@ -18,6 +18,9 @@ generated: true
 
 | Méthode | Chemin | Surface | Déclaration |
 |---|---|---|---|
+| `DELETE` | `/admin/api/accounting/accounts/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `DELETE` | `/admin/api/accounting/categories/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `DELETE` | `/admin/api/accounting/rules/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/models/{providerKey}/{modelKey}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/provider-types/{key}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/providers/{key}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -82,6 +85,7 @@ generated: true
 | `GET` | `/account` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/admin` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/` | API administrative | `backend/routes/admin.php` |
+| `GET` | `/admin/api/accounting/structure` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `GET` | `/admin/api/ai/actions` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `GET` | `/admin/api/ai/budget` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `GET` | `/admin/api/ai/prompts` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -293,6 +297,9 @@ generated: true
 | `GET` | `/gift-card` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/updates/manifest.json` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/{path:.+}` | HTML/runtime | `backend/routes/web.php` |
+| `PATCH` | `/admin/api/accounting/accounts/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `PATCH` | `/admin/api/accounting/categories/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `PATCH` | `/admin/api/accounting/rules/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `PATCH` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
@@ -342,6 +349,10 @@ generated: true
 | `PATCH` | `/admin/api/security/webhooks/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/taxonomies/{key}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/taxonomies/{key}/terms/{id}` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/accounting/accounts` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/categories` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/fiscal-periods` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/rules` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `POST` | `/admin/api/ai/editorial/test-generation` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `POST` | `/admin/api/ai/models` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `POST` | `/admin/api/ai/provider-types` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -500,6 +511,7 @@ generated: true
 | `POST` | `/api/v1/cookies/consent` | API publique | `backend/routes/api.php` |
 | `POST` | `/api/v1/forms/{key}/submit` | API publique | `backend/routes/api.php` |
 | `POST` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
+| `PUT` | `/admin/api/accounting/fiscal-periods/{id}/opening-balances` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `PUT` | `/admin/api/blueprints/{key}/design` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/products/{id}/base-prices` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/variants/{id}/price-adjustments` | API administrative | `backend/routes/api.php` |

@@ -14,6 +14,7 @@ const DocsView = () => import('@/views/assets/DocsView.vue');
 const FormsView = () => import('@/views/forms/FormsView.vue');
 const ModulesView = () => import('@/views/modules/ModulesView.vue');
 const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
+const AccountingView = () => import('@/views/modules/AccountingView.vue');
 const BusinessCrmView = () => import('@/views/modules/BusinessCrmView.vue');
 const SaleView = () => import('@/views/modules/SaleView.vue');
 const MenusView = () => import('@/views/content/MenusView.vue');
@@ -76,6 +77,8 @@ export const router = createRouter({
     { path: '/forms', name: 'forms', component: FormsView },
     { path: '/modules', name: 'modules', component: ModulesView },
     { path: '/modules/ai-assistant/config', name: 'ai-assistant-config', component: AiAssistantConfigView },
+    { path: '/accounting', name: 'accounting', component: AccountingView },
+    { path: '/accounting/opening', name: 'accounting-opening', component: AccountingView },
     { path: '/business', name: 'business', component: BusinessCrmView, props: { initialTab: 'dashboard' } },
     { path: '/business/relations', name: 'business-relations', component: BusinessCrmView, props: { initialTab: 'relations' } },
     { path: '/business/relations/advanced/profiles', name: 'business-advanced-profiles', component: BusinessCrmView, props: { initialTab: 'relations' } },

@@ -16,6 +16,19 @@ generated: true
 
 > Fichier généré. Ne pas modifier directement.
 
+## `accounting.sqlite`
+
+| Table | Colonnes |
+|---|---|
+| `accounting_accounts` | id, chart_id, account_number, label, is_active, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at, archived_at |
+| `accounting_balance_rules` | id, chart_id, account_prefix, increase_side, label, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `accounting_categories` | id, chart_id, account_prefix, label, sort_order, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `accounting_charts` | id, site_id, name, currency, default_increase_side, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `accounting_fiscal_periods` | id, chart_id, code, label, starts_on, ends_on, status, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `accounting_journal_entries` | id, fiscal_period_id, entry_number, entry_date, label, status, source_type, source_id, created_by_iam_user_id, posted_by_iam_user_id, created_at, posted_at |
+| `accounting_journal_lines` | id, journal_entry_id, account_id, line_number, debit_minor, credit_minor, label |
+| `accounting_opening_balances` | id, fiscal_period_id, account_id, amount_minor, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+
 ## `ai.sqlite`
 
 | Table | Colonnes |

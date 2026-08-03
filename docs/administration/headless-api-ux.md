@@ -38,10 +38,10 @@ Pour le **site sélectionné**, la page fournit notamment :
 Les URL sont calculées à partir du site actif. Par exemple, une installation dans un sous-répertoire peut produire :
 
 ```text
-/mod/site_a/docs/public-api/openapi.v1.json
+/cms/site_a/docs/public-api/openapi.v1.json
 ```
 
-Les liens préservent aussi le base path d’installation. Une documentation publique peut donc être publiée à une adresse telle que `https://webe.li/mod/site-b/docs/public-api/index.html`.
+Les liens préservent aussi le base path d’installation. Une documentation publique peut donc être publiée à une adresse telle que `https://webe.li/cms/site-b/docs/public-api/index.html`.
 
 ## Ce que l’API expose
 

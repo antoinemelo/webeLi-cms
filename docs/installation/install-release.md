@@ -31,7 +31,7 @@ Une archive de preuves est un artefact séparé réservé aux releases mineures 
 
 ## Procédure
 
-1. Décompressez l’archive dans un chemin définitif, ou clonez la branche attendue lorsque l'environnement est explicitement synchronisé par Git. Les commandes citées utilisent des guillemets afin de supporter les espaces : `cd "/chemin/avec espaces/mod"`.
+1. Décompressez l’archive dans un chemin définitif, ou clonez la branche attendue lorsque l'environnement est explicitement synchronisé par Git. Les commandes citées utilisent des guillemets afin de supporter les espaces : `cd "/chemin/avec espaces/cms"`.
 2. Copiez `ops/.env.example` vers la configuration locale utilisée par le déploiement et adaptez `APP_BASE_PATH`, l’URL publique, les secrets et le mode production ou staging.
 3. Si `vendor` est absent, exécutez Composer dans `backend/` selon le contrat de l’archive.
 4. Rendez `storage/` et le répertoire de bases accessibles en écriture au processus PHP.
@@ -72,7 +72,7 @@ Le dernier contrôle doit retourner le code `2` avec un message explicite lorsqu
 
 Pour une installation sous `/cms`, définissez `APP_BASE_PATH=/cms` et vérifiez les routes `/admin`, `/api/v1/health`, les assets et les URL générées. En multisite par sous-répertoire, un sous-site configuré comme `/site-a` doit être ouvert publiquement sous `/cms/site-a`; les liens du back-office ne doivent jamais perdre le préfixe d’installation.
 
-Pour Hostpoint, l'installation sous `/mod` peut être synchronisée soit par Git depuis la branche `staging`, soit par FTP/FTPS depuis une release préparée. Voir [Déployer sur Hostpoint avec Git ou FTP](../operations/hostpoint-git-ftp.md).
+Pour Hostpoint, l'installation sous `/cms` peut être synchronisée soit par Git depuis la branche `staging`, soit par FTP/FTPS depuis une release préparée. Voir [Déployer sur Hostpoint avec Git ou FTP](../operations/hostpoint-git-ftp.md).
 
 ## Socle modulaire local
 

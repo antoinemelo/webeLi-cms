@@ -58,7 +58,7 @@ Les canaux ont le rôle suivant :
 
 | Canal | Usage |
 |---|---|
-| `dev` | Prévisualiser une version de développement/staging. Dans l'organisation webeLi, ce canal correspond à `/mod` et à la branche Git `staging`. |
+| `dev` | Prévisualiser une version de développement/staging. Dans l'organisation webeLi, ce canal correspond à `/cms` et à la branche Git `staging`. |
 | `stable` | Suivre la release stable destinée aux instances client. Dans l'organisation webeLi, ce canal correspond à `/maj` et à la branche Git `main`. |
 
 La source prioritaire est le manifeste public du canal :

@@ -118,7 +118,7 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 
 ## Génération OpenAPI v1
 
-Depuis la racine du projet `mod/`, le fichier public OpenAPI est généré à partir des contrats JSON de ce dossier :
+Depuis la racine du projet `cms/`, le fichier public OpenAPI est généré à partir des contrats JSON de ce dossier :
 
 ```bash
 python3 tools/cms.py docs generate
@@ -128,7 +128,7 @@ Le générateur crée `docs/public-api/openapi.v1.json` et `docs/public-api/open
 
 ## Validation locale
 
-Depuis la racine du projet `mod/` :
+Depuis la racine du projet `cms/` :
 
 ```bash
 python3 tools/cms.py docs generate

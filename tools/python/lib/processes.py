@@ -16,13 +16,13 @@ def cms_subprocess_env(
     En PHP CLI, ``SCRIPT_NAME`` contient le chemin disque du script. Sans
     ``APP_BASE_PATH`` explicite, ce chemin pouvait être interprété comme un
     préfixe URL et être persisté dans les projections publiques. Le défaut
-    historique du projet est ``/mod``; une valeur fournie par l'environnement
+    historique du projet est ``/cms``; une valeur fournie par l'environnement
     reste prioritaire.
     """
     env = os.environ.copy()
     configured = app_base_path
     if configured is None:
-        configured = env.get("APP_BASE_PATH", "/mod")
+        configured = env.get("APP_BASE_PATH", "/cms")
     configured = str(configured).strip()
     if configured in {"", "/"}:
         env["APP_BASE_PATH"] = ""

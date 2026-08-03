@@ -14,7 +14,7 @@ final class SiteRepository implements SiteReadRepository
 
     public function withResolvedSiteContext(Request $request): Request
     {
-        $host = self::normalizeHost((string) ($request->server['HTTP_HOST'] ?? ''));
+        $host = (string) ($request->server['HTTP_HOST'] ?? '');
         $isHttps = $this->isHttps($request->server);
         $resolved = $this->resolveCurrentSite($host, $request->path, $isHttps);
 
@@ -63,7 +63,8 @@ final class SiteRepository implements SiteReadRepository
             }
         }
 
-        $host = self::normalizeHost($host !== '' ? $host : (string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $requestedHost = trim($host !== '' ? $host : (string) ($_SERVER['HTTP_HOST'] ?? ''));
+        $host = self::normalizeHost($requestedHost);
         $path = $path !== '' ? $path : (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
         $isHttps = $isHttps ?? $this->isHttps($_SERVER);
 
@@ -105,6 +106,19 @@ final class SiteRepository implements SiteReadRepository
             }
         }
         $fallback ??= $sites[0];
+
+        if ($this->allowsLocalHost($host)) {
+            $localDomain = null;
+            foreach ($domains as $domain) {
+                $basePath = self::effectiveRequestBasePath((string) ($domain['base_path'] ?? ''));
+                if ($basePath === '' || $path === $basePath || str_starts_with($path, $basePath . '/')) {
+                    $localDomain = $domain;
+                    break;
+                }
+            }
+            return $this->hydrateLocalSiteContext($localDomain ?? $fallback, $localDomain, $requestedHost, $isHttps);
+        }
+
         $primaryDomain = $this->primaryDomainForSite((int) $fallback['id']);
         return $this->hydrateSiteContext($fallback, $primaryDomain, $isHttps);
     }
@@ -352,6 +366,53 @@ final class SiteRepository implements SiteReadRepository
         ];
     }
 
+    private function hydrateLocalSiteContext(array $siteOrDomain, ?array $domain, string $requestedHost, bool $isHttps): array
+    {
+        $siteId = (int) ($siteOrDomain['site_id'] ?? $siteOrDomain['id']);
+        $site = isset($siteOrDomain['site_key']) && isset($siteOrDomain['site_id']) ? $this->siteById($siteId) : $siteOrDomain;
+        if (!$site) {
+            throw new \RuntimeException('Site local introuvable.');
+        }
+
+        $authority = self::localAuthority($requestedHost);
+        $publicBasePath = self::publicBasePath((string) ($domain['base_path'] ?? ''));
+        $requestBasePath = self::effectiveRequestBasePath((string) ($domain['base_path'] ?? ''));
+        $baseUrl = rtrim(($isHttps ? 'https' : 'http') . '://' . $authority . $publicBasePath, '/');
+
+        return $site + [
+            'base_url' => $baseUrl,
+            'canonical_base_url' => $baseUrl,
+            'current_base_url' => $baseUrl,
+            'matched_domain_id' => null,
+            'matched_host' => $authority,
+            'matched_base_path' => $publicBasePath,
+            'matched_request_base_path' => $requestBasePath,
+            'matched_scheme' => $isHttps ? 'https' : 'http',
+            'is_canonical_domain' => true,
+            'should_redirect_https' => false,
+        ];
+    }
+
+    private function allowsLocalHost(string $host): bool
+    {
+        if (empty($this->config['app']['allow_local_hosts'])) {
+            return false;
+        }
+        return $host === 'localhost' || $host === '127.0.0.1' || $host === '::1';
+    }
+
+    private static function localAuthority(string $host): string
+    {
+        $host = strtolower(trim($host));
+        if (preg_match('/^(?:localhost|127[.]0[.]0[.]1)(?::[0-9]{1,5})?$/', $host)) {
+            return $host;
+        }
+        if (preg_match('/^\[::1\](?::[0-9]{1,5})?$/', $host)) {
+            return $host;
+        }
+        return self::normalizeHost($host);
+    }
+
     private static function normalizeHost(string $host): string
     {
         $host = strtolower(trim($host));
@@ -371,9 +432,9 @@ final class SiteRepository implements SiteReadRepository
     }
 
     /**
-     * Request::capture() already strips APP_BASE_PATH (for example /mod).
+     * Request::capture() already strips APP_BASE_PATH (for example /cms).
      * site_domains.base_path, however, is the canonical/public deployment path
-     * and may legitimately contain that prefix (for example /mod/site-a).
+     * and may legitimately contain that prefix (for example /cms/site-a).
      * Matching must therefore compare against the request-visible part only.
      */
     private static function effectiveRequestBasePath(string $domainBasePath): string
@@ -388,8 +449,8 @@ final class SiteRepository implements SiteReadRepository
 
     /**
      * Public URLs must always include APP_BASE_PATH when the CMS is installed
-     * below a subdirectory such as /mod. The database may contain either the
-     * full public path (/mod/site-a) or the request-visible site path (/site-a);
+     * below a subdirectory such as /cms. The database may contain either the
+     * full public path (/cms/site-a) or the request-visible site path (/site-a);
      * this helper accepts both forms and never double-prefixes the app base.
      */
     private static function publicBasePath(string $domainBasePath): string

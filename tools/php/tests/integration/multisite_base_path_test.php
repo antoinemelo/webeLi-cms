@@ -54,6 +54,24 @@ function runBasePathScenario(TestHarness $h, string $appBasePath): void
         $h->assertSame($appBasePath, $main['matched_base_path'], $appBasePath . ' main public base includes APP_BASE_PATH');
         $h->assertSame('https://webe.li' . $appBasePath, $main['current_base_url'], $appBasePath . ' main public URL includes APP_BASE_PATH');
 
+        $localRepo = new SiteRepository($db, [
+            'app' => ['allow_local_hosts' => true],
+            'cms' => ['default_site_key' => 'main'],
+        ]);
+        $localMain = $localRepo->resolveCurrentSite('127.0.0.1:8080', '/', false);
+        $h->assertSame(1, (int) $localMain['id'], $appBasePath . ' loopback resolves the main site');
+        $h->assertSame('http://127.0.0.1:8080' . $appBasePath, $localMain['base_url'], $appBasePath . ' loopback keeps the local origin');
+        $h->assertSame(false, (bool) $localMain['should_redirect_https'], $appBasePath . ' loopback does not force public HTTPS');
+
+        $localSiteA = $localRepo->resolveCurrentSite('localhost:8080', '/site-a/', false);
+        $h->assertSame(10, (int) $localSiteA['id'], $appBasePath . ' loopback resolves a request-visible subsite');
+        $h->assertSame('/site-a', $localSiteA['matched_request_base_path'], $appBasePath . ' loopback keeps the subsite request base');
+        $h->assertSame('http://localhost:8080' . $appBasePath . '/site-a', $localSiteA['base_url'], $appBasePath . ' loopback builds the local subsite URL');
+
+        $productionLoopback = $repo->resolveCurrentSite('127.0.0.1:8080', '/', false);
+        $h->assertSame('https://webe.li' . $appBasePath, $productionLoopback['base_url'], $appBasePath . ' loopback falls back to the public canonical URL when disabled');
+        $h->assertSame(true, (bool) $productionLoopback['should_redirect_https'], $appBasePath . ' production fallback still enforces HTTPS');
+
         $request = new Request('GET', '/site-a/admin/api/context', [], [], ['HTTP_HOST' => 'webe.li', 'HTTPS' => 'on'], [], []);
         $scoped = $repo->withResolvedSiteContext($request);
         $h->assertSame('/admin/api/context', $scoped->path, $appBasePath . ' resolved request strips request-visible site path only');
@@ -71,6 +89,6 @@ function runBasePathScenario(TestHarness $h, string $appBasePath): void
 }
 
 $h = new TestHarness();
-runBasePathScenario($h, '/mod');
+runBasePathScenario($h, '/cms');
 runBasePathScenario($h, '/eve');
 exit($h->finish('INTEGRATION multisite APP_BASE_PATH URLs'));

@@ -17,8 +17,8 @@ return [
     'channels' => [
         'dev' => [
             'label' => 'Dev',
-            'instance_url' => (string) env('APP_UPDATES_DEV_INSTANCE_URL', 'https://webe.li/mod'),
-            'manifest_url' => (string) env('APP_UPDATES_DEV_MANIFEST_URL', 'https://webe.li/mod/updates/manifest.json'),
+            'instance_url' => (string) env('APP_UPDATES_DEV_INSTANCE_URL', 'https://webe.li/cms'),
+            'manifest_url' => (string) env('APP_UPDATES_DEV_MANIFEST_URL', 'https://webe.li/cms/updates/manifest.json'),
             'git_branch' => (string) env('APP_UPDATES_DEV_GIT_BRANCH', 'staging'),
         ],
         'stable' => [

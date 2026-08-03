@@ -32,12 +32,12 @@
         "site_key": "main",
         "name": "Main site",
         "host": "example.test",
-        "base_path": "/mod",
+        "base_path": "/cms",
         "request_base_path": "",
         "default_language_code": "fr",
         "is_active": true,
-        "public_path": "/mod/",
-        "public_url": "https://example.test/mod"
+        "public_path": "/cms/",
+        "public_url": "https://example.test/cms"
       },
       "user": {
         "id": 1,

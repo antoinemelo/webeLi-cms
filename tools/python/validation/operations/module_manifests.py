@@ -15,6 +15,7 @@ SYSTEM_MANIFESTS = (
     "backend/src/Modules/Forms/module.json",
     "backend/src/Modules/Business/module.json",
     "backend/src/Modules/Sale/module.json",
+    "backend/src/Modules/Accounting/module.json",
     "backend/src/Modules/AiAssistant/module.json",
 )
 REQUIRED_FIELDS = ("key", "version", "type", "provider_class", "provider_file")

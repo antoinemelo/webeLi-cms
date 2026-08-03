@@ -7,6 +7,7 @@ namespace App\Core;
 use App\Application\Admin\AdminAuthController;
 use App\Application\Admin\AdminSpaController;
 use App\Application\Api\Admin\AiAssistantApiController;
+use App\Application\Api\Admin\AccountingAdminApiController;
 use App\Application\Api\Admin\AdminContextApiController;
 use App\Application\Api\Admin\BlockBlueprintApiController;
 use App\Application\Api\Admin\CapabilityApiController;
@@ -478,6 +479,13 @@ final class App
                 $services->authorization(),
                 $services->coreDatabase(),
                 $services->shopConfigurations(),
+            ),
+            AccountingAdminApiController::class => new AccountingAdminApiController(
+                $this->request,
+                $services->sites(),
+                $services->auth(),
+                $services->authorization(),
+                $services->accountingChart(),
             ),
             ModuleAdminApiController::class => new ModuleAdminApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->moduleLifecycle(), $services->moduleBlueprintGovernance()),
             CapabilityApiController::class => new CapabilityApiController($this->request, $services->sites(), $services->auth(), $services->authorization(), $services->capabilities(), $services->capabilityExecutor()),

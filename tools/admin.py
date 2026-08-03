@@ -520,7 +520,7 @@ def run_instance_clone() -> int:
     print("Créer un clone local d'instance")
     print("-" * 34)
     print("Le dossier de destination et le APP_BASE_PATH cible sont indépendants.")
-    print("Exemple: destination ../mod2 avec APP_BASE_PATH /mod.")
+    print("Exemple: destination ../cms2 avec APP_BASE_PATH /cms.")
     print()
 
     source = prompt_text("Répertoire source", str(PROJECT_ROOT))

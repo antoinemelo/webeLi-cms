@@ -33,7 +33,7 @@ cp .env.example .env
 Variables disponibles :
 
 ```txt
-AMCMS_BASE_URL=https://example.com/mod/site_a
+AMCMS_BASE_URL=https://example.com/cms/site_a
 AMCMS_TOKEN=
 AMCMS_SITE=site_a
 AMCMS_LANG=fr

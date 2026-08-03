@@ -68,8 +68,8 @@ def now() -> str:
 
 
 def hash_pw(_password: str) -> str:
-    # Hash PHP PASSWORD_DEFAULT pour 'admin123'.
-    return "$2y$12$IQ1A5lwkoWrPfypHOTGlT.aPMvbImII5mHeLb/wC4b/DaCmUyvLba"
+    # Hash PHP PASSWORD_DEFAULT pour 'ChangeMe123!go'.
+    return "$2y$10$vojNo7wjLjCbl00/RvAxHuhu3fT1U6lj2XTRfKN8o6yvM4pYhkuVa"
 
 
 def ensure_databases_exist() -> None:
@@ -768,7 +768,7 @@ def _seed_is_internal_storage_media_path(value: str) -> bool:
     return '/storage/' in path or 'storage/media/' in path or path.startswith('storage/')
 
 
-def _seed_public_media_url(value: str, app_base_path: str = '/mod') -> str:
+def _seed_public_media_url(value: str, app_base_path: str = '/cms') -> str:
     path = str(value or '').strip().replace('\\', '/')
     if path == '' or re.match(r'^https?://', path, re.I) or path.startswith('//') or path.startswith('data:'):
         return path
@@ -786,7 +786,7 @@ def _seed_public_media_url(value: str, app_base_path: str = '/mod') -> str:
     return path
 
 
-def _seed_sanitize_srcset(value: str, app_base_path: str = '/mod') -> str:
+def _seed_sanitize_srcset(value: str, app_base_path: str = '/cms') -> str:
     items: list[str] = []
     for raw in str(value or '').split(','):
         item = raw.strip()
@@ -801,7 +801,7 @@ def _seed_sanitize_srcset(value: str, app_base_path: str = '/mod') -> str:
     return ', '.join(items)
 
 
-def _seed_sanitize_media_urls(value: object, key: str = '', app_base_path: str = '/mod') -> object:
+def _seed_sanitize_media_urls(value: object, key: str = '', app_base_path: str = '/cms') -> object:
     if isinstance(value, dict):
         return {str(k): _seed_sanitize_media_urls(v, str(k), app_base_path) for k, v in value.items()}
     if isinstance(value, list):
@@ -1368,20 +1368,20 @@ def _seed_fallback_block(entry_id: int, language_code: str, document: dict[str, 
 
 
 def _replace_multisite_demo_urls(value: object) -> object:
-    """Remplace les anciens domaines de démonstration par l'URL réelle webe.li/mod.
+    """Remplace les anciens domaines de démonstration par l'URL réelle webe.li/cms.
 
     Le seed multisite a d'abord utilisé multi-a.example.test / multi-b.example.test
     comme domaines primaires. En production de démonstration, le back-office et
-    le public sont servis sous webe.li/mod/site-a et webe.li/mod/site-b. Cette
+    le public sont servis sous webe.li/cms/site-a et webe.li/cms/site-b. Cette
     réparation évite les redirections vers des hosts inexistants.
     """
     if isinstance(value, str):
         return (
             value
-            .replace('https://multi-a.example.test/site-a', 'https://webe.li/mod/site-a')
-            .replace('http://multi-a.example.test/site-a', 'https://webe.li/mod/site-a')
-            .replace('https://multi-b.example.test/site-b', 'https://webe.li/mod/site-b')
-            .replace('http://multi-b.example.test/site-b', 'https://webe.li/mod/site-b')
+            .replace('https://multi-a.example.test/site-a', 'https://webe.li/cms/site-a')
+            .replace('http://multi-a.example.test/site-a', 'https://webe.li/cms/site-a')
+            .replace('https://multi-b.example.test/site-b', 'https://webe.li/cms/site-b')
+            .replace('http://multi-b.example.test/site-b', 'https://webe.li/cms/site-b')
         )
     if isinstance(value, list):
         return [_replace_multisite_demo_urls(item) for item in value]
@@ -1391,19 +1391,19 @@ def _replace_multisite_demo_urls(value: object) -> object:
 
 
 def repair_multisite_primary_domains_for_webe_li_deployment() -> None:
-    """Aligne les sites de contrat sur le déploiement réel /mod/site-a|site-b.
+    """Aligne les sites de contrat sur le déploiement réel /cms/site-a|site-b.
 
     Les domaines multi-*.example.test restent des alias de test, mais ne doivent
     plus être primaires. Sinon le runtime public redirige
-    https://webe.li/mod/site-a vers https://multi-a.example.test/site-a/.
+    https://webe.li/cms/site-a vers https://multi-a.example.test/site-a/.
     """
     if not CORE_DB.exists():
         return
     with connect_sqlite(CORE_DB) as con:
         cur = con.cursor()
         cur.execute("UPDATE site_domains SET is_primary=0 WHERE site_id IN (10,11)")
-        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=10 AND host='webe.li' AND base_path='/mod/site-a'")
-        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=11 AND host='webe.li' AND base_path='/mod/site-b'")
+        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=10 AND host='webe.li' AND base_path='/cms/site-a'")
+        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=11 AND host='webe.li' AND base_path='/cms/site-b'")
         cur.execute("UPDATE site_domains SET is_primary=0, is_active=1 WHERE site_id=10 AND host='multi-a.example.test' AND base_path='/site-a'")
         cur.execute("UPDATE site_domains SET is_primary=0, is_active=1 WHERE site_id=11 AND host='multi-b.example.test' AND base_path='/site-b'")
 
@@ -1439,7 +1439,7 @@ def repair_multisite_primary_domains_for_webe_li_deployment() -> None:
                 repaired_snapshot_json += 1
         con.commit()
     if repaired_seo_json or repaired_snapshot_json:
-        print(f"Correctif seed: domaines primaires multisite alignes sur webe.li/mod (json SEO: {repaired_seo_json}, snapshots: {repaired_snapshot_json}).")
+        print(f"Correctif seed: domaines primaires multisite alignes sur webe.li/cms (json SEO: {repaired_seo_json}, snapshots: {repaired_snapshot_json}).")
 
 
 def _canonical_seed_block_type(block_type: object) -> str:
@@ -2001,7 +2001,7 @@ def seed() -> None:
         i.execute("DELETE FROM iam_users")
         i.execute(
             "INSERT INTO iam_users(email, email_normalized, password_hash, first_name, last_name, is_active, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
-            ("admin@example.test", "admin@example.test", hash_pw("admin123"), "Admin", "User", 1, now(), now()),
+            ("admin@example.test", "admin@example.test", hash_pw("ChangeMe123!go"), "Admin", "User", 1, now(), now()),
         )
         user_id = i.lastrowid
         role_id = fetch_required_id(i, "SELECT id FROM iam_roles WHERE role_key=?", ("super_admin",), "role IAM super_admin")

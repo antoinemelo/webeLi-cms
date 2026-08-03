@@ -6,8 +6,8 @@ Ce script est volontairement distinct de test_load.py :
 - test_perf.py mesure des temps de réponse répétés à faible concurrence ;
 - test_load.py produit une montée en charge avec utilisateurs virtuels.
 
-Objectif : comparer une cible distante, par exemple https://webe.li/mod/ , avec
-une cible locale, par exemple http://127.0.0.1:8080/mod/ , en séparant public,
+Objectif : comparer une cible distante, par exemple https://webe.li/cms/ , avec
+une cible locale, par exemple http://127.0.0.1:8080/cms/ , en séparant public,
 API et administration. Par défaut, le script tente un run complet en lecture
 (public + API + admin si un CSV d'identifiants est fourni ou détecté), mesure le
 profil de données local si les bases SQLite sont accessibles, et produit un
@@ -57,8 +57,8 @@ import requests
 
 PROGRAM_VERSION = "1.4.0"
 USER_AGENT = f"webeLi-perf-compare/{PROGRAM_VERSION} (+authorized-performance-benchmark)"
-DEFAULT_REMOTE_URL = "https://webe.li/mod/"
-DEFAULT_LOCAL_URL = "http://127.0.0.1:8080/mod/"
+DEFAULT_REMOTE_URL = "https://webe.li/cms/"
+DEFAULT_LOCAL_URL = "http://127.0.0.1:8080/cms/"
 DEFAULT_CREDENTIALS_FILENAME = "users.csv"
 DEFAULT_TOKENS_FILENAME = "token.csv"
 SENSITIVE_HEADERS = {"set-cookie", "cookie", "authorization", "proxy-authorization"}
@@ -816,7 +816,7 @@ def find_default_db_root(explicit: Path | None) -> tuple[Path | None, str]:
         for base in [anchor, *anchor.parents[:5]]:
             roots.extend([
                 base / "storage" / "database",
-                base / "mod" / "storage" / "database",
+                base / "cms" / "storage" / "database",
                 base / ".." / "storage" / "database",
             ])
     seen: set[Path] = set()

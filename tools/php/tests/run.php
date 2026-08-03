@@ -35,6 +35,7 @@ $tests = [
     'unit/business_messaging_provider_test.php',
     'unit/business_mailing_service_test.php',
     'unit/capability_registry_test.php',
+    'unit/accounting_chart_service_test.php',
     'unit/sale_module_contracts_test.php',
     'unit/commerce_module_lifecycle_test.php',
     'unit/shop_configuration_service_test.php',

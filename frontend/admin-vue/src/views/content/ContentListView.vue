@@ -59,7 +59,24 @@ async function load() {
     if (sequence !== loadSequence) return;
     systemRows.value = (response.data.shops || [])
       .filter(shop => Number(shop.site_id) === requestedSiteId && String(shop.language_code) === requestedLanguageCode && Boolean(shop.is_initialized))
-      .map((shop): EntryListItem => ({ id:0,site_id:Number(shop.site_id),content_type_key:'page',entry_key:'system-shop',title:String((shop.draft as Record<string,unknown>)?.title||'Boutique'),status:Boolean(shop.is_published)?'published':'draft',full_path:Boolean(shop.public_visible)?String(shop.route_path||'/shop'):null,public_href:Boolean(shop.public_visible)?String(shop.preview_path||shop.route_path||'/shop'):null,updated_at:String(shop.updated_at||''),published_at:null,system_kind:'shop',system_badge:'Système — Boutique',editor_route:String(shop.studio_route||'/contents/pages/system-shop') }))
+      .map((shop): EntryListItem => ({
+        id: 0,
+        site_id: Number(shop.site_id),
+        content_type_key: 'page',
+        entry_key: 'system-shop',
+        title: String((shop.draft as Record<string,unknown>)?.title || 'Boutique'),
+        // This editorial status keeps the system page in the matching content
+        // filter. Its public lifecycle is intentionally exposed separately.
+        status: Boolean(shop.is_published) ? 'published' : 'draft',
+        full_path: Boolean(shop.public_visible) ? String(shop.route_path || '/shop') : null,
+        public_href: Boolean(shop.public_visible) ? String(shop.preview_path || shop.route_path || '/shop') : null,
+        updated_at: String(shop.updated_at || ''),
+        published_at: null,
+        system_kind: 'shop',
+        system_badge: 'Système — Boutique',
+        system_operational_status: String(shop.status || 'inactive') as EntryListItem['system_operational_status'],
+        editor_route: String(shop.studio_route || '/contents/pages/system-shop')
+      }))
       .filter(row => status.value === 'all' || row.status === status.value);
   } catch { /* La liste éditoriale ordinaire reste utilisable sans accès E-Commerce. */ }
 }
@@ -121,6 +138,13 @@ function openPublicPath(row: Record<string, unknown>, event: MouseEvent): void {
 function blockStatusSummary(row: Record<string, unknown>) {
   const summary = row.block_editorial_statuses as { total?: number; draft?: number; review?: number; ready?: number; published?: number; archived?: number } | undefined;
   return summary || { total: 0, draft: 0, review: 0, ready: 0, published: 0, archived: 0 };
+}
+
+function systemStatusClass(status: unknown): string {
+  if (status === 'active') return 'text-bg-success';
+  if (status === 'error') return 'text-bg-danger';
+  if (status === 'activating') return 'text-bg-warning';
+  return 'text-bg-secondary';
 }
 
 function relativeDate(iso: unknown): string {
@@ -198,7 +222,8 @@ watch(() => [context.siteId, context.languageCode, props.typeKey], load);
       </button>
     </template>
     <template #cell-status="{ row }">
-      <StatusBadge :status="String(row.status || '')" />
+      <span v-if="row.system_kind === 'shop'" class="badge" :class="systemStatusClass(row.system_operational_status)">{{ t(`commerce.status.${row.system_operational_status || 'inactive'}`) }}</span>
+      <StatusBadge v-else :status="String(row.status || '')" />
     </template>
     <template #cell-block_editorial_statuses="{ row }">
       <div class="block-status-summary" v-if="blockStatusSummary(row).total" :title="`${blockStatusSummary(row).total} bloc(s)`">

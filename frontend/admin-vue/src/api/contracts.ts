@@ -80,6 +80,7 @@ export type EntryListItem = {
   published_at?: string | null;
   system_kind?: 'shop';
   system_badge?: string;
+  system_operational_status?: 'inactive'|'activating'|'active'|'error';
   editor_route?: string;
 };
 

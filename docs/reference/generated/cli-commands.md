@@ -220,7 +220,7 @@ options:
 
 ```text
 usage: tools/cms.py migrate [-h]
-                            [--all | --database {core,iam,forms,cookies,ai,business,sale} | --module {ai-assistant,business,forms,sale}]
+                            [--all | --database {core,iam,forms,cookies,ai,business,sale} | --module {accounting,ai-assistant,business,forms,sale}]
                             [--plan | --apply] [--backup]
                             [--no-backup-i-understand-the-risk] [--yes]
 
@@ -230,7 +230,7 @@ options:
                         (défaut).
   --database {core,iam,forms,cookies,ai,business,sale}
                         Traite une seule base par clé ou scope.
-  --module {ai-assistant,business,forms,sale}
+  --module {accounting,ai-assistant,business,forms,sale}
                         Traite les bases déclarées par un module.
   --plan                Affiche les migrations disponibles et manquantes sans
                         les appliquer.

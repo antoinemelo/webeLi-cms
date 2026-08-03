@@ -173,10 +173,12 @@ function latestSourceLabel(source?: string): string {
 
 function shortPath(path = ''): string {
   if (!path) return '—';
-  const marker = '/web/mod/';
+  const marker = '/web/';
   const index = path.indexOf(marker);
-  if (index >= 0) return path.slice(index + marker.length);
-  return path;
+  if (index < 0) return path;
+  const projectRelative = path.slice(index + marker.length);
+  const separator = projectRelative.indexOf('/');
+  return separator >= 0 ? projectRelative.slice(separator + 1) : projectRelative;
 }
 
 function isBusyAction(action: string): boolean {

@@ -18,8 +18,8 @@ python3 test_perf.py --yes
 Valeurs par défaut :
 
 ```text
-remote-url : https://webe.li/mod/
-local-url  : http://127.0.0.1:8080/mod/
+remote-url : https://webe.li/cms/
+local-url  : http://127.0.0.1:8080/cms/
 mode       : all
 iterations : 30
 warmup     : 5
@@ -92,8 +92,8 @@ Format recommandé :
 
 ```csv
 url,nom,token
-http://127.0.0.1:8080/mod/,perf,TOKEN_LOCAL
-https://webe.li/mod/,perf,TOKEN_DISTANT
+http://127.0.0.1:8080/cms/,perf,TOKEN_LOCAL
+https://webe.li/cms/,perf,TOKEN_DISTANT
 ```
 
 Le champ `url` associe chaque token à la bonne cible. Le script accepte aussi les colonnes `base_url`, `target`, `cible`, `nom`, `name`, `env` ou `environment` selon les cas.
@@ -291,7 +291,7 @@ Host: webe.li
 X-Forwarded-Proto: https
 ```
 
-Le transport reste local : `http://127.0.0.1:8080/mod/`. Le rapport vérifie `final_url` et `redirect_count`. Si le local redirige réellement vers une cible externe, la comparaison est marquée non concluante.
+Le transport reste local : `http://127.0.0.1:8080/cms/`. Le rapport vérifie `final_url` et `redirect_count`. Si le local redirige réellement vers une cible externe, la comparaison est marquée non concluante.
 
 Désactiver :
 
@@ -400,8 +400,8 @@ Run complet avec chemins explicites :
 
 ```bash
 python3 test_perf.py \
-  --remote-url https://webe.li/mod/ \
-  --local-url http://127.0.0.1:8080/mod/ \
+  --remote-url https://webe.li/cms/ \
+  --local-url http://127.0.0.1:8080/cms/ \
   --credentials-file users.csv \
   --tokens-file token.csv \
   --db-root ../storage/database \

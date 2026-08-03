@@ -15,7 +15,7 @@ $h = new TestHarness();
 
 try {
     $connection = new SaleDatabaseConnection($path);
-    $registry = new PaymentProviderRegistry(null, $connection->database(), 'provider-contract-test-secret');
+    $registry = new PaymentProviderRegistry(null, $connection->database(), 'provider-contract-test-secret', 'test');
     $descriptors = array_column($registry->descriptors(), null, 'key');
     $h->assertSame(PaymentProviderContractV1::VERSION, $descriptors['sandbox']['contract_version'] ?? null, 'provider registry exposes one versioned canonical contract');
     foreach (['create_payment_session','update_payment_session','authorize','capture','cancel','refund','webhook','reconcile'] as $responsibility) {
@@ -30,6 +30,9 @@ try {
     $h->assertSame('redirect', $byCode['sandbox_online']['next_action'] ?? null, 'shop receives the next customer action');
     $h->assertSame(true, $byCode['sandbox_online']['capabilities']['online'] ?? null, 'shop receives safe provider capabilities');
     $h->assertSame(PaymentProviderContractV1::VERSION, $byCode['sandbox_online']['contract_version'] ?? null, 'shop method declares provider contract version');
+
+    $productionRegistry = new PaymentProviderRegistry(null, $connection->database(), 'provider-contract-test-secret', 'production');
+    $h->assertTrue(!in_array('sandbox', $productionRegistry->keys(), true), 'production never registers the sandbox payment provider');
 
     $db->run("UPDATE sale_payment_methods SET max_amount_minor=1000 WHERE channel_id=? AND code='sandbox_online'", [$channelId]);
     $limited = array_column($methods->availableMethods(1, $channelId, 'fr', 'CHF', 2900), null, 'code');

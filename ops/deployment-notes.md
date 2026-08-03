@@ -43,7 +43,7 @@ python3 tools/cms.py qualify --profile release
 
 ## Option Git sur Hostpoint
 
-Pour `webe.li/mod`, le serveur peut suivre la branche `staging` si SSH, Git et l'accès GitHub sont configurés :
+Pour `webe.li/cms`, le serveur peut suivre la branche `staging` si SSH, Git et l'accès GitHub sont configurés :
 
 ```bash
 cd ~/www/webe.li
@@ -56,7 +56,7 @@ python3 tools/python/operations/deployment/d1_preflight_local.py --target stagin
 Les mises à jour suivantes se font par :
 
 ```bash
-cd ~/www/webe.li/mod
+cd ~/www/webe.li/cms
 git pull --ff-only
 python3 tools/python/operations/deployment/d1_preflight_local.py --target staging
 ```
@@ -75,7 +75,7 @@ python3 tools/python/operations/deployment/d_deploy.py ftp-dry-run
 python3 tools/python/operations/deployment/d_deploy.py ftp-deploy
 ```
 
-Pour Hostpoint `/mod`, `ops/ftp.deploy.json` doit pointer vers le répertoire distant `/www/webe.li/mod`. Ce fichier contient des identifiants et doit rester hors Git.
+Pour Hostpoint `/cms`, `ops/ftp.deploy.json` doit pointer vers le répertoire distant `/www/webe.li/cms`. Ce fichier contient des identifiants et doit rester hors Git.
 
 Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi affiche l'état Git. Le push optionnel n'est proposé que si le worktree est propre et si la branche contient des commits locaux. Le menu ne crée jamais de commit : les fichiers doivent être sélectionnés et revus séparément.
 
@@ -84,8 +84,8 @@ Depuis le menu interactif `python3 tools/admin.py`, un FTP réussi affiche l'ét
 Pour préparer un dossier temporaire en séparant le nom du dossier et la configuration publique :
 
 ```bash
-python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /mod
-python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /mod
+python3 tools/cms.py --dry-run instance clone --destination ../mod2 --new-base-path /cms
+python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /cms
 ```
 
 Le clone copie aussi les bases SQLite et médias locaux. Pour préparer une future instance `/eve` dans un dossier `eve2`, utilisez `--destination ../eve2 --new-base-path /eve`.
@@ -127,7 +127,7 @@ APP_VUE_NODE_MODULES_PATH=../vendor/node_modules/
 APP_TWIG_VENDOR_PATH=../vendor/twig/
 ```
 
-Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. Sur un hébergement avec plusieurs instances (`/mod`, `/eve`, `/edu`), `APP_TWIG_VENDOR_PATH=../vendor/twig/` permet de partager Twig depuis le dossier parent lorsque l'instance ne contient pas `vendor/`. Le runtime ne charge pas un Composer parent déclarant `App\\`; le préflight signale ce cas comme point à vérifier.
+Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. Sur un hébergement avec plusieurs instances (`/cms`, `/eve`, `/edu`), `APP_TWIG_VENDOR_PATH=../vendor/twig/` permet de partager Twig depuis le dossier parent lorsque l'instance ne contient pas `vendor/`. Le runtime ne charge pas un Composer parent déclarant `App\\`; le préflight signale ce cas comme point à vérifier.
 
 ## Préflight conseillé
 
@@ -190,7 +190,7 @@ ops/
 Configuration recommandée :
 
 ```apache
-DocumentRoot /chemin/vers/mod/backend/public
+DocumentRoot /chemin/vers/cms/backend/public
 AllowOverride All
 ```
 
@@ -201,7 +201,7 @@ Si le document root reste à la racine du package, vérifier que `.htaccess` est
 Exemple minimal :
 
 ```nginx
-root /chemin/vers/mod/backend/public;
+root /chemin/vers/cms/backend/public;
 index index.php;
 
 location / {

@@ -80,7 +80,7 @@
           {
             "key": "backend_vendor",
             "label": "Vendor PHP backend",
-            "path": "/var/www/mod/backend/vendor",
+            "path": "/var/www/cms/backend/vendor",
             "exists": true,
             "active": true,
             "detail": "Autoload Composer principal."

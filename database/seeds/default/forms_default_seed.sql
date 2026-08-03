@@ -1,4 +1,4 @@
--- Seed snapshot genere depuis database.zip pour mod2_v02-e21e.
+-- Seed snapshot genere depuis database.zip pour cms_v02-e21e.
 -- Ne contient pas de DDL durable; les structures restent dans database/schema, database/modules et database/iam.sql.
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;

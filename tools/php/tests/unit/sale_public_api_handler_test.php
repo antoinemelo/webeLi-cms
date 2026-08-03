@@ -35,6 +35,7 @@ use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\SiteRepository;
 
@@ -72,10 +73,11 @@ try {
     $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
     $guestCheckout = new SaleGuestCheckoutService($saleConnection, $carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, new SaleStateMachineService($saleConnection->database()));
     $onlinePayments = new SaleOnlinePaymentService($saleConnection,new SalePaymentRepository($saleConnection),$orders,$inventory,new SaleStateMachineService($saleConnection->database()),new PaymentProviderRegistry(null,$saleConnection->database(),null,'test'));
+    $paymentMethods = new SalePaymentMethodService($saleConnection,new PaymentProviderRegistry(null,$saleConnection->database(),null,'test'));
 
-    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, $onlinePayments): PublicSaleApiHandler {
+    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, $onlinePayments, $paymentMethods): PublicSaleApiHandler {
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
-        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, null, null, null, $onlinePayments);
+        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, null, null, null, $onlinePayments, $paymentMethods);
     };
 
     $provider = new SaleModuleProvider();

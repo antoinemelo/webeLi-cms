@@ -107,11 +107,11 @@
                       "data": {
                         "name": "DEC CMS Public Headless API",
                         "status": "available",
-                        "base_path": "/mod/api/v1",
-                        "health": "/mod/api/v1/health",
+                        "base_path": "/cms/api/v1",
+                        "health": "/cms/api/v1/health",
                         "openapi": {
-                          "json": "/mod/api/v1/openapi.json",
-                          "yaml": "/mod/api/v1/openapi.yaml"
+                          "json": "/cms/api/v1/openapi.json",
+                          "yaml": "/cms/api/v1/openapi.yaml"
                         }
                       },
                       "meta": {

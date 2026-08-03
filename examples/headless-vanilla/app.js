@@ -1,7 +1,7 @@
 import { AmCmsApiError, createAmCmsClient } from '../../packages/amcms-client/dist/index.js';
 
 const client = createAmCmsClient({
-  baseUrl: 'https://example.com/mod/site_a',
+  baseUrl: 'https://example.com/cms/site_a',
   token: '',
   site: 'site_a',
   lang: 'fr'

@@ -16,11 +16,14 @@ test.describe('41 merchandising, promotions et popularité',()=>{
     await page.goto(cmsPath('/admin/app/contents/pages/system-shop?site_id=1&language_code=fr'));
     await expect(page.getByRole('heading',{name:'Sections du Shop'})).toBeVisible();
     const promotion=page.locator('.shop-section-row').filter({hasText:'promotions'});
+    await expect(promotion.getByLabel('Règle de sélection')).toBeHidden();
+    await promotion.locator('.shop-section-disclosure').click();
     await expect(promotion.getByLabel('Règle de sélection')).toBeVisible();
     await promotion.getByLabel('Limite').fill('2');
     await promotion.getByLabel('Règle de sélection').selectOption('percent');
     await expect(promotion.locator('.section-explanation')).toContainText(/remise|vide/i);
     const popular=page.locator('.shop-section-row').filter({hasText:'popular'});
+    await popular.locator('.shop-section-disclosure').click();
     await expect(popular.getByLabel('Fenêtre d’analyse (jours)')).toHaveValue('30');
     await page.getByRole('button',{name:'Aperçu du brouillon'}).click();
     await expect(page.getByRole('button',{name:'Ordinateur'})).toBeVisible();

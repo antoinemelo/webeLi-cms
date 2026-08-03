@@ -114,6 +114,8 @@ use App\Modules\AiAssistant\Services\AiSettingsService;
 use App\Modules\AiAssistant\Services\AiSuggestionService;
 use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
+use App\Modules\Accounting\Services\AccountingChartService;
+use App\Modules\Accounting\Services\AccountingDatabaseConnection;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\BusinessActivityRepository;
@@ -644,6 +646,18 @@ final class ServiceFactory
     {
         $path = (string) ($this->config['databases']['sale']['path'] ?? base_path('storage/database/sale.sqlite'));
         return $this->once('sale_database_connection', fn() => new SaleDatabaseConnection($path));
+    }
+
+    public function accountingDatabaseConnection(): AccountingDatabaseConnection
+    {
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['accounting']['path'] ?? ($modulesDir . '/accounting.sqlite'));
+        return $this->once('accounting_database_connection', fn() => new AccountingDatabaseConnection($path, base_path('database/modules/accounting.sql')));
+    }
+
+    public function accountingChart(): AccountingChartService
+    {
+        return $this->once('accounting_chart', fn() => new AccountingChartService($this->accountingDatabaseConnection()));
     }
 
     public function saleCatalogSnapshots(): SaleCatalogSnapshotService

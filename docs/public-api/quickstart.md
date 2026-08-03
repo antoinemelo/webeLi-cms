@@ -21,10 +21,10 @@ Cette API publique sert à consommer les contenus publiés du CMS depuis un fron
 
 ## Base d’utilisation
 
-Remplacez `https://example.com/mod` par l’URL publique du site ciblé. En multisite, `AMCMS_BASE_URL` doit inclure le chemin du sous-site lorsque celui-ci est publié sous un sous-dossier, par exemple `https://webe.li/mod/site_a` pour le site `site_a`. N’ajoutez jamais `/api/v1` à cette variable : le client ou l’appel `fetch` l’ajoute ensuite.
+Remplacez `https://example.com/cms` par l’URL publique du site ciblé. En multisite, `AMCMS_BASE_URL` doit inclure le chemin du sous-site lorsque celui-ci est publié sous un sous-dossier, par exemple `https://webe.li/cms/site_a` pour le site `site_a`. N’ajoutez jamais `/api/v1` à cette variable : le client ou l’appel `fetch` l’ajoute ensuite.
 
 ```js
-const API_BASE = 'https://example.com/mod/site_a';
+const API_BASE = 'https://example.com/cms/site_a';
 
 async function getJson(path) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -105,7 +105,7 @@ Un client TypeScript léger est disponible dans `packages/amcms-client/`. Il uti
 import { createAmCmsClient } from '@amcms/client';
 
 const cms = createAmCmsClient({
-  baseUrl: 'https://webe.li/mod/site_a',
+  baseUrl: 'https://webe.li/cms/site_a',
   token: '<token>',
   site: 'site_a',
   lang: 'fr',

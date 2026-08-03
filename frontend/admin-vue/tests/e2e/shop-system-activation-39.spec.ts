@@ -55,6 +55,7 @@ test.describe('39 Shop système, activation multisite et Studio', () => {
 
     await page.goto(cmsPath('/admin/app/contents/pages'));
     await expect(page.getByText('Système', { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('row', { name: /Boutique.*Système/ }).getByText('Actif', { exact: true })).toBeVisible();
     const configuredBasePath = `/configured-${Date.now().toString(36)}`;
     await page.evaluate(({ basePath, apiBasePath }) => {
       window.__AMCMS_ADMIN__ = { ...(window.__AMCMS_ADMIN__ || {}), basePath, apiBasePath };
@@ -75,6 +76,13 @@ test.describe('39 Shop système, activation multisite et Studio', () => {
 
     const activeShop = await page.request.get(cmsPath('/shop?lang=fr'));
     expect(activeShop.status()).toBe(200);
+    await page.goto(cmsPath('/'));
+    const publicBrand = page.locator('a.navbar-brand.brand').first();
+    const stableHomePath = cmsPath('/').replace(/\/$/, '') || '/';
+    await expect(publicBrand).toHaveAttribute('href', stableHomePath);
+    await publicBrand.click();
+    expect(new URL(page.url()).origin).toBe(new URL(baseUrl!).origin);
+    expect(new URL(page.url()).pathname).toBe(stableHomePath);
     const deactivateEnglish = await page.request.post(cmsPath('/admin/api/sale/ecommerce/shops/1/en/deactivate'), {
       headers: headers(csrf), data: {},
     });
@@ -103,6 +111,11 @@ test.describe('39 Shop système, activation multisite et Studio', () => {
       await page.goto(cmsPath('/'));
       await expect(page.locator('.system-shop-menu-item')).toHaveCount(0);
       await expect(page.locator('[data-cart-toggle]')).toHaveCount(0);
+
+      await page.goto(cmsPath('/admin/app/contents/pages'));
+      const inactiveShopRow = page.getByRole('row', { name: /Boutique.*Système/ });
+      await expect(inactiveShopRow.getByText('Inactif', { exact: true })).toBeVisible();
+      await expect(inactiveShopRow.getByText('/shop', { exact: true })).toHaveCount(0);
 
       const activate = await page.request.post(cmsPath('/admin/api/sale/ecommerce/shops/1/fr/activate'), {
         headers: headers(csrf), data: {},

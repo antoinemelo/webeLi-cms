@@ -18,6 +18,9 @@ generated: true
 
 | Permission |
 |---|
+| `accounting.chart.manage` |
+| `accounting.opening.manage` |
+| `accounting.read` |
 | `admin.blueprints.delete` |
 | `admin.blueprints.versions.write` |
 | `admin.blueprints.write` |

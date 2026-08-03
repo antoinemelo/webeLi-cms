@@ -972,7 +972,7 @@ final class ResolvePublicRoute
         }
 
         // Media files are application-scoped, even when the current request is
-        // served from a sub-site base path such as /site-a or /mod/site-b.
+        // served from a sub-site base path such as /site-a or /cms/site-b.
         // Prefixing storage URLs with the sub-site path breaks logos, favicons
         // and content media on multisite frontends.
         foreach (['/storage/media/', '/storage/'] as $needle) {
@@ -1207,7 +1207,7 @@ final class ResolvePublicRoute
             'footer_menu_items' => $footerMenu,
             'footer_top_menu_items' => $footerTopMenu,
             'footer_bottom_menu_items' => $footerBottomMenu,
-            'localized_home_url' => localized_path('/', $languageCode),
+            'localized_home_url' => localized_home_path($languageCode),
             'localized_search_url' => localized_path('/search', $languageCode),
             'sitemap_url' => localized_absolute_url('/sitemap.xml', $languageCode, (string) ($site['base_url'] ?? '')),
             'llms_txt_url' => localized_absolute_url('/llms.txt', $languageCode, (string) ($site['base_url'] ?? '')),

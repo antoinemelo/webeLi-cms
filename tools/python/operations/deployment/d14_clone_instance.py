@@ -3,7 +3,7 @@
 
 The destination directory and the public runtime configuration are deliberately
 separate. This allows workflows such as creating ``../mod2`` while keeping the
-clone configured as ``/mod`` for a later filesystem rename.
+clone configured as ``/cms`` for a later filesystem rename.
 """
 from __future__ import annotations
 

@@ -35,8 +35,8 @@ class InstanceCloneTest(unittest.TestCase):
                 [
                     "APP_ENV=staging",
                     "APP_DEBUG=0",
-                    "APP_BASE_PATH=/mod",
-                    "APP_PUBLIC_BASE_URL=https://webe.li/mod",
+                    "APP_BASE_PATH=/cms",
+                    "APP_PUBLIC_BASE_URL=https://webe.li/cms",
                     f"ABS_PATH={source}",
                 ]
             )
@@ -44,7 +44,7 @@ class InstanceCloneTest(unittest.TestCase):
             encoding="utf-8",
         )
         (source / "config/modules.php").write_text(
-            "return ['/mod/admin', '/modules', 'database/modules', 'config/modules.php'];\n",
+            "return ['/cms/admin', '/modules', 'database/modules', 'config/modules.php'];\n",
             encoding="utf-8",
         )
         (source / "docs/ignored.md").write_text("ignored", encoding="utf-8")
@@ -55,7 +55,7 @@ class InstanceCloneTest(unittest.TestCase):
             connection.execute("CREATE TABLE pages (id INTEGER PRIMARY KEY, body TEXT)")
             connection.execute(
                 "INSERT INTO pages (body) VALUES (?)",
-                (f"https://webe.li/mod/page stored at {source}",),
+                (f"https://webe.li/cms/page stored at {source}",),
             )
         return source
 
@@ -71,13 +71,13 @@ class InstanceCloneTest(unittest.TestCase):
                 "--destination",
                 str(destination),
                 "--new-base-path",
-                "/mod",
+                "/cms",
             )
 
             self.assertEqual(process.returncode, 0, process.stderr)
             env = (destination / "ops/.env").read_text(encoding="utf-8")
-            self.assertIn("APP_BASE_PATH=/mod", env)
-            self.assertIn("APP_PUBLIC_BASE_URL=https://webe.li/mod", env)
+            self.assertIn("APP_BASE_PATH=/cms", env)
+            self.assertIn("APP_PUBLIC_BASE_URL=https://webe.li/cms", env)
             self.assertIn(f"ABS_PATH={destination}", env)
 
             modules = (destination / "config/modules.php").read_text(encoding="utf-8")
@@ -91,7 +91,7 @@ class InstanceCloneTest(unittest.TestCase):
 
             with sqlite3.connect(destination / "storage/database/core.sqlite") as connection:
                 body = connection.execute("SELECT body FROM pages WHERE id = 1").fetchone()[0]
-            self.assertIn("https://webe.li/mod/page", body)
+            self.assertIn("https://webe.li/cms/page", body)
             self.assertIn(str(destination), body)
 
 
