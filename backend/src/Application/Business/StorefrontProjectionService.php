@@ -145,10 +145,11 @@ final class StorefrontProjectionService
         ));
         $productMedia = array_values(array_filter($visualAssets, static fn(array $media): bool => (int)($media['variant_id']??0)===0));
         $documentAssets=array_values(array_filter($assets,static fn(array $media):bool=>(int)($media['variant_id']??0)===0&&in_array((string)($media['role']??''),['document','technical_sheet'],true)));
+        $stockManaged=!in_array((string)($product['type']??'physical'),['service','gift_card'],true);
         $sellables = [];
         foreach ($result['items'] as $item) {
             $regular=(int)$item['regular_sale_price_minor']; $final=(int)$item['sale_price_minor']; $discount=max(0,$regular-$final);
-            $availability=$this->publicAvailability((array)($item['availability']??[]),(float)($item['metadata']['available_quantity']??0),$siteId,$locale);
+            $availability=$this->publicAvailability((array)($item['availability']??[]),(float)($item['metadata']['available_quantity']??0),$siteId,$locale,$stockManaged);
             $variantId=(int)$item['business_variant_id'];
             $variantMedia=array_values(array_filter($visualAssets,static fn(array $media):bool=>(int)($media['variant_id']??0)===$variantId));
             if ($variantMedia===[]) $variantMedia=$productMedia;
@@ -174,7 +175,7 @@ final class StorefrontProjectionService
         $canonical = '/shop/products/' . $slug;
         $primary=null; foreach($sellables as $candidate) if(!empty($candidate['orderable'])){$primary=$candidate;break;} $primary??=$sellables[0]??null;
         $price=is_array($primary['price']??null)?$primary['price']:null;
-        $availability=is_array($primary['availability']??null)?$primary['availability']:$this->publicAvailability(['status'=>'unavailable','is_orderable'=>false],0,$siteId,$locale);
+        $availability=is_array($primary['availability']??null)?$primary['availability']:$this->publicAvailability(['status'=>'unavailable','is_orderable'=>false],0,$siteId,$locale,$stockManaged);
         $offers=[]; foreach($sellables as $sellable) $offers[]=['@type'=>'Offer','sku'=>$sellable['sku'],'priceCurrency'=>$sellable['price']['currency'],'price'=>number_format($sellable['price']['final_minor']/100,2,'.',''),'availability'=>!empty($sellable['orderable'])?'https://schema.org/InStock':'https://schema.org/OutOfStock','url'=>$canonical.'?variant='.$sellable['sellable_id']];
         $displayMedia=$productMedia;
         if($displayMedia===[])foreach($sellables as$sellable)if(($sellable['media']??[])!==[]){$displayMedia=(array)$sellable['media'];break;}
@@ -191,7 +192,7 @@ final class StorefrontProjectionService
             'groups' => $groups, 'attributes' => $attributes, 'updated_at' => (string) ($product['updated_at'] ?? gmdate('c')),
             'media' => $displayMedia, 'documents'=>$documentAssets, 'sellables' => $sellables, 'default_sellable_id' => $primary['sellable_id']??null, 'sku'=>$primary['sku']??null, 'price' => $price, 'availability' => $availability,
             'cta' => !empty($primary['cta'])?($primary['cta']+['label'=>$locale==='en'?'Add to cart':'Ajouter au panier']):null, 'url' => $canonical,
-            'commerce'=>$this->commerceInformation($siteId,$channelId,$locale,(int)($price['final_minor']??0)),
+            'commerce'=>$this->commerceInformation($siteId,$channelId,$locale,(int)($price['final_minor']??0),(string)($product['type']??'physical'),$documentAssets!==[]),
             'content'=>$this->linkedContent($siteId,$productId,$locale),
             '_relation_refs'=>array_values(array_filter((array)($source['relations']??[]),'is_array')),
             'relations'=>[],
@@ -229,7 +230,7 @@ final class StorefrontProjectionService
         return [
             'contract'=>'storefront.product_card.v1','product_id'=>(int)$product['product_id'],'slug'=>(string)$product['slug'],
             'name'=>(string)$product['name'],'summary'=>(string)($product['summary']??''),'card_summary'=>(string)($product['card_summary']??''),
-            'type'=>(string)$product['type'],'locale'=>(string)($product['locale']??'fr'),'brand'=>$product['brand']??null,'attributes'=>$product['attributes']??[],'media'=>array_slice((array)($product['media']??[]),0,1),'price'=>$product['price']??null,
+            'type'=>(string)$product['type'],'locale'=>(string)($product['locale']??'fr'),'brand'=>$product['brand']??null,'attributes'=>$product['attributes']??[],'media'=>array_slice((array)($product['media']??[]),0,1),'sellables'=>$product['sellables']??[],'price'=>$product['price']??null,
             'availability'=>$product['availability']??null,'cta'=>$product['cta']??null,'projection'=>$product['projection']??null,'url'=>(string)$product['url'],
         ];
     }
@@ -241,12 +242,12 @@ final class StorefrontProjectionService
     }
 
     /** @param array<string,mixed> $availability @return array<string,mixed> */
-    private function publicAvailability(array $availability,float $available,int $siteId,string $locale): array
+    private function publicAvailability(array $availability,float $available,int $siteId,string $locale,bool $stockManaged=true): array
     {
         $technical=(string)($availability['status']??'unavailable');
         $orderable=!empty($availability['is_orderable']);
         $threshold=(int)($this->core->one('SELECT last_available_threshold FROM cms_shop_configurations WHERE site_id=? AND language_code=? LIMIT 1',[$siteId,$locale])['last_available_threshold']??1);
-        $display=match(true){!$orderable||in_array($technical,['unavailable','contact_us'],true)=>'unavailable',$technical==='backorder'=>'on_order',$technical==='in_stock'&&$available>0&&$available<=max(1,$threshold)=>'last_available',default=>'available'};
+        $display=match(true){!$orderable||in_array($technical,['unavailable','contact_us'],true)=>'unavailable',!$stockManaged=>'available',$technical==='backorder'=>'on_order',$technical==='in_stock'&&$available>0&&$available<=max(1,$threshold)=>'last_available',default=>'available'};
         $en=str_starts_with($locale,'en');
         $labels=$en?['unavailable'=>'Unavailable','on_order'=>'On order','last_available'=>'Last one available','available'=>'Available']:['unavailable'=>'Indisponible','on_order'=>'Sur commande','last_available'=>'Dernier disponible','available'=>'Disponible'];
         return array_merge($availability,[
@@ -265,16 +266,19 @@ final class StorefrontProjectionService
     }
 
     /** @return array<string,mixed> */
-    private function commerceInformation(int $siteId,int $channelId,string $locale,int $amountMinor): array
+    private function commerceInformation(int $siteId,int $channelId,string $locale,int $amountMinor,string $productType='physical',bool $hasDownloads=false): array
     {
         $db=$this->saleConnection?->database(); $en=str_starts_with($locale,'en');
-        if($db===null) return ['channel_id'=>$channelId,'delivery_methods'=>[],'payment_methods'=>[],'checkout_available'=>false];
+        $virtual=!in_array($productType,['physical','bundle'],true);
+        $virtualDelivery=$virtual?[['code'=>$hasDownloads?'download':'email_confirmation','label'=>$hasDownloads?($en?'Download':'Téléchargement'):($en?'Email confirmation':'Confirmation courriel'),'type'=>$hasDownloads?'digital_download':'email','price_minor'=>0,'free_above_minor'=>null,'requires_address'=>false]]:[];
+        if($db===null) return ['channel_id'=>$channelId,'delivery_methods'=>$virtualDelivery,'payment_methods'=>[],'checkout_available'=>false];
         $delivery=[];
         if($db->tableExists('sale_fulfillment_methods')) foreach($db->all(
             "SELECT code,label_fr,label_en,fulfillment_type,flat_rate_minor,free_above_minor,requires_shipping_address FROM sale_fulfillment_methods
              WHERE site_id=? AND status='active' AND (active_from IS NULL OR active_from<=CURRENT_TIMESTAMP) AND (active_until IS NULL OR active_until>CURRENT_TIMESTAMP)
              ORDER BY sort_order,code",[$siteId]
         ) as $row) $delivery[]=['code'=>(string)$row['code'],'label'=>(string)$row[$en?'label_en':'label_fr'],'type'=>(string)$row['fulfillment_type'],'price_minor'=>(int)$row['flat_rate_minor'],'free_above_minor'=>$row['free_above_minor']!==null?(int)$row['free_above_minor']:null,'requires_address'=>(bool)$row['requires_shipping_address']];
+        if($virtual) $delivery=$virtualDelivery;
         $payments=[];
         if($db->tableExists('sale_payment_methods')) foreach($db->all(
             "SELECT code,name,label_fr,label_en,description_fr,description_en,method_type,currency,min_amount_minor,max_amount_minor FROM sale_payment_methods

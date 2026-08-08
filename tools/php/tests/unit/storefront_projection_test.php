@@ -45,6 +45,18 @@ try {
     $repo=new StorefrontProjectionRepository($core);
     $page=$repo->products(1,3,'fr',['limit'=>100]);
     $h->assertSame($result['products'],count($page['items']),'headless repository reads the exact core projection set');
+    $serviceProduct=array_values(array_filter($page['items'],static fn(array $item):bool=>($item['type']??'')==='service'))[0]??null;
+    $h->assertTrue(is_array($serviceProduct),'public fixture exposes a projected service product');
+    if(is_array($serviceProduct)){
+        $serviceStates=array_column((array)($serviceProduct['sellables']??[]),'availability');
+        $serviceDisplays=array_map(static fn(array $availability):string=>(string)($availability['display_status']??''),$serviceStates);
+        $h->assertTrue(count(array_diff($serviceDisplays,['available','unavailable']))===0,'service availability never exposes physical low-stock or backorder states');
+        $h->assertSame('Confirmation courriel',(string)($serviceProduct['commerce']['delivery_methods'][0]['label']??''),'a service without a downloadable asset uses email confirmation instead of physical delivery');
+        $h->assertSame(false,(bool)($serviceProduct['commerce']['delivery_methods'][0]['requires_address']??true),'non-physical fulfilment never requests a shipping address');
+    }
+    $commerceMethod=(new ReflectionClass(StorefrontProjectionService::class))->getMethod('commerceInformation');$commerceMethod->setAccessible(true);
+    $downloadCommerce=$commerceMethod->invoke($builder,1,3,'fr',1000,'service',true);
+    $h->assertSame('Téléchargement',(string)($downloadCommerce['delivery_methods'][0]['label']??''),'a non-physical product with a downloadable asset presents digital fulfilment');
     $product=array_values(array_filter($page['items'],static fn(array $item):bool=>($item['type']??'')==='physical'&&!empty($item['default_sellable_id'])))[0]??$page['items'][0];
     $variantMediaId=9001;
     $documentMediaId=9002;

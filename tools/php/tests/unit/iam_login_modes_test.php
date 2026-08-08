@@ -34,6 +34,12 @@ try {
     $user = $iam->setLoginMode(2, 'password');
     $h->assertSame('password', $user['login_mode'], 'setLoginMode changes mode');
     $h->assertSame(0, (int) $pdo->query("SELECT count(*) FROM iam_sessions WHERE user_id=2")->fetchColumn(), 'mode change revokes sessions');
+
+    $pdo->exec("INSERT INTO iam_sessions(user_id,session_token_hash,expires_at,created_at) VALUES(1,'password-change-session',datetime('now','+1 hour'),datetime('now'))");
+    $iam->updateUser(1, ['email'=>'password@example.test','first_name'=>'Test','last_name'=>'Import','locale'=>'fr-CH','is_active'=>true,'password'=>'NewPassword123!']);
+    $updatedHash = (string)$pdo->query('SELECT password_hash FROM iam_users WHERE id=1')->fetchColumn();
+    $h->assertTrue(password_verify('NewPassword123!', $updatedHash), 'user import/update can replace an existing password');
+    $h->assertSame(0, (int)$pdo->query('SELECT count(*) FROM iam_sessions WHERE user_id=1')->fetchColumn(), 'password replacement revokes existing sessions');
 } finally {
     unset($pdo, $auth, $iam);
     $db = null;

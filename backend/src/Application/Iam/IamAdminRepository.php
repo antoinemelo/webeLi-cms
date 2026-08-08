@@ -165,7 +165,15 @@ final class IamAdminRepository
         if (array_key_exists('role_ids',$data) || array_key_exists('site_roles',$data)) {
             $this->replaceUserRoles($id, $nextRoleIds, $nextSiteRoles);
         }
-        if (!$nextActive) $this->revokeSessions($id);
+        $newPassword = (string)($data['password'] ?? '');
+        if ($newPassword !== '') {
+            if (strlen($newPassword) < 12) throw new \InvalidArgumentException('PASSWORD_TOO_SHORT');
+            $this->db->run(
+                'UPDATE iam_users SET password_hash=:hash, last_password_change_at=:changed_at, updated_at=:updated_at WHERE id=:id',
+                ['hash'=>password_hash($newPassword, PASSWORD_DEFAULT),'changed_at'=>now_utc(),'updated_at'=>now_utc(),'id'=>$id]
+            );
+        }
+        if (!$nextActive || $newPassword !== '') $this->revokeSessions($id);
         return $this->findUser($id) ?? [];
     }
 

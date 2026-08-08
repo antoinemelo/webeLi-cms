@@ -5,10 +5,10 @@
   "package_root": "cms",
   "major": "v09",
   "minor": "e07",
-  "patch": "a",
-  "release_type": "minor",
+  "patch": "g",
+  "release_type": "patch",
   "release_name": "E-COMMERCE",
-  "technical_version": "dec_v09-e07a",
+  "technical_version": "dec_v09-e07g",
   "history_policy": {
     "minor_resets_patch_history": true,
     "major_resets_minor_and_patch_history": true,

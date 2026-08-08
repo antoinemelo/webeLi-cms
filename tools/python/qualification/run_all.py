@@ -676,23 +676,45 @@ def _php_dependencies_check() -> tuple[int, str, str]:
     if validate.returncode != 0:
         return validate.returncode, validate_output, "composer validate --strict a échoué."
 
-    try:
-        audit = subprocess.run(
-            [composer, "audit", "--locked", "--no-interaction", "--format=json"],
-            cwd=backend,
-            text=True,
-            capture_output=True,
-            timeout=120,
-        )
-    except subprocess.TimeoutExpired as exc:
-        stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None)).strip()
-        stderr = _as_text(getattr(exc, "stderr", None)).strip()
-        return 124, "\n".join(part for part in (stdout, stderr) if part), "composer audit --locked a dépassé 120s."
+    audit_command = [composer, "audit", "--locked", "--no-interaction", "--format=json"]
+    failed_attempts: list[str] = []
+    for attempt in range(1, 3):
+        try:
+            audit = subprocess.run(
+                audit_command,
+                cwd=backend,
+                text=True,
+                capture_output=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = _as_text(getattr(exc, "stdout", None) or getattr(exc, "output", None)).strip()
+            stderr = _as_text(getattr(exc, "stderr", None)).strip()
+            return 124, "\n".join(part for part in (stdout, stderr) if part), "composer audit --locked a dépassé 120s."
 
-    output = "\n".join(part for part in (_as_text(audit.stdout).strip(), _as_text(audit.stderr).strip()) if part)
-    if audit.returncode != 0:
-        return audit.returncode, output, "composer audit --locked a détecté au moins une advisory non acceptée."
-    return 0, "Audit sécurité PHP OK.\n$ composer validate --strict --no-check-publish\n$ composer audit --locked --format=json\n" + (output or "{}"), ""
+        stdout = _as_text(audit.stdout).strip()
+        stderr = _as_text(audit.stderr).strip()
+        output = "\n".join(part for part in (stdout, stderr) if part)
+        if audit.returncode == 0:
+            retry_note = f"Audit Composer rétabli à la tentative {attempt}/2.\n" if attempt > 1 else ""
+            return 0, retry_note + "Audit sécurité PHP OK.\n$ composer validate --strict --no-check-publish\n$ composer audit --locked --format=json\n" + (output or "{}"), ""
+
+        try:
+            payload = json.loads(stdout)
+        except (json.JSONDecodeError, TypeError):
+            payload = None
+        if isinstance(payload, dict) and ("advisories" in payload or "abandoned" in payload):
+            return audit.returncode, output, "composer audit --locked a détecté au moins une advisory ou dépendance abandonnée non acceptée."
+
+        failed_attempts.append(f"Tentative {attempt}/2:\n{output or 'aucune sortie Composer'}")
+        if attempt < 2:
+            time.sleep(1.0)
+
+    return (
+        audit.returncode,
+        "\n\n".join(failed_attempts),
+        "composer audit --locked est indisponible après 2 tentatives; l’état de sécurité des dépendances PHP n’a pas pu être certifié.",
+    )
 
 
 def _performance_baseline_check() -> tuple[int, str, str]:

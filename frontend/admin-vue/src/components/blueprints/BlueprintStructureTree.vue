@@ -38,8 +38,9 @@ function dropField(section: number, target: number): void {
       <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="!canManage" @click="emit('addSection')">{{ t('blueprints.tree.addSection') }}</button>
     </div>
     <ol class="blueprint-tree__sections list-unstyled mb-0">
-      <li v-for="(section, sectionIndex) in sections" :key="section.section_key + sectionIndex" class="blueprint-tree__section" :class="{ 'is-selected': sectionIndex === selectedSectionIndex }" draggable="true" @dragstart="draggedSection = sectionIndex" @dragover.prevent @drop.self="dropSection(sectionIndex)">
+      <li v-for="(section, sectionIndex) in sections" :key="section.section_key + sectionIndex" class="blueprint-tree__section" :class="{ 'is-selected': sectionIndex === selectedSectionIndex }" :draggable="canManage" @dragstart="draggedSection = sectionIndex" @dragover.prevent @drop.self="dropSection(sectionIndex)">
         <div class="blueprint-tree__section-header">
+          <span class="dnd-handle" :class="{ 'is-disabled': !canManage }" :title="t('common.dragToReorder')" aria-hidden="true">⋮</span>
           <button type="button" class="btn btn-link text-start p-0 flex-grow-1" @click="emit('selectSection', sectionIndex)"><strong>{{ section.label }}</strong><small class="d-block text-muted">{{ t('blueprints.tree.sectionSummary', { layout: t(`blueprints.layout.${section.layout}`), count: section.fields.length }) }}</small></button>
           <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="!canManage || sectionIndex === 0" :aria-label="t('blueprints.tree.moveSectionUp', { label: section.label })" @click="emit('moveSection', sectionIndex, sectionIndex - 1)">{{ t('common.moveUp') }}</button>
           <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="!canManage || sectionIndex === sections.length - 1" :aria-label="t('blueprints.tree.moveSectionDown', { label: section.label })" @click="emit('moveSection', sectionIndex, sectionIndex + 1)">{{ t('common.moveDown') }}</button>
@@ -58,7 +59,8 @@ function dropField(section: number, target: number): void {
           </div>
         </details>
         <ol class="list-group" :aria-label="t('blueprints.tree.fieldsOf', { label: section.label })">
-          <li v-for="(field, fieldIndex) in section.fields" :key="field.field_handle + fieldIndex" class="list-group-item blueprint-tree__field" draggable="true" @dragstart.stop="draggedField = { section: sectionIndex, field: fieldIndex }" @dragover.prevent @drop.stop="dropField(sectionIndex, fieldIndex)">
+          <li v-for="(field, fieldIndex) in section.fields" :key="field.field_handle + fieldIndex" class="list-group-item blueprint-tree__field" :draggable="canManage" @dragstart.stop="draggedField = { section: sectionIndex, field: fieldIndex }" @dragover.prevent @drop.stop="dropField(sectionIndex, fieldIndex)">
+            <span class="dnd-handle" :class="{ 'is-disabled': !canManage }" :title="t('common.dragToReorder')" aria-hidden="true">⋮</span>
             <button type="button" class="blueprint-tree__field-main" @click="emit('editField', sectionIndex, fieldIndex, $event.currentTarget as HTMLElement)"><strong>{{ field.label }}</strong><small><code>{{ field.field_handle }}</code> · {{ field.field_type }} · {{ field.width }}%</small></button>
             <span v-if="field.is_system" class="badge text-bg-secondary">{{ t('blueprints.fieldsets.system') }}</span>
             <div class="blueprint-tree__actions" :aria-label="t('blueprints.tree.fieldActions')">

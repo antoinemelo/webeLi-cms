@@ -370,6 +370,7 @@ final class IamAdminApiController
             'INVALID_ROLE_KEY' => AdminApiContract::validationResponse(['role_key'=>['Clé de rôle invalide.']], 'Rôle invalide.'),
             'INVALID_TOTP_CODE' => AdminApiContract::validationResponse(['code'=>['Code 2FA invalide.']], 'Code 2FA invalide.'),
             'INVALID_LOGIN_MODE' => AdminApiContract::validationResponse(['login_mode'=>['Mode de connexion invalide.']], 'Utilisateur invalide.'),
+            'PASSWORD_TOO_SHORT' => AdminApiContract::validationResponse(['password'=>['Minimum 12 caractères.']], 'Utilisateur invalide.'),
             'TOTP_NOT_ENABLED' => Response::error('TOTP_NOT_ENABLED', 'La 2FA n’est pas activée pour cet utilisateur.', 409),
             default => throw $e,
         };

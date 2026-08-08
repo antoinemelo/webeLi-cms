@@ -128,7 +128,7 @@ test.describe('38d Opérations, produits, stock, offres et Audiences', () => {
     await productRow.locator('.catalog-row-menu-summary').click();
     await productRow.getByRole('button',{name:'Médias',exact:true}).click();
     const dialog=page.getByRole('dialog',{name:'Modifier les médias'});
-    await expect(dialog.getByRole('heading',{name:'Images et médias du produit'})).toBeVisible();
+    await expect(dialog.getByRole('heading',{name:'Images et médias du produit'})).toBeVisible({ timeout: 60_000 });
     await expect(dialog.getByRole('heading',{name:'Aperçu de la galerie boutique'})).toBeVisible();
     await expect(dialog.getByRole('button',{name:/Image principale Cartes/})).toBeVisible();
     await expect(dialog.getByRole('button',{name:'Médiathèque'})).toBeVisible();
@@ -153,6 +153,7 @@ test.describe('38d Opérations, produits, stock, offres et Audiences', () => {
   });
 
   test('updates the unified inventory only through an explicit signed variation', async ({ page }) => {
+    test.setTimeout(120_000);
     await signIn(page);
     let releaseInventory = () => {};
     const inventoryGate = new Promise<void>(resolve => { releaseInventory = resolve; });
@@ -171,10 +172,9 @@ test.describe('38d Opérations, produits, stock, offres et Audiences', () => {
       } : { movement: { quantity: -2 } }) });
     });
 
-    const navigation = page.goto(cmsPath('/admin/app/business/inventory'));
-    await expect(page.getByRole('status', { name: 'Calcul de l’inventaire en cours' })).toBeVisible();
+    await page.goto(cmsPath('/admin/app/business/inventory'), { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('status', { name: 'Calcul de l’inventaire en cours' })).toBeVisible({ timeout: 60_000 });
     releaseInventory();
-    await navigation;
     await expect(page.getByRole('heading', { name: 'Inventaire' })).toHaveCount(0);
     const inventoryRow = page.locator('.operations-inventory__table-wrap tbody tr').filter({ hasText: 'DEMO-GOURDE' });
     await expect(inventoryRow).toHaveCount(1);

@@ -11,7 +11,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-06-25
+last_verified: 2026-08-04
 source_of_truth: manual
 source_paths:
   - docs
@@ -24,17 +24,20 @@ generated: false
 ---
 # Choisir son parcours documentaire
 
-> Ouvrez cette page depuis **Actifs > Docs** pour partir du bon profil. Les
-> profils sont des filtres de lecture : tout utilisateur authentifié peut voir
-> toute la documentation.
+Choisissez d’abord selon votre tâche. Votre intitulé de poste peut couvrir plusieurs parcours : un administrateur peut aussi publier, et une personne chargée du catalogue peut avoir besoin des guides de contenu.
 
-```text
-/--------------------------/-----------------------\
-|  @===\  #====  /%%%%    /  /%%%%  |\  /|  /====  |
-|  @    | #===   #       /   #      | \/ |  \===\  |
-|  @===/  #====  \%%%%  /    \%%%%  |    |  ====/  |
-\----------------------/---------------------------/
-```
+| Aujourd’hui, je veux… | Parcours conseillé |
+|---|---|
+| Me connecter, créer une page, ajouter un média ou publier | [Guide utilisateur](../user-guide/README.md) |
+| Gérer un produit, un contact ou une commande | [Catalogue, clients et ventes](../business/README.md) |
+| Régler un site, une langue, un rôle ou un module | [Administration](../administration/README.md) |
+| Installer, sauvegarder, mettre à jour ou dépanner | [Exploitation](../operations/README.md) |
+| Utiliser une API, modifier le code ou créer une extension | [API](../api/README.md) et [Développement](../development/README.md) |
+| Vérifier une capacité, une limite ou une preuve | [Évaluation](../evaluation/README.md) |
+
+Dans **Actifs > Docs**, la recherche examine tous les parcours. Le filtre de profil ne retire aucune autorisation : il réduit seulement la liste affichée.
+
+## Parcours conseillés selon vos responsabilités
 
 ## Éditeur
 
@@ -162,12 +165,12 @@ Objectif : contrôler factuellement l’état vérifié du CMS et ses limites co
 
 Passez au profil **Installateur** uniquement si vous devez exécuter une installation ou une mise à jour réelle.
 
-## Sources canoniques
+## Lorsque plusieurs profils interviennent
 
-Les procédures utilisateur se trouvent dans les guides. Les listes de routes,
-commandes, permissions, validateurs et schémas sont générées dans
-[Référence](../reference/README.md). Les endpoints publics sont référencés par
-l’[OpenAPI publique](../public-api/openapi.v1.json). Les limites connues sont
-dans [Limites connues](../evaluation/limitations.md). Les commandes et contrôles
-de release ne doivent pas être recopiés partout : liez la procédure canonique
-existante lorsqu’elle est nécessaire.
+Un contenu peut passer successivement entre un éditeur, une personne chargée de la validation et un responsable SEO. Utilisez les statuts et révisions pour transmettre le travail, et notez les décisions qui ne sont pas visibles dans le contenu lui-même. Un administrateur règle les accès et la structure, mais ne remplace pas la relecture fonctionnelle de chaque métier.
+
+Pour une opération sensible, la personne qui exécute et celle qui vérifie devraient être distinctes lorsque l’organisation le permet. C’est particulièrement utile pour les publications importantes, les changements de droits, les mises à jour et les restaurations.
+
+## Pour maintenir ou auditer la documentation
+
+Les procédures utilisateur se trouvent dans les guides. Les routes, commandes, permissions, validateurs et schémas sont générés dans [Référence](../reference/README.md). Les endpoints publics sont décrits dans l’[OpenAPI publique](../public-api/openapi.v1.json), et les écarts connus dans [Limites connues](../evaluation/limitations.md). Cette séparation garde les explications lisibles tout en conservant une preuve technique complète.

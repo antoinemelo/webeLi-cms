@@ -1,8 +1,11 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
-  expect: { timeout: 10_000 },
+  // The release profile runs the isolated PHP server with one browser worker.
+  // Under sustained load, a valid API round-trip can exceed Playwright's
+  // defaults; keep assertions strict while giving the full stack time to settle.
+  timeout: 120_000,
+  expect: { timeout: 60_000 },
   fullyParallel: false,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),

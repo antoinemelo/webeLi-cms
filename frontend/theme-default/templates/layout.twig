@@ -20,11 +20,11 @@
   {% include 'partials/site-footer.twig' %}
   {% include 'partials/cookie-consent.twig' %}
   {% if storefront_cart_visible|default(false) %}
-    <div class="storefront-cart-backdrop" data-cart-backdrop hidden></div>
-    <aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden role="dialog" aria-modal="true" aria-labelledby="storefront-cart-title" tabindex="-1"><button type="button" data-cart-close aria-label="Fermer le panier">Fermer</button><h2 id="storefront-cart-title">Votre panier</h2><div data-cart-status role="status" aria-live="polite"></div><div data-cart-error role="alert" aria-live="assertive"></div><div data-cart-lines aria-live="polite"></div><div data-cart-summary></div><strong data-cart-total></strong><div class="cart-drawer__actions"><a data-cart-full href="{{ localized_url('/cart', languageCode|default('fr')) }}">Voir le panier complet</a><a class="cart-checkout" data-cart-checkout href="{{ localized_url('/checkout', languageCode|default('fr')) }}">Passer la commande</a></div></aside>
-    <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart-header.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script><script src="{{ asset('/frontend/theme-default/assets/js/storefront-product.js') }}" defer></script>
+    {% include 'partials/storefront-cart-drawer.twig' %}
+    <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart-header.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script>
   {% endif %}
 
+  <script src="{{ asset('/frontend/theme-default/assets/js/storefront-product.js') }}" defer></script>
   <script src="{{ asset('/frontend/theme-default/assets/js/app.js') }}" defer></script>
   <script src="{{ asset('/frontend/theme-default/assets/js/cookie-consent.js') }}" defer></script>
   {% if visual_editing|default(false) %}<script src="{{ asset('/frontend/theme-default/assets/js/visual-editing-bridge.js') }}" defer></script>{% endif %}

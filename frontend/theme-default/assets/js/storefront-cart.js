@@ -6,19 +6,21 @@
 
   const lang = (document.documentElement.lang || 'fr').toLowerCase().startsWith('en') ? 'en' : 'fr';
   const labels = lang === 'en' ? {
-    loading: 'Loading your cart…', empty: 'Your cart is empty.', quantity: 'Quantity', remove: 'Remove',
+    empty: 'Your cart is empty.', quantity: 'Quantity', remove: 'Remove',
     subtotal: 'Subtotal', discount: 'Discount', shippingKnown: 'Estimated delivery', shippingUnknown: 'Delivery calculated at checkout',
-    total: 'Total', added: 'Item added to cart.', updated: 'Cart updated.', removed: 'Item removed from cart.',
+    total: 'Total',
     conflict: 'This cart changed in another tab. The latest version is now displayed.', expired: 'This cart has expired or was revoked.',
     restart: 'Start a new cart', retry: 'Try again', inStock: 'In stock', backorder: 'On order', unavailable: 'Unavailable',
     reduced: 'Reduce quantity', choose: 'Choose another variant', priceChanged: 'Price updated', was: 'previously',
+    decrease: 'Decrease quantity', increase: 'Increase quantity', item: 'item', items: 'items',
   } : {
-    loading: 'Chargement du panier…', empty: 'Votre panier est vide.', quantity: 'Quantité', remove: 'Retirer',
+    empty: 'Votre panier est vide.', quantity: 'Quantité', remove: 'Retirer',
     subtotal: 'Sous-total', discount: 'Remise', shippingKnown: 'Livraison estimée', shippingUnknown: 'Livraison calculée à l’étape suivante',
-    total: 'Total', added: 'Article ajouté au panier.', updated: 'Panier mis à jour.', removed: 'Article retiré du panier.',
+    total: 'Total',
     conflict: 'Ce panier a changé dans un autre onglet. Sa version la plus récente est maintenant affichée.', expired: 'Ce panier a expiré ou a été révoqué.',
     restart: 'Créer un nouveau panier', retry: 'Réessayer', inStock: 'En stock', backorder: 'Sur commande', unavailable: 'Indisponible',
     reduced: 'Réduire la quantité', choose: 'Choisir une autre variante', priceChanged: 'Prix actualisé', was: 'auparavant',
+    decrease: 'Diminuer la quantité', increase: 'Augmenter la quantité', item: 'article', items: 'articles',
   };
   const storageKey = `amcms.cart.${channel}`;
   const detectedPrefix = (() => {
@@ -38,7 +40,6 @@
   let loading = false;
   let pendingChanges = [];
 
-  const setStatus = (message = '') => document.querySelectorAll('[data-cart-status]').forEach((node) => { node.textContent = message; });
   const setError = (message = '', recovery = false) => document.querySelectorAll('[data-cart-error]').forEach((node) => {
     node.classList.toggle('cart-error', Boolean(message));
     node.innerHTML = message ? `<p>${escapeHtml(message)}</p>${recovery ? `<button type="button" data-cart-retry>${escapeHtml(labels.retry)}</button>` : ''}` : '';
@@ -46,7 +47,6 @@
   const setBusy = (busy) => {
     loading = busy;
     document.querySelectorAll('[data-cart-drawer], [data-cart-page]').forEach((node) => node.setAttribute('aria-busy', String(busy)));
-    if (busy) setStatus(labels.loading);
   };
 
   const request = async (path, options = {}) => {
@@ -86,13 +86,13 @@
       ? ` · ${lang === 'en' ? 'reserved until' : 'réservé jusqu’à'} ${new Date(`${line.reservation.expires_at}Z`).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })}` : '';
     const mediaValue = line.media_url || line.image_url || line.thumbnail_url;
     const media = mediaValue && String(mediaValue).startsWith('/') && prefix && mediaValue !== prefix && !String(mediaValue).startsWith(`${prefix}/`) ? `${prefix}${mediaValue}` : mediaValue;
+    const quantity = Math.max(1, Number(line.quantity || 1));
     return `<article class="cart-line" data-line-id="${Number(line.id)}">
-      ${media ? `<img class="cart-line__media" src="${escapeHtml(media)}" alt="${escapeHtml(line.media_alt || '')}">` : ''}
-      <div class="cart-line__content"><strong>${escapeHtml(line.product_name)}</strong>${variant ? `<small>${variant}</small>` : ''}
-        <div class="cart-line__price">${promotion}</div>${oldPrice}
-        <small class="cart-line__availability" data-status="${escapeHtml(line.availability?.status || line.availability_state)}">${escapeHtml(availabilityLabel(line))}${reservation}${expiry}</small>
+      <div class="cart-line__media-wrap">${media ? `<img class="cart-line__media" src="${escapeHtml(media)}" alt="${escapeHtml(line.media_alt || '')}">` : '<span class="cart-line__media-placeholder" aria-hidden="true">◇</span>'}</div>
+      <div class="cart-line__content"><div class="cart-line__heading"><strong>${escapeHtml(line.product_name)}</strong><div class="cart-line__price">${promotion}</div></div>${variant ? `<small class="cart-line__variant">${variant}</small>` : ''}
+        ${oldPrice}<small class="cart-line__availability" data-status="${escapeHtml(line.availability?.status || line.availability_state)}"><i aria-hidden="true"></i>${escapeHtml(availabilityLabel(line))}${reservation}${expiry}</small>
       </div>
-      <div class="cart-line__actions"><label>${escapeHtml(labels.quantity)} <input data-cart-quantity type="number" inputmode="numeric" min="1" value="${Number(line.quantity)}"></label><button data-cart-remove type="button">${escapeHtml(labels.remove)}</button></div>
+      <div class="cart-line__actions"><div class="cart-quantity" role="group" aria-label="${escapeHtml(labels.quantity)}"><button data-cart-decrease type="button" aria-label="${escapeHtml(labels.decrease)}" ${quantity <= 1 ? 'disabled' : ''}>−</button><label><span class="visually-hidden">${escapeHtml(labels.quantity)}</span><input data-cart-quantity type="number" inputmode="numeric" min="1" value="${quantity}"></label><button data-cart-increase type="button" aria-label="${escapeHtml(labels.increase)}">+</button></div><button class="cart-line__remove" data-cart-remove type="button">${escapeHtml(labels.remove)}</button></div>
     </article>`;
   };
 
@@ -100,11 +100,12 @@
     const lines = value?.lines || [];
     const count = lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
     document.querySelectorAll('[data-cart-count]').forEach((node) => { node.textContent = String(count); });
+    document.querySelectorAll('[data-cart-item-count]').forEach((node) => { node.textContent = `${count} ${count === 1 ? labels.item : labels.items}`; });
     document.querySelectorAll('[data-cart-lines]').forEach((root) => { root.innerHTML = lines.length ? lines.map(lineMarkup).join('') : `<p class="cart-empty">${escapeHtml(labels.empty)}</p>`; });
     document.querySelectorAll('[data-cart-summary]').forEach((root) => {
       root.innerHTML = value && lines.length ? `<dl class="cart-summary"><div><dt>${escapeHtml(labels.subtotal)}</dt><dd>${money(value.subtotal_minor, value.currency)}</dd></div>${Number(value.discount_total_minor || 0) > 0 ? `<div><dt>${escapeHtml(labels.discount)}</dt><dd>−${money(value.discount_total_minor, value.currency)}</dd></div>` : ''}<div><dt>${escapeHtml(Number(value.shipping_total_minor || 0) > 0 ? labels.shippingKnown : labels.shippingUnknown)}</dt><dd>${Number(value.shipping_total_minor || 0) > 0 ? money(value.shipping_total_minor, value.currency) : '—'}</dd></div></dl>` : '';
     });
-    document.querySelectorAll('[data-cart-total]').forEach((node) => { node.textContent = value && lines.length ? `${labels.total} : ${money(value.grand_total_minor, value.currency)}` : ''; });
+    document.querySelectorAll('[data-cart-total]').forEach((node) => { node.innerHTML = value && lines.length ? `<span>${escapeHtml(labels.total)}</span><strong>${money(value.grand_total_minor, value.currency)}</strong>` : ''; });
     document.querySelectorAll('[data-cart-checkout]').forEach((link) => {
       link.href = value && lines.length ? `${checkoutUrl}?channel=${encodeURIComponent(channel)}&cart_token=${encodeURIComponent(token())}&lang=${encodeURIComponent(lang)}` : '#';
       link.toggleAttribute('aria-disabled', !(value && lines.length) || pendingChanges.some((change) => change.requires_confirmation));
@@ -140,7 +141,7 @@
   };
 
   const load = async ({ preserveMessage = false } = {}) => {
-    if (!token()) { cart = null; render(null); setStatus(''); return null; }
+    if (!token()) { cart = null; render(null); return null; }
     setBusy(true);
     if (!preserveMessage) setError('');
     try {
@@ -155,7 +156,6 @@
       return null;
     } finally {
       setBusy(false);
-      if (!preserveMessage) setStatus('');
     }
   };
 
@@ -180,14 +180,13 @@
     else document.querySelector('[data-cart-toggle]')?.focus();
   };
 
-  const mutate = async (path, options, successMessage) => {
+  const mutate = async (path, options) => {
     const before = cart ? structuredClone(cart) : null;
     setBusy(true); setError('');
     try {
       const data = await request(path, options);
       cart = data.cart;
       render(cart);
-      setStatus(successMessage);
       return data;
     } catch (reason) {
       if (reason.status === 409) {
@@ -197,7 +196,6 @@
           return !current || current.quantity !== oldLine.quantity || current.unit_price_minor !== oldLine.unit_price_minor;
         });
         setError(`${labels.conflict}${changedLine ? ` ${changedLine.product_name}.` : ''}`);
-        setStatus(labels.conflict);
       } else if (reason.status === 404) expired();
       else setError(reason.message, true);
       return null;
@@ -209,25 +207,42 @@
     const toggle = event.target.closest('[data-cart-toggle]');
     const close = event.target.closest('[data-cart-close], [data-cart-backdrop]');
     const remove = event.target.closest('[data-cart-remove]');
+    const decrease = event.target.closest('[data-cart-decrease]');
+    const increase = event.target.closest('[data-cart-increase]');
     const retry = event.target.closest('[data-cart-retry]');
     const restart = event.target.closest('[data-cart-restart]');
     const confirmChanges = event.target.closest('[data-cart-change-confirm]');
     if (toggle) { await openDrawer(); return; }
     if (close) { closeDrawer(); return; }
     if (retry) { await load(); return; }
-    if (restart) { localStorage.removeItem(storageKey); cart = null; setError(''); render(null); setStatus(labels.empty); return; }
-    if (confirmChanges) { pendingChanges = []; setError(''); render(cart); setStatus(labels.updated); return; }
+    if (restart) { localStorage.removeItem(storageKey); cart = null; setError(''); render(null); return; }
+    if (confirmChanges) { pendingChanges = []; setError(''); render(cart); return; }
     if (event.target.closest('[data-cart-checkout][aria-disabled="true"]')) { event.preventDefault(); return; }
+    if ((decrease || increase) && cart && !loading) {
+      const line = (decrease || increase).closest('[data-line-id]');
+      const input = line?.querySelector('[data-cart-quantity]');
+      const quantity = Math.max(1, (Number.parseInt(input?.value || '1', 10) || 1) + (increase ? 1 : -1));
+      await mutate(`/cart/${encodeURIComponent(token())}/lines/${encodeURIComponent(line.dataset.lineId)}?lang=${encodeURIComponent(lang)}`, {
+        method: 'PATCH', body: JSON.stringify({ data: { quantity, expected_version: cart.version } }),
+      });
+      return;
+    }
     if (add) {
       event.preventDefault();
+      const sellableIds = [...new Set(String(add.dataset.sellableIds || add.dataset.sellableId || '').split(',').map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))];
+      if (!sellableIds.length) return;
       try {
         await ensure();
         if (!cart) await load();
-        await mutate(`/cart/${encodeURIComponent(token())}/lines?lang=${encodeURIComponent(lang)}`, {
-          method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() },
-          body: JSON.stringify({ data: { sellable_id: Number(add.dataset.sellableId), quantity: Number(add.dataset.quantity || 1), expected_version: cart?.version } }),
-        }, labels.added);
-        if (cart) await openDrawer();
+        let completed = true;
+        for (const sellableId of sellableIds) {
+          const result = await mutate(`/cart/${encodeURIComponent(token())}/lines?lang=${encodeURIComponent(lang)}`, {
+            method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() },
+            body: JSON.stringify({ data: { sellable_id: sellableId, quantity: Number(add.dataset.quantity || 1), expected_version: cart?.version } }),
+          });
+          if (!result) { completed = false; break; }
+        }
+        if (completed && cart) await openDrawer();
       } catch (reason) { setError(reason.message, true); }
       return;
     }
@@ -235,7 +250,7 @@
       const line = remove.closest('[data-line-id]');
       await mutate(`/cart/${encodeURIComponent(token())}/lines/${encodeURIComponent(line.dataset.lineId)}?lang=${encodeURIComponent(lang)}`, {
         method: 'DELETE', body: JSON.stringify({ data: { expected_version: cart.version } }),
-      }, labels.removed);
+      });
     }
   });
 
@@ -246,7 +261,7 @@
     const line = event.target.closest('[data-line-id]');
     await mutate(`/cart/${encodeURIComponent(token())}/lines/${encodeURIComponent(line.dataset.lineId)}?lang=${encodeURIComponent(lang)}`, {
       method: 'PATCH', body: JSON.stringify({ data: { quantity, expected_version: cart.version } }),
-    }, labels.updated);
+    });
   });
 
   document.addEventListener('keydown', (event) => {
@@ -261,6 +276,6 @@
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
 
-  window.addEventListener('storage', (event) => { if (event.key === storageKey) load({ preserveMessage: true }).then(() => setStatus(labels.conflict)); });
+  window.addEventListener('storage', (event) => { if (event.key === storageKey) load({ preserveMessage: true }); });
   load();
 })();

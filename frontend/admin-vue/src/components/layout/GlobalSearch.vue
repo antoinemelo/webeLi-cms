@@ -83,7 +83,7 @@ watch(query, () => {
   debounceTimer = window.setTimeout(fetchContentResults, 220);
 });
 
-watch(() => [context.siteId, context.languageCode], () => {
+watch(() => [context.siteId, context.languageCode, context.context], () => {
   if (hasEnoughCharacters.value) fetchContentResults();
 });
 

@@ -68,10 +68,18 @@ test.describe('M6 reservations, expiry and backorder UX', () => {
     await page.getByRole('button', { name: 'Libérer' }).first().click();
     await expect(page.getByRole('button', { name: 'Confirmer la libération' })).toBeDisabled();
     await page.getByLabel('Raison obligatoire').fill('Client parti avant paiement');
+    const refreshedReservations = page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/admin\/api\/sale\/stock\/reservations(?:\?|$)/.test(response.url()),
+      { timeout: 60_000 },
+    );
     await page.getByRole('button', { name: 'Confirmer la libération' }).click();
     await expect.poll(() => state.released()).not.toBeNull();
     expect(state.released()).toMatchObject({ data: { reservation_kind: 'physical', reason: 'Client parti avant paiement' } });
-    await page.getByLabel('Déclenchement').selectOption('payment_authorization');
+    await refreshedReservations;
+    await expect(page.getByRole('dialog', { name: 'Libérer' })).toHaveCount(0);
+    const policyTrigger = page.getByLabel('Déclenchement');
+    await policyTrigger.selectOption('payment_authorization');
+    await expect(policyTrigger).toHaveValue('payment_authorization');
     await page.getByLabel('TTL (s)').fill('900');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect.poll(() => state.savedPolicy()).not.toBeNull();

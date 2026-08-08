@@ -135,7 +135,8 @@ def wait_for_http(url: str, process: subprocess.Popen[bytes], timeout: float = 6
         if process.poll() is not None:
             raise RuntimeError(f"Le serveur PHP s’est arrêté avec le code {process.returncode}.")
         try:
-            with urllib.request.urlopen(url, timeout=1.0) as response:
+            request_timeout = min(5.0, max(0.1, deadline - time.monotonic()))
+            with urllib.request.urlopen(url, timeout=request_timeout) as response:
                 if response.status < 500:
                     return
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:

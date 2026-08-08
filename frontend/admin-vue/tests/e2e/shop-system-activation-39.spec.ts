@@ -29,6 +29,18 @@ const headers = (csrf: string): Record<string, string> => ({
   'X-CSRF-Token': csrf,
 });
 
+async function selectContentLanguage(page: Page, languageCode: string): Promise<void> {
+  const label = languageCode.slice(0, 2).toUpperCase();
+  const languageButton = page.getByRole('button', { name: new RegExp(`^${label}(?:\\s|$)`) });
+  const directButton = languageButton.filter({ hasText: new RegExp(`^${label}$`) });
+  if (await directButton.count()) {
+    await directButton.click();
+    return;
+  }
+  await page.getByRole('button', { name: '⋯', exact: true }).click();
+  await languageButton.click();
+}
+
 test.describe('39 Shop système, activation multisite et Studio', () => {
   test.skip(!enabled, 'Dedicated E2E admin environment is required');
 
@@ -42,8 +54,10 @@ test.describe('39 Shop système, activation multisite et Studio', () => {
     expect(matrixResponse.ok(), await matrixResponse.text()).toBeTruthy();
     const matrix = (await matrixResponse.json()).data.shops as Array<Record<string, unknown>>;
     const french = matrix.find(shop => Number(shop.site_id) === 1 && shop.language_code === 'fr');
+    const uninitialized = matrix.find(shop => Number(shop.site_id) === 1 && !Boolean(shop.is_initialized));
     expect(french).toBeTruthy();
     expect(french?.status).toBe('active');
+    expect(uninitialized).toBeTruthy();
 
     await page.goto(cmsPath('/admin/app/contents/pages/system-shop?site_id=1&language_code=fr'));
     await expect(page.getByRole('heading', { name: 'Page système Boutique' })).toBeVisible();
@@ -60,9 +74,19 @@ test.describe('39 Shop système, activation multisite et Studio', () => {
     await page.evaluate(({ basePath, apiBasePath }) => {
       window.__AMCMS_ADMIN__ = { ...(window.__AMCMS_ADMIN__ || {}), basePath, apiBasePath };
     }, { basePath: configuredBasePath, apiBasePath: cmsPath('/admin/api') });
-    await page.getByRole('button', { name: 'EN', exact: true }).click();
+    const uninitializedShopMatrix = page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/admin\/api\/sale\/ecommerce\/shops(?:\?|$)/.test(response.url()),
+      { timeout: 60_000 },
+    );
+    await selectContentLanguage(page, String(uninitialized?.language_code));
+    expect((await uninitializedShopMatrix).ok()).toBeTruthy();
     await expect(page.getByText('Système', { exact: true })).toHaveCount(0);
-    await page.getByRole('button', { name: 'FR', exact: true }).click();
+    const frenchShopMatrix = page.waitForResponse(
+      (response) => response.request().method() === 'GET' && /\/admin\/api\/sale\/ecommerce\/shops(?:\?|$)/.test(response.url()),
+      { timeout: 60_000 },
+    );
+    await selectContentLanguage(page, 'fr');
+    expect((await frenchShopMatrix).ok()).toBeTruthy();
     await expect(page.getByText('Système', { exact: true })).toBeVisible();
     const shopRow = page.getByRole('row', { name: /Boutique.*Système/ });
     const shopButton = shopRow.getByRole('button', { name: '/shop', exact: true });

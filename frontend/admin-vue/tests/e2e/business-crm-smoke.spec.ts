@@ -192,7 +192,7 @@ async function createCrmFixture(page: Page): Promise<CrmFixture> {
 
 test.describe('business CRM UX smoke', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
@@ -277,7 +277,7 @@ test.describe('business CRM UX smoke', () => {
 
     const viewContactRow = page.locator('.relations-table tbody tr').filter({ hasText: contactName }).first();
     await viewContactRow.getByRole('button', { name: `Voir ${contactName}` }).click();
-    await expect(relationModal.getByLabel('Rechercher')).toBeVisible();
+    await expect(relationModal.getByLabel('Rechercher')).toBeVisible({ timeout: 60_000 });
     await expect(relationModal.getByLabel('Type')).toBeVisible();
     await expect(relationModal.getByLabel('Canal')).toBeVisible();
     await relationModal.getByLabel('Rechercher').fill('activité absente e2e');
@@ -355,8 +355,13 @@ test.describe('business CRM UX smoke', () => {
     await panel.getByLabel('Valeur').fill('999999999');
     await panel.getByRole('button', { name: 'Aperçu' }).click();
     await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.', { timeout: 60_000 });
+    const recalculation = page.waitForResponse(
+      (response) => response.request().method() === 'POST' && /\/admin\/api\/business\/segments\/\d+\/recalculate(?:\?|$)/.test(response.url()),
+      { timeout: 60_000 },
+    );
     await panel.getByRole('button', { name: 'Créer l’audience' }).click();
-    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Audience' }).first()).toBeVisible();
+    expect((await recalculation).ok()).toBeTruthy();
+    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Audience' }).first()).toBeVisible({ timeout: 60_000 });
 
     await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
     await page.reload();

@@ -28,6 +28,7 @@ generated: true
 | `accounting_journal_entries` | id, fiscal_period_id, entry_number, entry_date, label, status, source_type, source_id, created_by_iam_user_id, posted_by_iam_user_id, created_at, posted_at |
 | `accounting_journal_lines` | id, journal_entry_id, account_id, line_number, debit_minor, credit_minor, label |
 | `accounting_opening_balances` | id, fiscal_period_id, account_id, amount_minor, created_by_iam_user_id, updated_by_iam_user_id, created_at, updated_at |
+| `schema_migrations` | id, migration, migrated_at |
 
 ## `ai.sqlite`
 

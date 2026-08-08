@@ -30,15 +30,26 @@ test.describe('42 cartes, fiches, variantes et produits liés',()=>{
       await expect(card.getByRole('link',{name:/voir/i}).first()).toBeVisible();
       await expect(card.locator('.storefront-availability')).toBeVisible();
       const preview=card.locator('[data-product-preview]');
-      await preview.locator('summary').click();
+      // The preview intentionally covers its trigger as soon as mouseenter fires.
+      // Dispatching that event avoids Playwright retrying a hover which already succeeded.
+      await card.locator('[data-product-preview-trigger]').first().dispatchEvent('mouseenter');
       await expect(preview).toHaveAttribute('open','');
+      const cardAdd=card.locator('[data-storefront-add-to-cart]');
+      if(await cardAdd.count()&&await cardAdd.isDisabled()){
+        const choice=preview.locator('[data-product-variant-choice]:not([disabled])').first();
+        await choice.click();
+        await expect(choice).toHaveAttribute('aria-pressed','true');
+        await expect(cardAdd).toBeEnabled();
+      }
       await page.keyboard.press('Escape');
       await expect(preview).not.toHaveAttribute('open','');
       if(theme==='default'){
-        const cardAdd=page.locator('[data-shop-section="catalog"] [data-storefront-add-to-cart]').first();
         if(await cardAdd.count()){
+          const cartCount=page.locator('[data-cart-count]');
+          const previousCount=Number(await cartCount.textContent()||0);
           await cardAdd.click();
-          await expect(page.locator('[data-cart-drawer]')).toBeVisible();
+          await expect.poll(async()=>Number(await cartCount.textContent()||0),{timeout:60_000}).toBeGreaterThan(previousCount);
+          await expect(page.locator('[data-cart-drawer]')).toBeVisible({timeout:60_000});
           await expect(page.locator('[data-cart-lines] .cart-line').first()).toBeVisible();
           await page.locator('[data-cart-close]').click();
         }
@@ -67,8 +78,11 @@ test.describe('42 cartes, fiches, variantes et produits liés',()=>{
     expect(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),'mobile has no horizontal overflow').toBe(false);
     const detailAdd=page.locator('[data-product-add]');
     if(await detailAdd.isVisible()){
+      const cartCount=page.locator('[data-cart-count]');
+      const previousCount=Number(await cartCount.textContent()||0);
       await detailAdd.click();
-      await expect(page.locator('[data-cart-drawer]')).toBeVisible();
+      await expect.poll(async()=>Number(await cartCount.textContent()||0),{timeout:60_000}).toBeGreaterThan(previousCount);
+      await expect(page.locator('[data-cart-drawer]')).toBeVisible({timeout:60_000});
       await expect(page.locator('[data-cart-lines] .cart-line').first()).toBeVisible();
     }
   });

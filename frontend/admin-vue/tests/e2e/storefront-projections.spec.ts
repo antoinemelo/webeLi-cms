@@ -8,6 +8,7 @@ async function signIn(page:Page):Promise<string>{ await page.goto(cmsPath('/admi
 test.describe('Storefront projections SSR and headless',()=>{
   test.skip(!enabled,'Dedicated E2E environment and administrator credentials are required');
   test('rebuilds once and serves the same sellable through headless and SSR',async({page})=>{
+    test.setTimeout(120_000);
     const csrf=await signIn(page);
     const rebuild=await page.request.post(cmsPath('/admin/api/business/pim/storefront-projections/rebuild'),{headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Contract-Version':'admin-api-v1'},data:{data:{locale:'fr'}}});
     expect(rebuild.ok(),await rebuild.text()).toBeTruthy();

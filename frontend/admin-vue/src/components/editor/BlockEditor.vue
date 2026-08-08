@@ -465,7 +465,7 @@ function splitPanelBlock(): EditorialBlock {
             @drop="onBlockDrop(index, $event)"
             @dragend="onBlockDragEnd"
           >
-            <span class="blueprint-drag-handle block-drag-handle" :class="{ 'is-disabled': !canDragBlock(index) }" title="Déplacer" aria-hidden="true">⋮</span>
+            <span class="dnd-handle block-drag-handle" :class="{ 'is-disabled': !canDragBlock(index) }" title="Glisser pour réordonner" aria-hidden="true">⋮</span>
             <button type="button" class="block-list-row__title" :disabled="isEditorDisabled || isLockedByOther(block.id)" @click="open(index)">
               <span class="block-list-row__number">{{ index + 1 }}</span>
               <span class="block-list-row__type">{{ labelFor(block.type) }}</span>

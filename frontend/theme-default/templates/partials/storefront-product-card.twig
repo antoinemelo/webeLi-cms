@@ -1,28 +1,60 @@
-{% set media=item.media|default([]) %}{% set price=item.price|default(null) %}{% set availability=item.availability|default(null) %}{% set en=item.locale|default('fr')|slice(0,2) == 'en' %}{% set display=display|default({price:true,promotion:true,availability:true,cta:true}) %}{% set view_label=display.view_label|default('')|trim %}{% set cart_label=display.cart_label|default('')|trim %}
+{% set media = item.media|default([]) %}
+{% set price = item.price|default(null) %}
+{% set availability = item.availability|default(null) %}
+{% set sellables = item.sellables|default([]) %}
+{% set en = item.locale|default('fr')|slice(0, 2) == 'en' %}
+{% set display = display|default({price:true,promotion:true,availability:true,cta:true}) %}
+{% set view_label = display.view_label|default('')|trim %}
+{% set cart_label = display.cart_label|default('')|trim %}
+{% set requires_variant_selection = sellables|length > 1 %}
+{% set stock_managed = item.type|default('physical') in ['physical', 'bundle'] %}
 <article class="storefront-card" data-product-id="{{ item.product_id }}">
-  <a class="storefront-card__media" href="{{ item.url_with_return|default(item.url) }}" aria-label="{{ en ? 'View' : 'Voir' }} {{ item.name }}">
+  <a class="storefront-card__media" data-product-preview-trigger href="{{ item.url_with_return|default(item.url) }}" aria-label="{{ en ? 'Preview' : 'Aperçu' }} {{ item.name }}">
     {% if media %}<img src="{{ media[0].url }}" alt="{{ media[0].alt|default(item.name) }}" width="800" height="600" loading="lazy">
     {% else %}<span class="storefront-media-missing" role="img" aria-label="{{ en ? 'Image unavailable' : 'Image indisponible' }}">{{ en ? 'Image unavailable' : 'Image indisponible' }}</span>{% endif %}
   </a>
-  <h2><a href="{{ item.url_with_return|default(item.url) }}">{{ item.name }}</a></h2>
+  <h2><a data-product-preview-trigger href="{{ item.url_with_return|default(item.url) }}">{{ item.name }}</a></h2>
   {% if item.card_summary|default(item.summary) %}<p>{{ item.card_summary|default(item.summary) }}</p>{% endif %}
   {% if price and display.price %}<p class="storefront-price">{% if display.promotion and price.regular_minor > price.final_minor %}<del>{{ (price.regular_minor / 100)|number_format(2, '.', ' ') }}</del> {% endif %}<strong>{{ (price.final_minor / 100)|number_format(2, '.', ' ') }} {{ price.currency }}</strong>{% if display.promotion and price.discount_percent_bps|default(0) > 0 %} <mark>−{{ (price.discount_percent_bps / 100)|round }}%</mark>{% endif %}</p>{% endif %}
   {% if availability and display.availability %}<p class="storefront-availability storefront-availability--{{ availability.tone|default('neutral') }}" data-availability="{{ availability.display_status|default(availability.status) }}"><span aria-hidden="true">{% if availability.display_status == 'available' %}●{% elseif availability.display_status == 'last_available' %}◐{% elseif availability.display_status == 'on_order' %}◷{% else %}○{% endif %}</span> {{ availability.label|default(availability.status) }}</p>{% endif %}
   {% if item.projection.state|default('current') == 'delayed' %}<p class="storefront-projection-warning" role="status">{{ en ? 'Information is being updated.' : 'Informations en cours d’actualisation.' }}</p>{% endif %}
   {% if display.cta %}<div class="storefront-card__actions">
+    {% if item.cta|default(null) and requires_variant_selection %}<button type="button" class="storefront-card__variant-selection-status" id="product-variant-status-{{ item.product_id }}" data-variant-selection-status data-product-preview-trigger>{{ en ? 'Select an available option to add it to the cart.' : "Sélectionnez une option disponible pour l'ajouter au panier." }}</button>{% endif %}
     <a class="btn btn--ghost" href="{{ item.url_with_return|default(item.url) }}">{{ view_label ?: (en ? 'View' : 'Voir') }}</a>
-    {% if item.cta|default(null) %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-sellable-id="{{ item.cta.sellable_id }}" data-quantity="1">{{ cart_label ?: item.cta.label|default(en ? 'Add to cart' : 'Ajouter au panier') }}</button>{% endif %}
+    {% if item.cta|default(null) %}<button type="button" class="btn btn--primary" data-storefront-add-to-cart data-quantity="1"{% if requires_variant_selection %} data-variant-required="1" aria-describedby="product-variant-status-{{ item.product_id }}" aria-disabled="true" disabled{% else %} data-sellable-id="{{ item.cta.sellable_id }}"{% endif %}>{{ cart_label ?: item.cta.label|default(en ? 'Add to cart' : 'Ajouter au panier') }}</button>{% endif %}
   </div>{% endif %}
   <details class="storefront-card__preview" data-product-preview>
-    <summary>{{ en ? 'Enriched preview' : 'Aperçu enrichi' }}</summary>
+    <summary class="storefront-card__preview-toggle"><span aria-hidden="true">×</span><span>{{ en ? 'Close preview' : 'Fermer l’aperçu' }}</span></summary>
     <div class="storefront-card__preview-body">
-      <p><strong>{{ item.name }}</strong></p>
-      {% if item.brand.name|default(null) %}<p>{{ item.brand.name }}</p>{% endif %}
-      {% if item.summary|default(null) %}<p>{{ item.summary }}</p>{% endif %}
-      {% if price and display.price %}<p>{% if display.promotion and price.regular_minor > price.final_minor %}<del>{{ (price.regular_minor / 100)|number_format(2, '.', ' ') }}</del> {% endif %}<strong>{{ (price.final_minor / 100)|number_format(2, '.', ' ') }} {{ price.currency }}</strong>{% if display.promotion and price.discount_percent_bps|default(0) > 0 %} · −{{ (price.discount_percent_bps / 100)|round }}%{% endif %}</p>{% endif %}
-      {% for attribute in item.attributes|default([])|slice(0, 3) %}<p><strong>{{ attribute.name }} :</strong> {% for value in attribute.values|default([]) %}{{ value.label }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endfor %}
-      {% if availability and display.availability %}<p>{{ availability.label|default(availability.status) }}</p>{% endif %}
-      <a href="{{ item.url_with_return|default(item.url) }}">{{ en ? 'View full details' : 'Consulter la fiche complète' }}</a>
+      <header class="storefront-card__preview-heading">
+        <div>{% if item.brand.name|default(null) %}<p class="storefront-card__preview-brand">{{ item.brand.name }}</p>{% endif %}<h3>{{ item.name }}</h3></div>
+        {% if price and display.price %}<p class="storefront-card__preview-price">{% if display.promotion and price.regular_minor > price.final_minor %}<del>{{ (price.regular_minor / 100)|number_format(2, '.', ' ') }}</del>{% endif %}<strong>{{ (price.final_minor / 100)|number_format(2, '.', ' ') }} {{ price.currency }}</strong></p>{% endif %}
+      </header>
+      {% if item.summary|default(null) %}<p class="storefront-card__preview-summary">{{ item.summary }}</p>{% endif %}
+      {% if sellables and display.availability %}
+        <section class="storefront-card__variant-availability" aria-label="{{ en ? 'Available options' : 'Options disponibles' }}">
+          <div class="storefront-card__variant-title"><strong>{{ en ? 'Options and availability' : 'Options et disponibilités' }}</strong><span>{{ sellables|length }} {{ en ? 'choice(s)' : 'choix' }}</span></div>
+          <ul>
+            {% for sellable in sellables %}
+              {% set quantity = sellable.availability.available_quantity|default(0) %}
+              {% set low_stock = stock_managed and sellable.orderable and quantity > 0 and quantity <= 2 %}
+              {% set stock_state = not sellable.orderable ? 'unavailable' : (low_stock ? 'low' : 'available') %}
+              <li class="storefront-card__variant storefront-card__variant--{{ stock_state }}" data-stock-state="{{ stock_state }}">
+                <button type="button" class="storefront-card__variant-choice" data-product-variant-choice data-sellable-id="{{ sellable.sellable_id }}" aria-pressed="false"{% if not sellable.orderable %} disabled{% endif %}>
+                  <span class="storefront-card__variant-options">
+                    {% if sellable.options|default([]) %}
+                      {% for option in sellable.options %}<span class="storefront-card__option">{% if option.color_hex|default(null) %}<i class="storefront-card__swatch" style="--storefront-swatch:{{ option.color_hex }}" aria-hidden="true"></i>{% endif %}<small>{{ option.option_name }}</small> {{ option.label }}</span>{% endfor %}
+                    {% else %}<span class="storefront-card__option">{{ sellable.name|default(sellable.sku) }}</span>{% endif %}
+                  </span>
+                  <span class="storefront-card__variant-status"><i aria-hidden="true"></i>{% if not sellable.orderable %}{{ en ? 'Unavailable' : 'Indisponible' }}{% elseif low_stock %}{% if quantity == 1 %}{{ en ? 'Only one left' : 'Plus qu’une pièce' }}{% else %}{{ en ? 'Only two left' : 'Plus que deux pièces' }}{% endif %}{% else %}{{ sellable.availability.label|default(en ? 'Available' : 'Disponible') }}{% endif %}</span>
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="storefront-card__availability-legend"><span><i class="is-available"></i>{{ en ? 'Available' : 'Disponible' }}</span>{% if stock_managed %}<span><i class="is-low"></i>{{ en ? 'Low stock' : 'Stock faible' }}</span>{% endif %}<span><i class="is-unavailable"></i>{{ en ? 'Unavailable' : 'Indisponible' }}</span></p>
+        </section>
+      {% endif %}
+      {% if item.attributes|default([]) %}<div class="storefront-card__preview-attributes">{% for attribute in item.attributes|slice(0, 3) %}<p><strong>{{ attribute.name }}</strong>{% for value in attribute.values|default([]) %}<span>{{ value.label }}</span>{% endfor %}</p>{% endfor %}</div>{% endif %}
     </div>
   </details>
 </article>

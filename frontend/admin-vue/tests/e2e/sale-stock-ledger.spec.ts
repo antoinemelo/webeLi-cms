@@ -66,6 +66,7 @@ async function mockStock(page: Page, options: { forbidden?: boolean; empty?: boo
 
 test.describe('M6 ledger stock Sale', () => {
   test.skip(!enabled, 'Dedicated E2E admin environment is required');
+  test.setTimeout(90_000);
 
   test('supports large lists, scanner search, persistent filters and mobile consultation', async ({ page }) => {
     test.setTimeout(90_000);

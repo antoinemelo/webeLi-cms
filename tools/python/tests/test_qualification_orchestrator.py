@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from subprocess import CompletedProcess
+from unittest.mock import patch
 
 from tools.python.commands import qualify
 from tools.python.qualification.performance_baseline import _measure
@@ -13,12 +15,63 @@ from tools.python.qualification.run_all import (
     _display_path,
     _exit_code,
     _gate_matrix,
+    _php_dependencies_check,
     parse_args,
     steps,
 )
 
 
 class QualificationOrchestratorTest(unittest.TestCase):
+    @patch("tools.python.qualification.run_all.time.sleep")
+    @patch("tools.python.qualification.run_all.shutil.which", return_value="/usr/bin/composer")
+    @patch("tools.python.qualification.run_all.subprocess.run")
+    def test_php_audit_retries_transient_registry_failure(self, run, _which, _sleep):
+        run.side_effect = [
+            CompletedProcess([], 0, "valid", ""),
+            CompletedProcess([], 1, "", "HTTP/2 502 from Packagist"),
+            CompletedProcess([], 0, '{"advisories": [], "abandoned": []}', ""),
+        ]
+
+        code, output, error = _php_dependencies_check()
+
+        self.assertEqual(0, code)
+        self.assertIn("rétabli à la tentative 2/2", output)
+        self.assertEqual("", error)
+        self.assertEqual(3, run.call_count)
+
+    @patch("tools.python.qualification.run_all.time.sleep")
+    @patch("tools.python.qualification.run_all.shutil.which", return_value="/usr/bin/composer")
+    @patch("tools.python.qualification.run_all.subprocess.run")
+    def test_php_audit_reports_registry_failure_without_claiming_an_advisory(self, run, _which, _sleep):
+        run.side_effect = [
+            CompletedProcess([], 0, "valid", ""),
+            CompletedProcess([], 1, "", "HTTP/2 502 from Packagist"),
+            CompletedProcess([], 1, "", "HTTP/2 503 from Packagist"),
+        ]
+
+        code, output, error = _php_dependencies_check()
+
+        self.assertEqual(1, code)
+        self.assertIn("HTTP/2 502", output)
+        self.assertIn("HTTP/2 503", output)
+        self.assertIn("indisponible après 2 tentatives", error)
+        self.assertNotIn("détecté", error)
+
+    @patch("tools.python.qualification.run_all.time.sleep")
+    @patch("tools.python.qualification.run_all.shutil.which", return_value="/usr/bin/composer")
+    @patch("tools.python.qualification.run_all.subprocess.run")
+    def test_php_audit_does_not_retry_a_structured_security_finding(self, run, _which, _sleep):
+        run.side_effect = [
+            CompletedProcess([], 0, "valid", ""),
+            CompletedProcess([], 1, '{"advisories": {"vendor/package": [{"advisoryId": "CVE-test"}]}, "abandoned": []}', ""),
+        ]
+
+        code, _output, error = _php_dependencies_check()
+
+        self.assertEqual(1, code)
+        self.assertIn("advisory", error)
+        self.assertEqual(2, run.call_count)
+
     def test_performance_baseline_rejects_client_errors(self):
         result = _measure("invalid-contract", 2000.0, 1, lambda: (422, 1.0, "validation failed"))
         self.assertEqual("failed", result["status"])

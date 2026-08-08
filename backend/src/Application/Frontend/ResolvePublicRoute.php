@@ -407,7 +407,7 @@ final class ResolvePublicRoute
             'sitemap_cards' => $cards,
             'sitemap_count' => count($seen),
             'sitemap_xml_url' => localized_path('/sitemap.xml', $languageCode),
-            'sitemap_home_url' => localized_path('/', $languageCode),
+            'sitemap_home_url' => localized_home_path($languageCode),
             'sitemap_ui' => $texts,
         ];
     }
@@ -2186,7 +2186,7 @@ final class ResolvePublicRoute
         foreach ($this->sites->getLanguages($siteId) as $language) {
             $code = (string) ($language['language_code'] ?? $language['code']);
             $label = (string) ($language['native_name'] ?? strtoupper($code));
-            $relative = localized_path($currentPath, $code);
+            $relative = $currentPath === '/' ? localized_home_path($code) : localized_path($currentPath, $code);
             $items[] = [
                 'code' => $code,
                 'hreflang' => (string) ($language['hreflang_code'] ?? $code),
@@ -2224,7 +2224,7 @@ final class ResolvePublicRoute
     private function breadcrumbs(string $languageCode, string $currentPath, string $currentTitle): array
     {
         $ui = $this->ui($languageCode);
-        $crumbs = [['label' => $ui['home'], 'url' => localized_path('/', $languageCode)]];
+        $crumbs = [['label' => $ui['home'], 'url' => localized_home_path($languageCode)]];
         if ($currentPath === '/') {
             return $crumbs;
         }

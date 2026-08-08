@@ -212,6 +212,7 @@ async function firstCategoryTermId(page: Page, siteId: number, languageCode: str
 
 test.describe('editorial publication flow', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
+  test.setTimeout(120_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);

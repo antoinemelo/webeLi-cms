@@ -1679,7 +1679,7 @@ async function openEditProduct(product?: CatalogProduct, scope: ProductModalScop
   closeCatalogMenus();
   variantAttributesOnlyModal.value = false;
   if (product && Number(product.id) !== selectedProductId.value) {
-    await selectProduct(product);
+    await selectProduct(product, scope);
   } else if (selectedProduct.value) {
     fillProductForm(selectedProduct.value);
   }
@@ -3065,7 +3065,7 @@ async function loadCatalog(): Promise<void> {
   }
 }
 
-async function selectProduct(product: CatalogProduct): Promise<void> {
+async function selectProduct(product: CatalogProduct, scope: ProductModalScope = 'all'): Promise<void> {
   loading.value = true;
   try {
     variantAttributeValuesById.value = {};
@@ -3073,6 +3073,10 @@ async function selectProduct(product: CatalogProduct): Promise<void> {
     selectedProduct.value = response.data.product;
     fillProductForm(response.data.product);
     selectedVariant.value = selectedProduct.value.variants?.[0] || null;
+    if (scope === 'media') {
+      await Promise.all([loadProductAssets(Number(product.id)), loadMediaRows()]);
+      return;
+    }
     await Promise.all([loadAttributeDefinitions(), loadProductAssets(Number(product.id)), loadProductAttributeValues(Number(product.id)), loadMediaRows(), loadProductContentLinks(Number(product.id)), loadProductRelations(Number(product.id))]);
     if (selectedVariant.value) await Promise.all([loadVariantStock(selectedVariant.value), loadVariantAttributeValues(Number(selectedVariant.value.id || 0))]);
   } catch (err) {

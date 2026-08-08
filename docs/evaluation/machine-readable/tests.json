@@ -8,7 +8,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-admin-convergence-gate-py-12068e9576",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -27,7 +27,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-admin-menu-py-060f33d812",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -46,7 +46,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-audit-and-release-export-layout-py-b2140391a2",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -65,7 +65,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-audit-evidence-collection-py-5da93b6de5",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -84,7 +84,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-bundle-stock-strategy-gate-py-2d2d72841a",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -103,7 +103,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-business-module-smoke-py-6e3b65b2be",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -122,7 +122,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-characterization-baseline-py-b0ca41a89d",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -141,7 +141,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-cli-rationalization-py-3d24717e29",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -160,7 +160,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-cli-smoke-py-27bcb6e55e",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -179,7 +179,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-cms-cli-py-d78ec908db",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -198,7 +198,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-command-runtime-reliability-py-8fe47f8633",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -217,7 +217,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-content-repository-architecture-py-45640cbece",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -236,7 +236,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-crm-event-activity-gate-py-ea5afa4830",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -255,7 +255,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-crm-guest-order-gate-py-36b8a5e2fe",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -274,7 +274,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-crm-segmentation-consent-gate-py-d666fe7fa3",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -293,7 +293,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-customer-identity-gate-py-78ad5c4e09",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -312,7 +312,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-e2e-harness-py-dc08ee8e2d",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -331,7 +331,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-i18n-coverage-py-843b5d141f",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -350,7 +350,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-instance-clone-py-dbf5d20478",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -369,7 +369,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-inventory-ledger-gate-py-508cae25ec",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -388,7 +388,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-migrate-plan-readonly-py-48556fd171",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -407,7 +407,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-module-foundation-py-841af8e2f7",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -426,7 +426,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-omnichannel-gate-py-8c28c794d2",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -445,7 +445,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-payment-provider-gate-py-bd1b9044d6",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -464,7 +464,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-public-route-repository-wiring-py-707e65ffa6",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -477,13 +477,13 @@
   {
     "command": "python3 tools/cms.py test",
     "confidence": "high",
-    "discovered_test_functions": 8,
+    "discovered_test_functions": 11,
     "evidence": [
       "tools/python/tests/test_qualification_orchestrator.py"
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-qualification-orchestrator-py-a0cf139cf4",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -502,7 +502,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-release-archive-vendor-contract-py-70a3ed1da1",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -521,7 +521,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-release-package-cli-py-1741bb10f1",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -540,7 +540,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-reservation-availability-gate-py-e9cde67895",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -559,7 +559,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-runtime-bootstrap-and-audit-evidence-py-59a44b4211",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -578,7 +578,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-sale-module-smoke-py-b3daad31bc",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -597,7 +597,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-shop-operational-gate-py-9d34c515c4",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -616,7 +616,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-static-export-multisite-py-7725579ab6",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -635,7 +635,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-stock-reconstruction-gate-py-4a3e75d507",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -654,7 +654,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-test-suite-structure-py-7c1bae18a1",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],
@@ -673,7 +673,7 @@
     ],
     "execution_result": null,
     "id": "test-file-tools-python-tests-test-usability-commerce-gate-py-51a27e5102",
-    "last_verified": "2026-07-19",
+    "last_verified": "2026-08-08",
     "limitations": [
       "File presence is not proof that the tests were executed successfully."
     ],

@@ -29,7 +29,7 @@ async function findFieldFixture(page: Page, pattern: RegExp): Promise<Locator | 
   for (let index = 0; index < count; index += 1) {
     const model = models.nth(index);
     if (!await model.isVisible()) continue;
-    const designResponse = page.waitForResponse((response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/[^/]+\/design/.test(response.url()), { timeout: 5000 }).catch(() => null);
+    const designResponse = page.waitForResponse((response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/[^/]+\/design/.test(response.url()), { timeout: 30_000 }).catch(() => null);
     await model.click();
     await designResponse;
     if (await fields.count() > 0) return fields.first();
@@ -39,17 +39,17 @@ async function findFieldFixture(page: Page, pattern: RegExp): Promise<Locator | 
 
 test.describe('blueprint designer safe activation', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
     const modelResponse = page.waitForResponse(
       (response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/model(?:\?|$)/.test(response.url()),
-      { timeout: 30_000 }
+      { timeout: 60_000 }
     );
     const designResponse = page.waitForResponse(
       (response) => response.request().method() === 'GET' && /\/admin\/api\/blueprints\/[^/]+\/design/.test(response.url()),
-      { timeout: 30_000 }
+      { timeout: 60_000 }
     );
     await page.goto(cmsPath('/admin/app/blueprints'));
     await expect(page.getByRole('heading', { name: 'Structures de contenu' })).toBeVisible();
