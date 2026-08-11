@@ -28,7 +28,9 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/database/README.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/operations/client-instance-update.md",
         "ops/deployment-notes.md",
         "tools/python/tests/test_admin_menu.py",
         "tools/python/tool-manifest.json"
@@ -556,6 +558,7 @@
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/qualification/run_all.py",
         "tools/python/qualification/shop_operational_gate.py",
+        "tools/python/tests/test_e2e_harness.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -600,6 +603,7 @@
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/tests/support/database_fixture.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -718,6 +722,7 @@
         "docs/operations/hostpoint-git-ftp.md",
         "docs/reference/generated/cli-commands.md",
         "docs/reference/generated/configuration.md",
+        "tools/admin.py",
         "tools/python/README.md",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/operations/deployment/d11_ci_release.py",
@@ -1039,6 +1044,7 @@
         "tools/python/operations/backup/d6_backup_sqlite.py",
         "tools/python/operations/backup/d7_restore_sqlite.py",
         "tools/python/operations/database/a_db_init.py",
+        "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/d9_migrate_sqlite.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
@@ -1067,9 +1073,11 @@
         "TREE.txt",
         "tools/python/generators/generate_tree_manifest.py",
         "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
         "tools/python/qualification/performance_baseline.py",
+        "tools/python/tests/test_ftp_instance_update.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/qualification/backup_restore_roundtrip.py"
       ],
@@ -1332,6 +1340,7 @@
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/tests/support/database_fixture.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
@@ -1353,6 +1362,7 @@
         "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "tools/python/operations/database/a_db_init.py",
         "tools/python/qualification/inventory_ledger_gate.py",
+        "tools/python/tests/test_database_rebuild_profiles.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/security/pii.py"
       ],
@@ -1657,6 +1667,7 @@
         "docs/evaluation/machine-readable/features.json",
         "docs/evaluation/machine-readable/release-contents.json",
         "docs/operations/hostpoint-git-ftp.md",
+        "tools/admin.py",
         "tools/python/README.md",
         "tools/python/generators/generate_documentation.py",
         "tools/python/generators/generate_evaluation_documentation.py",
@@ -1684,6 +1695,8 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/operations/client-instance-update.md",
+        "tools/admin.py",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
@@ -2172,13 +2185,16 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/shop-operational-release-gate-48.md",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_qualification_orchestrator.py",
-        "tools/python/tests/test_shop_operational_gate.py"
+        "tools/python/tests/test_shop_operational_gate.py",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": null,
       "status": "active",
@@ -2271,6 +2287,39 @@
       "called_by": [
         "TREE.txt",
         "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/support/__init__.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.release.txt",
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/support/database_fixture.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "tools/python/tests/integration/test_php_functional_suites.py",
+        "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2544,6 +2593,21 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_database_rebuild_profiles.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_e2e_harness.py",
       "category": "test",
       "public": false,
@@ -2553,6 +2617,21 @@
         "docs/evaluation/admin-convergence-ux-gate-38e.md",
         "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/public-cart-checkout-resilience-44.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_ftp_instance_update.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2798,7 +2877,10 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
-        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md"
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
@@ -2819,7 +2901,7 @@
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
-      "destructive": true,
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },

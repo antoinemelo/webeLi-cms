@@ -13,12 +13,16 @@ if str(_DEC_CMS_PROJECT_ROOT) not in _dec_sys.path:
 
 import argparse
 import ftplib
+import hashlib
 import io
 import json
 import posixpath
 import sys
+import tempfile
 import time
 from pathlib import Path
+
+from tools.python.operations.deployment import d8_deploy_web_update as web_update
 
 from tools.python.lib.deploylib import (
     build_deploy_report,
@@ -36,6 +40,18 @@ DEFAULT_CONFIG = ROOT / "ops" / "ftp.deploy.json"
 DEFAULT_STAGE = ROOT / "storage" / "exports" / "release_stage"
 DEFAULT_MANIFEST = ROOT / "storage" / "exports" / "last_ftp_deploy_manifest.json"
 PROTECTED_PREFIXES = dependency_prefixes(ROOT)
+INSTANCE_DATA_PREFIXES = (
+    "storage/database/",
+    "storage/media/",
+    "storage/uploads/",
+    "storage/security/",
+    "storage/logs/",
+    "storage/cache/",
+    "storage/backups/",
+    "ops/.env",
+    "ops/modules.local.json",
+    "local/modules/",
+)
 REMOTE_DEPLOYMENT_DIR = "storage/deployments"
 
 
@@ -303,6 +319,79 @@ def write_last_manifest(path: Path, remote_root: str, stage_dir: Path, files: di
     write_json(path, manifest)
 
 
+def file_sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def files_fingerprint(files: dict[str, dict]) -> str:
+    payload = {
+        rel: {
+            "sha256": str(meta.get("sha256", "")),
+            "size": int(meta.get("size", 0)),
+        }
+        for rel, meta in sorted(files.items())
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def build_locked_plan(
+    *,
+    stage_dir: Path,
+    remote_root: str,
+    release_manifest: dict,
+    manifest_path: Path,
+    current_files: dict[str, dict],
+    uploads_new: list[str],
+    uploads_changed: list[str],
+    removals: list[str],
+    protect_instance_data: bool,
+    no_delete_removed: bool,
+) -> dict:
+    return {
+        "schema_version": 1,
+        "stage_dir": str(stage_dir.resolve()),
+        "remote_root": remote_root,
+        "release_id": release_manifest.get("release_id"),
+        "stage_fingerprint": files_fingerprint(current_files),
+        "previous_manifest_sha256": file_sha256(manifest_path),
+        "protect_instance_data": protect_instance_data,
+        "no_delete_removed": no_delete_removed,
+        "delta": {
+            "new": uploads_new,
+            "changed": uploads_changed,
+            "removed": removals,
+        },
+    }
+
+
+def validate_locked_plan(expected: dict, current: dict) -> None:
+    comparable_keys = (
+        "schema_version",
+        "stage_dir",
+        "remote_root",
+        "release_id",
+        "stage_fingerprint",
+        "previous_manifest_sha256",
+        "protect_instance_data",
+        "no_delete_removed",
+        "delta",
+    )
+    differences = [key for key in comparable_keys if expected.get(key) != current.get(key)]
+    if differences:
+        raise DeployError(
+            "Le staging ou le manifeste différentiel a changé depuis la simulation "
+            f"({', '.join(differences)}). Relancez le point 11 pour produire un nouveau plan."
+        )
+
+
 def upload_deployment_markers(ftp: ftplib.FTP, remote_root: str, release_manifest: dict | None, deploy_report: dict, dry_run: bool, tracker: ProgressTracker, quiet: bool = False) -> int:
     base = posixpath.join(remote_root.rstrip("/"), REMOTE_DEPLOYMENT_DIR)
     releases = posixpath.join(base, "releases")
@@ -320,12 +409,15 @@ def upload_deployment_markers(ftp: ftplib.FTP, remote_root: str, release_manifes
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Déploiement FTP différentiel d'un staging local préparé.")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG), help="Fichier JSON de configuration FTP.")
-    parser.add_argument("--stage-dir", default=str(DEFAULT_STAGE), help="Répertoire local à envoyer.")
+    parser.add_argument("--stage-dir", default=str(DEFAULT_STAGE), help="Répertoire de staging ou archive ZIP de release à envoyer.")
     parser.add_argument("--remote-root", default="", help="Répertoire racine distant. Prioritaire sur la config.")
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST), help="Manifest local du dernier déploiement réussi.")
     parser.add_argument("--dry-run", action="store_true", help="Affiche seulement les opérations prévues.")
+    parser.add_argument("--plan-output", default="", help="Écrit le plan verrouillé produit par --dry-run.")
+    parser.add_argument("--apply-plan", default="", help="Exige que l'exécution corresponde exactement à ce plan dry-run.")
     parser.add_argument("--no-delete-removed", action="store_true", help="Ne supprime pas les fichiers absents de la nouvelle version.")
     parser.add_argument("--no-server-markers", action="store_true", help="Ne téléverse pas storage/deployments/current.json/history.ndjson.")
+    parser.add_argument("--protect-instance-data", action="store_true", help="Préserve bases, médias, secrets, logs, backups et modules locaux d'une instance existante.")
     parser.add_argument("--quiet", action="store_true", help="Réduit l'affichage au minimum.")
     return parser.parse_args()
 
@@ -334,17 +426,40 @@ def main() -> int:
     started_at = time.monotonic()
     args = parse_args()
     config_path = Path(args.config).expanduser()
-    stage_dir = Path(args.stage_dir).expanduser()
+    stage_source = Path(args.stage_dir).expanduser()
     manifest_path = Path(args.manifest).expanduser()
     if not config_path.is_absolute():
         config_path = ROOT / config_path
-    if not stage_dir.is_absolute():
-        stage_dir = ROOT / stage_dir
+    if not stage_source.is_absolute():
+        stage_source = ROOT / stage_source
     if not manifest_path.is_absolute():
         manifest_path = ROOT / manifest_path
+    plan_output_path = Path(args.plan_output).expanduser() if args.plan_output else None
+    apply_plan_path = Path(args.apply_plan).expanduser() if args.apply_plan else None
+    if plan_output_path is not None and not plan_output_path.is_absolute():
+        plan_output_path = ROOT / plan_output_path
+    if apply_plan_path is not None and not apply_plan_path.is_absolute():
+        apply_plan_path = ROOT / apply_plan_path
+    if args.dry_run and apply_plan_path is not None:
+        print("ERREUR: --apply-plan ne peut pas être combiné avec --dry-run.", file=sys.stderr)
+        return 2
+    if not args.dry_run and plan_output_path is not None:
+        print("ERREUR: --plan-output exige --dry-run.", file=sys.stderr)
+        return 2
 
-    if not stage_dir.exists():
-        print(f"ERREUR: staging introuvable: {stage_dir}", file=sys.stderr)
+    if not stage_source.exists():
+        print(f"ERREUR: staging introuvable: {stage_source}", file=sys.stderr)
+        return 2
+
+    temporary_source: tempfile.TemporaryDirectory[str] | None = None
+    try:
+        if stage_source.is_file():
+            temporary_source = tempfile.TemporaryDirectory(prefix="amcms-ftp-release-")
+            stage_dir = web_update.resolve_source(stage_source, Path(temporary_source.name))
+        else:
+            stage_dir = stage_source
+    except RuntimeError as exc:
+        print(f"ERREUR: {exc}", file=sys.stderr)
         return 2
 
     release_manifest = read_release_manifest(stage_dir)
@@ -366,7 +481,32 @@ def main() -> int:
     current_files = collect_files(stage_dir)
     previous_manifest = read_json(manifest_path, default={})
     previous_files = previous_manifest.get("files", {}) if isinstance(previous_manifest, dict) else {}
-    uploads_new, uploads_changed, removals = compute_delta(previous_files, current_files, PROTECTED_PREFIXES)
+    protected_prefixes = tuple(sorted(set(PROTECTED_PREFIXES + (INSTANCE_DATA_PREFIXES if args.protect_instance_data else ()))))
+    uploads_new, uploads_changed, removals = compute_delta(previous_files, current_files, protected_prefixes)
+    locked_plan = build_locked_plan(
+        stage_dir=stage_dir,
+        remote_root=remote_root,
+        release_manifest=release_manifest,
+        manifest_path=manifest_path,
+        current_files=current_files,
+        uploads_new=uploads_new,
+        uploads_changed=uploads_changed,
+        removals=removals,
+        protect_instance_data=bool(args.protect_instance_data),
+        no_delete_removed=bool(args.no_delete_removed),
+    )
+    if apply_plan_path is not None:
+        expected_plan = read_json(apply_plan_path, default=None)
+        if not isinstance(expected_plan, dict):
+            print(f"ERREUR: plan FTP introuvable ou invalide: {apply_plan_path}", file=sys.stderr)
+            return 2
+        try:
+            validate_locked_plan(expected_plan, locked_plan)
+        except DeployError as exc:
+            print(f"ERREUR: {exc}", file=sys.stderr)
+            return 2
+    if plan_output_path is not None:
+        write_json(plan_output_path, locked_plan)
     effective_removals = [] if args.no_delete_removed else removals
     upload_queue = uploads_new + uploads_changed
     total_upload_size = sum((stage_dir / rel).stat().st_size for rel in upload_queue if (stage_dir / rel).exists())
@@ -387,7 +527,7 @@ def main() -> int:
         print(f"Fichiers modifiés: {len(uploads_changed)}")
         print(f"Fichiers à supprimer: {0 if args.no_delete_removed else len(removals)}")
         print(f"Volume prévu en upload: {format_bytes(total_upload_size)}")
-        print("Protection active: " + ", ".join(PROTECTED_PREFIXES) + " ne sont jamais modifiés automatiquement.")
+        print("Protection active: " + ", ".join(protected_prefixes) + " ne sont jamais modifiés automatiquement.")
         print("────────────────────────────────────────")
         print("")
 
@@ -458,6 +598,8 @@ def main() -> int:
         elif not args.quiet:
             print("")
             print(f"[dry-run] manifest local non écrit: {manifest_path}", flush=True)
+            if plan_output_path is not None:
+                print(f"[dry-run] plan verrouillé écrit: {plan_output_path}", flush=True)
 
         tracker.summary(deleted_count=deleted_count, created_dirs=created_dirs_count, dry_run=args.dry_run)
         return 0

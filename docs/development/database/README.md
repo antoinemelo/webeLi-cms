@@ -40,6 +40,18 @@ python3 tools/cms.py rebuild
 python3 tools/cms.py validate
 ```
 
+Deux profils permettent de conserver toutes les structures tout en écartant certaines données initiales :
+
+```bash
+# Core reste alimenté ; Business et Sale sont créées vides.
+python3 tools/cms.py rebuild --without-commerce-seed
+
+# Core reste techniquement amorcé, sans contenu éditorial ; Business et Sale sont vides.
+python3 tools/cms.py rebuild --without-core-seed
+```
+
+Le second profil implique automatiquement le premier. Il conserve dans Core le minimum indispensable au démarrage — site `main`, langue par défaut, domaine dérivé de `ops/.env`, thèmes, modules et blueprints — mais aucune page, aucun article, menu, média ou taxonomie de démonstration. Les autres seeds techniques, notamment IAM, Forms, Cookies et AI, restent appliqués. Ces choix sont aussi proposés dans le sous-menu du point 1 de `tools/admin.py`.
+
 La reconstruction doit être lancée uniquement sur une instance de développement, de test ou après une décision de récupération contrôlée avec sauvegarde vérifiée. Elle recrée les bases à partir des schémas et seeds présents dans le dépôt ; elle ne sert pas à mettre à jour une installation existante avec contenu.
 
 ## Transactions entre bases

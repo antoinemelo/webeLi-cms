@@ -47,6 +47,19 @@ const newSite = reactive({
 });
 const drafts = reactive<Record<string, Record<string, unknown>>>({});
 
+type ContentLanguageDraft = {
+  code: string;
+  name?: string;
+  locale: string;
+  url_prefix: string;
+  hreflang_code: string;
+  fallback_language_code: string | null;
+  is_default: boolean;
+  is_active: boolean;
+  is_rtl: boolean;
+  sort_order: number;
+};
+
 
 function tabKeyFromQuery(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -112,6 +125,71 @@ function resetDrafts(): void {
     drafts[key] = clone(value);
   });
   ensureValidActiveTab();
+}
+
+function contentLanguageDrafts(): ContentLanguageDraft[] {
+  const rows = drafts.languages?.enabled_languages;
+  return Array.isArray(rows) ? rows as ContentLanguageDraft[] : [];
+}
+
+function normalizeLanguageCode(value: unknown): string {
+  const raw = String(value ?? '').trim().replace('_', '-');
+  const [language = '', region] = raw.split('-', 2);
+  return region ? `${language.toLowerCase()}-${region.toUpperCase()}` : language.toLowerCase();
+}
+
+function addContentLanguage(): void {
+  const rows = contentLanguageDrafts();
+  const used = new Set(rows.map((row) => normalizeLanguageCode(row.code)));
+  const code = ['fr', 'en', 'de', 'it', 'es', 'pt', 'nl'].find((candidate) => !used.has(candidate)) ?? '';
+  const isFirst = rows.length === 0;
+  rows.push({
+    code,
+    name: code.toUpperCase(),
+    locale: code,
+    url_prefix: isFirst ? '' : (code ? `/${code}` : ''),
+    hreflang_code: code,
+    fallback_language_code: isFirst ? null : (rows.find((row) => row.is_default)?.code ?? rows[0]?.code ?? null),
+    is_default: isFirst,
+    is_active: true,
+    is_rtl: false,
+    sort_order: (rows.length + 1) * 10,
+  });
+}
+
+function normalizeContentLanguage(row: ContentLanguageDraft, index: number): void {
+  const previousCode = row.code;
+  row.code = normalizeLanguageCode(row.code);
+  row.locale = normalizeLanguageCode(row.locale || row.code);
+  row.hreflang_code = String(row.hreflang_code || row.code).trim();
+  row.url_prefix = row.is_default ? '' : normalizePathSegment(row.url_prefix || row.code);
+  row.is_active = true;
+  row.sort_order = (index + 1) * 10;
+  if (!row.name || row.name === previousCode.toUpperCase()) row.name = row.code.toUpperCase();
+}
+
+function setDefaultContentLanguage(index: number): void {
+  contentLanguageDrafts().forEach((row, rowIndex) => {
+    row.is_default = rowIndex === index;
+    row.is_active = true;
+    if (row.is_default) {
+      row.url_prefix = '';
+    } else if (!row.url_prefix) {
+      row.url_prefix = normalizePathSegment(row.code);
+    }
+  });
+}
+
+function removeContentLanguage(index: number): void {
+  const rows = contentLanguageDrafts();
+  if (rows.length <= 1) return;
+  const removed = rows[index];
+  rows.splice(index, 1);
+  if (removed?.is_default && rows[0]) setDefaultContentLanguage(0);
+  rows.forEach((row, rowIndex) => {
+    if (row.fallback_language_code === removed?.code) row.fallback_language_code = null;
+    row.sort_order = (rowIndex + 1) * 10;
+  });
 }
 
 
@@ -237,6 +315,9 @@ async function persistGroup(group: ConfigurationGroup, values: Record<string, un
 
 async function saveGroup(group: ConfigurationGroup): Promise<void> {
   const currentTab = activeTabKey.value;
+  if (group.key === 'languages') {
+    contentLanguageDrafts().forEach(normalizeContentLanguage);
+  }
   const savedUiLanguage = group.key === 'backoffice'
     ? String((drafts.backoffice?.admin_ui_language_code ?? context.uiLanguageCode) || 'fr')
     : context.uiLanguageCode;
@@ -250,6 +331,14 @@ async function saveGroup(group: ConfigurationGroup): Promise<void> {
     activeTabKey.value = currentTab;
     if (group.key === 'backoffice') {
       context.setUiLanguage(savedUiLanguage);
+      activeTabKey.value = currentTab;
+    }
+    if (group.key === 'languages') {
+      const rows = contentLanguageDrafts();
+      const nextLanguage = rows.some((row) => row.code === context.contentLanguageCode)
+        ? context.contentLanguageCode
+        : (rows.find((row) => row.is_default)?.code || rows[0]?.code || 'fr');
+      await context.load(context.siteId, nextLanguage);
       activeTabKey.value = currentTab;
     }
     success.value = t('configuration.saved', { group: groupLabel(group) });
@@ -773,7 +862,74 @@ watch(() => route.query.tab, (tab) => {
               <InfoHint v-if="fieldHelp(field)" :text="fieldHelp(field)" placement="end" />
             </label>
 
-            <div v-if="inputMode(field) === 'site_asset'" class="site-asset-field">
+            <div v-if="group.key === 'languages' && field.key === 'enabled_languages'" class="content-language-editor">
+              <div class="content-language-editor__toolbar">
+                <p class="muted mb-0">{{ t('configuration.languages.help') }}</p>
+                <button class="btn ghost" type="button" @click="addContentLanguage">
+                  {{ t('configuration.languages.add') }}
+                </button>
+              </div>
+
+              <article v-for="(language, languageIndex) in contentLanguageDrafts()" :key="`${language.code}-${languageIndex}`" class="content-language-row">
+                <div class="content-language-row__heading">
+                  <strong>{{ language.name || language.code.toUpperCase() || t('configuration.languages.new') }}</strong>
+                  <button
+                    class="btn danger"
+                    type="button"
+                    :disabled="contentLanguageDrafts().length <= 1"
+                    @click="removeContentLanguage(languageIndex)"
+                  >
+                    {{ t('common.remove') }}
+                  </button>
+                </div>
+
+                <div class="content-language-row__grid">
+                  <label class="form-field">
+                    <span>{{ t('configuration.languages.code') }}</span>
+                    <input v-model="language.code" class="form-control" type="text" placeholder="fr" required @blur="normalizeContentLanguage(language, languageIndex)" />
+                  </label>
+                  <label class="form-field">
+                    <span>{{ t('configuration.languages.locale') }}</span>
+                    <input v-model="language.locale" class="form-control" type="text" placeholder="fr-CH" required @blur="normalizeContentLanguage(language, languageIndex)" />
+                  </label>
+                  <label class="form-field">
+                    <span>{{ t('configuration.languages.urlPrefix') }}</span>
+                    <input v-model="language.url_prefix" class="form-control" type="text" :disabled="language.is_default" placeholder="/fr" @blur="normalizeContentLanguage(language, languageIndex)" />
+                  </label>
+                  <label class="form-field">
+                    <span>hreflang</span>
+                    <input v-model="language.hreflang_code" class="form-control" type="text" placeholder="fr-CH" />
+                  </label>
+                  <label class="form-field">
+                    <span>{{ t('configuration.languages.fallback') }}</span>
+                    <select v-model="language.fallback_language_code" class="form-select">
+                      <option :value="null">{{ t('configuration.languages.noFallback') }}</option>
+                      <option v-for="candidate in contentLanguageDrafts().filter((row) => row !== language && row.code)" :key="candidate.code" :value="candidate.code">
+                        {{ candidate.name || candidate.code.toUpperCase() }}
+                      </option>
+                    </select>
+                  </label>
+                  <div class="content-language-row__options">
+                    <label class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="radio"
+                        name="default-content-language"
+                        :checked="language.is_default"
+                        @change="setDefaultContentLanguage(languageIndex)"
+                      />
+                      <span class="form-check-label">{{ t('configuration.languages.default') }}</span>
+                    </label>
+                    <label class="form-check">
+                      <input v-model="language.is_rtl" class="form-check-input" type="checkbox" />
+                      <span class="form-check-label">RTL</span>
+                    </label>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div v-else-if="inputMode(field) === 'site_asset'" class="site-asset-field">
               <div v-if="assetPreviewByField[assetFieldPreviewKey(group.key, field.key)]" class="site-asset-preview">
                 <img
                   v-if="assetPreviewByField[assetFieldPreviewKey(group.key, field.key)]?.thumbnail_url || assetPreviewByField[assetFieldPreviewKey(group.key, field.key)]?.public_url"

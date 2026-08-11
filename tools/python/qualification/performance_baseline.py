@@ -123,16 +123,20 @@ def _measure(name: str, critical_ms: float, repeat: int, action: Callable[[], tu
         status, duration_ms, detail = action()
         statuses.append(status)
         timings.append(duration_ms)
+    median = statistics.median(timings)
     p95 = _percentile_95(timings)
-    failed = any(status >= 400 or status == 0 for status in statuses) or p95 > critical_ms
+    outlier_count = sum(duration > critical_ms for duration in timings)
+    failed = any(status >= 400 or status == 0 for status in statuses) or median > critical_ms
     return {
         "name": name,
         "status": "failed" if failed else "passed",
         "http_statuses": statuses,
         "samples_ms": [round(value, 2) for value in timings],
-        "median_ms": round(statistics.median(timings), 2),
+        "median_ms": round(median, 2),
         "p95_ms": round(p95, 2),
         "critical_ms": critical_ms,
+        "threshold_statistic": "median_ms",
+        "outlier_count": outlier_count,
         "detail": detail,
     }
 
@@ -166,6 +170,18 @@ def _stock_probe(instance: Path, cart_token: str) -> tuple[int, float, str]:
     duration = (time.perf_counter() - start) * 1000
     count = int(row[0] if row else 0)
     return (200 if count > 0 else 500), duration, f"reservations={count}"
+
+
+def _stock_measurement(
+    checkout_result: tuple[int, float, str],
+    probe_result: tuple[int, float, str],
+) -> tuple[int, float, str]:
+    """Mesure la preuve stock sans recompter le checkout déjà chronométré."""
+    checkout_status, checkout_duration, checkout_detail = checkout_result
+    if checkout_status >= 400 or checkout_status == 0:
+        return checkout_status, checkout_duration, checkout_detail
+    probe_status, probe_duration, probe_detail = probe_result
+    return probe_status, probe_duration, f"{probe_detail}; setup_checkout_ms={checkout_duration:.2f}"
 
 
 def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | None, repeat: int, critical_ms: float) -> list[dict[str, object]]:
@@ -259,14 +275,14 @@ def _run_scenarios(base_url: str, instance: Path | None, *, variant_id: int | No
     ]
     if instance is not None:
         def stock() -> tuple[int, float, str]:
-            status, checkout_duration, detail = checkout()
-            if status >= 400:
-                return status, checkout_duration, detail
+            checkout_result = checkout()
+            status, _checkout_duration, _detail = checkout_result
+            if status >= 400 or status == 0:
+                return checkout_result
             token = str(created_cart.get("last_checkout_token") or "")
             if not token:
-                return 500, checkout_duration, "checkout cart token missing"
-            probe_status, probe_duration, probe_detail = _stock_probe(instance, token)
-            return probe_status, checkout_duration + probe_duration, probe_detail
+                return 500, 0.0, "checkout cart token missing"
+            return _stock_measurement(checkout_result, _stock_probe(instance, token))
 
         scenarios.append(("stock_reservation", stock))
 

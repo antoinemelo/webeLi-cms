@@ -24,6 +24,9 @@ final class NativeHtmlRenderer
             'article' => self::article($data),
             'search' => self::search($data),
             'taxonomy-archive' => self::taxonomyArchive($data),
+            'storefront-shop' => self::storefrontShop($data),
+            'storefront-collection' => self::storefrontCollection($data),
+            'storefront-product' => self::storefrontProduct($data),
             'tombstone' => self::tombstone($data),
             'error' => self::error($data),
             default => self::page($data),
@@ -83,6 +86,24 @@ final class NativeHtmlRenderer
         $llmsUrl = self::esc((string) ($data['llms_txt_url'] ?? url_path('/llms.txt')));
         $appearanceCss = trim((string) ($data['appearance_css'] ?? ''));
         $appearanceStyle = $appearanceCss !== '' ? '<style id="amcms-appearance">' . $appearanceCss . '</style>' : '';
+        $storefrontCartVisible = !empty($data['storefront_cart_visible']);
+        $storefrontChannel = self::esc((string) ($data['storefront_channel_code'] ?? ''));
+        $bodyAttributes = '';
+        $cartToggle = '';
+        $cartRuntime = '';
+        if ($storefrontCartVisible && $storefrontChannel !== '') {
+            $apiBase = self::esc(public_api_url_path('sale/channels/' . $storefrontChannel));
+            $cartUrl = self::esc(localized_path('/cart', (string) ($data['languageCode'] ?? 'fr')));
+            $checkoutUrl = self::esc(localized_path('/checkout', (string) ($data['languageCode'] ?? 'fr')));
+            $appBasePath = self::esc(url_path('/'));
+            $bodyAttributes = ' data-storefront-channel="' . $storefrontChannel . '" data-storefront-api-base="' . $apiBase . '" data-storefront-cart-url="' . $cartUrl . '" data-storefront-checkout-url="' . $checkoutUrl . '" data-app-base-path="' . $appBasePath . '"';
+            $cartToggle = self::cartToggle($ui);
+            $cartCss = self::esc(asset_path('/frontend/theme-default/assets/css/cart.css'));
+            $cartHeaderCss = self::esc(asset_path('/frontend/theme-default/assets/css/cart-header.css'));
+            $cartJs = self::esc(asset_path('/frontend/theme-default/assets/js/storefront-cart.js'));
+            $cartRuntime = self::cartDrawer($data) . '<link rel="stylesheet" href="' . $cartCss . '"><link rel="stylesheet" href="' . $cartHeaderCss . '"><script src="' . $cartJs . '" defer></script>';
+        }
+        $storefrontProductJs = self::esc(asset_path('/frontend/theme-default/assets/js/storefront-product.js'));
 
         $htmlAttrs = self::$visualEditing ? ' data-amcms-visual="1"' : '';
 
@@ -119,13 +140,14 @@ final class NativeHtmlRenderer
   {$appearanceStyle}
   {$jsonLd}
 </head>
-<body>
+<body{$bodyAttributes}>
   <a class="skip-link" href="#main-content">{$ui['skip_to_content']}</a>
   <header class="site-header" data-site-header>
     <nav class="navbar navbar-expand-lg" aria-label="{$ui['main_navigation']}">
       <div class="container site-header__inner">
         <a class="navbar-brand brand" href="{$homeUrl}" aria-label="{$siteTitle} — {$ui['home']}">{$brandMark}{$brandTitleHtml}</a>
         <form class="header-search header-search--desktop d-none d-sm-block" action="{$searchUrl}" method="get" role="search"><label class="visually-hidden" for="header-search-q">{$searchLabel}</label><input id="header-search-q" class="form-control rounded-pill" name="q" value="" placeholder="{$searchPlaceholder}" autocomplete="search" inputmode="search"></form>
+        {$cartToggle}
         <button class="navbar-toggler nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#site-navigation" aria-controls="site-navigation" aria-expanded="false" aria-label="{$ui['menu']}"><span class="navbar-toggler-icon"></span></button>
         <div id="site-navigation" class="collapse navbar-collapse site-navigation">{$menu}{$languages}</div>
       </div>
@@ -133,6 +155,8 @@ final class NativeHtmlRenderer
   </header>
   <main id="main-content" class="container main-content">{$breadcrumbs}{$content}</main>
   {$footer}
+  {$cartRuntime}
+  <script src="{$storefrontProductJs}" defer></script>
   <script src="{$js}" defer></script>
   <script src="{$cookieJs}" defer></script>
   {$visualJs}
@@ -183,6 +207,281 @@ HTML;
             return $html . '</section>';
         }
         return $html . '<p class="empty-state">' . self::esc($q !== '' ? ($ui['no_results'] ?? 'Aucun résultat.') : ($ui['search_hint'] ?? 'Saisissez une recherche.')) . '</p>';
+    }
+
+    private static function storefrontShop(array $data): string
+    {
+        $title = self::esc((string) ($data['entry_title'] ?? 'Boutique'));
+        $introduction = trim((string) ($data['storefront_introduction'] ?? ''));
+        $html = '<header class="hero"><p class="eyebrow">Storefront</p><h1>' . $title . '</h1>';
+        if ($introduction !== '') {
+            $html .= '<p>' . self::esc($introduction) . '</p>';
+        }
+        $html .= '</header>';
+        foreach ((array) ($data['storefront_merchandising_sections'] ?? []) as $section) {
+            if (is_array($section)) {
+                $html .= self::storefrontMerchandisingSection($section, $data);
+            }
+        }
+        return $html;
+    }
+
+    private static function storefrontCollection(array $data): string
+    {
+        $collection = is_array($data['storefront_collection'] ?? null) ? $data['storefront_collection'] : [];
+        $title = self::esc((string) ($collection['name'] ?? $data['entry_title'] ?? 'Collection'));
+        $description = trim((string) ($collection['description'] ?? ''));
+        $html = '<header class="hero"><p class="eyebrow">Collection</p><h1>' . $title . '</h1>';
+        if ($description !== '') {
+            $html .= '<p>' . self::esc($description) . '</p>';
+        }
+        return $html . '</header>' . self::storefrontCatalogFilters($data)
+            . self::storefrontProductGrid((array) ($data['storefront_products'] ?? []))
+            . self::storefrontPagination((array) ($data['pagination'] ?? []), self::isEnglish($data));
+    }
+
+    private static function storefrontProduct(array $data): string
+    {
+        $product = is_array($data['storefront_product'] ?? null) ? $data['storefront_product'] : [];
+        $en = self::isEnglish($product + $data);
+        $name = self::esc((string) ($product['name'] ?? $data['entry_title'] ?? ''));
+        $returnUrl = self::esc((string) ($data['storefront_return_url'] ?? localized_path('/shop', (string) ($data['languageCode'] ?? 'fr'))));
+        $productId = (int) ($product['product_id'] ?? 0);
+        $media = array_values(array_filter((array) ($product['media'] ?? []), 'is_array'));
+        $main = $media[0] ?? [];
+        $mainUrl = self::esc((string) ($main['url'] ?? ''));
+        $mainAlt = self::esc((string) ($main['alt'] ?? $product['name'] ?? ''));
+        if ($mainUrl === '') {
+            $mainMedia = '<span class="storefront-media-missing" role="img" aria-label="' . ($en ? 'Image unavailable' : 'Image indisponible') . '">' . ($en ? 'Image unavailable' : 'Image indisponible') . '</span>';
+        } elseif (($main['type'] ?? 'image') === 'video') {
+            $mainMedia = '<video controls preload="metadata" src="' . $mainUrl . '" aria-label="' . $mainAlt . '"></video>';
+        } else {
+            $mainMedia = '<img src="' . $mainUrl . '" alt="' . $mainAlt . '" width="1000" height="750">';
+        }
+        $html = '<p><a class="btn btn--ghost" href="' . $returnUrl . '">' . ($en ? 'Back to catalog' : 'Retour au catalogue') . '</a></p>';
+        $html .= '<article class="storefront-product" data-product-detail data-product-id="' . $productId . '"><div class="storefront-product__gallery" aria-label="' . ($en ? 'Media for ' : 'Médias de ') . $name . '"><div class="storefront-product__main-media" data-product-main-media>' . $mainMedia . '<p data-product-media-caption>' . self::esc((string) ($main['caption'] ?? '')) . '</p></div>';
+        if (count($media) > 1) {
+            $html .= '<div class="storefront-product__thumbnails" role="list" aria-label="' . ($en ? 'Choose media' : 'Choisir un média') . '">';
+            foreach ($media as $medium) {
+                $url = self::esc((string) ($medium['url'] ?? ''));
+                $type = self::esc((string) ($medium['type'] ?? 'image'));
+                $alt = self::esc((string) ($medium['alt'] ?? $product['name'] ?? ''));
+                $caption = self::esc((string) ($medium['caption'] ?? ''));
+                $thumb = $type === 'video' ? '<span aria-hidden="true">▶</span>' : '<img src="' . $url . '" alt="" width="96" height="72">';
+                $html .= '<button type="button" role="listitem" data-product-media data-media-url="' . $url . '" data-media-type="' . $type . '" data-media-alt="' . $alt . '" data-media-caption="' . $caption . '">' . $thumb . '</button>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div><section class="storefront-product__summary" aria-labelledby="product-title"><p class="eyebrow">' . self::esc((string) ($product['type'] ?? '')) . '</p><h1 id="product-title">' . $name . '</h1>';
+        if (trim((string) ($product['summary'] ?? '')) !== '') {
+            $html .= '<p>' . self::esc((string) $product['summary']) . '</p>';
+        }
+        $html .= self::storefrontPrice((array) ($product['price'] ?? []), true, ' data-product-price');
+        $availability = is_array($product['availability'] ?? null) ? $product['availability'] : [];
+        $html .= self::storefrontAvailability($availability, ' data-product-availability');
+        $sellables = array_values(array_filter((array) ($product['sellables'] ?? []), 'is_array'));
+        if (count($sellables) > 1) {
+            $html .= '<label for="product-variant-' . $productId . '">' . ($en ? 'Variant' : 'Variante') . '</label><select id="product-variant-' . $productId . '" data-product-variant>';
+            foreach ($sellables as $sellable) {
+                $price = is_array($sellable['price'] ?? null) ? $sellable['price'] : [];
+                $stock = is_array($sellable['availability'] ?? null) ? $sellable['availability'] : [];
+                $selected = (int) ($sellable['sellable_id'] ?? 0) === (int) ($product['default_sellable_id'] ?? 0) ? ' selected' : '';
+                $html .= '<option value="' . (int) ($sellable['sellable_id'] ?? 0) . '" data-sku="' . self::esc((string) ($sellable['sku'] ?? '')) . '" data-regular="' . (int) ($price['regular_minor'] ?? 0) . '" data-final="' . (int) ($price['final_minor'] ?? 0) . '" data-currency="' . self::esc((string) ($price['currency'] ?? '')) . '" data-availability="' . self::esc((string) ($stock['label'] ?? '')) . '" data-status="' . self::esc((string) ($stock['display_status'] ?? '')) . '" data-tone="' . self::esc((string) ($stock['tone'] ?? 'neutral')) . '" data-orderable="' . (!empty($sellable['orderable']) ? '1' : '0') . '"' . $selected . '>' . self::esc((string) ($sellable['name'] ?? $sellable['sku'] ?? '')) . ' — ' . self::esc((string) ($stock['label'] ?? '')) . '</option>';
+            }
+            $html .= '</select>';
+        }
+        $html .= '<label for="product-quantity-' . $productId . '">' . ($en ? 'Quantity' : 'Quantité') . '</label><input id="product-quantity-' . $productId . '" data-product-quantity type="number" min="1" step="1" value="1">';
+        if (!empty($product['cta'])) {
+            $html .= '<button type="button" class="btn btn--primary" data-product-add data-storefront-add-to-cart data-sellable-id="' . (int) ($product['default_sellable_id'] ?? 0) . '" data-quantity="1">' . ($en ? 'Add to cart' : 'Ajouter au panier') . '</button>';
+        }
+        $html .= '<p class="visually-hidden" data-product-announcement role="status" aria-live="polite"></p></section>';
+        if (trim((string) ($product['description'] ?? '')) !== '') {
+            $html .= '<div class="prose-block storefront-product__description">' . MarkdownRenderer::toHtml((string) $product['description']) . '</div>';
+        }
+        $html .= self::storefrontProductAttributes((array) ($product['attributes'] ?? []), $en);
+        $html .= self::storefrontProductDocuments((array) ($product['documents'] ?? []), $en);
+        return $html . '</article>';
+    }
+
+    private static function storefrontMerchandisingSection(array $section, array $data): string
+    {
+        $key = (string) ($section['key'] ?? '');
+        $items = array_values(array_filter((array) ($section['items'] ?? []), 'is_array'));
+        $count = (int) ($section['count'] ?? count($items));
+        if ($count < 1 && !in_array($key, ['search', 'catalog'], true) && ($section['empty_state'] ?? '') !== 'message') {
+            return '';
+        }
+        $title = self::esc((string) ($section['title'] ?? ''));
+        $html = '<section class="storefront-merchandising storefront-merchandising--' . self::esc((string) ($section['display'] ?? 'grid')) . '" data-shop-section="' . self::esc($key) . '">';
+        if ($key !== 'search' && $title !== '') {
+            $html .= '<header class="storefront-section-heading"><h2>' . $title . '</h2>';
+            if ($count > 0 && trim((string) ($section['view_all_label'] ?? '')) !== '') {
+                $html .= '<a href="' . self::esc((string) ($section['view_all_url'] ?? '#')) . '">' . self::esc((string) $section['view_all_label']) . '</a>';
+            }
+            $html .= '</header>';
+        }
+        if ($key === 'search') {
+            $html .= self::storefrontCatalogFilters($data);
+        } elseif (in_array($key, ['catalog', 'promotions', 'popular', 'new'], true)) {
+            $html .= self::storefrontProductGrid($items);
+            if ($key === 'catalog') {
+                $html .= self::storefrontPagination((array) ($data['pagination'] ?? []), self::isEnglish($data));
+            }
+        } elseif ($key === 'collections') {
+            $html .= '<section class="storefront-grid storefront-grid--collections" data-storefront-block="collection-grid" style="--storefront-columns:3">';
+            foreach ($items as $item) {
+                $html .= '<article class="storefront-card"><h2><a href="' . self::esc((string) ($item['url'] ?? '#')) . '">' . self::esc((string) ($item['name'] ?? '')) . '</a></h2><p>' . self::esc((string) ($item['description'] ?? '')) . '</p><small>' . (int) ($item['product_count'] ?? 0) . ' produit(s)</small></article>';
+            }
+            $html .= '</section>';
+        } elseif (in_array($key, ['groups', 'keywords'], true)) {
+            $html .= '<nav class="storefront-merchandising-links" aria-label="' . $title . '">';
+            foreach ($items as $item) {
+                $label = (string) ($item[$key === 'keywords' ? 'keyword' : 'name'] ?? '');
+                $suffix = $key === 'groups' ? ' <small>' . (int) ($item['product_count'] ?? 0) . '</small>' : '';
+                $html .= '<a href="' . self::esc((string) ($item['url'] ?? '#')) . '">' . self::esc($label) . $suffix . '</a>';
+            }
+            $html .= '</nav>';
+        }
+        if ($count < 1 && ($section['empty_state'] ?? '') === 'message') {
+            $html .= '<p class="storefront-empty" role="status">' . self::esc((string) ($section['empty_message'] ?? 'Aucun produit à afficher.')) . '</p>';
+        }
+        return $html . '</section>';
+    }
+
+    private static function storefrontCatalogFilters(array $data): string
+    {
+        $en = self::isEnglish($data);
+        $selection = is_array($data['storefront_selection'] ?? null) ? $data['storefront_selection'] : [];
+        $catalog = is_array($data['storefront_catalog'] ?? null) ? $data['storefront_catalog'] : [];
+        $html = '<section class="storefront-catalog-tools" aria-labelledby="storefront-catalog-title"><h2 id="storefront-catalog-title" class="visually-hidden">' . ($en ? 'Catalog' : 'Catalogue') . '</h2><form method="get" class="storefront-catalog-form"><div class="storefront-catalog-search"><label>' . ($en ? 'Search' : 'Recherche') . ' <input type="search" name="q" value="' . self::esc((string) ($selection['q'] ?? '')) . '" autocomplete="off"></label><label>' . ($en ? 'Sort' : 'Tri') . ' <select name="sort">';
+        foreach ((array) ($data['storefront_sorts'] ?? []) as $sort) {
+            if (!is_array($sort)) { continue; }
+            $selected = (string) ($sort['key'] ?? '') === (string) ($selection['sort'] ?? 'name') ? ' selected' : '';
+            $html .= '<option value="' . self::esc((string) ($sort['key'] ?? '')) . '"' . $selected . '>' . self::esc((string) ($sort['label'] ?? '')) . '</option>';
+        }
+        $html .= '</select></label><button class="btn btn--primary" type="submit">' . ($en ? 'Show' : 'Afficher') . '</button><a class="btn btn--ghost" href="' . self::esc((string) ($catalog['reset_url'] ?? localized_path('/shop', (string) ($data['languageCode'] ?? 'fr')))) . '">' . ($en ? 'Reset' : 'Réinitialiser') . '</a></div><details class="storefront-filter-drawer" open><summary>' . ($en ? 'Filters' : 'Filtres') . '</summary><div class="storefront-facet-grid">';
+        foreach ((array) ($data['storefront_facets'] ?? []) as $facet) {
+            if (!is_array($facet) || empty($facet['options'])) { continue; }
+            $html .= '<fieldset class="storefront-facet"><legend>' . self::esc((string) ($facet['label'] ?? '')) . '</legend>';
+            foreach ((array) $facet['options'] as $option) {
+                if (!is_array($option)) { continue; }
+                $name = ($facet['type'] ?? '') === 'attribute' ? 'attributes[' . (string) ($facet['key'] ?? '') . '][]' : (string) ($facet['key'] ?? '') . '[]';
+                $checked = !empty($option['selected']) ? ' checked' : '';
+                $html .= '<label><input type="checkbox" name="' . self::esc($name) . '" value="' . self::esc((string) ($option['key'] ?? '')) . '"' . $checked . '><span>' . self::esc((string) ($option['label'] ?? '')) . '</span> <small>(' . (int) ($option['count'] ?? 0) . ')</small></label>';
+            }
+            $html .= '</fieldset>';
+        }
+        $total = (int) (($data['pagination']['total'] ?? $catalog['pagination']['total'] ?? 0));
+        return $html . '</div></details></form><p class="storefront-result-count" role="status">' . $total . ' ' . ($en ? 'result(s)' : 'résultat(s)') . '</p></section>';
+    }
+
+    private static function storefrontProductGrid(array $items): string
+    {
+        $html = '<section class="storefront-grid storefront-grid--products" data-storefront-block="product_grid" style="--storefront-columns:3">';
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $html .= self::storefrontProductCard($item);
+            }
+        }
+        return $html . '</section>';
+    }
+
+    private static function storefrontProductCard(array $item): string
+    {
+        $en = self::isEnglish($item);
+        $url = self::esc((string) ($item['url_with_return'] ?? $item['url'] ?? '#'));
+        $name = self::esc((string) ($item['name'] ?? ''));
+        $media = array_values(array_filter((array) ($item['media'] ?? []), 'is_array'));
+        $image = $media === []
+            ? '<span class="storefront-media-missing" role="img" aria-label="' . ($en ? 'Image unavailable' : 'Image indisponible') . '">' . ($en ? 'Image unavailable' : 'Image indisponible') . '</span>'
+            : '<img src="' . self::esc((string) ($media[0]['url'] ?? '')) . '" alt="' . self::esc((string) ($media[0]['alt'] ?? $item['name'] ?? '')) . '" width="800" height="600" loading="lazy">';
+        $html = '<article class="storefront-card" data-product-id="' . (int) ($item['product_id'] ?? 0) . '"><a class="storefront-card__media" data-product-preview-trigger href="' . $url . '" aria-label="' . ($en ? 'Preview ' : 'Aperçu ') . $name . '">' . $image . '</a><h2><a data-product-preview-trigger href="' . $url . '">' . $name . '</a></h2>';
+        $summary = trim((string) ($item['card_summary'] ?? $item['summary'] ?? ''));
+        if ($summary !== '') { $html .= '<p>' . self::esc($summary) . '</p>'; }
+        $html .= self::storefrontPrice((array) ($item['price'] ?? []), true);
+        $html .= self::storefrontAvailability((array) ($item['availability'] ?? []));
+        $sellables = array_values(array_filter((array) ($item['sellables'] ?? []), 'is_array'));
+        $requiresVariant = count($sellables) > 1;
+        if (!empty($item['cta'])) {
+            $html .= '<div class="storefront-card__actions">';
+            if ($requiresVariant) {
+                $html .= '<button type="button" class="storefront-card__variant-selection-status" id="product-variant-status-' . (int) ($item['product_id'] ?? 0) . '" data-variant-selection-status data-product-preview-trigger>' . ($en ? 'Select an available option to add it to the cart.' : "Sélectionnez une option disponible pour l'ajouter au panier.") . '</button>';
+            }
+            $html .= '<a class="btn btn--ghost" href="' . $url . '">' . ($en ? 'View' : 'Voir') . '</a><button type="button" class="btn btn--primary" data-storefront-add-to-cart data-quantity="1"';
+            $html .= $requiresVariant ? ' data-variant-required="1" aria-disabled="true" disabled' : ' data-sellable-id="' . (int) ($item['cta']['sellable_id'] ?? 0) . '"';
+            $html .= '>' . self::esc((string) ($item['cta']['label'] ?? ($en ? 'Add to cart' : 'Ajouter au panier'))) . '</button></div>';
+        }
+        if ($requiresVariant) {
+            $html .= '<details class="storefront-card__preview" data-product-preview><summary class="storefront-card__preview-toggle"><span aria-hidden="true">×</span><span>' . ($en ? 'Close preview' : 'Fermer l’aperçu') . '</span></summary><div class="storefront-card__preview-body"><ul>';
+            foreach ($sellables as $sellable) {
+                $disabled = empty($sellable['orderable']) ? ' disabled' : '';
+                $html .= '<li><button type="button" class="storefront-card__variant-choice" data-product-variant-choice data-sellable-id="' . (int) ($sellable['sellable_id'] ?? 0) . '" aria-pressed="false"' . $disabled . '>' . self::esc((string) ($sellable['name'] ?? $sellable['sku'] ?? '')) . ' — ' . self::esc((string) ($sellable['availability']['label'] ?? '')) . '</button></li>';
+            }
+            $html .= '</ul></div></details>';
+        }
+        return $html . '</article>';
+    }
+
+    private static function storefrontPrice(array $price, bool $promotion = true, string $attributes = ''): string
+    {
+        if ($price === [] || !array_key_exists('final_minor', $price)) { return ''; }
+        $regular = (int) ($price['regular_minor'] ?? $price['final_minor'] ?? 0);
+        $final = (int) ($price['final_minor'] ?? 0);
+        $html = '<p class="storefront-price"' . $attributes . '>';
+        if ($promotion && $regular > $final) { $html .= '<del>' . number_format($regular / 100, 2, '.', ' ') . '</del> '; }
+        $html .= '<strong>' . number_format($final / 100, 2, '.', ' ') . ' ' . self::esc((string) ($price['currency'] ?? '')) . '</strong>';
+        if ($promotion && (int) ($price['discount_percent_bps'] ?? 0) > 0) { $html .= ' <mark>−' . (int) round((int) $price['discount_percent_bps'] / 100) . '%</mark>'; }
+        return $html . '</p>';
+    }
+
+    private static function storefrontAvailability(array $availability, string $attributes = ''): string
+    {
+        if ($availability === []) { return ''; }
+        $status = (string) ($availability['display_status'] ?? $availability['status'] ?? '');
+        $icon = match ($status) { 'available' => '●', 'last_available' => '◐', 'on_order' => '◷', default => '○' };
+        return '<p class="storefront-availability storefront-availability--' . self::esc((string) ($availability['tone'] ?? 'neutral')) . '" data-availability="' . self::esc($status) . '"' . $attributes . '><span aria-hidden="true">' . $icon . '</span> ' . self::esc((string) ($availability['label'] ?? $status)) . '</p>';
+    }
+
+    private static function storefrontPagination(array $pagination, bool $en): string
+    {
+        $previous = trim((string) ($pagination['previous_url'] ?? ''));
+        $next = trim((string) ($pagination['next_url'] ?? ''));
+        if ($previous === '' && $next === '' && (int) ($pagination['pages'] ?? 0) < 1) { return ''; }
+        $html = '<nav class="storefront-pagination" aria-label="' . ($en ? 'Catalog pagination' : 'Pagination du catalogue') . '">';
+        if ($previous !== '') { $html .= '<a class="btn btn--ghost" rel="prev" href="' . self::esc($previous) . '">' . ($en ? 'Previous page' : 'Page précédente') . '</a>'; }
+        if ((int) ($pagination['pages'] ?? 0) > 0) { $html .= '<span>Page ' . (int) ($pagination['page'] ?? 1) . ' ' . ($en ? 'of' : 'sur') . ' ' . (int) $pagination['pages'] . '</span>'; }
+        if ($next !== '') { $html .= '<a class="btn btn--ghost" rel="next" href="' . self::esc($next) . '">' . ($en ? 'Next page' : 'Page suivante') . '</a>'; }
+        return $html . '</nav>';
+    }
+
+    private static function storefrontProductAttributes(array $attributes, bool $en): string
+    {
+        if ($attributes === []) { return ''; }
+        $html = '<section class="storefront-product__attributes"><h2>' . ($en ? 'Characteristics' : 'Caractéristiques') . '</h2><dl>';
+        foreach ($attributes as $attribute) {
+            if (!is_array($attribute)) { continue; }
+            $values = [];
+            foreach ((array) ($attribute['values'] ?? []) as $value) { if (is_array($value)) { $values[] = (string) ($value['label'] ?? ''); } }
+            $html .= '<div><dt>' . self::esc((string) ($attribute['name'] ?? '')) . '</dt><dd>' . self::esc(implode(', ', $values)) . ' ' . self::esc((string) ($attribute['unit'] ?? '')) . '</dd></div>';
+        }
+        return $html . '</dl></section>';
+    }
+
+    private static function storefrontProductDocuments(array $documents, bool $en): string
+    {
+        if ($documents === []) { return ''; }
+        $html = '<section class="storefront-product__documents"><h2>' . ($en ? 'Downloads' : 'Documents à télécharger') . '</h2><ul>';
+        foreach ($documents as $document) {
+            if (!is_array($document)) { continue; }
+            $label = trim((string) ($document['title'] ?? $document['caption'] ?? '')) ?: ($en ? 'Download document' : 'Télécharger le document');
+            $html .= '<li><a href="' . self::esc((string) ($document['url'] ?? '#')) . '" target="_blank" rel="noopener">' . self::esc($label) . '</a></li>';
+        }
+        return $html . '</ul></section>';
+    }
+
+    private static function isEnglish(array $data): bool
+    {
+        return str_starts_with(strtolower((string) ($data['locale'] ?? $data['language_code'] ?? $data['languageCode'] ?? 'fr')), 'en');
     }
 
     private static function searchHiddenFilters(array $data): string
@@ -652,11 +951,13 @@ HTML;
 
         $ui = self::ui($data);
         $loginIcon = '<svg class="bi bi-person login-shortcut__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/></svg>';
+        $languageLabel = self::esc($ui['language_menu'] ?? 'Langue');
+        $languageIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-translate language-switch__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4.545 6.714 4.11 8H3l1.862-5h1.284L8 8H6.833l-.435-1.286zm1.634-.736L5.5 3.956h-.049l-.679 2.022z"/><path d="M0 2a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v3h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-3H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zm7.138 9.995q.289.451.63.846c-.748.575-1.673 1.001-2.768 1.292.178.217.451.635.555.867 1.125-.359 2.08-.844 2.886-1.494.777.665 1.739 1.165 2.93 1.472.133-.254.414-.673.629-.89-1.125-.253-2.057-.694-2.82-1.284.681-.747 1.222-1.651 1.621-2.757H14V8h-3v1.047h.765c-.318.844-.74 1.546-1.272 2.13a6 6 0 0 1-.415-.492 2 2 0 0 1-.94.31"/></svg>';
         $loginUrl = self::esc((string) ($data['admin_login_url'] ?? url_path('/admin/login')));
         $html = '<div class="header-actions header-actions--desktop d-none d-lg-flex align-items-center gap-2 ms-lg-3">';
 
         if ($items !== []) {
-            $html .= '<div class="dropdown language-switch language-switch--desktop"><button class="btn btn-outline-primary dropdown-toggle language-switch__button" type="button" data-bs-toggle="dropdown" aria-expanded="false">' . self::esc($ui['language_menu'] ?? 'Langue') . '</button><ul class="dropdown-menu dropdown-menu-end language-switch__menu">';
+            $html .= '<div class="dropdown language-switch language-switch--desktop"><button class="btn btn-outline-primary dropdown-toggle language-switch__button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="' . $languageLabel . '" title="' . $languageLabel . '">' . $languageIcon . '<span class="visually-hidden">' . $languageLabel . '</span></button><ul class="dropdown-menu dropdown-menu-end language-switch__menu">';
             foreach ($items as $item) {
                 if (!is_array($item)) {
                     continue;
@@ -691,6 +992,28 @@ HTML;
         $html .= '</div>';
 
         return $html;
+    }
+
+    /** @param array<string,string> $ui */
+    private static function cartToggle(array $ui): string
+    {
+        $label = self::esc($ui['open_cart'] ?? 'Ouvrir le panier');
+        $cart = self::esc($ui['cart'] ?? 'Panier');
+        return '<button type="button" class="storefront-cart-toggle" data-cart-toggle aria-controls="storefront-cart-drawer" aria-expanded="false" aria-label="' . $label . '">'
+            . '<svg class="bi bi-bag" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a2.5 2.5 0 0 0-2.5 2.5V4h5v-.5A2.5 2.5 0 0 0 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zM3 5h10v9H3z"/></svg>'
+            . '<span class="visually-hidden">' . $cart . '</span><span class="storefront-cart-count" data-cart-count aria-live="polite">0</span></button>';
+    }
+
+    private static function cartDrawer(array $data): string
+    {
+        $en = self::isEnglish($data);
+        $cartUrl = self::esc(localized_path('/cart', (string) ($data['languageCode'] ?? 'fr')));
+        $checkoutUrl = self::esc(localized_path('/checkout', (string) ($data['languageCode'] ?? 'fr')));
+        return '<div class="storefront-cart-backdrop" data-cart-backdrop hidden></div>'
+            . '<aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden role="dialog" aria-modal="true" aria-labelledby="storefront-cart-title" tabindex="-1">'
+            . '<header class="cart-drawer__header"><div><p>' . ($en ? 'Your selection' : 'Votre sélection') . '</p><h2 id="storefront-cart-title">' . ($en ? 'Cart' : 'Panier') . '</h2></div><button class="cart-drawer__close" type="button" data-cart-close aria-label="' . ($en ? 'Close cart' : 'Fermer le panier') . '"><span aria-hidden="true">×</span></button></header>'
+            . '<div class="cart-drawer__content"><div data-cart-error role="alert" aria-live="assertive"></div><div data-cart-lines aria-live="polite"></div></div>'
+            . '<footer class="cart-drawer__footer"><div data-cart-summary></div><div class="cart-total" data-cart-total></div><div class="cart-drawer__actions"><a class="cart-secondary-action" data-cart-full href="' . $cartUrl . '">' . ($en ? 'View full cart' : 'Voir le panier') . '</a><a class="cart-checkout" data-cart-checkout href="' . $checkoutUrl . '">' . ($en ? 'Checkout' : 'Commander') . '</a></div><p class="cart-reassurance"><span aria-hidden="true">⌁</span>' . ($en ? 'Secure checkout · cart saved on this device' : 'Paiement sécurisé · panier conservé sur cet appareil') . '</p></footer></aside>';
     }
 
     private static function footer(array $data): string

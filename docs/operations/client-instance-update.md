@@ -5,10 +5,12 @@ audience:
   - administrator
   - developer
 status: current
-last_verified: 2026-07-10
+last_verified: 2026-08-11
 source_of_truth: procedure
 source_paths:
   - tools/python/commands/instance.py
+  - tools/admin.py
+  - tools/python/operations/deployment/d3_deploy_ftp.py
   - tools/python/operations/deployment/d8_deploy_web_update.py
   - tools/python/operations/backup/d6_backup_sqlite.py
   - tools/python/operations/database/d9_migrate_sqlite.py
@@ -79,6 +81,8 @@ La source fournie à `instance update` est généralement une archive release :
 /chemin/release.zip
 ```
 
+Depuis `tools/admin.py`, le point 11 guide toute l'opération : il demande la release source, puis propose une cible locale ou FTP/FTPS. Lorsque la source proposée `storage/exports/release_stage` est conservée, le point 11 la reconstruit automatiquement depuis les fichiers courants de `/dev`, sans bases, sans vendor et sans artefacts de développement. Une archive ZIP ou un autre dossier explicitement choisi reste inchangé et permet toujours de déployer une release précise. Le point 5 demeure la procédure de préparation et de qualification d'une release officielle.
+
 Avant d'intervenir sur une instance client, vérifiez :
 
 - que la release cible correspond au canal choisi ;
@@ -124,6 +128,26 @@ L’application crée un backup SQLite, applique le delta fichiers avec archive 
 `--apply` doit rester accompagné de `--backup` et `--yes` dans une procédure normale. L'option longue de risque explicite des migrations ne doit être utilisée que si un backup externe vérifié existe déjà.
 
 Pendant une intervention réelle, il est recommandé de bloquer les écritures applicatives ou de placer l'instance en maintenance, surtout si des éditeurs peuvent publier pendant la copie fichiers ou les migrations.
+
+## Cible FTP/FTPS depuis le point 11
+
+Le mode FTP du point 11 demande :
+
+- le fichier `ops/ftp.deploy.json` contenant la connexion ;
+- le chemin distant exact, par exemple `/www/webe.li/eve`, ou une URL `ftp://serveur/www/webe.li/eve` ;
+- si les fichiers retirés de la nouvelle release doivent aussi être supprimés.
+
+Une simulation est toujours exécutée avant la confirmation. Un manifeste différentiel distinct est conservé par configuration FTP et chemin distant sous `storage/deployments/ftp-manifests/`. Après le premier transfert suivi, les exécutions suivantes n'envoient que les fichiers ajoutés ou dont le hash a changé. Le premier transfert d'une cible sans manifeste constitue la référence et peut donc envoyer toute la release.
+
+Ce profil protège les bases, médias, uploads, secrets, logs, caches, backups, vendors et modules locaux. FTP ne permet pas d'exécuter de manière fiable les commandes du serveur : le point 11 réalise donc uniquement la mise à jour différentielle des fichiers. Si la release contient des migrations, exécutez ensuite sur le serveur, par SSH ou console d'hébergement :
+
+La simulation écrit en outre un plan propre à la cible. L'exécution réelle refuse de démarrer si le stage, le manifeste précédent, la cible ou la liste des différences a changé entre-temps. Si la simulation ne détecte aucune différence, le point 11 s'arrête sans lancer un second déploiement FTP.
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py validate
+```
 
 ## Chemins protégés
 

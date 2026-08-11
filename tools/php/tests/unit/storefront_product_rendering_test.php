@@ -5,6 +5,7 @@ require_once __DIR__ . '/../TestHarness.php';
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Core\Renderer;
+use App\Core\NativeHtmlRenderer;
 use App\Application\Frontend\ResolvePublicRoute;
 use App\Application\Frontend\SiteReadRepository;
 use App\Application\Frontend\PublicStorefrontCartController;
@@ -60,7 +61,26 @@ foreach (['default','aurora','pulse'] as $theme) {
     $h->assertTrue(substr_count($layout,'data-cart-toggle')===1&&str_contains($layout,'class="bi bi-bag"'),$theme.' renders one compact Bootstrap-style bag icon instead of a floating text button');
     $h->assertTrue(str_contains($layout,'data-storefront-api-base="'.public_api_url_path('sale/channels/web-main').'"')&&str_contains($layout,'data-storefront-cart-url="'.localized_path('/cart','fr').'"'),$theme.' gives the cart client explicit installation-aware API and page URLs');
     $h->assertTrue(str_contains($layout,'cart-drawer__header')&&str_contains($layout,'cart-drawer__footer')&&str_contains($layout,'cart-drawer__close'),$theme.' renders the shared modern cart drawer structure');
+    $languageLayout=$renderer->render('layout',['languageCode'=>'de','content'=>'<p>Inhalt</p>','menu_items'=>[],'footer_menu_items'=>[],'footer_top_menu_items'=>[],'footer_bottom_menu_items'=>[],'language_menu_items'=>[['code'=>'de','label'=>'Deutsch','url'=>'/de','is_active'=>true],['code'=>'fr','label'=>'Français','url'=>'/fr','is_active'=>false]],'site'=>['name'=>'Test'],'site_localization'=>['site_title'=>'Test'],'ui'=>['skip_to_content'=>'Inhalt','main_navigation'=>'Navigation','home'=>'Start','menu'=>'Menü','footer_navigation'=>'Fußzeile','language_menu'=>'Sprache']]);
+    $h->assertTrue(str_contains($languageLayout,'class="bi bi-translate language-switch__icon"')&&str_contains($languageLayout,'aria-label="Sprache"')&&!str_contains($languageLayout,'>Sprache</button>'),$theme.' displays the translation icon while keeping an accessible localized label');
 }
+
+$nativeShop=NativeHtmlRenderer::render('storefront-shop',[
+    'languageCode'=>'fr','entry_title'=>'Boutique','storefront_introduction'=>'Catalogue public',
+    'storefront_selection'=>['q'=>'','sort'=>'name'],'storefront_sorts'=>[['key'=>'name','label'=>'Nom']],
+    'storefront_facets'=>[],'storefront_catalog'=>['reset_url'=>'/shop'],'pagination'=>['total'=>1,'page'=>1,'pages'=>1],
+    'storefront_merchandising_sections'=>[
+        ['key'=>'search','display'=>'list','items'=>[],'count'=>0,'empty_state'=>'hidden'],
+        ['key'=>'catalog','title'=>'Produits','display'=>'grid','items'=>[$product],'count'=>1,'empty_state'=>'message'],
+    ],
+]);
+$h->assertTrue(str_contains($nativeShop,'data-shop-section="catalog"')&&str_contains($nativeShop,'data-product-id="42"')&&str_contains($nativeShop,'1 résultat(s)'), 'native no-vendor renderer displays the Shop catalog instead of falling back to a generic CMS page');
+$nativeProduct=NativeHtmlRenderer::render('storefront-product',['languageCode'=>'fr','storefront_product'=>$product,'storefront_return_url'=>'/shop']);
+$h->assertTrue(str_contains($nativeProduct,'data-product-detail')&&str_contains($nativeProduct,'Produit vidéo')&&str_contains($nativeProduct,'data-storefront-add-to-cart'), 'native no-vendor renderer keeps product details and cart actions usable');
+$nativeLayout=NativeHtmlRenderer::render('layout',['languageCode'=>'fr','content'=>$nativeShop,'storefront_cart_visible'=>true,'storefront_channel_code'=>'web-main','menu_items'=>[],'footer_menu_items'=>[],'footer_top_menu_items'=>[],'footer_bottom_menu_items'=>[],'site'=>['name'=>'Test'],'site_localization'=>['site_title'=>'Test'],'ui'=>['skip_to_content'=>'Contenu','main_navigation'=>'Navigation','home'=>'Accueil','menu'=>'Menu','footer_navigation'=>'Pied de page','cart'=>'Panier','open_cart'=>'Ouvrir le panier']]);
+$h->assertTrue(str_contains($nativeLayout,'data-cart-toggle')&&str_contains($nativeLayout,'data-storefront-api-base=')&&str_contains($nativeLayout,'cart-header.css')&&str_contains($nativeLayout,'storefront-cart-drawer'), 'native no-vendor layout renders the same compact Shop button and cart runtime as Twig');
+$nativeLanguageLayout=NativeHtmlRenderer::render('layout',['languageCode'=>'de','content'=>'<p>Inhalt</p>','menu_items'=>[],'footer_menu_items'=>[],'footer_top_menu_items'=>[],'footer_bottom_menu_items'=>[],'language_menu_items'=>[['code'=>'de','label'=>'Deutsch','url'=>'/de','is_active'=>true],['code'=>'fr','label'=>'Français','url'=>'/fr','is_active'=>false]],'site'=>['name'=>'Test'],'site_localization'=>['site_title'=>'Test'],'ui'=>['skip_to_content'=>'Inhalt','main_navigation'=>'Navigation','home'=>'Start','menu'=>'Menü','footer_navigation'=>'Fußzeile','language_menu'=>'Sprache']]);
+$h->assertTrue(str_contains($nativeLanguageLayout,'class="bi bi-translate language-switch__icon"')&&str_contains($nativeLanguageLayout,'aria-label="Sprache"')&&!str_contains($nativeLanguageLayout,'>Sprache</button>'),'native no-vendor layout displays the translation icon with an accessible localized label');
 
 $cartCss=(string)file_get_contents(dirname(__DIR__,4).'/frontend/theme-default/assets/css/cart.css');
 $h->assertTrue(!str_contains($cartCss,'.storefront-cart-toggle{position:fixed')&&str_contains($cartCss,'.storefront-cart-toggle .bi-bag'),'cart styles keep the bag icon in navigation flow rather than fixing it at page bottom');

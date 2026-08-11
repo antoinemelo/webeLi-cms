@@ -7,7 +7,10 @@ $rolesMatrixDatabaseDir = sys_get_temp_dir() . '/amcms-roles-matrix-db-' . bin2h
 if (!mkdir($rolesMatrixDatabaseDir, 0775, true) && !is_dir($rolesMatrixDatabaseDir)) {
     throw new RuntimeException('Unable to create temporary database directory.');
 }
-$sourceDatabaseDir = dirname(__DIR__, 4) . '/storage/database';
+$configuredSourceDatabaseDir = $_ENV['CMS_DATABASE_DIR'] ?? $_SERVER['CMS_DATABASE_DIR'] ?? getenv('CMS_DATABASE_DIR');
+$sourceDatabaseDir = is_string($configuredSourceDatabaseDir) && trim($configuredSourceDatabaseDir) !== ''
+    ? rtrim($configuredSourceDatabaseDir, DIRECTORY_SEPARATOR)
+    : dirname(__DIR__, 4) . '/storage/database';
 foreach (glob($sourceDatabaseDir . '/*.sqlite') ?: [] as $source) {
     $target = $rolesMatrixDatabaseDir . '/' . basename($source);
     $sourceDatabase = new PDO('sqlite:' . $source, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);

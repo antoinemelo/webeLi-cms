@@ -10,13 +10,19 @@ de champs. Aucun cache monolithique legacy n'est créé ni alimenté.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
 
 
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
-CORE_DB = BASE / "storage" / "database" / "core.sqlite"
+DATABASE_DIR_OVERRIDE = os.getenv("CMS_DATABASE_DIR", "").strip()
+CORE_DB = (
+    Path(DATABASE_DIR_OVERRIDE).expanduser() / "core.sqlite"
+    if DATABASE_DIR_OVERRIDE
+    else BASE / "storage" / "database" / "core.sqlite"
+)
 BLUEPRINTS_JSON = BASE / "database" / "seeds" / "native_blueprints.json"
 
 
@@ -1274,5 +1280,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
 

@@ -228,10 +228,39 @@ switch ($cmd) {
     case 'test:smoke':
     case 'system:smoke':
         App\Core\Installer::ensure($coreDb, $iamDb, $logger, $formsDb, $cookiesDb);
-        $count = (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM content_entries')->fetchColumn();
-        $routes = (int) $coreDb->pdo()->query("SELECT COUNT(*) FROM routes WHERE status = 'active'")->fetchColumn();
-        $ok = $count > 0 && $routes > 0;
-        echo $ok ? "Smoke OK\n" : "Smoke failed\n";
+        $requiredTables = ['sites', 'languages', 'site_languages', 'site_domains', 'content_entries', 'routes'];
+        $missingTables = array_values(array_filter(
+            $requiredTables,
+            static fn(string $table): bool => !$coreDb->tableExists($table),
+        ));
+        $activeSites = $coreDb->tableExists('sites')
+            ? (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM sites WHERE is_active = 1')->fetchColumn()
+            : 0;
+        $activeLanguages = $coreDb->tableExists('site_languages')
+            ? (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM site_languages WHERE is_active = 1')->fetchColumn()
+            : 0;
+        $activeDomains = $coreDb->tableExists('site_domains')
+            ? (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM site_domains WHERE is_active = 1')->fetchColumn()
+            : 0;
+        $contents = $coreDb->tableExists('content_entries')
+            ? (int) $coreDb->pdo()->query('SELECT COUNT(*) FROM content_entries')->fetchColumn()
+            : 0;
+        $routes = $coreDb->tableExists('routes')
+            ? (int) $coreDb->pdo()->query("SELECT COUNT(*) FROM routes WHERE status = 'active'")->fetchColumn()
+            : 0;
+        $ok = $missingTables === [] && $activeSites > 0 && $activeLanguages > 0 && $activeDomains > 0;
+        $summary = sprintf(
+            'sites=%d languages=%d domains=%d contents=%d routes=%d',
+            $activeSites,
+            $activeLanguages,
+            $activeDomains,
+            $contents,
+            $routes,
+        );
+        if ($missingTables !== []) {
+            $summary .= ' missing_tables=' . implode(',', $missingTables);
+        }
+        echo $ok ? "Smoke OK ({$summary})\n" : "Smoke failed ({$summary})\n";
         exit($ok ? 0 : 1);
 
     default:

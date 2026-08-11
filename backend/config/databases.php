@@ -10,6 +10,10 @@ return [
     'iam' => ['driver' => 'sqlite', 'path' => $databaseDir . '/iam.sqlite'],
     'forms' => ['driver' => 'sqlite', 'path' => $databaseDir . '/forms.sqlite'],
     'cookies' => ['driver' => 'sqlite', 'path' => $databaseDir . '/cookies.sqlite'],
+    'ai' => ['driver' => 'sqlite', 'path' => $databaseDir . '/ai.sqlite'],
+    'business' => ['driver' => 'sqlite', 'path' => $databaseDir . '/business.sqlite'],
+    'sale' => ['driver' => 'sqlite', 'path' => $databaseDir . '/sale.sqlite'],
+    'accounting' => ['driver' => 'sqlite', 'path' => $databaseDir . '/accounting.sqlite'],
 
     // Les modules métier peuvent déclarer leurs propres bases via ModuleProvider::databases().
     // Exemples attendus: crm.sqlite, commerce.sqlite, bookings.sqlite, accounting.sqlite.

@@ -5,11 +5,13 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 BUSINESS_DB = ROOT / "storage/database/business.sqlite"
+BUSINESS_SCHEMA = ROOT / "database/modules/business.sql"
 CMS = ROOT / "tools/cms.py"
 
 
@@ -84,11 +86,15 @@ def php_test_list() -> str:
 class BusinessModuleSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.connection = sqlite3.connect(f"file:{BUSINESS_DB}?mode=ro", uri=True)
+        cls.temporary_directory = tempfile.TemporaryDirectory(prefix="dec-business-smoke-")
+        cls.fixture_database = Path(cls.temporary_directory.name) / "business.sqlite"
+        cls.connection = sqlite3.connect(cls.fixture_database)
+        cls.connection.executescript(BUSINESS_SCHEMA.read_text(encoding="utf-8"))
 
     @classmethod
     def tearDownClass(cls) -> None:
         cls.connection.close()
+        cls.temporary_directory.cleanup()
 
     def names(self, kind: str) -> set[str]:
         rows = self.connection.execute(
@@ -98,7 +104,7 @@ class BusinessModuleSmokeTest(unittest.TestCase):
         return {str(row[0]) for row in rows}
 
     def test_business_sqlite_schema_is_seeded(self) -> None:
-        self.assertTrue(BUSINESS_DB.is_file(), "business.sqlite doit exister après rebuild")
+        self.assertTrue(self.fixture_database.is_file(), "la fixture business.sqlite doit exister")
         self.assertTrue(EXPECTED_TABLES.issubset(self.names("table")))
         self.assertTrue(EXPECTED_INDEXES.issubset(self.names("index")))
         row = self.connection.execute(

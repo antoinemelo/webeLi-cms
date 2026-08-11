@@ -20,20 +20,24 @@ import sys
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
+from urllib.parse import urlparse
 
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
 from tools.python.cms.runtime import resolve_php_binary
+from tools.python.lib.database_inventory import database_specs
+from tools.python.lib.deploylib import load_ops_env
 from tools.python.lib.processes import cms_subprocess_env
-CORE_DB = BASE / "storage" / "database" / "core.sqlite"
-BUSINESS_DB = BASE / "storage" / "database" / "business.sqlite"
-SALE_DB = BASE / "storage" / "database" / "sale.sqlite"
-IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
-FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
-COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
-AI_DB = BASE / "storage" / "database" / "ai.sqlite"
+DATABASES = {spec.key: spec.absolute_path(BASE) for spec in database_specs(root=BASE)}
+CORE_DB = DATABASES["core"]
+BUSINESS_DB = DATABASES["business"]
+SALE_DB = DATABASES["sale"]
+IAM_DB = DATABASES["iam"]
+FORMS_DB = DATABASES["forms"]
+COOKIES_DB = DATABASES["cookies"]
+AI_DB = DATABASES["ai"]
 CONSOLE = BASE / "backend" / "bin" / "console"
 DEFAULT_SEED_DIR = BASE / "database" / "seeds" / "default"
 CORE_DEFAULT_SEED = DEFAULT_SEED_DIR / "core_default_seed.sql"
@@ -89,6 +93,156 @@ def run_seed_file(connection: sqlite3.Connection, sql_path: Path) -> None:
     if sql:
         connection.executescript(sql)
         connection.commit()
+
+
+def _normalized_base_path(value: str) -> str:
+    value = str(value or "").strip()
+    if value in {"", "/"}:
+        return ""
+    return "/" + value.strip("/")
+
+
+def seed_core_runtime_bootstrap(
+    db_path: Path = CORE_DB,
+    *,
+    env_values: dict[str, str] | None = None,
+) -> None:
+    """Crée le socle Core indispensable, sans contenu éditorial de démo.
+
+    Le runtime public et l'administration ont besoin d'un site résoluble avant
+    de pouvoir créer les premiers contenus. Ce bootstrap conserve uniquement
+    les références techniques (site, langue, domaine, thèmes et modules natifs)
+    et ne peuple ni pages, ni articles, ni menus, ni médias, ni taxonomies.
+    """
+    values = load_ops_env(BASE) if env_values is None else env_values
+    public_url = str(values.get("APP_PUBLIC_BASE_URL", "")).strip()
+    parsed = urlparse(public_url) if public_url else None
+
+    configured_base_path = str(values.get("APP_BASE_PATH", "")).strip()
+    base_path = _normalized_base_path(
+        configured_base_path or (parsed.path if parsed is not None else "")
+    )
+    host = str(parsed.hostname or "localhost") if parsed is not None else "localhost"
+    scheme = str(parsed.scheme or "").lower() if parsed is not None else ""
+    if scheme not in {"http", "https"}:
+        scheme = "http" if host in {"localhost", "127.0.0.1", "::1"} else "https"
+    local_host = host in {"localhost", "127.0.0.1", "::1"}
+
+    language_code = str(values.get("APP_LOCALE", "fr")).strip().lower() or "fr"
+    if not re.fullmatch(r"[a-z]{2}(?:-[a-z0-9]{2,8})?", language_code):
+        language_code = "fr"
+    language_presets = {
+        "fr": ("French", "Français", "fr-CH"),
+        "en": ("English", "English", "en-GB"),
+        "de": ("German", "Deutsch", "de-CH"),
+        "it": ("Italian", "Italiano", "it-CH"),
+    }
+    language_name, native_name, locale = language_presets.get(
+        language_code,
+        (language_code.upper(), language_code.upper(), language_code),
+    )
+    site_name = str(values.get("APP_NAME", "DEC CMS")).strip() or "DEC CMS"
+
+    themes = (
+        (
+            "default",
+            "Default Theme",
+            "2.0.0",
+            1,
+            {"path": "frontend/theme-default", "supports": {"custom_blocks": True, "seo_meta_preview": True}},
+        ),
+        (
+            "aurora",
+            "Aurora Fullscreen",
+            "1.0.0",
+            0,
+            {"path": "frontend/theme-aurora", "supports": {"custom_blocks": True, "seo_meta_preview": True}},
+        ),
+        (
+            "pulse",
+            "Pulse",
+            "1.0.0",
+            0,
+            {"path": "frontend/theme-pulse", "supports": {"custom_blocks": True, "seo_meta_preview": True, "fullscreen_hero": True}},
+        ),
+    )
+    native_modules = (
+        ("core", "Core"),
+        ("pages", "Pages"),
+        ("articles", "Articles"),
+        ("seo", "SEO"),
+        ("taxonomy", "Taxonomy"),
+        ("media", "Media"),
+        ("editor", "Editorial Blocks"),
+    )
+
+    with connect_sqlite(db_path) as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            INSERT INTO languages(code, name, native_name, locale, is_default, is_active, sort_order)
+            VALUES(?,?,?,?,1,1,1)
+            """,
+            (language_code, language_name, native_name, locale),
+        )
+        cursor.execute(
+            "INSERT INTO sites(site_key, name, default_language_code, is_active) VALUES('main',?,?,1)",
+            (site_name, language_code),
+        )
+        site_id = int(cursor.lastrowid)
+        cursor.execute(
+            """
+            INSERT INTO site_languages(
+                site_id, language_code, locale, url_prefix, hreflang_code,
+                fallback_language_code, is_default, is_active, is_rtl, sort_order
+            ) VALUES(?,?,?,'',?,NULL,1,1,0,1)
+            """,
+            (site_id, language_code, locale, locale),
+        )
+        cursor.execute(
+            """
+            INSERT INTO site_domains(
+                site_id, host, base_path, scheme, is_primary, is_active,
+                enforce_https, canonical_host_strategy
+            ) VALUES(?,?,?,?,1,1,?,'primary')
+            """,
+            (site_id, host, base_path, scheme, 0 if local_host else 1),
+        )
+        cursor.execute(
+            """
+            INSERT INTO site_localizations(
+                site_id, language_code, site_title, baseline, footer_text,
+                default_meta_title_suffix, default_meta_description
+            ) VALUES(?,?,?,'','','','')
+            """,
+            (site_id, language_code, site_name),
+        )
+        cursor.executemany(
+            """
+            INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json)
+            VALUES(?,?,?,?,1,?)
+            """,
+            [
+                (key, name, version, is_default, json.dumps(config, ensure_ascii=False, separators=(",", ":")))
+                for key, name, version, is_default, config in themes
+            ],
+        )
+        cursor.executemany(
+            """
+            INSERT INTO modules(
+                module_key, name, version, provider_class, is_system,
+                is_installed, is_enabled
+            ) VALUES(?,?,'2.0.0',NULL,1,1,1)
+            """,
+            native_modules,
+        )
+        connection.commit()
+
+    print(
+        "Socle Core minimal initialise: "
+        f"site=main, langue={language_code}, domaine={scheme}://{host}{base_path or '/'} "
+        "(aucun contenu editorial de demonstration)."
+    )
 
 
 def normalize_seed_sql(sql_path: Path, sql: str) -> str:
@@ -424,7 +578,7 @@ def ensure_seed_support_tables(connection: sqlite3.Connection, seed_path: Path) 
     connection.commit()
 
 
-def seed_from_default_sql_files() -> bool:
+def seed_from_default_sql_files(*, skip_core_seed: bool = False) -> bool:
     """Injecte le jeu par defaut versionne dans database/seeds/default/.
 
     Retourne True si ces fichiers existent et ont ete appliques. Les fichiers
@@ -435,13 +589,16 @@ def seed_from_default_sql_files() -> bool:
     if not default_seed_files_available():
         return False
 
-    for db_path, seed_path in [
+    default_seeds = [
         (CORE_DB, CORE_DEFAULT_SEED),
         (IAM_DB, IAM_DEFAULT_SEED),
         (FORMS_DB, FORMS_DEFAULT_SEED),
         (COOKIES_DB, COOKIES_DEFAULT_SEED),
         (AI_DB, AI_DEFAULT_SEED),
-    ]:
+    ]
+    if skip_core_seed:
+        default_seeds = [(db_path, seed_path) for db_path, seed_path in default_seeds if db_path != CORE_DB]
+    for db_path, seed_path in default_seeds:
         con = connect_sqlite(db_path)
         try:
             ensure_seed_support_tables(con, seed_path)
@@ -449,13 +606,19 @@ def seed_from_default_sql_files() -> bool:
         finally:
             con.close()
 
+    if skip_core_seed:
+        seed_core_runtime_bootstrap()
+
     # Scenario contractuel multisite/multilingue. Il est applique apres le
     # snapshot database.zip pour prouver l'isolation site/language/media/menu
     # sans devoir regenerer manuellement le gros seed par defaut.
-    for db_path, seed_path in [
+    contract_seeds = [
         (CORE_DB, CORE_MULTISITE_CONTRACT_SEED),
         (IAM_DB, IAM_MULTISITE_CONTRACT_SEED),
-    ]:
+    ]
+    if skip_core_seed:
+        contract_seeds = [(db_path, seed_path) for db_path, seed_path in contract_seeds if db_path != CORE_DB]
+    for db_path, seed_path in contract_seeds:
         if not seed_path.exists():
             continue
         con = connect_sqlite(db_path)
@@ -467,14 +630,15 @@ def seed_from_default_sql_files() -> bool:
     with connect_sqlite(IAM_DB) as iam:
         enforce_modules_permissions_policy(iam)
 
-    repair_multisite_primary_domains_for_webe_li_deployment()
-    repair_published_revision_documents_for_projection_inputs()
-    with connect_sqlite(CORE_DB) as con:
-        cur = con.cursor()
-        rebuild_seed_public_projections(cur)
-        rebuild_seed_taxonomy_projections(cur)
-        con.commit()
-    sanitize_existing_public_media_urls()
+    if not skip_core_seed:
+        repair_multisite_primary_domains_for_webe_li_deployment()
+        repair_published_revision_documents_for_projection_inputs()
+        with connect_sqlite(CORE_DB) as con:
+            cur = con.cursor()
+            rebuild_seed_public_projections(cur)
+            rebuild_seed_taxonomy_projections(cur)
+            con.commit()
+        sanitize_existing_public_media_urls()
     return True
 
 
@@ -1977,10 +2141,12 @@ def demo_article_blocks(body: str) -> list[dict[str, object]]:
         }
     ]
 
-def seed() -> None:
+def seed(*, skip_core_seed: bool = False) -> None:
     ensure_databases_exist()
-    if seed_from_default_sql_files():
+    if seed_from_default_sql_files(skip_core_seed=skip_core_seed):
         return
+    if skip_core_seed:
+        raise RuntimeError("Le profil sans seed Core exige les snapshots SQL de database/seeds/default/.")
 
     core = connect_sqlite(CORE_DB)
     iam = connect_sqlite(IAM_DB)
@@ -2264,15 +2430,29 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="N'echoue pas si PHP CLI manque; utile uniquement pour preparer une DB sans projections.",
     )
+    parser.add_argument(
+        "--skip-commerce-seed",
+        action="store_true",
+        help="N'injecte aucune donnee Business/Sale ni projection commerciale derivee.",
+    )
+    parser.add_argument(
+        "--skip-core-seed",
+        action="store_true",
+        help=(
+            "N'injecte pas les contenus Core de demonstration; conserve le socle "
+            "technique minimal requis par le runtime."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        seed()
-        seed_sale_opening_inventory()
-        rebuild_seed_product_content_projections()
+        seed(skip_core_seed=args.skip_core_seed)
+        if not args.skip_commerce_seed and not args.skip_core_seed:
+            seed_sale_opening_inventory()
+            rebuild_seed_product_content_projections()
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR seed: {exc}", file=sys.stderr)
         return 1
@@ -2294,9 +2474,12 @@ def main() -> int:
         if code != 0:
             return code
 
-        code = rebuild_storefront_projections(required=not args.allow_missing_php)
-        if code != 0:
-            return code
+        if args.skip_commerce_seed or args.skip_core_seed:
+            print("Storefront projections skipped: Business/Sale seed disabled.")
+        else:
+            code = rebuild_storefront_projections(required=not args.allow_missing_php)
+            if code != 0:
+                return code
 
         # Le bootstrap PHP peut resynchroniser les déclarations des modules.
         # La source native doit donc être réappliquée en dernière étape afin que

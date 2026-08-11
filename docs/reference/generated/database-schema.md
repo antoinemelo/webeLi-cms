@@ -170,7 +170,6 @@ generated: true
 | `content_slug_registry` | id, site_id, language_code, slug, entry_id, updated_at |
 | `content_type_taxonomies` | id, content_type_id, taxonomy_id, is_required, max_terms |
 | `content_types` | id, module_id, type_key, name, singular_label, plural_label, description, icon, is_system, is_hidden, storage_mode, has_localizations, has_revisions, has_workflow, has_permalink, has_layout, has_taxonomies, has_seo, has_publish_window, default_status, default_sort, frontend_template, frontend_resolver, api_enabled, admin_enabled, created_at, updated_at |
-| `cross_database_operations` | id, correlation_id, operation_key, operation_type, primary_store, status, step, metadata_json, attempts, last_error, created_at, updated_at |
 | `editor_block_types` | id, block_type, label, category, schema_json, is_enabled, sort_order |
 | `field_groups` | id, content_type_id, group_key, label, tab_key, sort_order |
 | `field_validation_rules` | id, scope_type, field_id, blueprint_field_id, fieldset_field_id, rule_key, rule_value_json, message, sort_order, created_at |

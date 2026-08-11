@@ -49,8 +49,9 @@ back-office, reconstruction isolée, smoke HTTP, E2E éditorial et omnicanal,
 catalogue, panier, checkout avec paiement local ou sandbox, POS, stock, CRM, backup/restore,
 intégrité SQLite, documentation, OpenAPI/SDK et audits Composer/npm.
 
-La baseline performance M0 est volontairement modérée. Le seuil critique par
-scénario est configurable :
+La baseline performance M0 est volontairement modérée. Le seuil critique porte
+sur la médiane de chaque scénario ; le p95 et les dépassements isolés restent
+visibles dans le rapport. Le seuil est configurable :
 
 ```bash
 AMCMS_M0_PERF_CRITICAL_MS=2500 AMCMS_M0_PERF_REPEAT=5 \

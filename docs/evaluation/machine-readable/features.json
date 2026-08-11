@@ -13,7 +13,7 @@
     "feature": "accounts-authentication",
     "id": "feature-accounts-authentication-7de5db5f80",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Administrative authentication is implemented; all deployment flows remain environment-dependent."
     ],
@@ -40,7 +40,7 @@
     "feature": "totp-two-factor",
     "id": "feature-totp-two-factor-111c2f0197",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Recovery and all mail-dependent paths require scenario testing."
     ],
@@ -67,7 +67,7 @@
     "feature": "email-two-factor-passwordless",
     "id": "feature-email-two-factor-passwordless-be54028fe1",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Depends on external mail configuration."
     ],
@@ -94,7 +94,7 @@
     "feature": "roles-permissions",
     "id": "feature-roles-permissions-d0745d2227",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Custom roles and site scope must be verified on the deployed data."
     ],
@@ -121,7 +121,7 @@
     "feature": "multisite-multilingual",
     "id": "feature-multisite-multilingual-5992eb9372",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Not every domain and language combination is covered."
     ],
@@ -148,7 +148,7 @@
     "feature": "content-types-blueprints-fields-blocks",
     "id": "feature-content-types-blueprints-fields-blocks-5982e62470",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Third-party extension compatibility is not fully qualified."
     ],
@@ -175,7 +175,7 @@
     "feature": "drafts-revisions-preview",
     "id": "feature-drafts-revisions-preview-63cfad0c32",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Concurrent editing behavior requires targeted tests."
     ],
@@ -204,7 +204,7 @@
     "feature": "visual-editor-in-context",
     "id": "feature-visual-editor-in-context-21a65d387c",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "The controlled visual editor is implemented and documented; a full browser E2E path must still verify selection, save, revision, publication, language, media and locks."
     ],
@@ -233,7 +233,7 @@
     "feature": "publication-projections",
     "id": "feature-publication-projections-e244231cb3",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "High-concurrency publication is not benchmarked."
     ],
@@ -260,7 +260,7 @@
     "feature": "media-variants-local-storage",
     "id": "feature-media-variants-local-storage-7a3ff6a00f",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Malware scanning is not demonstrated."
     ],
@@ -287,7 +287,7 @@
     "feature": "media-s3-storage",
     "id": "feature-media-s3-storage-86c7c22eda",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "External provider integration was not executed by this generator."
     ],
@@ -314,7 +314,7 @@
     "feature": "menus-taxonomies",
     "id": "feature-menus-taxonomies-b4b59427d6",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "End-user usability requires manual testing."
     ],
@@ -341,7 +341,7 @@
     "feature": "seo-runtime-audit",
     "id": "feature-seo-runtime-audit-e0156682bd",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Internal SEO scores do not predict search rankings."
     ],
@@ -368,7 +368,7 @@
     "feature": "native-search",
     "id": "feature-native-search-50c8b82c68",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Distributed or semantic search is not demonstrated."
     ],
@@ -395,7 +395,7 @@
     "feature": "forms",
     "id": "feature-forms-453ca94c1e",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "External anti-spam and privacy operations require configuration."
     ],
@@ -422,7 +422,7 @@
     "feature": "cookies-consent",
     "id": "feature-cookies-consent-010f10d787",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "No legal compliance certification is claimed."
     ],
@@ -449,7 +449,7 @@
     "feature": "editorial-import-export",
     "id": "feature-editorial-import-export-4dbb0bed62",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Cross-version interoperability must be tested."
     ],
@@ -476,7 +476,7 @@
     "feature": "static-export",
     "id": "feature-static-export-8ebcbff191",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Target hosting and full runtime parity require scenario testing."
     ],
@@ -503,7 +503,7 @@
     "feature": "ai-assistant",
     "id": "feature-ai-assistant-a0ea499bcb",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Provider availability, costs, data protection and output quality are external concerns."
     ],
@@ -530,7 +530,7 @@
     "feature": "public-api-v1",
     "id": "feature-public-api-v1-02da5f7638",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Long-term SLA and all client integrations are not demonstrated."
     ],
@@ -556,7 +556,7 @@
     "feature": "backup-restore",
     "id": "feature-backup-restore-61aa113763",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "A backup is not proven until restoration is tested on a copy."
     ],
@@ -582,7 +582,7 @@
     "feature": "release-packaging-deployment",
     "id": "feature-release-packaging-deployment-ea2dc45e2a",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Production infrastructure was not exercised by this generation."
     ],
@@ -608,7 +608,7 @@
     "feature": "centralized-observability",
     "id": "feature-centralized-observability-0c2b718de5",
     "interface": null,
-    "last_verified": "2026-08-08",
+    "last_verified": "2026-08-11",
     "limitations": [
       "Local logging exists, but a native centralized metrics/tracing stack is not demonstrated."
     ],

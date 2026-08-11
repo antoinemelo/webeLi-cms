@@ -11,9 +11,9 @@ import unittest
 from pathlib import Path
 
 from tools.python.cms.runtime import resolve_php_binary
+from tools.python.tests.support.database_fixture import copy_full_seeded_databases
 
 ROOT = Path(__file__).resolve().parents[3]
-CORE_DB = ROOT / "storage" / "database" / "core.sqlite"
 
 
 def php_binary() -> str | None:
@@ -30,56 +30,32 @@ def php_supports_pdo_sqlite(binary: str) -> bool:
 
 
 class StaticExportMultisiteTest(unittest.TestCase):
-    original_db_backup: Path | None = None
-    restore_original_after_class = True
-
     @classmethod
     def setUpClass(cls) -> None:
         binary = php_binary()
         if binary is None or not php_supports_pdo_sqlite(binary):
             raise unittest.SkipTest("PHP avec pdo_sqlite requis pour tester l'export statique multisite")
-        if not CORE_DB.is_file():
-            raise unittest.SkipTest(f"Base core absente: {CORE_DB}")
+        cls.database_holder, cls.database_dir = copy_full_seeded_databases(prefix="webeli-static-export-db-")
+        cls.core_db = cls.database_dir / "core.sqlite"
+        cls.pristine_core = cls.database_dir / "core.pristine.sqlite"
+        shutil.copy2(cls.core_db, cls.pristine_core)
         cls.env = os.environ.copy()
         cls.env["CMS_PHP_BINARY"] = binary
-        handle = tempfile.NamedTemporaryFile(prefix="webeli-core-before-static-export-", suffix=".sqlite", delete=False)
-        handle.close()
-        cls.original_db_backup = Path(handle.name)
-        shutil.copy2(CORE_DB, cls.original_db_backup)
-        cls.restore_original_after_class = not cls.has_stale_collision_fixture()
+        cls.env["CMS_DATABASE_DIR"] = str(cls.database_dir)
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if CORE_DB.is_file():
-            if cls.restore_original_after_class and cls.original_db_backup is not None and cls.original_db_backup.is_file():
-                shutil.copy2(cls.original_db_backup, CORE_DB)
-            else:
-                cls.restore_demo_multisite_fixture()
-        if cls.original_db_backup is not None and cls.original_db_backup.is_file():
-            cls.original_db_backup.unlink(missing_ok=True)
+        cls.database_holder.cleanup()
 
     def setUp(self) -> None:
-        self.restore_demo_multisite_fixture()
+        shutil.copy2(self.pristine_core, self.core_db)
 
     def tearDown(self) -> None:
-        # Évite qu'un échec du scénario collisionnel laisse la base locale dans
-        # un état non exportable pour les autres tests ou pour une relance.
-        self.restore_demo_multisite_fixture()
-
-    @classmethod
-    def has_stale_collision_fixture(cls) -> bool:
-        with sqlite3.connect(CORE_DB) as con:
-            language = con.execute(
-                "SELECT url_prefix FROM site_languages WHERE site_id = 10 AND language_code = 'en'"
-            ).fetchone()
-            route = con.execute(
-                "SELECT full_path FROM routes WHERE site_id = 10 AND language_code = 'en' AND status = 'active' LIMIT 1"
-            ).fetchone()
-        return language is not None and route is not None and language[0] == '/actualites' and route[0] == '/'
+        shutil.copy2(self.pristine_core, self.core_db)
 
     @classmethod
     def restore_demo_multisite_fixture(cls) -> None:
-        with sqlite3.connect(CORE_DB) as con:
+        with sqlite3.connect(cls.core_db) as con:
             con.execute("UPDATE site_languages SET url_prefix = '' WHERE site_id = 10 AND language_code = 'fr'")
             con.execute("UPDATE site_languages SET url_prefix = '/en' WHERE site_id = 10 AND language_code = 'en'")
             con.execute(
@@ -138,7 +114,7 @@ class StaticExportMultisiteTest(unittest.TestCase):
                     )
 
     def test_unresolved_output_path_collision_fails_before_html_write(self) -> None:
-        with sqlite3.connect(CORE_DB) as con:
+        with sqlite3.connect(self.core_db) as con:
             # Simule une régression de configuration : deux langues actives du même site
             # publient volontairement une route vers le même output_path.
             con.execute("UPDATE site_languages SET url_prefix = '/actualites' WHERE site_id = 10 AND language_code = 'en'")

@@ -90,7 +90,7 @@ generated: true
 | `BUSINESS_WHATSAPP_API_VERSION` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `BUSINESS_WHATSAPP_ENABLED` | `backend/src/Modules/Business/Messaging/WhatsAppCloudApiProvider.php`, `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
 | `BUSINESS_WHATSAPP_PHONE_NUMBER_ID` | `backend/src/Modules/Business/Services/BusinessMessagingProviderManager.php` |
-| `CMS_DATABASE_DIR` | `backend/config/databases.php`, `backend/config/modules.php` |
+| `CMS_DATABASE_DIR` | `backend/config/databases.php`, `backend/config/modules.php`, `tools/python/lib/database_inventory.py`, `tools/python/operations/database/g1_seed_native_blueprints.py` |
 | `CMS_TOTP_KEY` | `backend/src/Repository/AuthRepository.php` |
 | `DEC_CMS_AUDIT_INTERNAL` | `tools/python/operations/deployment/d_deploy.py` |
 | `FTP_PASSIVE` | `tools/python/operations/deployment/d11_ci_release.py` |

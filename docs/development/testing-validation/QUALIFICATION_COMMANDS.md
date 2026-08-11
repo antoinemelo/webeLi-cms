@@ -90,9 +90,12 @@ Le profil `release` exécute `tools/python/qualification/performance_baseline.py
 - ajout de ligne ;
 - lecture panier ;
 - checkout avec paiement local ;
-- réservation de stock.
+- réservation de stock (création couverte par le checkout, puis lecture de preuve chronométrée séparément).
 
-Le seuil critique par scénario est de `2000 ms` par défaut. Il est configurable avec :
+Le seuil critique par scénario est de `2000 ms` par défaut et s'applique à la
+médiane des répétitions. Le p95 et le nombre d'échantillons au-dessus du seuil
+restent consignés afin de rendre les pointes visibles sans transformer une seule
+variation locale en échec. Le seuil est configurable avec :
 
 ```bash
 AMCMS_M0_PERF_CRITICAL_MS=2500 AMCMS_M0_PERF_REPEAT=5 \

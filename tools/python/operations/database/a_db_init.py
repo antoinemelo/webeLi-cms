@@ -16,6 +16,7 @@ Utiliser --structures-only pour obtenir des bases vides.
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import subprocess
 import sys
@@ -84,17 +85,38 @@ def connect_sqlite(db_path: Path, *, writable: bool = True) -> sqlite3.Connectio
     return connection
 
 
-def run_sql_file(connection: sqlite3.Connection, sql_path: Path) -> None:
+DATA_STATEMENT_KEYWORDS = {"INSERT", "UPDATE", "DELETE", "REPLACE"}
+
+
+def sql_statement_keyword(statement: str) -> str:
+    """Return the leading SQL keyword after comments and whitespace."""
+    cleaned = statement.lstrip()
+    while cleaned:
+        if cleaned.startswith("--"):
+            newline = cleaned.find("\n")
+            cleaned = "" if newline < 0 else cleaned[newline + 1 :].lstrip()
+            continue
+        if cleaned.startswith("/*"):
+            end = cleaned.find("*/", 2)
+            cleaned = "" if end < 0 else cleaned[end + 2 :].lstrip()
+            continue
+        break
+    match = re.match(r"[A-Za-z]+", cleaned)
+    return match.group(0).upper() if match else ""
+
+
+def run_sql_file(connection: sqlite3.Connection, sql_path: Path, *, include_data: bool = True) -> int:
     if not sql_path.exists():
         raise FileNotFoundError(f"Fichier SQL introuvable: {sql_path}")
     sql = sql_path.read_text(encoding="utf-8").strip()
     if not sql:
-        return
+        return 0
 
     # sqlite3.executescript() sur un gros schéma FTS + triggers peut être difficile
     # à diagnostiquer. L'exécution statement par statement rend l'init plus robuste
     # et localise précisément l'instruction fautive en cas d'erreur.
     buffer = ""
+    skipped_data_statements = 0
     for line in sql.splitlines(keepends=True):
         buffer += line
         if not sqlite3.complete_statement(buffer):
@@ -102,10 +124,14 @@ def run_sql_file(connection: sqlite3.Connection, sql_path: Path) -> None:
         statement = buffer.strip()
         buffer = ""
         if statement:
+            if not include_data and sql_statement_keyword(statement) in DATA_STATEMENT_KEYWORDS:
+                skipped_data_statements += 1
+                continue
             connection.executescript(statement)
     if buffer.strip():
         raise sqlite3.OperationalError(f"Instruction SQL incomplete dans {sql_path}")
     connection.commit()
+    return skipped_data_statements
 
 
 SCHEMA_MIGRATIONS_SQL = """
@@ -163,7 +189,13 @@ def ensure_storage_dirs() -> None:
             protection.write_text(PRIVATE_HTACCESS, encoding="utf-8")
 
 
-def create_structure(db_path: Path, schema_path: Path, migration_scope: str | None = None) -> None:
+def create_structure(
+    db_path: Path,
+    schema_path: Path,
+    migration_scope: str | None = None,
+    *,
+    include_schema_data: bool = True,
+) -> int:
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema SQL introuvable: {schema_path}")
 
@@ -173,11 +205,12 @@ def create_structure(db_path: Path, schema_path: Path, migration_scope: str | No
 
     con = connect_sqlite(db_path)
     try:
-        run_sql_file(con, schema_path)
+        skipped_data_statements = run_sql_file(con, schema_path, include_data=include_schema_data)
         ensure_schema_migrations(con)
         mark_current_schema_migrations(con, migration_scope)
     finally:
         con.close()
+    return skipped_data_statements
 
 
 def apply_reference_seeds() -> None:
@@ -220,6 +253,19 @@ def parse_args() -> argparse.Namespace:
             "Ne pas utiliser avec --with-seed, qui injecte deja le jeu par defaut complet."
         ),
     )
+    parser.add_argument(
+        "--without-commerce-seed",
+        action="store_true",
+        help="Conserve les structures Business/Sale mais ignore leurs donnees initiales.",
+    )
+    parser.add_argument(
+        "--without-core-seed",
+        action="store_true",
+        help=(
+            "Ignore aussi les contenus Core de demonstration, mais conserve le "
+            "socle runtime minimal; implique --without-commerce-seed."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -234,14 +280,30 @@ def main() -> int:
         raise SystemExit("Utilisez --with-reference-seed avec --structures-only, ou lancez le seed complet par defaut.")
 
     initialized: list[str] = []
+    data_free_scopes = {"business", "sale"} if (args.without_commerce_seed or args.without_core_seed) else set()
+    skipped_schema_data: dict[str, int] = {}
     for spec in DATABASE_SPECS:
         schema_path = SCHEMAS[spec.key]
         if schema_path is None:
             raise FileNotFoundError(f"Schema SQL non declaré pour {spec.key}")
-        create_structure(DATABASES[spec.key], schema_path, spec.migration_scope)
+        skipped = create_structure(
+            DATABASES[spec.key],
+            schema_path,
+            spec.migration_scope,
+            include_schema_data=spec.key not in data_free_scopes,
+        )
+        if skipped:
+            skipped_schema_data[spec.key] = skipped
         initialized.append(spec.key)
 
     print("Database structures initialized from SQL schemas: " + ", ".join(initialized) + ".", flush=True)
+    if skipped_schema_data:
+        print(
+            "Schema data omitted: "
+            + ", ".join(f"{scope} ({count} statements)" for scope, count in skipped_schema_data.items())
+            + ".",
+            flush=True,
+        )
 
     if args.with_reference_seed:
         apply_reference_seeds()
@@ -257,6 +319,10 @@ def main() -> int:
         print("ERREUR: script de seed introuvable: b0_db_seed.py", file=sys.stderr)
         return 2
     command = [sys.executable, str(seed_script)]
+    if args.without_commerce_seed or args.without_core_seed:
+        command.append("--skip-commerce-seed")
+    if args.without_core_seed:
+        command.append("--skip-core-seed")
     if args.seed_skip_projections:
         command.append("--skip-projections")
     print("Running seed script:", " ".join(command), flush=True)

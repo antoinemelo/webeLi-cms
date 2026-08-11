@@ -79,11 +79,16 @@ options:
 ## `tools/cms.py rebuild`
 
 ```text
-usage: tools/cms.py rebuild [-h] [--skip-projections]
+usage: tools/cms.py rebuild [-h] [--skip-projections] [--without-commerce-seed]
+                            [--without-core-seed]
 
 options:
-  -h, --help          show this help message and exit
+  -h, --help            show this help message and exit
   --skip-projections
+  --without-commerce-seed
+                        Structures Business/Sale sans donnees initiales.
+  --without-core-seed   Ignore les contenus Core de demonstration et conserve le
+                        socle runtime minimal.
 ```
 
 ## `tools/cms.py validate`
@@ -262,7 +267,7 @@ options:
 ```text
 usage: tools/cms.py instance clone [-h] [--source SOURCE] --destination
                                    DESTINATION [--old-base-path OLD_BASE_PATH]
-                                   [--new-base-path NEW_BASE_PATH]
+                                   --new-base-path NEW_BASE_PATH
                                    [--new-public-base-url NEW_PUBLIC_BASE_URL]
                                    [--force] [--include-dev-admin-vue]
                                    [--include-docs]
@@ -274,11 +279,11 @@ options:
                         Répertoire destination à créer, par exemple ../mod2 ou
                         ../eve.
   --old-base-path OLD_BASE_PATH
-                        APP_BASE_PATH public source. Par défaut: nom du
-                        répertoire source.
+                        APP_BASE_PATH public source. Par défaut: valeur de
+                        ops/.env, puis nom du répertoire source.
   --new-base-path NEW_BASE_PATH, --target-base-path NEW_BASE_PATH
-                        APP_BASE_PATH public cible. Par défaut: nom du
-                        répertoire destination.
+                        APP_BASE_PATH public cible exact, par exemple /cms/main,
+                        /new/main ou /cms2.
   --new-public-base-url NEW_PUBLIC_BASE_URL
                         APP_PUBLIC_BASE_URL exact à écrire dans ops/.env.
   --force               Remplace la destination si elle existe.

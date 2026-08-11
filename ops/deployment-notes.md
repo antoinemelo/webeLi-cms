@@ -90,6 +90,10 @@ python3 tools/cms.py instance clone --destination ../mod2 --new-base-path /cms
 
 Le clone copie aussi les bases SQLite et médias locaux. Pour préparer une future instance `/eve` dans un dossier `eve2`, utilisez `--destination ../eve2 --new-base-path /eve`.
 
+`--new-base-path` est obligatoire et doit contenir le chemin public final exact, indépendamment du nom du dossier local : `/cms/main`, `/new/main`, `/cms2`, etc. Le chemin public source est lu depuis `ops/.env`, puis réécrit dans les fichiers texte et les cellules SQLite du clone. L’option 9 de `tools/admin.py` demande explicitement cette valeur et propose une URL publique cohérente, qui reste modifiable.
+
+Les dossiers `vendor/`, `backend/vendor/` et `node_modules/` ne sont jamais copiés dans un clone. Le `.env` cloné conserve les chemins configurés, mais le runtime ne dépend pas du nom de l’instance. Il vérifie, dans cet ordre : `backend/vendor`, `vendor`, le `vendor` du parent, le dossier partagé conventionnel `cms/vendor` à la racine web, puis le `vendor` situé deux niveaux au-dessus de l’instance. Pour `/cms/edu/edu1`, la dernière option rejoint ainsi `/cms/vendor`; pour `/eve`, l’option conventionnelle peut rejoindre `/cms/vendor` même si l’instance n’est pas rangée sous `cms`. `APP_TWIG_VENDOR_PATH` reste un emplacement personnalisé supplémentaire.
+
 ## Release v1
 
 Une release v1 standard inclut les bases SQLite seedées sous `storage/database/*.sqlite`. Le packaging exclut d’abord les bases locales du parcours générique, puis injecte explicitement les quatre bases attendues (`core`, `iam`, `forms`, `cookies`) après contrôle d’intégrité. Cela évite d’embarquer silencieusement des bases locales accidentelles tout en conservant une installation propre sans migration obligatoire.
@@ -127,7 +131,7 @@ APP_VUE_NODE_MODULES_PATH=../vendor/node_modules/
 APP_TWIG_VENDOR_PATH=../vendor/twig/
 ```
 
-Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. Sur un hébergement avec plusieurs instances (`/cms`, `/eve`, `/edu`), `APP_TWIG_VENDOR_PATH=../vendor/twig/` permet de partager Twig depuis le dossier parent lorsque l'instance ne contient pas `vendor/`. Le runtime ne charge pas un Composer parent déclarant `App\\`; le préflight signale ce cas comme point à vérifier.
+Les chemins extérieurs au projet peuvent être utilisés localement, mais ne sont jamais inclus dans les releases. La recherche automatique permet de partager Twig depuis un parent proche, depuis le `cms/vendor` conventionnel ou depuis un parent plus haut. Cette recherche n'importe pas l'autoload `App\\` d'une autre instance : seul `backend/vendor/autoload.php` peut être l'autoload Composer canonique de l'application, tandis que Twig est détecté séparément dans les cinq emplacements pris en charge.
 
 ## Préflight conseillé
 

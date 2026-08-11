@@ -27,8 +27,31 @@ $runtimePath = static function (string $key, string $default, array $aliases = [
     return rtrim($value, DIRECTORY_SEPARATOR . '/');
 };
 
-$vueNodeModulesPath = $runtimePath('APP_VUE_NODE_MODULES_PATH', './vendor/node_modules/', ['APP_NODE_MODULES_PATH']);
-$twigVendorPath = $runtimePath('APP_TWIG_VENDOR_PATH', './vendor/twig/', ['APP_TWIG_PATH']);
+$firstExistingDependencyPath = static function (array $candidates, string $fallback): string {
+    foreach (array_values(array_unique(array_map(
+        static fn(string $path): string => rtrim($path, DIRECTORY_SEPARATOR . '/'),
+        $candidates,
+    ))) as $candidate) {
+        if ($candidate !== '' && is_dir($candidate)) {
+            return $candidate;
+        }
+    }
+    return rtrim($fallback, DIRECTORY_SEPARATOR . '/');
+};
+
+$configuredNodeModulesPath = $runtimePath('APP_VUE_NODE_MODULES_PATH', './vendor/node_modules/', ['APP_NODE_MODULES_PATH']);
+$configuredTwigVendorPath = $runtimePath('APP_TWIG_VENDOR_PATH', './vendor/twig/', ['APP_TWIG_PATH']);
+$vendorRoots = function_exists('cms_vendor_roots')
+    ? cms_vendor_roots()
+    : [base_path('backend/vendor'), base_path('vendor'), base_path('../vendor')];
+$vueNodeModulesPath = $firstExistingDependencyPath([
+    ...array_map(static fn(string $root): string => $root . '/node_modules', $vendorRoots),
+    $configuredNodeModulesPath,
+], $configuredNodeModulesPath);
+$twigVendorPath = $firstExistingDependencyPath([
+    ...array_map(static fn(string $root): string => $root . '/twig', $vendorRoots),
+    $configuredTwigVendorPath,
+], $configuredTwigVendorPath);
 $primaryPaymentProvider = strtolower(trim((string) env('PAYMENT_REAL_PROVIDER', '')));
 $secondPaymentProvider = strtolower(trim((string) env('PROVIDER_REAL_2', '')));
 $configuredPaymentProviders = trim((string) env('PAYMENT_REAL_PROVIDERS', $primaryPaymentProvider));

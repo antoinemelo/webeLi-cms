@@ -632,19 +632,22 @@ final class ServiceFactory
 
     public function aiDatabaseConnection(): AiDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['ai']['path'] ?? base_path('storage/database/ai.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['ai']['path'] ?? ($modulesDir . '/ai.sqlite'));
         return $this->once('ai_database_connection', fn() => new AiDatabaseConnection($path));
     }
 
     public function businessDatabaseConnection(): BusinessDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['business']['path'] ?? base_path('storage/database/business.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['business']['path'] ?? ($modulesDir . '/business.sqlite'));
         return $this->once('business_database_connection', fn() => new BusinessDatabaseConnection($path));
     }
 
     public function saleDatabaseConnection(): SaleDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['sale']['path'] ?? base_path('storage/database/sale.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['sale']['path'] ?? ($modulesDir . '/sale.sqlite'));
         return $this->once('sale_database_connection', fn() => new SaleDatabaseConnection($path));
     }
 

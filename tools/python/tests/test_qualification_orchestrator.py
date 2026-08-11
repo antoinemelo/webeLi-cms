@@ -6,7 +6,7 @@ from subprocess import CompletedProcess
 from unittest.mock import patch
 
 from tools.python.commands import qualify
-from tools.python.qualification.performance_baseline import _measure
+from tools.python.qualification.performance_baseline import _measure, _stock_measurement
 from tools.python.qualification.run_all import (
     E2E_INPUTS,
     FRONTEND_BUILD_INPUTS,
@@ -75,6 +75,33 @@ class QualificationOrchestratorTest(unittest.TestCase):
     def test_performance_baseline_rejects_client_errors(self):
         result = _measure("invalid-contract", 2000.0, 1, lambda: (422, 1.0, "validation failed"))
         self.assertEqual("failed", result["status"])
+
+    def test_performance_baseline_uses_median_and_reports_outliers(self):
+        durations = iter([100.0, 2100.0, 120.0])
+        result = _measure("one-spike", 2000.0, 3, lambda: (200, next(durations), "ok"))
+        self.assertEqual("passed", result["status"])
+        self.assertEqual(120.0, result["median_ms"])
+        self.assertEqual(2100.0, result["p95_ms"])
+        self.assertEqual(1, result["outlier_count"])
+        self.assertEqual("median_ms", result["threshold_statistic"])
+
+        slow_durations = iter([2100.0, 2200.0, 100.0])
+        slow = _measure("typically-slow", 2000.0, 3, lambda: (200, next(slow_durations), "slow"))
+        self.assertEqual("failed", slow["status"])
+        self.assertEqual(2100.0, slow["median_ms"])
+
+    def test_stock_baseline_does_not_count_checkout_twice(self):
+        status, duration, detail = _stock_measurement(
+            (201, 1900.0, "order_id=1"),
+            (200, 4.5, "reservations=1"),
+        )
+        self.assertEqual(200, status)
+        self.assertEqual(4.5, duration)
+        self.assertIn("reservations=1", detail)
+        self.assertIn("setup_checkout_ms=1900.00", detail)
+
+        failed = _stock_measurement((422, 42.0, "checkout failed"), (200, 3.0, "reservations=0"))
+        self.assertEqual((422, 42.0, "checkout failed"), failed)
 
     def test_profiles_have_expected_depth_without_database_rebuild(self):
         registry = steps()

@@ -219,7 +219,7 @@ def vite_manifest_missing_assets(manifest_path: Path, asset_root: Path) -> list[
     return missing
 
 
-def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True, echo_output: bool = True) -> int:
+def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True, echo_output: bool = True) -> tuple[int, str]:
     stamp = time.strftime("%Y-%m-%d %H:%M:%S")
     header = f"\n[{stamp}] >>> {' '.join(command)}\n"
     log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -239,8 +239,8 @@ def run_step(command: list[str], cwd: Path, log_file: Path, capture: bool = True
             if stderr:
                 handle.write("\n[stderr]\n")
                 handle.write(stderr)
-        return proc.returncode
-    return subprocess.run(command, cwd=str(cwd)).returncode
+        return proc.returncode, (stdout + stderr).strip()
+    return subprocess.run(command, cwd=str(cwd)).returncode, ""
 
 
 def check_php_runtime(errors: list[str], warnings: list[str]) -> None:
@@ -301,9 +301,16 @@ def check_runtime_config(errors: list[str], warnings: list[str], target: str = "
     if existing_twig:
         parent_vendor = (ROOT.parent / "vendor").resolve()
         if any(parent_vendor in path.resolve().parents for path in existing_twig):
-            warnings.append(
-                "Twig est résolu depuis le vendor parent. Vérifiez que ce vendor ne charge pas un autoloader Composer déclarant App\\."
+            runtime_source = (ROOT / "backend/bootstrap/runtime.php").read_text(encoding="utf-8", errors="ignore")
+            shared_vendor_is_guarded = (
+                "cms_register_twig_fallback" in runtime_source
+                and "cms_require_portable_composer_autoload" in runtime_source
+                and "$loader->setPsr4('App\\\\', []);" in runtime_source
             )
+            if not shared_vendor_is_guarded:
+                warnings.append(
+                    "Twig est résolu depuis le vendor parent sans garde-fou vérifiable contre un mapping Composer App\\."
+                )
     else:
         warnings.append(
             "Twig introuvable dans APP_TWIG_VENDOR_PATH, ./vendor/twig ou ../vendor/twig. "
@@ -446,9 +453,10 @@ def main() -> int:
     if not args.skip_console and not errors and CONSOLE.exists():
         php = resolve_php_binary()
         for command in [[php, str(CONSOLE), "route:list"], [php, str(CONSOLE), "system:smoke"]]:
-            code = run_step(command, ROOT, log_file, echo_output=False)
+            code, output = run_step(command, ROOT, log_file, echo_output=False)
             if code != 0:
-                errors.append(f"Commande de préflight échouée: {' '.join(command)}")
+                detail = output.splitlines()[-1].strip() if output else "aucun détail"
+                errors.append(f"Commande de préflight échouée: {' '.join(command)} ({detail})")
                 break
 
     if args.json:

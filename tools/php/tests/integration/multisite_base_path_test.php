@@ -90,5 +90,6 @@ function runBasePathScenario(TestHarness $h, string $appBasePath): void
 
 $h = new TestHarness();
 runBasePathScenario($h, '/cms');
+runBasePathScenario($h, '/cms/main');
 runBasePathScenario($h, '/eve');
 exit($h->finish('INTEGRATION multisite APP_BASE_PATH URLs'));

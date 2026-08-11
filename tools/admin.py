@@ -19,6 +19,8 @@ administratives explicites. La reconstruction reste un outil destructif de déve
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shlex
 import subprocess
@@ -27,11 +29,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Sequence
+from urllib.parse import urlsplit
 
 
 TOOLS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = TOOLS_DIR.parent
 CMS_ENTRYPOINT = TOOLS_DIR / "cms.py"
+FTP_DEPLOY_SCRIPT = TOOLS_DIR / "python" / "operations" / "deployment" / "d3_deploy_ftp.py"
+RELEASE_PACKAGE_SCRIPT = TOOLS_DIR / "python" / "operations" / "deployment" / "d2_package_release.py"
+DEFAULT_UPDATE_STAGE = PROJECT_ROOT / "storage" / "exports" / "release_stage"
 
 
 @dataclass(frozen=True)
@@ -113,6 +119,34 @@ QUALIFICATION_ACTIONS: dict[str, Action] = {
 }
 
 
+DATABASE_REBUILD_ACTIONS: dict[str, Action] = {
+    "a": Action(
+        "1a",
+        "Reconstruire toutes les bases avec les données par défaut",
+        ("rebuild",),
+        "Profil historique complet : structures, seeds Core, Business et Vente, puis projections.",
+        True,
+    ),
+    "b": Action(
+        "1b",
+        "Reconstruire sans données Business et Vente",
+        ("rebuild", "--without-commerce-seed"),
+        "Crée toutes les structures, conserve le seed Core et laisse Business/Sale sans données initiales.",
+        True,
+    ),
+    "c": Action(
+        "1c",
+        "Reconstruire sans contenus Business, Vente et Core",
+        ("rebuild", "--without-commerce-seed", "--without-core-seed"),
+        (
+            "Crée toutes les structures, laisse Business/Sale sans données et conserve "
+            "uniquement le socle Core requis (site, langue, domaine, thèmes et registres techniques)."
+        ),
+        True,
+    ),
+}
+
+
 def command_for(action: Action) -> list[str]:
     return [sys.executable, str(CMS_ENTRYPOINT), *action.command]
 
@@ -151,7 +185,7 @@ def print_intro() -> None:
     print("  10 — plan non mutatif, migration incrémentale, backup et validation")
     print()
     print("• Mise à jour d’une instance client depuis une release")
-    print("  11 — plan fichiers/migrations, backup, chemins protégés et journal JSON")
+    print("  11 — cible locale ou FTP, avec transfert des seuls fichiers différents")
     print()
     print("• Reconstruction explicite des bases de données")
     print("  1 — opération indépendante, destructive, réservée au développement/test/récupération")
@@ -176,7 +210,7 @@ def print_menu() -> None:
     print(" 8. Lancer l'export statique")
     print(" 9. Créer un clone local d'instance")
     print("10. Mettre à jour les bases existantes — backup + migrations")
-    print("11. Mettre à jour une instance client depuis une release")
+    print("11. Mettre à jour une instance client locale ou FTP depuis une release")
     print("12. Créer un commit Git et/ou pousser les commits locaux")
     print(" 0. Quitter")
     print()
@@ -205,6 +239,42 @@ def print_qualification_menu() -> None:
     print()
     print(" 0. Retour au menu principal")
     print()
+
+
+def print_database_rebuild_menu() -> None:
+    print()
+    print("Profil de reconstruction des bases")
+    print("-" * 38)
+    print(" a. Complet")
+    print("    Structures et données par défaut de toutes les bases.")
+    print()
+    print(" b. Sans données Business et Vente")
+    print("    Toutes les structures, seed Core conservé, Business/Sale vides.")
+    print()
+    print(" c. Sans données Business, Vente et Core")
+    print("    Toutes les structures, Core/Business/Sale sans données initiales.")
+    print()
+    print(" 0. Retour au menu principal")
+    print()
+
+
+def choose_database_rebuild() -> Action | None:
+    while True:
+        print_database_rebuild_menu()
+        try:
+            choice = input("Votre choix : ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return None
+
+        if choice == "0":
+            return None
+
+        action = DATABASE_REBUILD_ACTIONS.get(choice)
+        if action is not None:
+            return action
+
+        print("\nChoix invalide. Saisissez a, b, c ou 0.\n")
 
 
 def choose_qualification() -> Action | None:
@@ -409,6 +479,66 @@ def default_sibling_destination() -> Path:
     return PROJECT_ROOT.parent / f"{PROJECT_ROOT.name}2"
 
 
+def read_instance_env(source: Path) -> dict[str, str]:
+    env_path = source.expanduser().resolve() / "ops" / ".env"
+    if not env_path.is_file():
+        return {}
+    values: dict[str, str] = {}
+    for raw_line in env_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip().strip("\"'")
+    return values
+
+
+def suggested_clone_public_url(source: Path, target_base_path: str) -> str:
+    values = read_instance_env(source)
+    source_public_url = values.get("APP_PUBLIC_BASE_URL", "").strip()
+    parsed = urlsplit(source_public_url)
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+    normalized_path = "/" + target_base_path.strip("/")
+    if normalized_path == "/":
+        normalized_path = ""
+    return f"{parsed.scheme}://{parsed.netloc}{normalized_path}"
+
+
+def named_cms_vendor_candidate(instance_root: Path, source_root: Path) -> Path:
+    for root in (instance_root, *instance_root.parents, source_root, *source_root.parents):
+        if root.name == "cms":
+            return root / "vendor"
+    return instance_root.parent / "cms" / "vendor"
+
+
+CLONE_VENDOR_CANDIDATE_LABELS = (
+    "backend de l’instance",
+    "racine de l’instance",
+    "dossier parent",
+    "cms partagé conventionnel",
+    "deux niveaux au-dessus",
+)
+
+
+def clone_vendor_candidates(destination: Path, source: Path = PROJECT_ROOT) -> tuple[Path, Path, Path, Path, Path]:
+    instance_root = destination.expanduser()
+    if not instance_root.is_absolute():
+        instance_root = PROJECT_ROOT / instance_root
+    instance_root = instance_root.resolve()
+    source_root = source.expanduser()
+    if not source_root.is_absolute():
+        source_root = PROJECT_ROOT / source_root
+    source_root = source_root.resolve()
+    return (
+        instance_root / "backend" / "vendor",
+        instance_root / "vendor",
+        instance_root.parent / "vendor",
+        named_cms_vendor_candidate(instance_root, source_root),
+        instance_root.parent.parent / "vendor",
+    )
+
+
 def run_existing_database_update() -> int:
     print()
     print("Mettre à jour les bases existantes")
@@ -455,18 +585,78 @@ def run_existing_database_update() -> int:
     return 0
 
 
-def run_instance_update() -> int:
-    print()
-    print("Mettre à jour une instance client")
-    print("-" * 37)
-    print("La cible conserve storage/database, médias, logs, backups, ops/.env, ops/modules.local.json et local/modules.")
-    print()
+def normalized_ftp_remote_root(value: str) -> str:
+    raw = value.strip()
+    parsed = urlsplit(raw)
+    if not parsed.scheme:
+        return raw
+    if parsed.scheme.lower() not in {"ftp", "ftps"}:
+        raise ValueError("Le chemin distant doit être un chemin FTP ou une URL ftp:// / ftps://.")
+    return parsed.path or "/"
 
-    source = prompt_text("Release source ZIP ou dossier", "")
-    if not source:
-        print("Opération annulée.")
+
+def ftp_update_manifest_path(config_path: str, remote_root: str) -> Path:
+    config = Path(config_path).expanduser()
+    if not config.is_absolute():
+        config = PROJECT_ROOT / config
+    identity = f"{config.resolve()}|{remote_root}".encode("utf-8")
+    fingerprint = hashlib.sha256(identity).hexdigest()[:12]
+    stem = "".join(character if character.isalnum() or character in "-_" else "-" for character in config.stem)
+    return PROJECT_ROOT / "storage" / "deployments" / "ftp-manifests" / f"{stem or 'ftp'}-{fingerprint}.json"
+
+
+def ftp_update_plan_path(manifest_path: Path) -> Path:
+    return manifest_path.with_name(f"{manifest_path.stem}-plan.json")
+
+
+def read_ftp_update_plan(path: Path) -> dict | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def ftp_plan_operation_count(plan: dict) -> int:
+    delta = plan.get("delta") if isinstance(plan.get("delta"), dict) else {}
+    return sum(len(delta.get(key, [])) for key in ("new", "changed", "removed") if isinstance(delta.get(key), list))
+
+
+def refresh_default_update_stage(source: str) -> int:
+    """Reconstruit le staging par défaut depuis /dev avant une mise à jour.
+
+    Une source ZIP ou un autre dossier reste volontairement immuable: elle
+    représente une release choisie explicitement. Le staging par défaut, lui,
+    doit toujours refléter les fichiers courants du dépôt au moment du point 11.
+    Les bases et dépendances restent exclues, car l'instance les protège.
+    """
+    source_path = Path(source).expanduser()
+    if not source_path.is_absolute():
+        source_path = PROJECT_ROOT / source_path
+    if source_path.resolve() != DEFAULT_UPDATE_STAGE.resolve():
         return 0
 
+    command = [
+        sys.executable,
+        str(RELEASE_PACKAGE_SCRIPT),
+        "--stage-dir",
+        str(DEFAULT_UPDATE_STAGE),
+        "--exclude-databases",
+        "--no-zip",
+        "--skip-generated-artifacts-refresh",
+    ]
+    print()
+    print("Actualisation de la release différentielle depuis /dev :")
+    print(f"  {format_command(command)}")
+    result = subprocess.run(command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if result.returncode != 0:
+        print(f"\nPréparation de la release en échec — code de retour {result.returncode}")
+        return result.returncode
+    print("Stage différentiel frais prêt (bases et vendor exclus).")
+    return 0
+
+
+def run_local_instance_update(source: str) -> int:
     target = prompt_text("Répertoire cible de l'instance", str(PROJECT_ROOT))
     if not target:
         print("Opération annulée.")
@@ -509,10 +699,107 @@ def run_instance_update() -> int:
     print(f"  {format_command(apply_command)}")
     result = subprocess.run(apply_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
     if result.returncode == 0:
-        print("\nOK — instance client mise à jour")
+        print("\nOK — instance locale mise à jour")
     else:
         print(f"\nERREUR — code de retour {result.returncode}")
     return result.returncode
+
+
+def run_ftp_instance_update(source: str) -> int:
+    config = prompt_text("Configuration FTP", str(PROJECT_ROOT / "ops" / "ftp.deploy.json"))
+    if not config:
+        print("Opération annulée.")
+        return 0
+    remote_value = prompt_text("Chemin distant exact (ou URL ftp://)", "")
+    if not remote_value:
+        print("Opération annulée.")
+        return 0
+    try:
+        remote_root = normalized_ftp_remote_root(remote_value)
+    except ValueError as exc:
+        print(f"ERREUR: {exc}")
+        return 2
+    manifest = ftp_update_manifest_path(config, remote_root)
+    plan_path = ftp_update_plan_path(manifest)
+    delete_obsolete = confirm_optional("Supprimer sur le serveur les fichiers retirés de la nouvelle release")
+
+    base_command = [
+        sys.executable,
+        str(FTP_DEPLOY_SCRIPT),
+        "--config",
+        config,
+        "--stage-dir",
+        source,
+        "--remote-root",
+        remote_root,
+        "--manifest",
+        str(manifest),
+        "--protect-instance-data",
+    ]
+    if not delete_obsolete:
+        base_command.append("--no-delete-removed")
+
+    plan_command = [*base_command, "--dry-run", "--plan-output", str(plan_path)]
+    print()
+    print("Simulation FTP exécutée :")
+    print(f"  {format_command(plan_command)}")
+    plan = subprocess.run(plan_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if plan.returncode != 0:
+        print(f"\nSimulation FTP en échec — code de retour {plan.returncode}")
+        return plan.returncode
+
+    locked_plan = read_ftp_update_plan(plan_path)
+    if locked_plan is None:
+        print(f"ERREUR: la simulation n'a pas produit de plan FTP lisible: {plan_path}")
+        return 2
+
+    print(f"Manifeste différentiel propre à cette cible : {manifest}")
+    print(f"Plan FTP verrouillé : {plan_path}")
+    print("Les bases, médias, secrets, logs, backups, dépendances et modules locaux sont protégés.")
+    print("Le transfert FTP met à jour les fichiers ; les migrations éventuelles restent à exécuter sur le serveur.")
+    if ftp_plan_operation_count(locked_plan) == 0:
+        print("Aucune différence applicative à transférer : l'instance correspond déjà à ce stage.")
+        return 0
+    if not confirm_destructive():
+        print("Mise à jour FTP annulée après la simulation.")
+        return 0
+
+    print()
+    print("Transfert FTP exécuté :")
+    apply_command = [*base_command, "--apply-plan", str(plan_path)]
+    print(f"  {format_command(apply_command)}")
+    result = subprocess.run(apply_command, cwd=str(PROJECT_ROOT), env=os.environ.copy(), check=False)
+    if result.returncode == 0:
+        print("\nOK — fichiers différents transférés vers l’instance FTP")
+    else:
+        print(f"\nERREUR — code de retour {result.returncode}")
+    return result.returncode
+
+
+def run_instance_update() -> int:
+    print()
+    print("Mettre à jour une instance client")
+    print("-" * 37)
+    print("La source doit être une release préparée au point 5 (dossier release_stage ou archive ZIP).")
+    print("Seuls les fichiers dont le contenu diffère sont transférés.")
+    print()
+
+    source = prompt_text("Release source ZIP ou dossier", str(DEFAULT_UPDATE_STAGE))
+    if not source:
+        print("Opération annulée.")
+        return 0
+
+    refresh_code = refresh_default_update_stage(source)
+    if refresh_code != 0:
+        return refresh_code
+
+    target_kind = prompt_text("Type de cible : local (l) ou FTP/FTPS (f)", "l").lower()
+    if target_kind in {"l", "local"}:
+        return run_local_instance_update(source)
+    if target_kind in {"f", "ftp", "ftps"}:
+        return run_ftp_instance_update(source)
+    print("ERREUR: type de cible inconnu. Utilisez l ou f.")
+    return 2
 
 
 def run_instance_clone() -> int:
@@ -520,7 +807,8 @@ def run_instance_clone() -> int:
     print("Créer un clone local d'instance")
     print("-" * 34)
     print("Le dossier de destination et le APP_BASE_PATH cible sont indépendants.")
-    print("Exemple: destination ../cms2 avec APP_BASE_PATH /cms.")
+    print("Saisissez le chemin public final exact, indépendamment du nom du dossier.")
+    print("Exemples: /cms/main, /new/main ou /cms2.")
     print()
 
     source = prompt_text("Répertoire source", str(PROJECT_ROOT))
@@ -533,11 +821,30 @@ def run_instance_clone() -> int:
         print("Opération annulée.")
         return 0
 
-    target_base_path = prompt_text(
-        "APP_BASE_PATH cible (vide = dérivé du dossier destination)",
-        "",
+    print("Vendor recherché automatiquement par la future instance :")
+    candidates = clone_vendor_candidates(Path(destination), Path(source))
+    for index, (label, candidate) in enumerate(zip(CLONE_VENDOR_CANDIDATE_LABELS, candidates), start=1):
+        print(f"  {index}. {label} : {candidate}")
+
+    source_values = read_instance_env(Path(source))
+    source_base_path = source_values.get("APP_BASE_PATH", "<non configuré>")
+    print(f"APP_BASE_PATH source détecté : {source_base_path}")
+    target_base_path = prompt_text("APP_BASE_PATH cible exact (obligatoire)", "")
+    if not target_base_path:
+        print("Opération annulée : APP_BASE_PATH cible obligatoire.")
+        return 0
+    if not target_base_path.startswith("/") or "//" in target_base_path:
+        print("ERREUR: APP_BASE_PATH doit commencer par '/' et ne pas contenir '//'.")
+        return 2
+    target_base_path = "/" + target_base_path.strip("/")
+    if target_base_path == "/":
+        target_base_path = "/"
+
+    suggested_public_url = suggested_clone_public_url(Path(source), target_base_path)
+    public_url = prompt_text(
+        "APP_PUBLIC_BASE_URL cible",
+        suggested_public_url,
     )
-    public_url = prompt_text("APP_PUBLIC_BASE_URL cible optionnel", "")
     force = confirm_optional("Remplacer la destination si elle existe")
 
     command = [
@@ -550,8 +857,7 @@ def run_instance_clone() -> int:
         "--destination",
         destination,
     ]
-    if target_base_path:
-        command.extend(["--new-base-path", target_base_path])
+    command.extend(["--new-base-path", target_base_path])
     if public_url:
         command.extend(["--new-public-base-url", public_url])
     if force:
@@ -667,7 +973,12 @@ def main() -> int:
                 return last_returncode
             continue
 
-        if choice == "2":
+        if choice == "1":
+            action = choose_database_rebuild()
+            if action is None:
+                print()
+                continue
+        elif choice == "2":
             action = choose_qualification()
             if action is None:
                 print()
