@@ -47,6 +47,7 @@
       "public": true,
       "entrypoint": true,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         ".github/workflows/quality.yml",
         ".github/workflows/release.yml",
         "README.md",
@@ -200,6 +201,7 @@
         "tools/python/operations/deployment/d12_quality_gate.py",
         "tools/python/operations/deployment/d13_bind_release_evidence.py",
         "tools/python/operations/deployment/d14_clone_instance.py",
+        "tools/python/operations/deployment/d15_package_stable_components.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
@@ -236,6 +238,7 @@
         "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tests/test_release_package_cli.py",
         "tools/python/tests/test_sale_module_smoke.py",
+        "tools/python/tests/test_stable_component_packager.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/configuration/repository_layout.py",
@@ -451,6 +454,7 @@
         "tools/python/qualification/run_all.py",
         "tools/python/tests/integration/test_php_functional_suites.py",
         "tools/python/tests/test_command_runtime_reliability.py",
+        "tools/python/tests/test_database_rebuild_profiles.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py",
@@ -646,6 +650,7 @@
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
         "tools/python/archive/consolidation_inventory.py",
         "tools/python/qualification/stock_reconstruction_gate.py",
         "tools/python/tool-manifest.json"
@@ -714,6 +719,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
@@ -1039,6 +1045,7 @@
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
         "tools/python/commands/migrate.py",
         "tools/python/generators/generate_tree_manifest.py",
         "tools/python/operations/backup/d6_backup_sqlite.py",
@@ -1496,6 +1503,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/reference/generated/configuration.md",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1635,6 +1643,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/operations/deployment/d15_package_stable_components.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        ".github/workflows/publish-stable-components.yml",
+        "docs/operations/stable-component-updates.md",
+        "tools/python/tests/test_stable_component_packager.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/operations/deployment/d1_preflight_local.py",
       "category": "operation-deployment",
       "public": false,
@@ -1661,6 +1685,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
@@ -2318,6 +2343,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "tools/python/tests/integration/test_php_functional_suites.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json"
@@ -2599,6 +2625,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2632,6 +2659,7 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2889,6 +2917,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_stable_component_packager.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_static_export_multisite.py",
       "category": "test",
       "public": false,
@@ -3127,6 +3171,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g1_seed_native_blueprints.py",
@@ -3236,6 +3281,7 @@
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/archive/consolidation_inventory.py",
         "tools/python/qualification/stock_reconstruction_gate.py",

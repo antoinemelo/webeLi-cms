@@ -49,11 +49,22 @@ type MaintenanceVersions = { enabled: boolean; local: VersionManifest; channels:
 type DependencyRuntime = { key: string; name: string; installed?: string; latest?: string; latest_checked_at?: string; latest_source?: string; required?: string; path?: string; status?: string };
 type DependencyPackage = { manager: 'composer' | 'npm'; name: string; label?: string; installed?: string; latest?: string; latest_checked_at?: string; latest_source?: string; path?: string; path_exists?: boolean; source_path?: string; direct?: boolean; status?: string };
 type MaintenanceDependencies = { generated_at?: string; latest_enabled?: boolean; latest_cache_ttl_seconds?: number; runtimes: DependencyRuntime[]; packages: DependencyPackage[] };
+type StableUpdateComponent = {
+  type: 'core' | 'module'; key: string; name?: string; version: string;
+  installed_version?: string | null; archive_url?: string; sha256?: string;
+  requires_core?: string; update_available?: boolean; update_allowed?: boolean;
+  current?: boolean; ahead_of_stable?: boolean; blocked_reason?: string | null;
+};
+type StableUpdates = {
+  enabled: boolean; channel: 'stable'; checked_at: number; error?: string | null;
+  repository: string; release_url?: string | null; catalog_fingerprint?: string | null;
+  core?: StableUpdateComponent | null; modules: StableUpdateComponent[];
+};
 type VersionRow = { key: string; name: string; type: 'core' | 'module'; installed: string; dev: string; stable: string; status: string; statusClass: string; detail: string };
 type DatabaseRow = { key: string; name: string; installed: string; dev: string; stable: string; status: string; statusClass: string; detail: string };
 type RuntimeRow = { key: string; name: string; latest: string; installed: string; required: string; status: string; statusClass: string; source: string };
 type DependencyPackageRow = { key: string; name: string; manager: string; installed: string; latest: string; path: string; status: string; statusClass: string; source: string };
-type MaintenancePayload = { status: MaintenanceStatus; audit_logs: AuditLog[]; runtime_logs: RuntimeLog[]; versions?: MaintenanceVersions; dependencies?: MaintenanceDependencies };
+type MaintenancePayload = { status: MaintenanceStatus; audit_logs: AuditLog[]; runtime_logs: RuntimeLog[]; versions?: MaintenanceVersions; dependencies?: MaintenanceDependencies; stable_updates?: StableUpdates };
 const HIDDEN_SYSTEM_MODULE_KEYS = new Set(['articles', 'core', 'editor', 'media', 'pages', 'seo', 'taxonomy']);
 
 const context = useAdminContextStore();
@@ -63,9 +74,12 @@ const auditLogs = ref<AuditLog[]>([]);
 const runtimeLogs = ref<RuntimeLog[]>([]);
 const versions = ref<MaintenanceVersions | null>(null);
 const dependencies = ref<MaintenanceDependencies | null>(null);
+const stableUpdates = ref<StableUpdates | null>(null);
 const loading = ref(false);
 const busyActions = ref<Record<string, boolean>>({});
 const refreshingDependencyVersions = ref(false);
+const refreshingStableUpdates = ref(false);
+const applyingStableComponent = ref('');
 const error = ref('');
 const message = ref('');
 
@@ -92,6 +106,12 @@ const databaseRows = computed<DatabaseRow[]>(() => buildDatabaseRows());
 const runtimeRows = computed<RuntimeRow[]>(() => buildRuntimeRows());
 const dependencyPackageRows = computed<DependencyPackageRow[]>(() => buildDependencyPackageRows());
 const initialLoading = computed(() => loading.value && status.value === null && versions.value === null && dependencies.value === null);
+const devUpdateAvailable = computed(() => versionRows.value.some((row) => {
+  if (row.dev === '—') return false;
+  return row.type === 'core'
+    ? compareTechnicalVersion(row.dev, row.installed) > 0
+    : compareModuleVersion(row.dev, row.installed) > 0;
+}));
 const updateManifestUrl = computed(() => {
   const configured = window.__AMCMS_ADMIN__?.basePath;
   if (typeof configured === 'string') return `${configured.replace(/\/$/, '')}/updates/manifest.json`;
@@ -121,6 +141,7 @@ async function load(): Promise<void> {
     runtimeLogs.value = res.data.runtime_logs || [];
     versions.value = res.data.versions || null;
     dependencies.value = res.data.dependencies || null;
+    stableUpdates.value = res.data.stable_updates || null;
   } catch (err) {
     error.value = apiErrorMessage(err, t('maintenance.loadError'));
   } finally {
@@ -476,6 +497,53 @@ async function refreshDependencyVersions(): Promise<void> {
   }
 }
 
+function stableComponent(row: VersionRow): StableUpdateComponent | null {
+  if (row.type === 'core') return stableUpdates.value?.core ?? null;
+  return stableUpdates.value?.modules?.find((component) => component.key === row.key) ?? null;
+}
+
+async function refreshStableCatalog(): Promise<void> {
+  refreshingStableUpdates.value = true;
+  error.value = '';
+  message.value = '';
+  try {
+    const query = `?site_id=${context.siteId}&language_code=${encodeURIComponent(context.languageCode)}`;
+    const res = await adminApi.post<{ message: string; stable_updates: StableUpdates }>('/maintenance/updates/stable/refresh' + query, {});
+    message.value = res.data.message;
+    stableUpdates.value = res.data.stable_updates;
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('maintenance.stable.refreshError'));
+  } finally {
+    refreshingStableUpdates.value = false;
+  }
+}
+
+async function applyStableUpdate(component: StableUpdateComponent | null): Promise<void> {
+  const fingerprint = stableUpdates.value?.catalog_fingerprint;
+  if (!component || !component.update_allowed || !fingerprint) return;
+  if (!window.confirm(t('maintenance.stable.confirm', { name: component.name || component.key, version: component.version }))) return;
+
+  applyingStableComponent.value = `${component.type}:${component.key}`;
+  error.value = '';
+  message.value = '';
+  try {
+    const query = `?site_id=${context.siteId}&language_code=${encodeURIComponent(context.languageCode)}`;
+    const res = await adminApi.post<{ version: string; reload_required?: boolean }>('/maintenance/updates/stable/apply' + query, {
+      component_type: component.type,
+      component_key: component.key,
+      expected_version: component.version,
+      catalog_fingerprint: fingerprint
+    });
+    message.value = t('maintenance.stable.applied', { version: res.data.version });
+    if (res.data.reload_required) window.location.reload();
+    else await load();
+  } catch (err) {
+    error.value = apiErrorMessage(err, t('maintenance.stable.applyError'));
+  } finally {
+    applyingStableComponent.value = '';
+  }
+}
+
 async function runAction(action: 'clear-cache' | 'reindex-search' | 'clear-audit' | 'clear-runtime'): Promise<void> {
   busyActions.value = { ...busyActions.value, [action]: true };
   error.value = '';
@@ -529,8 +597,22 @@ onMounted(load);
     </section>
 
     <section class="card maintenance-panel-full maintenance-versions-panel">
-      <p class="muted maintenance-channel-summary">
-        {{ t('maintenance.channelSummary', { dev: channelSourceLabel(devChannel), stable: channelSourceLabel(stableChannel) }) }}
+      <div class="maintenance-dependencies-head">
+        <p class="muted maintenance-channel-summary mb-0">
+          {{ t('maintenance.channelSummary', { dev: channelSourceLabel(devChannel), stable: channelSourceLabel(stableChannel) }) }}
+        </p>
+        <button class="btn small" type="button" :disabled="refreshingStableUpdates" @click="refreshStableCatalog">
+          {{ refreshingStableUpdates ? t('maintenance.stable.refreshing') : t('maintenance.stable.refresh') }}
+        </button>
+      </div>
+
+      <p v-if="stableUpdates?.error" class="alert alert-warning mt-3 mb-3">{{ stableUpdates.error }}</p>
+      <p v-if="devUpdateAvailable" class="alert alert-info mt-3 mb-3">
+        {{ t('maintenance.dev.available') }}
+        <a href="https://github.com/antoinemelo/webeLi-cms/tree/staging" target="_blank" rel="noopener">{{ t('maintenance.dev.openStaging') }}</a>
+        ·
+        <a href="https://github.com/antoinemelo/webeLi-cms/actions/workflows/release.yml" target="_blank" rel="noopener">{{ t('maintenance.dev.openDeployment') }}</a>
+        <span class="muted">· {{ t('maintenance.dev.deliveryOnly') }}</span>
       </p>
 
       <div v-if="!versions" class="muted">{{ t('maintenance.empty.versions') }}</div>
@@ -558,7 +640,18 @@ onMounted(load);
               <td><code>{{ row.installed }}</code></td>
               <td><code>{{ row.dev }}</code></td>
               <td><code>{{ row.stable }}</code></td>
-              <td><span class="badge" :class="row.statusClass">{{ row.status }}</span></td>
+              <td>
+                <span class="badge" :class="row.statusClass">{{ row.status }}</span>
+                <button
+                  v-if="stableComponent(row)?.update_allowed"
+                  class="btn small ms-2"
+                  type="button"
+                  :disabled="Boolean(applyingStableComponent)"
+                  @click="applyStableUpdate(stableComponent(row))"
+                >
+                  {{ applyingStableComponent === `${stableComponent(row)?.type}:${stableComponent(row)?.key}` ? t('maintenance.stable.applying') : t('maintenance.stable.apply') }}
+                </button>
+              </td>
             </tr>
             <tr v-if="versionRows.length === 0">
               <td colspan="5" class="text-muted">{{ t('maintenance.empty.versionRows') }}</td>

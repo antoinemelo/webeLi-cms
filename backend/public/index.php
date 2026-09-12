@@ -10,6 +10,18 @@ if (\App\Health\HealthEndpoint::handle($healthConfig, $databaseConfig)) {
     exit;
 }
 
+$maintenanceFlag = dirname(__DIR__, 2) . '/storage/maintenance.flag';
+if (is_file($maintenanceFlag)) {
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    header('Retry-After: 60');
+    header('X-Robots-Tag: noindex, nofollow, noarchive');
+    header('X-Content-Type-Options: nosniff');
+    echo '<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Maintenance en cours</title><style>body{font:16px/1.5 system-ui,sans-serif;max-width:42rem;margin:10vh auto;padding:2rem;color:#172033}.card{border:1px solid #dbe2ea;border-radius:16px;padding:2rem;box-shadow:0 12px 34px rgba(15,23,42,.08)}</style><main class="card"><h1>Maintenance en cours</h1><p>DEC CMS applique une mise à jour vérifiée. Réessayez dans quelques instants.</p></main></html>';
+    exit;
+}
+
 try {
     $app = require __DIR__ . '/../bootstrap/app.php';
     $response = $app->handle();

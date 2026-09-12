@@ -2,7 +2,7 @@
   "schema_version": 2,
   "remote_root": "/www/webe.li/cms/main/",
   "stage_dir": "/home/amelo/Documents/DEV/WebeLi/web/cms/dev/storage/exports/release_stage",
-  "release_id": "dec_v09-e07g-20260811-112425-698deab",
+  "release_id": "dec_v09-e08a-20260811-192337-875d574",
   "files": {
     ".github/workflows/quality.yml": {
       "sha256": "7b20c7e2d511a2eab078780520a7c3ac4cb1c886fe7bad207c89d18ee9a15dfe",
@@ -42,257 +42,257 @@
     "TREE.release.txt": {
       "sha256": "2a0fb5e251af12be06b64385c07509ab97b077450f10b55d5f9ad196d932df41",
       "size": 89425,
-      "mtime": 1786447468
+      "mtime": 1786476220
     },
     "TREE.txt": {
-      "sha256": "d15d5c6e973e433c64bcb7184e3ea90f8ebbca26acf1c9747675732b99dba40e",
-      "size": 98399,
-      "mtime": 1786447466
+      "sha256": "caa56f1ac423f73ee698ac1a5e3d8cc53706d58fba7e06642a279ab2a7611941",
+      "size": 98485,
+      "mtime": 1786476219
     },
     "admin-app/.vite/manifest.json": {
       "sha256": "27280b826d294f6e3d57c9fea564ba2853e47a930228b977ddd5355447fcbdfd",
       "size": 10829,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/AccountingView-1svFweWx.css": {
       "sha256": "641506d8b997b7bd3ba78cf362412686997cd97186e2cd802cfbdd6f3c045f39",
       "size": 5136,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/AccountingView-DiVqNaT-.js": {
       "sha256": "e5be963355071a398c0550cba02f0138a40461a67f294ddcc09f40cc2eacc892",
       "size": 13051,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/AiAssistantConfigView-m5U8IE-3.js": {
       "sha256": "84f79728ffbe846af5dae7e25160c2c72fde0bd263472165796ac17cd0130c1c",
       "size": 76122,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/BlueprintsView-ClEwz8Ce.js": {
       "sha256": "04d7a645775539e6cd872b1c064faad64d51bbf1c42626f273bf29369e88cc49",
       "size": 75444,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/BusinessCrmView-Q9McGOsg.js": {
       "sha256": "d1d5cb538b2041702b66c295540246d67f81ccd2e316c022ccd6ed84f74eec2e",
       "size": 402789,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/BusinessCrmView-afZtEhg5.css": {
       "sha256": "2f8cecfe2fcaea2ba6c2c06d4351d91b91cb6ab85dade3d4950ff64e1c2099e9",
       "size": 88707,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/BusinessPageHeader-DBzldNTr.js": {
       "sha256": "15d30484a56b86c49ea99506632e62a3ddc704b75f651b99598f5ab88b7cf33a",
       "size": 1959,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/BusinessPageHeader-fjvQak79.css": {
       "sha256": "31c7792005053c744660432cb411217b48e45bf4b54a6916b72cba62f2ba10b8",
       "size": 2448,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ContentEditorView-Bqce0o7F.js": {
       "sha256": "b5e477edf57b666a584a0ae3a4cc16140702d7d9574b30e64d0b28a644b0eed7",
       "size": 148848,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ContentEditorView-BwzNh-MB.css": {
       "sha256": "3ad3ac2a750a010c11a83477d8d2b54df1e8d03cb9156a8718186ea5b1ec55e4",
       "size": 3005,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ContentListView-B3qgmKEf.js": {
       "sha256": "468b109559363f663f32414a105c52ea8724493bf3960bed15265e6be43a3c1d",
       "size": 7966,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/CookiesView-BI3Zj7ZU.js": {
       "sha256": "46f81c87ce93e571c51d840397a4ceb4fb83476569b20a1fbea5da3f333471a4",
       "size": 22078,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/DataTable-Dv2YDJNW.js": {
       "sha256": "6f0d8edf05e1efd454d768fd99feac60dc1183afe6dc47bd9bdbd7264015d2fb",
       "size": 2358,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/DocsView-CUonhJ3i.js": {
       "sha256": "2e3a5b512a5d61d4b4e457f15eefbe6b2657a3e63d42881b8e77415821d4006d",
       "size": 15710,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/FormsView-DbjOkd4G.js": {
       "sha256": "ba526de3f290c8888d7a746bb48063b7f3944ec73f6efdcdec96d61e29f68a29",
       "size": 19590,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamAuditView-LkU-ninC.js": {
       "sha256": "626b25c08ebba31f8f258bfc38642a9d78b3f72fffba4408ac6b3c7bfc6c3f51",
       "size": 1380,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamRolesView-C-GagGkP.js": {
       "sha256": "0be72e0966ba118f5829904e88c0ace11e571154e58a3052c3d6ff43ee412d2a",
       "size": 9718,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamRolesView-sxN_Ms4F.css": {
       "sha256": "953bb051d862514f6ade42607389ef230768a9bf6dfc8abe86fb5404a4aa2872",
       "size": 3501,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamSessionsView-CUM0nNX2.js": {
       "sha256": "6043106979a505b1a9cef1cebf873cdbbd87fbd172d57d72c202420786f53b67",
       "size": 1804,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamUsersView-DOlUHDmB.js": {
       "sha256": "1b3b0b6ec92c7548811257aa11dedbc46742b04aa9b1890368519077f175bf03",
       "size": 33556,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/IamUsersView-DdTcjAZa.css": {
       "sha256": "dc02d8456b892a5d16e787d9548c118556bbd14ab28e52b8ed773989a309161f",
       "size": 3047,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ImportsExportsView-DppTjfVe.js": {
       "sha256": "15384cdb2cc3f83fe853d563d255380f65a52e61355bd9fa9d880f707ec16fe0",
       "size": 18600,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MaintenanceView-C3-rPzk_.css": {
       "sha256": "903139e298980765f017ee25b772872bb7fa0c934c646f8e3ab873813bdfd50c",
       "size": 2200,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MaintenanceView-RS7EB1MZ.js": {
       "sha256": "a44f517e333bbc2041dc5e30d6e50340cea9dd77f8ef997972ec302396bb1f4e",
       "size": 19850,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MediaLibraryView-BnNx5To8.js": {
       "sha256": "6d04896802f2e627cf323174c9a0c2f254686b5ce6ac2b8b0274de279b732666",
       "size": 14416,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MediaLibraryView-CWMxqLq3.css": {
       "sha256": "5986e46012ea0c336996c9da7aade98c1e63f1ee95ac36d4064127e466e7df25",
       "size": 1950,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MediaPicker-cvwgEMqx.js": {
       "sha256": "3bc13111f018ac989fde91f7ee342c2276b5bc00001bac6c317c82fc49c67793",
       "size": 8583,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MenusView-BE9m5mcn.js": {
       "sha256": "11a4f49eda2c1bfaea96788af07de648f4fe96e16a752ce2ad157eb46555f2ab",
       "size": 29029,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/MenusView-TgsRvz19.css": {
       "sha256": "6af1254a02323ef805b832fe50cb0091fc0da5ca32d4358c4d63b696b988f2fa",
       "size": 4357,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ModulesView-eftdVTz-.js": {
       "sha256": "4936127c48a4d417900dcc1b8a156d82068525328fc581d063ca23b59060d02f",
       "size": 7877,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/PageHeader-B0KWeZDw.js": {
       "sha256": "72e603629bd0abab8f2b7b0724f5d0ec1c93d4ce5469689b883b2061bf5ebb18",
       "size": 3635,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/PageHeader-B_-VHMCO.css": {
       "sha256": "d6a5aee1c07b9e05d3cc4c1fe933de5f0a849a1d5524e22ab620f6ae8b3b6f06",
       "size": 650,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ProfileView-BXGj4dJH.js": {
       "sha256": "dd54ba848634865673b0463aa3a12b0070509b23de6255d86c0c9230e3f3ab25",
       "size": 6796,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/SaleView-BPFnJAYq.css": {
       "sha256": "0347082cebcda2d7059076765312fd62893258e0551b40e2aabfb9c63c042a81",
       "size": 36499,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/SaleView-C3fWxzgm.js": {
       "sha256": "bdcd4fbb073b65add63cc05ef77a4a77abe9ccd55860e2a67cc3c424b9d65029",
       "size": 144881,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/SeoAuditView-BNFmuckL.js": {
       "sha256": "27905eda9b7aef99af5ad801a562a15c63b6dcab19c5d44e829e80d721332f8a",
       "size": 7926,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ShopSystemEditorView-Cb0dl6tL.css": {
       "sha256": "55917426425073609b9f0af0740db4ce73f2a0979d3bf0695329de0880d3832b",
       "size": 4317,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/ShopSystemEditorView-c2bNe1_d.js": {
       "sha256": "46c098505214c99e533f2481dedf92ffa5ca9e198c6ff7e8533e96c469bac401",
       "size": 19362,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/StatusBadge-DSJ7YTg1.js": {
       "sha256": "121b306c28266095e9215615b5cd8769f64db83913e2f4716107fb7eeb552350",
       "size": 238,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/StudioView-z_FeVbdh.js": {
       "sha256": "79bf991e9915e7a117d4c0869aeb9aa52df822bee1b90b51a75cb87420281c79",
       "size": 2627,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/SystemConfigurationView-DVqjfZhJ.js": {
       "sha256": "1a46e5e3a238a9fbc47ed6807154d2c13f1b1365236e4b7531059ae1c24db9b7",
       "size": 38207,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/TaxonomiesView-BKkQwJpz.css": {
       "sha256": "20ce11ad4fd3241cfe1cbc347e4e7d773c113d1d627560cde07971536abb33c4",
       "size": 2829,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/TaxonomiesView-Ijt0K_2e.js": {
       "sha256": "7b95b6f86772f922a3a1fbb974e0fde3dd60282c22dff6d3feaef52c3ac8c874",
       "size": 24604,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/contentEntries-BTobtCHy.js": {
       "sha256": "ced0dde6dae5780f132fde9f274f6cd0ca640d5185582e3ee5c495367e7a0561",
       "size": 3984,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/index-Bp_lvqzM.js": {
       "sha256": "c769d4f7554cf1e52a85e3bb193062561eb3514c48125b2cd7e13a27bfd4cc83",
       "size": 351250,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/assets/index-BvCFQ1V7.css": {
       "sha256": "9fa29c9ce2f1595f26586c9068a9c19703bc9024d6593097c814e9ac154d8a27",
       "size": 375169,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "admin-app/index.html": {
       "sha256": "9ef89d2c4f672de5b2eb896e7ac6f73658106b6b750a0f905cb5e9f8b94466e6",
       "size": 1024,
-      "mtime": 1786444191
+      "mtime": 1786466876
     },
     "backend/bin/console": {
-      "sha256": "f8054bb4301c210216fcb7ce31d74253ea7a852c89ac447d979e40cb9818118e",
-      "size": 12522,
-      "mtime": 1784349739
+      "sha256": "758cfdbf0a293a3b43a5a8702e451e4e3d8feea909ffa6c0125a6dac2003a91b",
+      "size": 13955,
+      "mtime": 1786470355
     },
     "backend/bootstrap/app.php": {
       "sha256": "a3c0721d988e7d936111ca61f6a9d86e567dfed568ec906fef0678f16cb384c2",
@@ -330,9 +330,9 @@
       "mtime": 1778940016
     },
     "backend/config/databases.php": {
-      "sha256": "fb96c4adf2a9447a26830228059549dc80ccdd67939a174861e2270cb1f3915d",
-      "size": 935,
-      "mtime": 1784322934
+      "sha256": "b2043d0821ab752882fee10023c1e2516e7aabac93e2a249f906529cd88a24bd",
+      "size": 1267,
+      "mtime": 1786465755
     },
     "backend/config/health.php": {
       "sha256": "7aa997b7cfca97b29b7e384565796b12464448023ddfa50a5e3e9fbc8c6a81d3",
@@ -1340,9 +1340,9 @@
       "mtime": 1778356204
     },
     "backend/src/Core/ServiceFactory.php": {
-      "sha256": "1806f7a8cb7472b6e0e169bf362996deb364b78d8e973e93d468fefa1888afe3",
-      "size": 64710,
-      "mtime": 1784978076
+      "sha256": "4fefeff4c3aa40b0e0c6f601be2c8041392b6e3d04fc6b74b28a31c685c64b2d",
+      "size": 65004,
+      "mtime": 1786465755
     },
     "backend/src/Domain/Blueprint/Blueprint.php": {
       "sha256": "2ae4657b05fff16af6bf7eabf706a1a95c27935d09f3352ac378cbf5c8a11479",
@@ -2945,9 +2945,9 @@
       "mtime": 1783830533
     },
     "config/release.json": {
-      "sha256": "4d5f3668445f9440c61c041997fcbf9f83009ee5b61f20c90be5b2b9bfabab05",
+      "sha256": "b4366a0c8680eb620b03fcb9966455dc485deb406e0d8498a6cfd876d96ee1ad",
       "size": 419,
-      "mtime": 1786164858
+      "mtime": 1786473839
     },
     "database/.htaccess": {
       "sha256": "b559f6eb0a184ee63492409052594930de02ccdb8045cf312cb96d88275008a8",
@@ -3970,9 +3970,9 @@
       "mtime": 1784058780
     },
     "docs/development/testing-validation/QUALIFICATION_COMMANDS.md": {
-      "sha256": "949b627911401be2b4673b1f10c4da774834c596f7a4fc129dff8436f95b28e1",
-      "size": 12795,
-      "mtime": 1784294130
+      "sha256": "13ec9b8a0955eba63752f908ab43b8b5df05bfcf1bddf9039cce5d775988e306",
+      "size": 13102,
+      "mtime": 1786471706
     },
     "docs/development/testing-validation/README.md": {
       "sha256": "f1690d39a2a48e03071aa7fbf8bb7ca1ca0ed4f2cac3522b47d4d5104b4409d5",
@@ -4065,9 +4065,9 @@
       "mtime": 1784287986
     },
     "docs/evaluation/latest-release-audit.md": {
-      "sha256": "9c0c7eb0c2215912ee1afd147d9010361b43d1b2f8f234c5433048077da1fb18",
+      "sha256": "1d6cf10022a5f2a7453d6f562a3cae8d67e5cbcb736a329fccae5e2b40530657",
       "size": 1179,
-      "mtime": 1784458791
+      "mtime": 1786475009
     },
     "docs/evaluation/limitations.md": {
       "sha256": "ba823aa52942bba7d60fce5133dc06e8a0fa5d3f5904fd674eeeed6a1e2470fa",
@@ -4085,14 +4085,14 @@
       "mtime": 1784155942
     },
     "docs/evaluation/machine-readable/api-endpoints.json": {
-      "sha256": "3305e64fc2fa644d459088e45562de25946e2388599dae15f2ce2364897c5a0d",
+      "sha256": "762d64ee3f4ad846e3d1bf8f1781cc25206edacc1f74d8f6ede0e429a3843360",
       "size": 17927,
-      "mtime": 1786167933
+      "mtime": 1786474990
     },
     "docs/evaluation/machine-readable/architecture.json": {
-      "sha256": "6dd72c9a53e25abda3974aafa20a1eadbd4de5aa70e57e12d66bfd1454dcb804",
+      "sha256": "fa1d0b3fe1d61703aba62c7d195c8219eb211785d1773206df30602d2436d0af",
       "size": 2744,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/bundle-stock-strategies.json": {
       "sha256": "c1ee694bc72aee103ee2affc07e7a201dd3bb6f890979d8d87014180e687e962",
@@ -4100,9 +4100,9 @@
       "mtime": 1784015849
     },
     "docs/evaluation/machine-readable/cms-evaluation-manifest.json": {
-      "sha256": "1469b7a38e4e8b06c14933c8d8ee25ca1847829fd7e035b4f1ad0701b7149708",
+      "sha256": "9469bb3e9b395804221a2e35086185c7ce509a6825e2ce078e01249f98a3a73f",
       "size": 4329,
-      "mtime": 1786167933
+      "mtime": 1786474992
     },
     "docs/evaluation/machine-readable/crm-event-activities-m7.json": {
       "sha256": "028ba393f0a0c85f8fb6ce1757f346a395e702ba016a3f626e4f7f378b0e9854",
@@ -4125,34 +4125,34 @@
       "mtime": 1784026250
     },
     "docs/evaluation/machine-readable/databases.json": {
-      "sha256": "3c4fac2bdcf6f69795e8ea3475f80ea0b7aefd19e914d535d90193103d39b0f7",
+      "sha256": "cb9c9ce53813648ef2b01f760d9887d88e453501fc18d686c99a6532f4c392b8",
       "size": 58247,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/features.json": {
-      "sha256": "1e3c28f38e257021ab5441779926b9d791f7c7c72a8f3d6534ae9f796be0afeb",
+      "sha256": "ec12f03c0a151c7c0eeb146ca54fcc6165533876af9232abcdbfff214d3f3af3",
       "size": 17578,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/latest-release-audit.json": {
-      "sha256": "f8d61923a282f1d5beb8204525efb4b0883adc8f3880348551a2a49e5abfec0b",
+      "sha256": "a8deb3552adba0a823c43b1acecbb75e848323c3822cb66116259c20fd98da60",
       "size": 526,
-      "mtime": 1784458791
+      "mtime": 1786475009
     },
     "docs/evaluation/machine-readable/permissions.json": {
-      "sha256": "ce815d5fead41920805588469c15b655129cf41fec2065634b121d2ed16b3689",
+      "sha256": "7afbcb917d3a119d67804f88a572334761e9afec12e22e1f14e1e3e4d27ef126",
       "size": 198363,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/release-contents.json": {
-      "sha256": "ae3b90ece033cc74b68ac03f905e7f6033333d3bf64d77cda5c4d1dcdff8e3c9",
+      "sha256": "8379a8cb61b5940307a8517141cebb9453504fe3f4a2e812753af7db1b1ccb8d",
       "size": 908,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/routes.json": {
-      "sha256": "a6b1491a9c24870a1852c67479c3e63187423d487b04f432d1b304e6f7f458ac",
+      "sha256": "f7010bba635c7dc0af77e4a170d0a5a04f65709f16df6c28a19ffdf01bd1701b",
       "size": 263773,
-      "mtime": 1786167933
+      "mtime": 1786474990
     },
     "docs/evaluation/machine-readable/sale-inventory-ledger.json": {
       "sha256": "f733ca6163c241a54635779400ff678c431896d179355f0e0526efcab4173335",
@@ -4180,9 +4180,9 @@
       "mtime": 1784293600
     },
     "docs/evaluation/machine-readable/tests.json": {
-      "sha256": "71be5fa7bd63d7e9edab362088162cd5fa49efff555290d69f3a5b0e64752773",
-      "size": 21705,
-      "mtime": 1786167933
+      "sha256": "fecee672a859da21f0efedc5c7d160cf44bc3f6c7b30ebcecea36114462e2c10",
+      "size": 22914,
+      "mtime": 1786474991
     },
     "docs/evaluation/machine-readable/usability-commerce-foundations.json": {
       "sha256": "e0b65b42f6d0f065c102d0e1fe8fa43dcc462d0d5db29b5f057fd016305d7eb2",
@@ -4190,9 +4190,9 @@
       "mtime": 1784064468
     },
     "docs/evaluation/machine-readable/validators.json": {
-      "sha256": "1b7cb66b58ae71226458dd2cab0806de24aa03fe80a408ec632e2d26980a119b",
+      "sha256": "5112636fb42f92762b93d13a8d8d344f0493f8cb538bc34e27054ed8b7428c09",
       "size": 15948,
-      "mtime": 1786167933
+      "mtime": 1786474991
     },
     "docs/evaluation/order-logistics-tracking-46.md": {
       "sha256": "9ab07c08335aeb7b46ddecc830468b45f1117bb602bf7a63f045d8b0553ef3b3",
@@ -4380,9 +4380,9 @@
       "mtime": 1783936089
     },
     "docs/operations/m0-release-gate.md": {
-      "sha256": "87db0f99daac29d9a96194323e249361b7f98529d490dea947dd0ec8d52fba92",
-      "size": 1918,
-      "mtime": 1783936089
+      "sha256": "d916eaa7d7d1b55263543abe8175330b16f9a906ec13e5516f66adbfac3eda27",
+      "size": 2027,
+      "mtime": 1786471706
     },
     "docs/operations/module-migrations.md": {
       "sha256": "56848116271aaf846c92f741e55a9e3159f4bc0231381192d89d62884ae30320",
@@ -4447,12 +4447,12 @@
     "docs/public-api/openapi.v1.json": {
       "sha256": "55426389b5d007e3c0fd3a0ff2d6af4ab54e9f23cdac6c6c4045982b5682b700",
       "size": 341838,
-      "mtime": 1786173200
+      "mtime": 1786474990
     },
     "docs/public-api/openapi.v1.yaml": {
       "sha256": "b9316594d7b6c9ffe1f72f1b8652b98f33ccee5935992a5adbf79faca3cf95f1",
       "size": 248865,
-      "mtime": 1786173200
+      "mtime": 1786474990
     },
     "docs/public-api/quickstart.md": {
       "sha256": "8f9ed4c18a451581cce8b97144b4bbac488a820c5ff82690bfc84b711096ce0b",
@@ -5387,12 +5387,12 @@
     "docs/reference/contracts/public-api/openapi.v1.json": {
       "sha256": "55426389b5d007e3c0fd3a0ff2d6af4ab54e9f23cdac6c6c4045982b5682b700",
       "size": 341838,
-      "mtime": 1786173200
+      "mtime": 1786474990
     },
     "docs/reference/contracts/public-api/openapi.v1.yaml": {
       "sha256": "b9316594d7b6c9ffe1f72f1b8652b98f33ccee5935992a5adbf79faca3cf95f1",
       "size": 248865,
-      "mtime": 1786173200
+      "mtime": 1786474990
     },
     "docs/reference/demo-data-policy.md": {
       "sha256": "c4edcf026a3a42c164d3b6f59fa5a0a392524a34732f1d3fb917aff4344b6c40",
@@ -5407,22 +5407,22 @@
     "docs/reference/generated/README.md": {
       "sha256": "c8812fa7eabab7658b95c74dd29162b6eb530dc87a9603b57ccc7b8a04961314",
       "size": 814,
-      "mtime": 1786444225
+      "mtime": 1786474985
     },
     "docs/reference/generated/cli-commands.md": {
-      "sha256": "62aab5b506e6979267957e5462626f804ab564716fb0f341f9fd85a1f8c93ec0",
-      "size": 16035,
-      "mtime": 1786446145
+      "sha256": "f80ccb47472f83614d0c2a6455350516df2ef7983418a17a8f7f4aa78263c95f",
+      "size": 16036,
+      "mtime": 1786474989
     },
     "docs/reference/generated/configuration.md": {
-      "sha256": "2cf3e8a43f6ba8026e47c606124112a69cfc3a336bb3017c9df3615d3eae985b",
-      "size": 7959,
-      "mtime": 1786444225
+      "sha256": "f2e2a27932dce06fa24fbe236db8793bf09b09b52974615c9f677537418be2be",
+      "size": 8066,
+      "mtime": 1786474988
     },
     "docs/reference/generated/database-schema.md": {
-      "sha256": "2c02c3573406d97ca128289642dce0cb683f86fe20bd3a4ac72582140b5f78c6",
-      "size": 56143,
-      "mtime": 1786444249
+      "sha256": "04136567ea27656d8be69abae77d66b1e9c268092903cf79e953cb86f1fb5b5b",
+      "size": 55969,
+      "mtime": 1786474989
     },
     "docs/reference/generated/environment-variables.md": {
       "sha256": "80ecd8ecef43ae8ebac81dd064c44b99b04df04053ec823350fc438ab4020cc4",
@@ -5432,42 +5432,42 @@
     "docs/reference/generated/field-types.md": {
       "sha256": "355b9c839c7fff9358759d2175bfb8f0c1c799c468f1ab6852ea83dcdfd1749a",
       "size": 576,
-      "mtime": 1786444225
+      "mtime": 1786474989
     },
     "docs/reference/generated/modules.md": {
       "sha256": "3e13c57f35b91aad6085b40d9358072df9524259cb36ccc9aa3624176db81c77",
       "size": 1247,
-      "mtime": 1786444226
+      "mtime": 1786474989
     },
     "docs/reference/generated/native-blueprints.md": {
       "sha256": "b4418cf8126326585e0e0fd3cfddff9270b1131f7c3d8bd628a2ecfff046435a",
       "size": 355,
-      "mtime": 1786444226
+      "mtime": 1786474989
     },
     "docs/reference/generated/permissions.md": {
       "sha256": "f01f7e9cce9e11887009a5e4dec4622303d204606a810d5f853a2be91dbae424",
       "size": 4540,
-      "mtime": 1786444225
+      "mtime": 1786474987
     },
     "docs/reference/generated/release-contents.md": {
       "sha256": "4ce4ff63ae01a3f4f4eb813bd00988ce4a6596e777749b9b9d04602ff90d6272",
       "size": 3862,
-      "mtime": 1786444226
+      "mtime": 1786474989
     },
     "docs/reference/generated/routes.md": {
       "sha256": "689a6d1866f19b024df79a3fc90cd7f47324a76816b5668dc9465d94926527b7",
       "size": 51396,
-      "mtime": 1786444225
+      "mtime": 1786474985
     },
     "docs/reference/generated/schema-versions.md": {
       "sha256": "801b7854c53b6650ee575a0ce85d6ff0f0c46daf5f8187fb49937ee91bc4e203",
       "size": 6302,
-      "mtime": 1786444226
+      "mtime": 1786474989
     },
     "docs/reference/generated/validators.md": {
       "sha256": "3aa25778ade96e71096cdbc5a459b4ebdd85d614a70577838cec35b5d6caf0cb",
       "size": 3623,
-      "mtime": 1786444226
+      "mtime": 1786474989
     },
     "docs/reference/module-changelog.md": {
       "sha256": "7668ca04813ea6ae6be40a6901ef243e51b3e738d262bed2ec425e3dcc1ce02b",
@@ -7337,7 +7337,7 @@
     "packages/amcms-client/src/generated/openapi-types.ts": {
       "sha256": "416ce82abf23a0b72212867a58808c174c882e09e26ef93e6a54577c4aff2d39",
       "size": 11518,
-      "mtime": 1786173200
+      "mtime": 1786474990
     },
     "packages/amcms-client/src/index.ts": {
       "sha256": "e160c0fe8a15a6f2320e79122e34fec64425d5bb8b1d6726add3f91e8c2b2619",
@@ -7422,12 +7422,12 @@
     "storage/database/.gitkeep": {
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "size": 0,
-      "mtime": 1785999787
+      "mtime": 1786460013
     },
     "storage/database/.htaccess": {
       "sha256": "b559f6eb0a184ee63492409052594930de02ccdb8045cf312cb96d88275008a8",
       "size": 141,
-      "mtime": 1785999787
+      "mtime": 1786460013
     },
     "storage/deployments/.gitkeep": {
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -7435,9 +7435,9 @@
       "mtime": 1778947830
     },
     "storage/deployments/release-manifest.json": {
-      "sha256": "8e6f416ce37c32b60af2e39e8399a6f398edb87197d94cf5b656cceb44fd50a7",
-      "size": 335608,
-      "mtime": 1786447468
+      "sha256": "c299c6112953ccd1bccdb03bd636e3ae1ac4098b8322959b36ceacc79b265a54",
+      "size": 335609,
+      "mtime": 1786476221
     },
     "storage/deployments/releases/.gitkeep": {
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -7815,9 +7815,9 @@
       "mtime": 1783498614
     },
     "tools/python/lib/database_inventory.py": {
-      "sha256": "b9f0ba67efe7fc66fc5542e1b8e61833b8e93646e18b273aac0c99bbe6ff570d",
-      "size": 14368,
-      "mtime": 1782490418
+      "sha256": "e169efc2649ca33a8a1b181d20843b8ad49053b19ce741ac89073b445e075c41",
+      "size": 14600,
+      "mtime": 1786460800
     },
     "tools/python/lib/deploylib.py": {
       "sha256": "2911bd72e34bf78502dd39eb9a2983328dd6a81a62f126c1cc45b23edafbf78c",
@@ -7890,9 +7890,9 @@
       "mtime": 1786446071
     },
     "tools/python/operations/database/b0_db_seed.py": {
-      "sha256": "f726b6f3a4bcd70c4d2ae8ad69dc5d3736362e93384863410eb015d567d9139f",
-      "size": 144267,
-      "mtime": 1786446071
+      "sha256": "7198617bd94a53601ce87348e272a231ca4e35fd21bc26509032f63a8e5a1f09",
+      "size": 144221,
+      "mtime": 1786460800
     },
     "tools/python/operations/database/b1_rebuild_projections.py": {
       "sha256": "81614f498932bf85fe4f55a39eb4d48ea87bbcc0412a3aecc00f5f51ad4d12e9",
@@ -7925,9 +7925,9 @@
       "mtime": 1781957048
     },
     "tools/python/operations/database/g1_seed_native_blueprints.py": {
-      "sha256": "d3638102fe8f6dcae1f701e9e01835368141b9ff84ab0c60df67b1442b31b041",
-      "size": 71971,
-      "mtime": 1782138184
+      "sha256": "54346b44aba33d6cb370429bd718e7c2c540df3ae825c0922d17fba7fa6334b9",
+      "size": 72149,
+      "mtime": 1786460800
     },
     "tools/python/operations/database/g7_add_site.py": {
       "sha256": "01454b470090cc647a461a6a630171736ccc5476654c414bfa3c02beda728f80",
@@ -7965,9 +7965,9 @@
       "mtime": 1786429107
     },
     "tools/python/operations/deployment/d1_preflight_local.py": {
-      "sha256": "3f2825479fa7c96d2deda1c39be335f5e432829bd0d451dcbc6165e3342e461f",
-      "size": 21300,
-      "mtime": 1782449195
+      "sha256": "9a266c6afe1990dfd3a4b76fbd515f5c28ca2cefd547425d0bf2e80772352559",
+      "size": 21873,
+      "mtime": 1786470529
     },
     "tools/python/operations/deployment/d2_package_release.py": {
       "sha256": "b03c8dccd07e1d5ae6ceaae2a2af485bc5e931a85e2a9eed1b44e887d0024525",
@@ -8080,9 +8080,9 @@
       "mtime": 1783980870
     },
     "tools/python/qualification/performance_baseline.py": {
-      "sha256": "89ef46cde1737bf43fe21a99dd7c07780229a01fb3b2912481dd754e3f900771",
-      "size": 16175,
-      "mtime": 1783941147
+      "sha256": "f213ef71713af86bc9967e272c690bac61f2a200e832fa6ff4725e7324168424",
+      "size": 16886,
+      "mtime": 1786471706
     },
     "tools/python/qualification/reservation_availability_gate.py": {
       "sha256": "38792d56dd0f5740ae0bbdd28bc61a6db64849c9a57a84a568d6ffabeec2ebfb",
@@ -8110,9 +8110,9 @@
       "mtime": 1784146105
     },
     "tools/python/tool-manifest.json": {
-      "sha256": "63d912ba6ee31bd3af3ae9164b0594cb369183a4351613862be53bc0c7918160",
-      "size": 143046,
-      "mtime": 1784303924
+      "sha256": "a7cb3603b8acdd50d3b04cd1f0573a0c62f7522a119fb66d1b4156eaa4afa434",
+      "size": 145990,
+      "mtime": 1786461517
     },
     "tools/python/validation/__init__.py": {
       "sha256": "b0821c51d7926d1340fcc44bf909fe2bdcad8e00ca7d02f532521e344e15631a",

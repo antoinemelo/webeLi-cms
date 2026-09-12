@@ -69,6 +69,12 @@ generated: true
 | `APP_PUBLIC_BASE_URL` | `backend/config/app.php`, `backend/src/Application/Maintenance/VersionInventoryService.php` |
 | `APP_SESSION_IDLE_TIMEOUT` | `backend/config/app.php` |
 | `APP_SESSION_NAME` | `backend/config/app.php` |
+| `APP_STABLE_UPDATER_CACHE_TTL` | `backend/config/updates.php` |
+| `APP_STABLE_UPDATER_CATALOG_ASSET` | `backend/config/updates.php` |
+| `APP_STABLE_UPDATER_ENABLED` | `backend/config/updates.php` |
+| `APP_STABLE_UPDATER_GITHUB_API_URL` | `backend/config/updates.php` |
+| `APP_STABLE_UPDATER_MAX_ARCHIVE_BYTES` | `backend/config/updates.php` |
+| `APP_STABLE_UPDATER_MAX_CATALOG_BYTES` | `backend/config/updates.php` |
 | `APP_TEMPLATE_ENGINE` | `backend/config/app.php` |
 | `APP_THEME` | `backend/config/app.php` |
 | `APP_TIMEZONE` | `backend/config/app.php` |
@@ -78,7 +84,7 @@ generated: true
 | `APP_UPDATES_DEV_MANIFEST_URL` | `backend/config/updates.php` |
 | `APP_UPDATES_ENABLED` | `backend/config/updates.php` |
 | `APP_UPDATES_GITHUB_REPO` | `backend/config/updates.php` |
-| `APP_UPDATES_GITHUB_TOKEN` | `backend/src/Application/Maintenance/VersionInventoryService.php` |
+| `APP_UPDATES_GITHUB_TOKEN` | `backend/src/Application/Maintenance/VersionInventoryService.php`, `backend/src/Infrastructure/Maintenance/StableUpdateCatalogService.php` |
 | `APP_UPDATES_HTTP_TIMEOUT` | `backend/config/updates.php` |
 | `APP_UPDATES_STABLE_GIT_BRANCH` | `backend/config/updates.php` |
 | `APP_UPDATES_STABLE_INSTANCE_URL` | `backend/config/updates.php` |

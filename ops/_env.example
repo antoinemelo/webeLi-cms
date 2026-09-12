@@ -28,6 +28,18 @@ APP_PUBLIC_API_MODULE_ROUTES=1
 APP_ADMIN_MODULE_ROUTES=1
 APP_START_SESSION_FOR_PUBLIC=0
 
+# Mise à jour intégrée : canal stable uniquement. Le token est facultatif pour
+# un dépôt public et doit rester dans ops/.env pour un dépôt privé.
+APP_UPDATES_ENABLED=1
+APP_UPDATES_GITHUB_REPO=antoinemelo/webeLi-cms
+APP_UPDATES_GITHUB_TOKEN=
+APP_STABLE_UPDATER_ENABLED=1
+APP_STABLE_UPDATER_GITHUB_API_URL=https://api.github.com/repos/antoinemelo/webeLi-cms/releases/latest
+APP_STABLE_UPDATER_CATALOG_ASSET=dec-cms-stable.json
+APP_STABLE_UPDATER_CACHE_TTL=900
+APP_STABLE_UPDATER_MAX_CATALOG_BYTES=2000000
+APP_STABLE_UPDATER_MAX_ARCHIVE_BYTES=150000000
+
 # Password reset / mail
 APP_PUBLIC_BASE_URL=https://exemple.test
 APP_ALLOW_LOCAL_HOSTS=0

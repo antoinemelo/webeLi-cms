@@ -21,7 +21,7 @@
     "docs/public-api/",
     "docs/evaluation/"
   ],
-  "last_verified": "2026-08-11",
+  "last_verified": "2026-09-12",
   "limitations": [
     "The exact content must be checked against an archive produced by the current tree."
   ],

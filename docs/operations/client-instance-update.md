@@ -27,7 +27,7 @@ generated: false
 
 La commande `instance update` déploie une release du noyau sur une instance client en conservant les contenus, les bases SQLite, les médias, les sauvegardes, les secrets et les modules clients locaux.
 
-Ce document formalise le workflow recommandé. L'écran **Maintenance** du back-office aide à constater les versions disponibles, mais il ne remplace pas le plan, le backup et les validations locales.
+Ce document formalise le workflow recommandé pour les déploiements opérés hors du serveur. L'écran **Maintenance** du back-office propose aussi une mise à jour intégrée du canal stable, avec backup et contrôles automatiques, décrite dans [Mise à jour stable intégrée](stable-component-updates.md).
 
 ## Résumé du workflow
 
@@ -73,7 +73,7 @@ Si le manifeste est absent ou incomplet, l'information peut être complétée de
 
 ## Choisir la source de mise à jour
 
-Le canal `stable` est le choix normal pour une instance client. Le canal `dev` peut servir à tester une correction ou une évolution sur un clone, mais il ne doit pas devenir la source habituelle d'une production client sans décision explicite.
+Le canal `stable` est le choix normal pour une instance client et le seul applicable depuis le bouton **Mettre à jour**. Le canal `dev` peut servir à tester une correction ou une évolution sur un clone ; il reste déployé depuis `staging` par FTP, SFTP ou CLI.
 
 La source fournie à `instance update` est généralement une archive release :
 

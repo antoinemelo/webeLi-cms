@@ -486,6 +486,8 @@ generated: true
 | `POST` | `/admin/api/maintenance/cache/clear` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/dependencies/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/search/reindex` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/updates/stable/apply` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/updates/stable/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/folders` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/{id}/attach` | API administrative | `backend/routes/api.php` |
