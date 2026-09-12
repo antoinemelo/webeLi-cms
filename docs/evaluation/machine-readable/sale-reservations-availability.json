@@ -1,0 +1,55 @@
+{
+  "format_version": 1,
+  "gate": "sale.reservations-availability.m6.2.v1",
+  "status": "passed",
+  "default_policy": {
+    "storefront_trigger": "checkout_start",
+    "pos_trigger": "order_placement",
+    "ttl_seconds": 1800,
+    "max_lifetime_seconds": 7200
+  },
+  "triggers": ["checkout_start", "order_placement", "payment_authorization", "payment_capture"],
+  "states": ["active", "confirmed", "consumed", "released", "expired", "cancelled"],
+  "invariants": {
+    "atomic_claim": true,
+    "negative_reservation_forbidden": true,
+    "consumed_release_forbidden": true,
+    "expiry_idempotent": true,
+    "renewal_bounded": true,
+    "cart_preserved_on_conflict": true
+  },
+  "backorder": {
+    "explicit_table": "sale_stock_backorders",
+    "channel_policy": true,
+    "sellable_policy": true,
+    "implicit": false,
+    "lead_time_exposed": true
+  },
+  "fulfillment": {
+    "delivery": "channel and sellable policy",
+    "pickup": "location stock only; no implicit backorder",
+    "pos": "register location; order placement; no implicit backorder"
+  },
+  "worker": "php backend/bin/console worker:reservations [site_id]",
+  "public_ux": {
+    "labels": ["En stock", "Plus que…", "Sur commande", "Indisponible"],
+    "exact_quantity_default": false,
+    "expiry_visible": true,
+    "recovery_options": ["reduce_quantity", "choose_variant", "backorder", "remove_line"]
+  },
+  "back_office": {
+    "route": "/admin/app/sale/reservations",
+    "human_ttl": true,
+    "filters": ["active", "expiring_soon", "blocked", "order", "backorder"],
+    "permission_controlled_release": "sale.stock.manage"
+  },
+  "tests": {
+    "last_item_two_clients": true,
+    "crash_retry": true,
+    "double_expiry": true,
+    "backorder_policy": true,
+    "pos_policy": true,
+    "mobile_and_operator_ux": true
+  },
+  "security": {"contains_pii": false, "contains_secret": false}
+}

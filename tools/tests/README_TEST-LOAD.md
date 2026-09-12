@@ -36,7 +36,7 @@ python -m pip install requests
 Par défaut, le script cible l’instance locale :
 
 ```text
-http://127.0.0.1:8080/mod/
+http://127.0.0.1:8080/cms/
 ```
 
 Cela évite de lancer une charge distante par accident.
@@ -57,7 +57,7 @@ URL explicite :
 
 ```bash
 python3 test_load.py \
-  --base-url http://127.0.0.1:8080/mod/ \
+  --base-url http://127.0.0.1:8080/cms/ \
   --profile smoke \
   --mode public \
   --yes
@@ -123,8 +123,8 @@ Format recommandé :
 
 ```csv
 url,nom,token
-http://127.0.0.1:8080/mod/,local,amcms_LOCAL...
-https://webe.li/mod/,remote,amcms_REMOTE...
+http://127.0.0.1:8080/cms/,local,amcms_LOCAL...
+https://webe.li/cms/,remote,amcms_REMOTE...
 ```
 
 Le script accepte aussi un token explicite :

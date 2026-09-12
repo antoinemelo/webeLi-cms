@@ -556,7 +556,7 @@ watch(languages, () => {
           >
             <div class="d-flex justify-content-between gap-2">
               <span class="d-inline-flex align-items-center gap-2 min-w-0">
-                <span v-if="canDragTaxonomies" class="drag-handle d-inline-flex align-items-center text-secondary me-1 fs-5 lh-1" aria-hidden="true">⠿</span>
+                <span v-if="canDragTaxonomies" class="dnd-handle" title="Glisser pour réordonner" aria-hidden="true">⋮</span>
                 <strong class="fs-5 lh-sm">{{ row.name || row.label || taxonomyKey(row) }}</strong>
               </span>
               <span class="badge rounded-pill" :class="toBool(row.archive_enabled, true) ? 'text-bg-success' : 'text-bg-light'">{{ toBool(row.archive_enabled, true) ? 'publique' : 'interne' }}</span>
@@ -612,7 +612,7 @@ watch(languages, () => {
               @dragend="onTermDragEnd"
             >
               <button type="button" class="taxonomy-term-main" @click="selectTerm(term)">
-                <span v-if="canDragTerms" class="drag-handle d-inline-flex align-items-center text-secondary me-1 fs-5 lh-1" aria-hidden="true">⠿</span>
+                <span v-if="canDragTerms" class="dnd-handle" title="Glisser pour réordonner" aria-hidden="true">⋮</span>
                 <span class="taxonomy-term-text">
                   <strong class="fs-5 lh-sm">{{ term.name || term.term_key || term.slug || 'Sans nom' }}</strong>
                 </span>
@@ -745,7 +745,6 @@ watch(languages, () => {
 }
 .taxonomy-list { max-height: 70vh; overflow: auto; }
 .taxonomy-list-item strong { overflow-wrap: anywhere; }
-.drag-handle { cursor: grab; user-select: none; }
 .taxonomy-list-item[draggable="true"], .taxonomy-term-row[draggable="true"] { cursor: grab; }
 .taxonomy-list-item.is-dragging, .taxonomy-term-row.is-dragging { opacity: .55; }
 .taxonomy-list-item.is-drop-target, .taxonomy-term-row.is-drop-target { outline: 2px dashed rgba(var(--bs-primary-rgb), .55); outline-offset: -4px; }

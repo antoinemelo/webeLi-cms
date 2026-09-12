@@ -1,8 +1,7 @@
 <!doctype html>
 <html lang="{{ languageCode|default('fr') }}"{% if is_preview|default(false) %} data-amcms-preview="1"{% endif %}{% if visual_editing|default(false) %} data-amcms-visual="1"{% endif %}>
 {% include 'partials/head.twig' %}
-<body data-storefront-channel="web-main">
-  <button type="button" class="storefront-cart-toggle" data-cart-toggle aria-controls="storefront-cart-drawer" aria-expanded="false" aria-label="Ouvrir le panier">Panier <span data-cart-count aria-live="polite">0</span></button>
+<body{% if storefront_cart_visible|default(false) %} data-storefront-channel="{{ storefront_channel_code }}" data-storefront-api-base="{{ public_api_url('sale/channels/' ~ storefront_channel_code) }}" data-storefront-cart-url="{{ localized_url('/cart', languageCode|default('fr')) }}" data-storefront-checkout-url="{{ localized_url('/checkout', languageCode|default('fr')) }}" data-app-base-path="{{ url('/') }}"{% endif %}>
   <a class="skip-link" href="#main-content">{{ ui.skip_to_content }}</a>
 
   {% include 'partials/site-header.twig' %}
@@ -20,9 +19,12 @@
 
   {% include 'partials/site-footer.twig' %}
   {% include 'partials/cookie-consent.twig' %}
-  <aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden aria-labelledby="storefront-cart-title"><button type="button" data-cart-close aria-label="Fermer le panier">Fermer</button><h2 id="storefront-cart-title">Votre panier</h2><div data-cart-error role="alert" aria-live="assertive"></div><div data-cart-lines></div><strong data-cart-total></strong><p><a data-cart-checkout href="{{ asset('/cart') }}">Voir le panier</a></p></aside>
-  <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script>
+  {% if storefront_cart_visible|default(false) %}
+    {% include 'partials/storefront-cart-drawer.twig' %}
+    <link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart.css') }}"><link rel="stylesheet" href="{{ asset('/frontend/theme-default/assets/css/cart-header.css') }}"><script src="{{ asset('/frontend/theme-default/assets/js/storefront-cart.js') }}" defer></script>
+  {% endif %}
 
+  <script src="{{ asset('/frontend/theme-default/assets/js/storefront-product.js') }}" defer></script>
   <script src="{{ asset('/frontend/theme-default/assets/js/app.js') }}" defer></script>
   <script src="{{ asset('/frontend/theme-default/assets/js/cookie-consent.js') }}" defer></script>
   {% if visual_editing|default(false) %}<script src="{{ asset('/frontend/theme-default/assets/js/visual-editing-bridge.js') }}" defer></script>{% endif %}

@@ -18,6 +18,9 @@ generated: true
 
 | Méthode | Chemin | Surface | Déclaration |
 |---|---|---|---|
+| `DELETE` | `/admin/api/accounting/accounts/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `DELETE` | `/admin/api/accounting/categories/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `DELETE` | `/admin/api/accounting/rules/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/models/{providerKey}/{modelKey}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/provider-types/{key}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `DELETE` | `/admin/api/ai/providers/{key}` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -46,9 +49,13 @@ generated: true
 | `DELETE` | `/admin/api/business/pim/attributes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/bundle-components/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/pim/product-relation-rules/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/pim/product-relations/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/segments/{id}/members/{contactId}` | API administrative | `backend/routes/api.php` |
+| `DELETE` | `/admin/api/business/storytellings/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/business/tags/{id}` | API administrative | `backend/routes/api.php` |
 | `DELETE` | `/admin/api/cookies/bindings/{id}` | API administrative | `backend/routes/api.php` |
@@ -78,6 +85,7 @@ generated: true
 | `GET` | `/account` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/admin` | API administrative | `backend/routes/admin.php` |
 | `GET` | `/admin/` | API administrative | `backend/routes/admin.php` |
+| `GET` | `/admin/api/accounting/structure` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `GET` | `/admin/api/ai/actions` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `GET` | `/admin/api/ai/budget` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `GET` | `/admin/api/ai/prompts` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -105,6 +113,7 @@ generated: true
 | `GET` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/export.csv` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/export.pdf` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/catalog/inventory` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/products` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/catalog/products/{id}` | API administrative | `backend/routes/api.php` |
@@ -129,6 +138,7 @@ generated: true
 | `GET` | `/admin/api/business/export/contacts` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/export/memos` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/export/relations` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/form-links/pending` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/iam/available-users` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/mailing/campaigns` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/mailing/campaigns/{id}` | API administrative | `backend/routes/api.php` |
@@ -155,11 +165,13 @@ generated: true
 | `GET` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/sellable-variants` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/pim/storefront-blocks/candidates` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/pim/variants/{id}/sellable-snapshot` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/relations/{type}/{id}/360` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/activity` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/comments` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
@@ -167,6 +179,9 @@ generated: true
 | `GET` | `/admin/api/business/sale-activities/unlinked` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/schema` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/search` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/segments` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/segments/{id}` | API administrative | `backend/routes/api.php` |
+| `GET` | `/admin/api/business/storytellings` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/capabilities` | API administrative | `backend/routes/api.php` |
 | `GET` | `/admin/api/configuration` | API administrative | `backend/routes/api.php` |
@@ -275,11 +290,16 @@ generated: true
 | `GET` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/cart` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/checkout` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/checkout/confirmation` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/docs/public-api/{file:index\\.html|openapi\\.v1\\.json|openapi\\.v1\\.yaml|quickstart\\.md|authentication\\.md|errors\\.md|examples\\.md}` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/examples/{example:headless-next|headless-nuxt|headless-astro|headless-vanilla}/README.md` | HTML/runtime | `backend/routes/web.php` |
+| `GET` | `/gift-card` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/updates/manifest.json` | HTML/runtime | `backend/routes/web.php` |
 | `GET` | `/{path:.+}` | HTML/runtime | `backend/routes/web.php` |
+| `PATCH` | `/admin/api/accounting/accounts/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `PATCH` | `/admin/api/accounting/categories/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `PATCH` | `/admin/api/accounting/rules/{id}` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `PATCH` | `/admin/api/business/catalog/brands/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/catalog/categories/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/catalog/discounts/{id}` | API administrative | `backend/routes/api.php` |
@@ -291,6 +311,7 @@ generated: true
 | `PATCH` | `/admin/api/business/consents/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/contacts/{id}/consents/{channel}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/contacts/{id}/preference` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/mailing/campaigns/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/mailing/lists/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/memos/{id}` | API administrative | `backend/routes/api.php` |
@@ -305,6 +326,8 @@ generated: true
 | `PATCH` | `/admin/api/business/pim/content-links/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/pim/tax-classes/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/relations/{type}/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/segments/{id}` | API administrative | `backend/routes/api.php` |
+| `PATCH` | `/admin/api/business/storytellings/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/business/tags/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/configuration` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/cookies/bindings/{id}` | API administrative | `backend/routes/api.php` |
@@ -326,6 +349,10 @@ generated: true
 | `PATCH` | `/admin/api/security/webhooks/{id}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/taxonomies/{key}` | API administrative | `backend/routes/api.php` |
 | `PATCH` | `/admin/api/taxonomies/{key}/terms/{id}` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/accounting/accounts` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/categories` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/fiscal-periods` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
+| `POST` | `/admin/api/accounting/rules` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `POST` | `/admin/api/ai/editorial/test-generation` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `POST` | `/admin/api/ai/models` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
 | `POST` | `/admin/api/ai/provider-types` | API administrative | `backend/src/Modules/AiAssistant/AiAssistantModuleProvider.php` |
@@ -347,6 +374,7 @@ generated: true
 | `POST` | `/admin/api/business/catalog/brands` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/categories` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/discounts` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/catalog/discounts/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/import/apply` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/import/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/catalog/options` | API administrative | `backend/routes/api.php` |
@@ -362,6 +390,7 @@ generated: true
 | `POST` | `/admin/api/business/contacts/import.csv` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/contacts/{id}/archive` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/contacts/{id}/messages` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/form-links/{id}/decision` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/companies` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/contacts` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/import/relations` | API administrative | `backend/routes/api.php` |
@@ -400,17 +429,26 @@ generated: true
 | `POST` | `/admin/api/business/pim/products/{id}/assets` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/content-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/recalculate-completeness` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/products/{id}/relation-rules` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/products/{id}/relations` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/pim/storefront-blocks/preview` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/storefront-projections/rebuild` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/pim/tax-classes` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/archive` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/relations/{type}/{id}/form-address` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/memos` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/messages` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/restore` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/relations/{type}/{id}/summary` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/relations/{type}/{id}/tasks` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/reconcile` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/sale-activities/{id}/link` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/preview` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/{id}/members` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/segments/{id}/recalculate` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/business/storytellings` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tag-links` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/business/tags` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/capabilities/{key}/apply` | API administrative | `backend/routes/api.php` |
@@ -448,6 +486,8 @@ generated: true
 | `POST` | `/admin/api/maintenance/cache/clear` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/dependencies/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/maintenance/search/reindex` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/updates/stable/apply` | API administrative | `backend/routes/api.php` |
+| `POST` | `/admin/api/maintenance/updates/stable/refresh` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/folders` | API administrative | `backend/routes/api.php` |
 | `POST` | `/admin/api/media/{id}/attach` | API administrative | `backend/routes/api.php` |
@@ -473,6 +513,7 @@ generated: true
 | `POST` | `/api/v1/cookies/consent` | API publique | `backend/routes/api.php` |
 | `POST` | `/api/v1/forms/{key}/submit` | API publique | `backend/routes/api.php` |
 | `POST` | `/business/unsubscribe/{token:[A-Za-z0-9]+}` | HTML/runtime | `backend/routes/web.php` |
+| `PUT` | `/admin/api/accounting/fiscal-periods/{id}/opening-balances` | API administrative | `backend/src/Modules/Accounting/AccountingModuleProvider.php` |
 | `PUT` | `/admin/api/blueprints/{key}/design` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/products/{id}/base-prices` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/catalog/variants/{id}/price-adjustments` | API administrative | `backend/routes/api.php` |
@@ -480,5 +521,6 @@ generated: true
 | `PUT` | `/admin/api/business/pim/products/{id}/bundle` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/products/{id}/gift-card-policy` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/business/pim/variants/{id}/attributes` | API administrative | `backend/routes/api.php` |
+| `PUT` | `/admin/api/business/relations/{type}/{id}/roles` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/fieldsets/{key}` | API administrative | `backend/routes/api.php` |
 | `PUT` | `/admin/api/menus/{key}/items` | API administrative | `backend/routes/api.php` |

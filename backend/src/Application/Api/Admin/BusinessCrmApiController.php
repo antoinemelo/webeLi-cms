@@ -22,7 +22,9 @@ use App\Modules\Business\Services\BusinessConsentService;
 use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessMemoSharingService;
+use App\Modules\Business\Services\BusinessOperationsDashboardService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\BusinessSegmentationService;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Repository\AuthRepository;
 use App\Repository\SiteRepository;
@@ -52,6 +54,8 @@ final class BusinessCrmApiController
         private readonly BusinessRelationSummaryService $relationSummary,
         private readonly IamAdminRepository $iam,
         private readonly ?SaleCrmActivityProjectionService $saleActivities = null,
+        private readonly ?BusinessSegmentationService $segmentation = null,
+        private readonly ?BusinessOperationsDashboardService $operationsDashboard = null,
     ) {}
 
     public function schema(): Response
@@ -71,6 +75,9 @@ final class BusinessCrmApiController
                 'contact' => ['fields' => ['id', 'company_id', 'display_name', 'status', 'email', 'phone', 'mobile', 'tags', 'created_at', 'updated_at']],
                 'memo' => ['fields' => ['id', 'company_id', 'contact_id', 'title', 'body', 'visibility', 'created_at', 'updated_at']],
                 'activity' => ['fields' => ['id', 'kind', 'entity_type', 'entity_id', 'action', 'summary', 'channel', 'status', 'source_reference', 'created_at']],
+                'segment' => ['fields' => ['id', 'name', 'segment_kind', 'criterion', 'operator', 'value', 'rule_version', 'explanation', 'result_count', 'last_calculated_at']],
+                'consent_event' => ['fields' => ['id', 'contact_id', 'channel', 'purpose', 'scope_type', 'scope_id', 'consent_status', 'event_type', 'source', 'evidence', 'occurred_at']],
+                'contact_preference' => ['fields' => ['contact_id', 'preferred_channel', 'contact_window', 'do_not_contact', 'source']],
                 'message' => ['fields' => ['id', 'contact_id', 'channel', 'subject', 'status', 'created_at', 'sent_at']],
                 'product' => ['fields' => ['id', 'site_id', 'sku_base', 'name', 'slug', 'type', 'status', 'brand_id', 'category_id', 'tax_class_id', 'is_public', 'is_ecommerce_enabled', 'is_pos_enabled', 'is_catalogue_enabled', 'updated_at']],
                 'variant' => ['fields' => ['id', 'product_id', 'sku', 'barcode', 'name', 'status', 'stock_quantity', 'stock_reserved', 'track_stock', 'updated_at']],
@@ -100,6 +107,12 @@ final class BusinessCrmApiController
                 ['key' => 'sale_activities.unlinked', 'method' => 'GET', 'path' => '/admin/api/business/sale-activities/unlinked', 'permission' => 'business.crm.read'],
                 ['key' => 'sale_activities.link', 'method' => 'POST', 'path' => '/admin/api/business/sale-activities/{id}/link', 'permission' => 'business.crm.manage'],
                 ['key' => 'sale_activities.reconcile', 'method' => 'POST', 'path' => '/admin/api/business/sale-activities/reconcile', 'permission' => 'business.crm.manage'],
+                ['key' => 'segments.index', 'method' => 'GET', 'path' => '/admin/api/business/segments', 'permission' => 'business.segment.read'],
+                ['key' => 'segments.store', 'method' => 'POST', 'path' => '/admin/api/business/segments', 'permission' => 'business.segment.manage'],
+                ['key' => 'segments.preview', 'method' => 'POST', 'path' => '/admin/api/business/segments/preview', 'permission' => 'business.segment.read'],
+                ['key' => 'segments.recalculate', 'method' => 'POST', 'path' => '/admin/api/business/segments/{id}/recalculate', 'permission' => 'business.segment.manage'],
+                ['key' => 'contacts.consents', 'method' => 'GET', 'path' => '/admin/api/business/contacts/{id}/consents', 'permission' => 'business.consent.read'],
+                ['key' => 'contacts.consents.update', 'method' => 'PATCH', 'path' => '/admin/api/business/contacts/{id}/consents/{channel}', 'permission' => 'business.consent.manage'],
                 ['key' => 'relations.memos', 'method' => 'GET', 'path' => '/admin/api/business/relations/{type}/{id}/memos', 'permission' => 'business.memo.read'],
                 ['key' => 'relations.summary', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/summary', 'permission' => 'business.crm.read'],
                 ['key' => 'relations.restore', 'method' => 'POST', 'path' => '/admin/api/business/relations/{type}/{id}/restore', 'permission' => 'business.crm.manage'],
@@ -112,6 +125,10 @@ final class BusinessCrmApiController
             'permissions' => [
                 'business.crm.read',
                 'business.crm.manage',
+                'business.segment.read',
+                'business.segment.manage',
+                'business.consent.read',
+                'business.consent.manage',
                 'business.memo.read',
                 'business.memo.manage',
                 'business.memo.share',
@@ -167,6 +184,7 @@ final class BusinessCrmApiController
                 'has_phone' => $this->queryBool('has_phone'),
                 'missing_email_consent' => $this->queryBool('missing_email_consent'),
                 'linked_iam' => $this->queryBool('linked_iam'),
+                'view' => $this->queryString('view'),
                 'tag' => $this->queryString('tag'),
                 'updated_after' => $this->queryString('updated_after'),
                 'archived' => $this->queryString('archived'),
@@ -179,12 +197,18 @@ final class BusinessCrmApiController
 
     public function dashboard(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.read');
+        [$site, $languageCode] = $this->authorizeAny(['business.crm.read', 'business.catalog.read', 'business.segment.read', 'business.mailing.read']);
         $siteId = (int) $site['id'];
         $dashboard = $this->dashboard->dashboard($siteId, [
             'include_memos' => $this->auth->hasPermission('business.memo.read', $siteId),
             'include_messages' => $this->auth->hasPermission('business.messaging.send', $siteId) || $this->auth->hasPermission('business.messaging.admin', $siteId),
         ]);
+        $dashboard['actionable'] = $this->operationsDashboard?->actionable($siteId, [
+            'catalog' => $this->auth->hasPermission('business.catalog.read', $siteId),
+            'relations' => $this->auth->hasPermission('business.crm.read', $siteId),
+            'inventory' => $this->auth->hasPermission('business.catalog.read', $siteId),
+            'advanced' => $this->auth->hasPermission('business.advanced_tools.manage', $siteId),
+        ]) ?? ['tasks' => [], 'summary' => [], 'generated_at' => gmdate('c')];
         return Response::success($dashboard, 'admin.business.dashboard.v1', $this->meta($site, $languageCode));
     }
 
@@ -219,7 +243,11 @@ final class BusinessCrmApiController
         [$site, $languageCode] = $this->authorize('business.crm.read');
         try {
             $this->saleActivities?->consume((int) $site['id']);
-            $result = $this->activity->relationActivity((int) $site['id'], $type, $this->id($id), $this->limit(), $this->offset());
+            $result = $this->activity->relationActivity((int) $site['id'], $type, $this->id($id), $this->limit(), $this->offset(), [
+                'q' => $this->q(),
+                'kind' => $this->queryString('kind'),
+                'channel' => $this->queryString('channel'),
+            ]);
             return Response::success(['activity' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.relations.activity.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $e->getMessage() === 'business.relation_not_found' ? $this->notFound('Relation introuvable.', $id) : $this->validation($e);
@@ -259,11 +287,13 @@ final class BusinessCrmApiController
 
     public function reconcileSaleActivities(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        [$site, $languageCode] = $this->authorizeAdvanced('business.crm.manage');
         try {
             $payload = $this->payload();
             $projection = $this->saleActivities ?? throw new InvalidArgumentException('business.sale_activity_projection_unavailable');
-            $report = $projection->reconcile((int) $site['id'], $this->actorId(), ($payload['repair'] ?? true) !== false);
+            $report = ($payload['mode'] ?? 'reconcile') === 'rebuild'
+                ? $projection->rebuild((int) $site['id'], $this->actorId())
+                : $projection->reconcile((int) $site['id'], $this->actorId(), ($payload['repair'] ?? true) !== false);
             return Response::success(['reconciliation' => $report], 'admin.business.sale_activities.reconcile.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
@@ -1080,9 +1110,106 @@ final class BusinessCrmApiController
         }
     }
 
+    public function segments(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.read');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            return Response::success(['segments' => $service->list((int) $site['id']), 'criteria' => $service->criteria()], 'admin.business.segments.index.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function storeSegment(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.manage');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $segment = $service->create((int) $site['id'], $this->payload(), $this->actorId());
+            return Response::success(['segment' => $segment, 'message' => 'Segment créé.'], 'admin.business.segments.store.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function showSegment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.read');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $segmentId = $this->id($id);
+            $segments = array_values(array_filter($service->list((int) $site['id']), static fn(array $segment): bool => (int) $segment['id'] === $segmentId));
+            if ($segments === []) return $this->notFound('Segment introuvable.', $id);
+            return Response::success(['segment' => $segments[0], 'members' => $service->members((int) $site['id'], $segmentId)], 'admin.business.segments.show.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function updateSegment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.manage');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $segment = $service->update((int) $site['id'], $this->id($id), $this->payload(), $this->actorId());
+            return Response::success(['segment' => $segment, 'message' => 'Segment mis à jour.'], 'admin.business.segments.update.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function previewSegment(): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.read');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            return Response::success(['preview' => $service->preview((int) $site['id'], $this->payload())], 'admin.business.segments.preview.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function recalculateSegment(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.manage');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $payload = $this->payload();
+            $result = $service->recalculate((int) $site['id'], $this->id($id), (string) ($payload['mode'] ?? 'full') !== 'incremental');
+            return Response::success(['calculation' => $result, 'message' => 'Segment recalculé.'], 'admin.business.segments.recalculate.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function storeSegmentMember(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.manage');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $segment = $service->addManualMember((int) $site['id'], $this->id($id), $this->id($this->payload()['contact_id'] ?? 0), $this->actorId());
+            return Response::success(['segment' => $segment, 'message' => 'Contact ajouté au segment manuel.'], 'admin.business.segments.members.store.v1', $this->meta($site, $languageCode), 201);
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function deleteSegmentMember(string|int $id, string|int $contactId): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.segment.manage');
+        try {
+            $service = $this->segmentation ?? throw new InvalidArgumentException('business.segmentation_unavailable');
+            $service->removeManualMember((int) $site['id'], $this->id($id), $this->id($contactId));
+            return Response::success(['deleted' => true, 'message' => 'Contact retiré du segment manuel.'], 'admin.business.segments.members.delete.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
     public function contactConsents(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.read');
+        [$site, $languageCode] = $this->authorize('business.consent.read');
         $contactId = $this->id($id);
         if (!$this->contacts->find((int) $site['id'], $contactId, true)) {
             return $this->notFound('Contact introuvable.', $id);
@@ -1091,12 +1218,14 @@ final class BusinessCrmApiController
             'contact_id' => $contactId,
             'channels' => $this->consents->channels($contactId),
             'consents' => $this->consents->consentsForContact($contactId),
+            'history' => $this->consents->historyForContact($contactId),
+            'preference' => $this->consents->preferenceForContact((int) $site['id'], $contactId),
         ], 'admin.business.contacts.consents.index.v1', $this->meta($site, $languageCode));
     }
 
     public function consents(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.read');
+        [$site, $languageCode] = $this->authorize('business.consent.read');
         try {
             $result = $this->consents->list((int) $site['id'], $this->limit(), $this->offset(), $this->queryString('channel'), $this->queryString('status'));
             return Response::success(['consents' => $result['items'], 'pagination' => $this->pagination($result)], 'admin.business.consents.index.v1', $this->meta($site, $languageCode));
@@ -1107,7 +1236,7 @@ final class BusinessCrmApiController
 
     public function storeConsent(): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        [$site, $languageCode] = $this->authorize('business.consent.manage');
         try {
             $payload = $this->payload();
             $contactId = $this->id($payload['contact_id'] ?? 0);
@@ -1120,7 +1249,9 @@ final class BusinessCrmApiController
                 (string) ($payload['consent_status'] ?? $payload['status'] ?? 'unknown'),
                 (string) ($payload['source'] ?? 'manual'),
                 isset($payload['evidence']) ? (string) $payload['evidence'] : null,
-                $this->actorId()
+                $this->actorId(),
+                (string) ($payload['purpose'] ?? 'marketing'),
+                (int) ($payload['retention_days'] ?? 2190)
             );
             return Response::success(['consent' => $consent, 'message' => 'Consentement enregistré.'], 'admin.business.consents.store.v1', $this->meta($site, $languageCode), 201);
         } catch (InvalidArgumentException $e) {
@@ -1130,7 +1261,7 @@ final class BusinessCrmApiController
 
     public function updateConsent(string|int $id): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        [$site, $languageCode] = $this->authorize('business.consent.manage');
         try {
             $payload = $this->payload();
             $consent = $this->consents->updateById(
@@ -1139,7 +1270,9 @@ final class BusinessCrmApiController
                 (string) ($payload['consent_status'] ?? $payload['status'] ?? 'unknown'),
                 (string) ($payload['source'] ?? 'manual'),
                 isset($payload['evidence']) ? (string) $payload['evidence'] : null,
-                $this->actorId()
+                $this->actorId(),
+                (string) ($payload['purpose'] ?? 'marketing'),
+                (int) ($payload['retention_days'] ?? 2190)
             );
             if ($consent === null) {
                 return $this->notFound('Consentement introuvable.', $id);
@@ -1152,7 +1285,7 @@ final class BusinessCrmApiController
 
     public function updateContactConsent(string|int $id, string $channel): Response
     {
-        [$site, $languageCode] = $this->authorize('business.crm.manage');
+        [$site, $languageCode] = $this->authorize('business.consent.manage');
         $contactId = $this->id($id);
         if (!$this->contacts->find((int) $site['id'], $contactId, true)) {
             return $this->notFound('Contact introuvable.', $id);
@@ -1169,9 +1302,23 @@ final class BusinessCrmApiController
                 (string) ($payload['consent_status'] ?? $payload['status'] ?? 'unknown'),
                 (string) ($payload['source'] ?? 'manual'),
                 isset($payload['evidence']) ? (string) $payload['evidence'] : null,
-                $this->actorId()
+                $this->actorId(),
+                (string) ($payload['purpose'] ?? 'marketing'),
+                (int) ($payload['retention_days'] ?? 2190)
             );
             return Response::success(['channel' => $channelRow, 'consent' => $consent, 'message' => 'Consentement mis à jour.'], 'admin.business.contacts.consents.show.v1', $this->meta($site, $languageCode));
+        } catch (InvalidArgumentException $e) {
+            return $this->validation($e);
+        }
+    }
+
+    public function updateContactPreference(string|int $id): Response
+    {
+        [$site, $languageCode] = $this->authorize('business.consent.manage');
+        $contactId = $this->id($id);
+        try {
+            $preference = $this->consents->upsertPreference((int) $site['id'], $contactId, $this->payload(), $this->actorId());
+            return Response::success(['preference' => $preference, 'message' => 'Préférence de contact mise à jour.'], 'admin.business.contacts.preferences.show.v1', $this->meta($site, $languageCode));
         } catch (InvalidArgumentException $e) {
             return $this->validation($e);
         }
@@ -1184,6 +1331,26 @@ final class BusinessCrmApiController
         $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
         $this->authorization->require($permission, (int) $site['id']);
         return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @param list<string> $permissions @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAny(array $permissions): array
+    {
+        $this->auth->requireAuth();
+        $site = AdminApiContract::siteContext($this->request, $this->sites, isset($this->request->query['site_id']) ? (int) $this->request->query['site_id'] : null, $this->auth);
+        foreach ($permissions as $permission) {
+            if ($this->auth->hasPermission($permission, (int) $site['id'])) return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+        }
+        $this->authorization->require($permissions[0] ?? 'business.crm.read', (int) $site['id']);
+        return [$site, AdminApiContract::language($this->request, $this->sites, $site)];
+    }
+
+    /** @return array{0:array<string,mixed>,1:string} */
+    private function authorizeAdvanced(string $permission): array
+    {
+        [$site, $languageCode] = $this->authorize('business.advanced_tools.manage');
+        $this->authorization->require($permission, (int) $site['id']);
+        return [$site, $languageCode];
     }
 
     private function actorId(): int

@@ -8,7 +8,7 @@ pas être projetés dans cet index.
 Le script effectue aussi un balayage idempotent des snapshots publics pour
 supprimer les chemins médias absolus issus d'anciens seeds SQL. Après b0/b1/b2,
 les médias publiés doivent toujours être des URLs publiques, par exemple
-`/mod/storage/media/...`, jamais `/home/.../storage/media/...`.
+`/cms/storage/media/...`, jamais `/home/.../storage/media/...`.
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ SRCSET_KEYS = {"srcset", "image_srcset", "poster_srcset"}
 
 
 def expected_app_base_path(value: str | None) -> str:
-    raw = (value or os.getenv("APP_BASE_PATH") or "/mod").strip()
+    raw = (value or os.getenv("APP_BASE_PATH") or "/cms").strip()
     if raw in {"", "/"}:
         return ""
     return "/" + raw.strip("/")
@@ -104,7 +104,7 @@ def sanitize_srcset(value: str, app_base_path: str) -> str:
     return ", ".join(items)
 
 
-def sanitize_media_urls(value: Any, key: str = "", app_base_path: str = "/mod") -> Any:
+def sanitize_media_urls(value: Any, key: str = "", app_base_path: str = "/cms") -> Any:
     if isinstance(value, dict):
         return {str(k): sanitize_media_urls(v, str(k), app_base_path) for k, v in value.items()}
     if isinstance(value, list):
@@ -181,7 +181,7 @@ def cleanup_noindex_search_documents(con: sqlite3.Connection, dry_run: bool) -> 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Normalise les projections publiques post-seed.")
     parser.add_argument("--dry-run", action="store_true", help="Affiche ce qui serait corrigé sans modifier la base.")
-    parser.add_argument("--app-base-path", default=os.getenv("APP_BASE_PATH", "/mod"), help="Préfixe applicatif public attendu, par défaut: /mod.")
+    parser.add_argument("--app-base-path", default=os.getenv("APP_BASE_PATH", "/cms"), help="Préfixe applicatif public attendu, par défaut: /cms.")
     return parser.parse_args()
 
 

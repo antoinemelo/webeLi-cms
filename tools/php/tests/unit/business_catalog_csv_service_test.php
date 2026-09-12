@@ -163,7 +163,7 @@ try {
     ], 1);
     $h->assertSame(1, $overwrite['updated_products'], 'confirmed overwrite updates product');
     $updatedVariant = $db->one('SELECT * FROM business_product_variants WHERE sku = ?', ['IMPORT-V1']);
-    $h->assertSame(9.0, (float) ($updatedVariant['stock_quantity'] ?? 0), 'confirmed overwrite updates variant stock');
+    $h->assertSame(5.0, (float) ($updatedVariant['stock_quantity'] ?? 0), 'confirmed overwrite preserves deprecated Business bootstrap stock');
 
     $diffPreview = $csv->importProductsCsv(1, catalog_import_csv([
         'product_name' => 'Imported Product Updated',
@@ -176,8 +176,8 @@ try {
         'stock_quantity' => '10',
     ]), ['dry_run' => '1', 'create_options' => '1', 'overwrite_existing' => '1'], 1);
     $h->assertTrue(isset($diffPreview['rows'][0]['diff']['product']['base_sale_price']), 'preview explains product price diff before mutation');
-    $h->assertTrue(isset($diffPreview['rows'][0]['diff']['variant']['stock_quantity']), 'preview explains variant stock diff before mutation');
-    $h->assertSame(9.0, (float) ($db->one('SELECT stock_quantity FROM business_product_variants WHERE sku = ?', ['IMPORT-V1'])['stock_quantity'] ?? 0), 'dry-run diff leaves data unchanged');
+    $h->assertTrue(!isset($diffPreview['rows'][0]['diff']['variant']['stock_quantity']), 'preview excludes stock changes now owned by Sale');
+    $h->assertSame(5.0, (float) ($db->one('SELECT stock_quantity FROM business_product_variants WHERE sku = ?', ['IMPORT-V1'])['stock_quantity'] ?? 0), 'dry-run and overwrite leave bootstrap stock unchanged');
 
     $partial = catalog_import_rows([
         ['product_name' => 'Atomic Valid', 'product_slug' => 'atomic-valid', 'variant_sku' => 'ATOMIC-VALID', 'base_sale_price' => '10'],

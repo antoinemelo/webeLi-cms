@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "gate": "business.crm-segmentation-consents.m7.3.v1",
+  "status": "passed",
+  "segmentation": {"manual_separate": true, "calculated_separate": true, "configurable": true, "explainable": true, "rule_versioned": true, "calculation_dated": true, "full_recalculation": true, "incremental_recalculation": true, "anonymous_preview": true},
+  "dimensions": ["customer_type", "last_purchase_at", "order_count", "total_spent_minor", "primary_channel", "product_id", "category_id", "has_return", "gift_card_status"],
+  "source": {"projected_crm_activities_only": true, "sale_transaction_table_read": false, "controls_public_product_ranking": false},
+  "consent": {"marketing_separate": true, "contact_preference_separate": true, "transactional_necessity_separate": true, "account_creation_separate": true, "purchase_separate": true, "implicit_opt_in": false, "proof_visible": true, "source_visible": true, "date_visible": true, "scope_visible": true, "withdrawal_preserves_history": true},
+  "privacy": {"minimal_transaction_data": true, "configurable_retention": true, "prechecked_consent": false},
+  "chronology": {"origin": true, "channel": true, "order": true, "payment": true, "return": true, "consent": true, "account": true},
+  "experience": {"simple_builder": true, "criterion_operator_value": true, "count_preview": true, "zero_result": true, "advanced_collapsed": true, "permissions": true, "fr_en": true},
+  "fresh_instance": {"canonical_schema": true, "migration_required": false},
+  "evidence": {"service": "backend/src/Modules/Business/Services/BusinessSegmentationService.php", "consent_repository": "backend/src/Modules/Business/Repositories/BusinessConsentRepository.php", "schema": "database/modules/business.sql", "ui": "frontend/admin-vue/src/views/modules/business/BusinessSegmentsPanel.vue", "unit_test": "tools/php/tests/unit/business_segmentation_consent_test.php", "e2e": "frontend/admin-vue/tests/e2e/business-crm-smoke.spec.ts"}
+}

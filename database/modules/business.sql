@@ -70,6 +70,56 @@ CREATE INDEX IF NOT EXISTS idx_business_contacts_email ON business_contacts(site
 CREATE INDEX IF NOT EXISTS idx_business_contacts_mobile ON business_contacts(site_id, mobile);
 CREATE INDEX IF NOT EXISTS idx_business_contacts_archived ON business_contacts(archived_at);
 
+-- Relation 360 keeps business roles and follow-up actions in CRM. These rows
+-- do not duplicate Sale or Forms aggregates.
+CREATE TABLE IF NOT EXISTS business_relation_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL CHECK(relation_type IN ('contact','company')),
+    contact_id INTEGER,
+    company_id INTEGER,
+    role_key TEXT NOT NULL CHECK(role_key IN ('prospect','client','supplier','partner','other')),
+    source TEXT NOT NULL DEFAULT 'operator' CHECK(source IN ('operator','import','sale_projection','system')),
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(site_id, relation_type, contact_id, role_key),
+    UNIQUE(site_id, relation_type, company_id, role_key),
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(company_id) REFERENCES business_companies(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK((relation_type='contact' AND contact_id IS NOT NULL AND company_id IS NULL)
+       OR (relation_type='company' AND company_id IS NOT NULL AND contact_id IS NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_relation_roles_view
+    ON business_relation_roles(site_id, role_key, relation_type);
+
+CREATE TABLE IF NOT EXISTS business_relation_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL CHECK(relation_type IN ('contact','company')),
+    contact_id INTEGER,
+    company_id INTEGER,
+    title TEXT NOT NULL,
+    due_at TEXT,
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','completed','cancelled')),
+    priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high')),
+    assigned_to_iam_user_id INTEGER,
+    created_by_iam_user_id INTEGER,
+    completed_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT,
+    updated_at TEXT,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(company_id) REFERENCES business_companies(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK((relation_type='contact' AND contact_id IS NOT NULL AND company_id IS NULL)
+       OR (relation_type='company' AND company_id IS NOT NULL AND contact_id IS NULL)),
+    CHECK(trim(title)<>''),
+    CHECK(completed_at IS NULL OR status='completed')
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_relation_tasks_due
+    ON business_relation_tasks(site_id, status, due_at, id);
+
 CREATE TABLE IF NOT EXISTS business_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -421,7 +471,7 @@ CREATE INDEX IF NOT EXISTS idx_business_storefront_invalidations_pending ON busi
 CREATE TABLE IF NOT EXISTS business_inventory_availability_projections (
     sellable_id INTEGER PRIMARY KEY, site_id INTEGER NOT NULL, tracked INTEGER NOT NULL CHECK(tracked IN (0,1)),
     on_hand_quantity INTEGER NOT NULL, reserved_quantity INTEGER NOT NULL, available_quantity INTEGER NOT NULL,
-    availability_status TEXT NOT NULL CHECK(availability_status IN ('available','backorder','unavailable','not_tracked')),
+    availability_status TEXT NOT NULL CHECK(availability_status IN ('in_stock','deliverable','backorder','unavailable')),
     source_version INTEGER NOT NULL DEFAULT 0, projected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(sellable_id) REFERENCES business_sellables(sellable_id) ON DELETE CASCADE,
     CHECK(site_id>0), CHECK(available_quantity=on_hand_quantity-reserved_quantity)
@@ -564,6 +614,11 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     bundle_variant_id INTEGER,
     pricing_mode TEXT NOT NULL DEFAULT 'fixed' CHECK(pricing_mode IN ('fixed','sum_components','discount_components')),
     stock_mode TEXT NOT NULL DEFAULT 'components' CHECK(stock_mode IN ('components','virtual','none')),
+    stock_strategy TEXT NOT NULL DEFAULT 'COMPONENT_DERIVED' CHECK(stock_strategy IN ('OWN_STOCK','COMPONENT_DERIVED','NON_STOCKED')),
+    partial_availability_policy TEXT NOT NULL DEFAULT 'REQUIRE_ALL' CHECK(partial_availability_policy IN ('REQUIRE_ALL','ALLOW_PARTIAL')),
+    partial_fulfillment_supported INTEGER NOT NULL DEFAULT 0 CHECK(partial_fulfillment_supported IN (0,1)),
+    component_return_policy TEXT NOT NULL DEFAULT 'BUNDLE_ONLY' CHECK(component_return_policy IN ('BUNDLE_ONLY','COMPONENTS_ALLOWED')),
+    components_public INTEGER NOT NULL DEFAULT 1 CHECK(components_public IN (0,1)),
     composition_type TEXT NOT NULL DEFAULT 'bundle' CHECK(composition_type IN ('bundle','kit')),
     unavailable_strategy TEXT NOT NULL DEFAULT 'reject' CHECK(unavailable_strategy IN ('reject','backorder','contact')),
     is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
@@ -576,7 +631,9 @@ CREATE TABLE IF NOT EXISTS business_product_bundles (
     FOREIGN KEY(bundle_variant_id) REFERENCES business_product_variants(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK(site_id > 0),
     CHECK(bundle_product_id > 0),
-    CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0)
+    CHECK(bundle_variant_id IS NULL OR bundle_variant_id > 0),
+    CHECK((stock_strategy='OWN_STOCK' AND stock_mode='virtual') OR (stock_strategy='COMPONENT_DERIVED' AND stock_mode='components') OR (stock_strategy='NON_STOCKED' AND stock_mode='none')),
+    CHECK(partial_availability_policy<>'ALLOW_PARTIAL' OR partial_fulfillment_supported=1)
 );
 
 CREATE TABLE IF NOT EXISTS business_gift_card_policies (
@@ -632,6 +689,14 @@ CREATE TABLE IF NOT EXISTS business_stock_movements (
     CHECK(quantity <> 0),
     CHECK(reference_type IS NULL OR trim(reference_type) <> '')
 );
+
+CREATE TRIGGER IF NOT EXISTS trg_business_stock_movements_no_update
+BEFORE UPDATE ON business_stock_movements
+BEGIN SELECT RAISE(ABORT, 'business stock movements are immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS trg_business_stock_movements_no_delete
+BEFORE DELETE ON business_stock_movements
+BEGIN SELECT RAISE(ABORT, 'business stock movements are immutable'); END;
 
 CREATE TABLE IF NOT EXISTS business_product_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1026,7 +1091,7 @@ CREATE TABLE IF NOT EXISTS business_product_relations (
     site_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
     related_product_id INTEGER NOT NULL,
-    relation_type TEXT NOT NULL CHECK(relation_type IN ('accessory','alternative','bundle_candidate','replacement','upsell','cross_sell','similar')),
+    relation_type TEXT NOT NULL CHECK(relation_type IN ('related','accessory','alternative','bundle_candidate','replacement','upsell','cross_sell','similar')),
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -1042,6 +1107,25 @@ CREATE INDEX IF NOT EXISTS idx_business_product_relations_product
     ON business_product_relations(site_id, product_id, relation_type, sort_order);
 CREATE INDEX IF NOT EXISTS idx_business_product_relations_related
     ON business_product_relations(site_id, related_product_id, relation_type);
+
+CREATE TABLE IF NOT EXISTS business_product_relation_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    relation_type TEXT NOT NULL CHECK(relation_type IN ('related','accessory','alternative','upsell','cross_sell')),
+    match_type TEXT NOT NULL CHECK(match_type IN ('category','group')),
+    match_id INTEGER NOT NULL,
+    result_limit INTEGER NOT NULL DEFAULT 6 CHECK(result_limit BETWEEN 1 AND 24),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(product_id) REFERENCES business_products(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id,product_id,relation_type,match_type,match_id),
+    CHECK(site_id > 0), CHECK(product_id > 0), CHECK(match_id > 0)
+);
+CREATE INDEX IF NOT EXISTS idx_business_product_relation_rules_product
+    ON business_product_relation_rules(site_id,product_id,is_active,sort_order,id);
 
 CREATE INDEX IF NOT EXISTS idx_business_product_tags_site ON business_product_tags(site_id, archived_at, slug);
 
@@ -1486,6 +1570,107 @@ CREATE TABLE IF NOT EXISTS crm_consents (
 CREATE INDEX IF NOT EXISTS idx_crm_consents_channel_status ON crm_consents(channel, consent_status);
 CREATE INDEX IF NOT EXISTS idx_crm_consents_contact ON crm_consents(contact_id);
 
+-- Marketing consent is deliberately distinct from contact preferences,
+-- transactional necessity, account creation and purchases. The current state
+-- remains convenient to query in crm_consents while this ledger is append-only.
+CREATE TABLE IF NOT EXISTS crm_consent_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    consent_id INTEGER,
+    site_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    channel TEXT NOT NULL CHECK(channel IN ('email','whatsapp','telegram')),
+    purpose TEXT NOT NULL DEFAULT 'marketing' CHECK(purpose = 'marketing'),
+    scope_type TEXT NOT NULL DEFAULT 'site' CHECK(scope_type = 'site'),
+    scope_id INTEGER NOT NULL,
+    consent_status TEXT NOT NULL CHECK(consent_status IN ('unknown','opt_in','opt_out')),
+    event_type TEXT NOT NULL CHECK(event_type IN ('recorded','granted','withdrawn')),
+    source TEXT NOT NULL CHECK(source IN ('manual','form','import','unsubscribe','api')),
+    evidence TEXT,
+    proof_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(proof_json)),
+    occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retention_until TEXT,
+    actor_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(consent_id) REFERENCES crm_consents(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CHECK(site_id > 0 AND scope_id = site_id),
+    CHECK((consent_status = 'opt_in' AND event_type = 'granted')
+       OR (consent_status = 'opt_out' AND event_type = 'withdrawn')
+       OR (consent_status = 'unknown' AND event_type = 'recorded'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_consent_events_contact ON crm_consent_events(site_id, contact_id, occurred_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_consent_events_retention ON crm_consent_events(retention_until);
+
+CREATE TABLE IF NOT EXISTS crm_contact_preferences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    preferred_channel TEXT CHECK(preferred_channel IS NULL OR preferred_channel IN ('email','whatsapp','telegram')),
+    contact_window TEXT,
+    do_not_contact INTEGER NOT NULL DEFAULT 0 CHECK(do_not_contact IN (0,1)),
+    source TEXT NOT NULL DEFAULT 'manual' CHECK(source IN ('manual','form','import','api')),
+    note TEXT,
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(site_id, contact_id),
+    CHECK(site_id > 0),
+    CHECK(contact_window IS NULL OR length(contact_window) <= 120),
+    CHECK(note IS NULL OR length(note) <= 500)
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_contact_preferences_channel ON crm_contact_preferences(site_id, preferred_channel, do_not_contact);
+
+CREATE TABLE IF NOT EXISTS crm_segments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    segment_kind TEXT NOT NULL CHECK(segment_kind IN ('calculated','manual')),
+    criterion TEXT,
+    operator TEXT,
+    value_json TEXT NOT NULL DEFAULT 'null' CHECK(json_valid(value_json)),
+    rule_version INTEGER NOT NULL DEFAULT 1 CHECK(rule_version > 0),
+    explanation TEXT NOT NULL DEFAULT '',
+    advanced_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(advanced_json)),
+    retention_days INTEGER NOT NULL DEFAULT 730 CHECK(retention_days BETWEEN 30 AND 3650),
+    result_count INTEGER NOT NULL DEFAULT 0 CHECK(result_count >= 0),
+    last_source_activity_id INTEGER NOT NULL DEFAULT 0 CHECK(last_source_activity_id >= 0),
+    last_calculated_at TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived')),
+    created_by_iam_user_id INTEGER,
+    updated_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    archived_at TEXT,
+    UNIQUE(site_id, name),
+    CHECK(site_id > 0 AND trim(name) <> ''),
+    CHECK((segment_kind = 'manual' AND criterion IS NULL AND operator IS NULL)
+       OR (segment_kind = 'calculated' AND trim(criterion) <> '' AND trim(operator) <> ''))
+);
+
+CREATE TABLE IF NOT EXISTS crm_segment_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL,
+    contact_id INTEGER NOT NULL,
+    membership_kind TEXT NOT NULL CHECK(membership_kind IN ('calculated','manual')),
+    rule_version INTEGER NOT NULL CHECK(rule_version > 0),
+    explanation_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(explanation_json)),
+    matched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT,
+    created_by_iam_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(segment_id, contact_id),
+    FOREIGN KEY(segment_id) REFERENCES crm_segments(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(contact_id) REFERENCES business_contacts(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_segments_site_kind ON crm_segments(site_id, segment_kind, status, name);
+CREATE INDEX IF NOT EXISTS idx_crm_segment_members_contact ON crm_segment_members(contact_id, expires_at);
+
 CREATE TABLE IF NOT EXISTS crm_mailing_lists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     site_id INTEGER NOT NULL,
@@ -1705,23 +1890,30 @@ CREATE INDEX IF NOT EXISTS idx_business_activity_entity ON business_activity_log
 -- customer or order snapshots back into the Sale database.
 CREATE TABLE IF NOT EXISTS crm_sale_activities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dto_version INTEGER NOT NULL DEFAULT 1 CHECK(dto_version = 1),
+    dto_version INTEGER NOT NULL DEFAULT 2 CHECK(dto_version = 2),
+    contract_version TEXT NOT NULL DEFAULT 'crm.activity.v2' CHECK(contract_version = 'crm.activity.v2'),
     site_id INTEGER NOT NULL,
     activity_type TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
     channel TEXT NOT NULL CHECK(channel IN ('web','pos','admin','unknown')),
+    channel_id INTEGER,
+    language_code TEXT,
     related_company_id INTEGER,
     related_contact_id INTEGER,
-    source_event_id INTEGER NOT NULL UNIQUE,
+    source_event_id INTEGER NOT NULL,
     source_outbox_id INTEGER NOT NULL,
+    source_type TEXT NOT NULL DEFAULT 'sale_event',
+    source_id TEXT NOT NULL,
     source_event_type TEXT NOT NULL,
     source_aggregate_type TEXT NOT NULL,
     source_aggregate_id INTEGER NOT NULL,
     source_reference TEXT,
     summary TEXT NOT NULL,
     status TEXT NOT NULL,
-    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_order','iam_account_link','manual','anonymous')),
+    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit_event','event_correlation','manual','pending')),
+    provenance_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(provenance_json)),
     metadata_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+    retention_until TEXT,
     linked_by_iam_user_id INTEGER,
     linked_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1732,14 +1924,72 @@ CREATE TABLE IF NOT EXISTS crm_sale_activities (
     CHECK(source_aggregate_id > 0),
     CHECK(trim(activity_type) <> ''),
     CHECK(trim(summary) <> ''),
-    CHECK((resolution_strategy = 'anonymous' AND related_company_id IS NULL AND related_contact_id IS NULL)
-       OR resolution_strategy <> 'anonymous')
+    UNIQUE(source_type, source_id, contract_version),
+    CHECK((resolution_strategy = 'pending' AND related_company_id IS NULL AND related_contact_id IS NULL)
+       OR resolution_strategy <> 'pending')
 );
 
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_contact ON crm_sale_activities(site_id, related_contact_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_company ON crm_sale_activities(site_id, related_company_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'anonymous';
+CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_unlinked ON crm_sale_activities(site_id, occurred_at DESC) WHERE resolution_strategy = 'pending';
 CREATE INDEX IF NOT EXISTS idx_crm_sale_activities_source ON crm_sale_activities(source_event_type, source_aggregate_type, source_aggregate_id);
+
+-- Rebuildable, privacy-minimised read model fed by the Forms port. The form
+-- submission remains canonical in the Forms database; payloads are never
+-- copied here.
+CREATE TABLE IF NOT EXISTS crm_form_submission_activities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contract_version TEXT NOT NULL DEFAULT 'crm.form_activity.v1',
+    site_id INTEGER NOT NULL,
+    form_id INTEGER NOT NULL,
+    form_key TEXT NOT NULL,
+    form_name TEXT,
+    submission_id INTEGER NOT NULL,
+    submission_status TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    related_company_id INTEGER,
+    related_contact_id INTEGER,
+    resolution_strategy TEXT NOT NULL CHECK(resolution_strategy IN ('explicit','verified_email','manual','pending','dismissed','postponed')),
+    resolution_evidence_json TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(resolution_evidence_json)),
+    candidate_count INTEGER NOT NULL DEFAULT 0 CHECK(candidate_count>=0),
+    safe_summary TEXT NOT NULL,
+    retention_until TEXT,
+    linked_by_iam_user_id INTEGER,
+    linked_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT,
+    UNIQUE(site_id, form_id, submission_id, contract_version),
+    CHECK(site_id>0 AND form_id>0 AND submission_id>0),
+    CHECK((resolution_strategy='pending' AND related_company_id IS NULL AND related_contact_id IS NULL)
+       OR resolution_strategy<>'pending')
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_form_activity_relation_contact
+    ON crm_form_submission_activities(site_id, related_contact_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_form_activity_relation_company
+    ON crm_form_submission_activities(site_id, related_company_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_form_activity_pending
+    ON crm_form_submission_activities(site_id, occurred_at DESC) WHERE resolution_strategy='pending';
+
+CREATE TABLE IF NOT EXISTS crm_form_submission_link_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    activity_id INTEGER NOT NULL,
+    previous_company_id INTEGER,
+    previous_contact_id INTEGER,
+    company_id INTEGER,
+    contact_id INTEGER,
+    decision TEXT NOT NULL CHECK(decision IN ('link','unlink','postpone')),
+    reason TEXT NOT NULL,
+    decided_by_iam_user_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(activity_id) REFERENCES crm_form_submission_activities(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CHECK(trim(reason)<>'' AND decided_by_iam_user_id>0)
+);
+
+CREATE TRIGGER IF NOT EXISTS trg_crm_form_link_audit_no_update
+BEFORE UPDATE ON crm_form_submission_link_audit BEGIN SELECT RAISE(ABORT, 'CRM form link audit is immutable'); END;
+CREATE TRIGGER IF NOT EXISTS trg_crm_form_link_audit_no_delete
+BEFORE DELETE ON crm_form_submission_link_audit BEGIN SELECT RAISE(ABORT, 'CRM form link audit is immutable'); END;
 
 CREATE TABLE IF NOT EXISTS crm_sale_activity_link_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1835,6 +2085,10 @@ CREATE TRIGGER IF NOT EXISTS trg_business_sellable_variant_update AFTER UPDATE O
 END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation AFTER INSERT ON business_product_assets BEGIN
  INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'media' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation_update AFTER UPDATE ON business_product_assets BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,NEW.product_id,'media' FROM business_products p WHERE p.id=NEW.product_id; END;
+CREATE TRIGGER IF NOT EXISTS trg_storefront_asset_invalidation_delete AFTER DELETE ON business_product_assets BEGIN
+ INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) SELECT p.site_id,OLD.product_id,'media' FROM business_products p WHERE p.id=OLD.product_id; END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_visibility_invalidation_update AFTER UPDATE ON business_product_channel_visibility BEGIN
  INSERT INTO business_storefront_projection_invalidations(site_id,product_id,reason) VALUES(NEW.site_id,NEW.product_id,'visibility'); END;
 CREATE TRIGGER IF NOT EXISTS trg_storefront_price_invalidation_delete AFTER DELETE ON business_product_base_prices BEGIN

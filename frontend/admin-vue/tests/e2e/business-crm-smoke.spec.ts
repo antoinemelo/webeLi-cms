@@ -71,6 +71,18 @@ async function postJson<T>(page: Page, path: string, csrfToken: string, data: Re
   return payload.data;
 }
 
+async function patchJson<T>(page: Page, path: string, csrfToken: string, data: Record<string, unknown>, contract: string, label: string): Promise<T> {
+  const payload = await jsonEnvelope<T>(
+    await page.request.patch(cmsPath(path), {
+      headers: adminHeaders(csrfToken),
+      data: { data },
+    }),
+    contract,
+    label,
+  );
+  return payload.data;
+}
+
 async function getJson<T>(page: Page, path: string): Promise<T> {
   const response = await page.request.get(cmsPath(path));
   expect(response.ok(), `${path} returned ${response.status()}`).toBeTruthy();
@@ -115,7 +127,13 @@ async function openRelations(page: Page): Promise<void> {
     const url = new URL(response.url());
     return url.pathname.endsWith('/admin/api/business/relations');
   }, { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Relations' }).click();
+  const mobileNavigation = page.getByRole('combobox', { name: 'Navigation principale Opérations' });
+  if ((page.viewportSize()?.width ?? 1280) <= 680) {
+    await mobileNavigation.waitFor({ state: 'visible' });
+    await mobileNavigation.selectOption('/business/relations');
+  } else {
+    await page.getByRole('link', { name: 'Relations', exact: true }).click();
+  }
   expect((await responsePromise).ok(), 'Initial relations request succeeds').toBeTruthy();
   await expect(page.getByText('Chargement des relations...')).toBeHidden();
 }
@@ -174,17 +192,36 @@ async function createCrmFixture(page: Page): Promise<CrmFixture> {
 
 test.describe('business CRM UX smoke', () => {
   test.skip(!hasDedicatedEnvironment, 'Dedicated E2E_BASE_URL, E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD are required');
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
 
   test.beforeEach(async ({ page }) => {
     await signIn(page);
   });
 
   test('covers relations, memo, message and consent entry points without public CRM headless exposure', async ({ page }) => {
-    const { stamp, companyName, companyEmail, contactName, contactEmail, contactId } = await createCrmFixture(page);
+    const { context, stamp, companyName, companyEmail, contactName, contactEmail, contactId } = await createCrmFixture(page);
+    const siteQuery = `site_id=${context.data.site.id}`;
+    await patchJson(page, `/admin/api/business/contacts/${contactId}/consents/email?${siteQuery}`, context.data.csrf_token, {
+      value: contactEmail,
+      consent_status: 'opt_in',
+      source: 'manual',
+      evidence: 'Preuve explicite gate M7.4',
+      is_primary: true,
+      is_verified: true,
+      purpose: 'marketing',
+    }, 'admin.business.contacts.consents.show.v1', 'consent opt-in provenance');
+    await patchJson(page, `/admin/api/business/contacts/${contactId}/consents/email?${siteQuery}`, context.data.csrf_token, {
+      value: contactEmail,
+      consent_status: 'opt_out',
+      source: 'manual',
+      evidence: 'Retrait demandé lors de la gate M7.4',
+      is_primary: true,
+      is_verified: true,
+      purpose: 'marketing',
+    }, 'admin.business.contacts.consents.show.v1', 'consent withdrawal provenance');
 
     await page.goto(cmsPath('/admin/app/business'));
-    await expect(page.getByRole('button', { name: 'Relations' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Relations', exact: true })).toBeVisible();
     await openRelations(page);
 
     await expect(page.getByRole('heading', { name: 'Relations' })).toBeVisible();
@@ -238,6 +275,16 @@ test.describe('business CRM UX smoke', () => {
     await expect(relationModal.getByLabel('Email')).toHaveValue(contactEmail);
     await closeBusinessModal(page);
 
+    const viewContactRow = page.locator('.relations-table tbody tr').filter({ hasText: contactName }).first();
+    await viewContactRow.getByRole('button', { name: `Voir ${contactName}` }).click();
+    await expect(relationModal.getByLabel('Rechercher')).toBeVisible({ timeout: 60_000 });
+    await expect(relationModal.getByLabel('Type')).toBeVisible();
+    await expect(relationModal.getByLabel('Canal')).toBeVisible();
+    await relationModal.getByLabel('Rechercher').fill('activité absente e2e');
+    await expect(relationModal.getByText('Aucune activité ne correspond aux filtres.')).toBeVisible();
+    await relationModal.getByLabel('Rechercher').fill('');
+    await closeBusinessModal(page);
+
     await freshContactRow.getByRole('button', { name: `Ajouter un mémo pour ${contactName}` }).click();
     await expect(relationModal.getByRole('heading', { name: 'Nouveau mémo' })).toBeVisible();
     await expect(relationModal.getByLabel('Contact')).toHaveValue(String(contactId));
@@ -254,6 +301,9 @@ test.describe('business CRM UX smoke', () => {
     await openRelationRowMenu(afterMessageRow);
     await relationRowMenuButton(afterMessageRow, 'Consentement').click();
     await expect(relationModal.getByRole('heading', { name: 'Consentements', level: 2 })).toBeVisible();
+    await expect(relationModal.getByText('Retrait demandé lors de la gate M7.4')).toBeVisible();
+    await expect(relationModal.getByText(/marketing · site:.* · manual/).first()).toBeVisible();
+    await expect(relationModal.getByText('Preuve explicite gate M7.4')).toBeVisible();
     await closeBusinessModal(page);
 
     const users = await getJson<{ data: { users: Array<{ id: number; email?: string }> } }>(page, '/admin/api/business/iam/available-users?include_assigned=true');
@@ -285,5 +335,37 @@ test.describe('business CRM UX smoke', () => {
 
     const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
     expect(horizontalOverflow, 'mobile CRM viewport has no page-level horizontal overflow').toBeFalsy();
+  });
+
+  test('creates an explainable audience, handles an empty rule and stays localized FR/EN', async ({ page }) => {
+    test.setTimeout(120_000);
+    const context = await jsonEnvelope<AdminContextData>(await page.request.get(cmsPath('/admin/api/context')), 'admin.context.v1', 'admin context');
+    expect(context.data.capabilities['business.segment.read']).toBeTruthy();
+    expect(context.data.capabilities['business.segment.manage']).toBeTruthy();
+    await page.goto(cmsPath('/admin/app/business/offers-marketing'));
+    await page.getByRole('link', { name: 'Audiences' }).click();
+    const panel = page.getByTestId('crm-segments-panel');
+    await expect(panel.getByRole('heading', { name: 'Audiences' })).toBeVisible();
+
+    await panel.getByRole('button', { name: 'Aperçu' }).click();
+    await expect(panel).toContainText('Choisissez un critère, un opérateur et une valeur.');
+    await panel.getByLabel('Nom de l’audience').fill(`E2E Audience ${Date.now()}`);
+    await panel.getByLabel('Critère').selectOption('product_id');
+    await panel.getByLabel('Opérateur').selectOption('contains');
+    await panel.getByLabel('Valeur').fill('999999999');
+    await panel.getByRole('button', { name: 'Aperçu' }).click();
+    await expect(page.getByTestId('segment-preview')).toContainText('Aucun contact ne correspond à cette règle.', { timeout: 60_000 });
+    const recalculation = page.waitForResponse(
+      (response) => response.request().method() === 'POST' && /\/admin\/api\/business\/segments\/\d+\/recalculate(?:\?|$)/.test(response.url()),
+      { timeout: 60_000 },
+    );
+    await panel.getByRole('button', { name: 'Créer l’audience' }).click();
+    expect((await recalculation).ok()).toBeTruthy();
+    await expect(page.getByTestId('segment-card').filter({ hasText: 'E2E Audience' }).first()).toBeVisible({ timeout: 60_000 });
+
+    await page.evaluate(() => localStorage.setItem('amcms.admin.uiLanguage', 'en'));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Audiences' })).toBeVisible();
+    await expect(page.getByText(/never constitutes marketing consent/i)).toBeVisible();
   });
 });

@@ -372,11 +372,26 @@ final class DependencyInventoryService
         return array_key_exists($name, $requires);
     }
 
+    /** @return list<string> */
+    private function vendorRoots(): array
+    {
+        if (function_exists('cms_vendor_roots')) {
+            return cms_vendor_roots();
+        }
+        return array_values(array_unique([
+            base_path('backend/vendor'),
+            base_path('vendor'),
+            base_path('../vendor'),
+            base_path('../cms/vendor'),
+            base_path('../../vendor'),
+        ]));
+    }
+
     /** @return array<string,array<string,mixed>> */
     private function composerInstalledPackages(): array
     {
         $this->composerVendorRoot = '';
-        foreach ([base_path('backend/vendor'), base_path('vendor'), base_path('../vendor')] as $vendorRoot) {
+        foreach ($this->vendorRoots() as $vendorRoot) {
             if (is_file($vendorRoot . '/composer/installed.json')) {
                 $this->composerVendorRoot = $vendorRoot;
                 break;
@@ -413,7 +428,8 @@ final class DependencyInventoryService
                 return $this->normalizeAbsolutePath($twigPath);
             }
         }
-        foreach ([base_path('backend/vendor/' . $name), base_path('vendor/' . $name), base_path('../vendor/' . $name)] as $candidate) {
+        foreach ($this->vendorRoots() as $vendorRoot) {
+            $candidate = $vendorRoot . '/' . $name;
             if (is_dir($candidate)) {
                 return $this->normalizeAbsolutePath($candidate);
             }
@@ -478,11 +494,15 @@ final class DependencyInventoryService
         $twigConfigured = (string) ($this->appConfig['twig_vendor_path'] ?? base_path('vendor/twig'));
         $nodeConfigured = (string) ($this->appConfig['vue_node_modules_path'] ?? base_path('vendor/node_modules'));
         $twigRuntime = $this->twigRuntimePath((string) ($twigPackage['path'] ?? ''), $twigConfigured);
+        $namedCmsVendor = function_exists('cms_named_shared_vendor_root') ? cms_named_shared_vendor_root() : base_path('../cms/vendor');
+        $grandparentVendor = dirname(base_path(), 2) . '/vendor';
 
         return [
             $this->pathRow('backend_vendor', 'Vendor PHP backend', base_path('backend/vendor'), is_file(base_path('backend/vendor/autoload.php')), 'Autoload Composer principal.'),
             $this->pathRow('root_vendor', 'Vendor PHP racine', base_path('vendor'), is_file(base_path('vendor/autoload.php')), 'Vendor partagé optionnel.'),
             $this->pathRow('parent_vendor', 'Vendor PHP parent', base_path('../vendor'), is_file(base_path('../vendor/autoload.php')), 'Fallback runtime ../vendor.'),
+            $this->pathRow('named_cms_vendor', 'Vendor PHP cms partagé', $namedCmsVendor, is_file($namedCmsVendor . '/autoload.php'), 'Fallback conventionnel cms/vendor depuis la racine web.'),
+            $this->pathRow('grandparent_vendor', 'Vendor PHP grand-parent', $grandparentVendor, is_file($grandparentVendor . '/autoload.php'), 'Fallback runtime deux niveaux au-dessus de l’instance.'),
             $this->pathRow('twig_runtime', 'Twig runtime', $twigRuntime, is_dir($twigRuntime), 'Chemin Twig effectivement résolu.'),
             $this->pathRow('twig_configured', 'Twig configuré', $twigConfigured, is_dir($twigConfigured), 'APP_TWIG_VENDOR_PATH ou valeur par défaut.'),
             $this->pathRow('admin_node_modules', 'node_modules admin', base_path('frontend/admin-vue/node_modules'), is_dir(base_path('frontend/admin-vue/node_modules')), 'Dépendances utilisées pour compiler le back-office.'),
@@ -495,16 +515,17 @@ final class DependencyInventoryService
 
     private function twigRuntimePath(string $composerPath, string $configuredPath): string
     {
-        foreach ([
+        $candidates = [
             $composerPath,
             $configuredPath,
             $configuredPath . '/twig',
             $configuredPath . '/twig/twig',
-            base_path('vendor/twig'),
-            base_path('vendor/twig/twig'),
-            base_path('../vendor/twig'),
-            base_path('../vendor/twig/twig'),
-        ] as $candidate) {
+        ];
+        foreach ($this->vendorRoots() as $vendorRoot) {
+            $candidates[] = $vendorRoot . '/twig';
+            $candidates[] = $vendorRoot . '/twig/twig';
+        }
+        foreach ($candidates as $candidate) {
             $candidate = rtrim((string) $candidate, DIRECTORY_SEPARATOR . '/');
             if ($candidate !== '' && is_file($candidate . '/src/Environment.php')) {
                 return $candidate;

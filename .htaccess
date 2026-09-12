@@ -14,7 +14,7 @@ RewriteRule (^|/)\.(?:env|git|svn|hg) - [F,L]
 # Documentation publique headless : passer par le front controller.
 # IMPORTANT : ces règles doivent être placées AVANT le blocage générique des fichiers .json/.yaml.
 # Les deux règles avec préfixe autorisent aussi les sous-sites montés sous le base path
-# de l'installation, par exemple /mod/site-b/docs/public-api/openapi.v1.json.
+# de l'installation, par exemple /cms/site-b/docs/public-api/openapi.v1.json.
 RewriteRule ^docs/public-api/?$ index.php [QSA,L]
 RewriteRule ^docs/public-api/(index\.html|openapi\.v1\.json|openapi\.v1\.yaml|quickstart\.md|authentication\.md|errors\.md|examples\.md)$ index.php [QSA,L]
 RewriteRule ^(?:[^/]+/)*docs/public-api/?$ index.php [QSA,L]

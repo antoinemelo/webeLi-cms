@@ -11,7 +11,18 @@ class CharacterizationBaseline(unittest.TestCase):
  @classmethod
  def tearDownClass(cls): cls.con.close()
  def tables(self): return {r[0] for r in self.con.execute("select name from sqlite_master where type='table'")}
- def test_system_sqlite_databases_exist(self): self.assertEqual({'core.sqlite','iam.sqlite','forms.sqlite','cookies.sqlite','ai.sqlite','business.sqlite','sale.sqlite'},{p.name for p in (ROOT/'storage/database').glob('*.sqlite')})
+ def declared_system_databases(self):
+  expected={'core.sqlite','iam.sqlite','cookies.sqlite'}
+  for manifest_path in sorted((ROOT/'backend/src/Modules').glob('*/module.json')):
+   manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+   if manifest.get('type')!='system' or manifest.get('enabled_by_default') is not True: continue
+   for database in manifest.get('databases',[]):
+    relative=Path(str(database.get('path','')))
+    if relative.parent==Path('storage/database') and relative.suffix=='.sqlite': expected.add(relative.name)
+  return expected
+ def test_system_sqlite_databases_exist(self):
+  actual={p.name for p in (ROOT/'storage/database').glob('*.sqlite')}
+  self.assertEqual(self.declared_system_databases(),actual)
  def test_blueprint_representations_are_converged(self):
   forbidden='schema_'+'blueprints'; self.assertNotIn(forbidden,self.tables())
   self.assertTrue({'blueprints','blueprint_versions','blueprint_sections','blueprint_fields','schema_field_types','content_types','fields'}.issubset(self.tables()))

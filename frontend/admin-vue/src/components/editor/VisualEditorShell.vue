@@ -84,7 +84,7 @@ const buttonTargetOptions = [
 
 const viewportMode = computed(() => props.viewport || 'desktop');
 const frameWidth = computed(() => viewportMode.value === 'mobile' ? '390px' : viewportMode.value === 'tablet' ? '768px' : '100%');
-const frameHeightCss = computed(() => `${Math.max(320, Math.min(frameHeight.value, 12000))}px`);
+const frameHeightCss = computed(() => `${Math.max(320, Math.ceil(frameHeight.value))}px`);
 const fields = computed(() => map.value?.fields ?? []);
 const mapBlocks = computed(() => map.value?.blocks ?? []);
 const blockFields = computed(() => selected.value?.block_id ? fields.value.filter((field) => field.block_id === selected.value?.block_id && field.field_path !== 'enabled') : []);
@@ -690,7 +690,7 @@ watch(viewportMode, () => { setTimeout(requestFrameSize, 80); });
       <div class="visual-preview-stage" :style="{ background: previewChromeColor }">
         <div class="visual-preview-frame" :style="{ width: frameWidth }">
           <div v-if="loading || navigating" class="visual-preview-loading">{{ navigating ? 'Ouverture du lien dans l’éditeur visuel…' : 'Chargement de la preview…' }}</div>
-          <iframe v-else-if="previewUrl" ref="iframe" :src="previewUrl" :style="{ height: frameHeightCss }" title="Preview visuelle" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" @load="handleIframeLoad" />
+          <iframe v-else-if="previewUrl" ref="iframe" :src="previewUrl" :style="{ height: frameHeightCss }" title="Preview visuelle" scrolling="no" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" @load="handleIframeLoad" />
           <p v-else class="empty-editor">Preview indisponible.</p>
         </div>
       </div>

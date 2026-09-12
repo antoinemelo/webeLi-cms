@@ -122,6 +122,52 @@ final class SaleCartRepository extends SaleRepositoryBase
         return $cart;
     }
 
+    /** @param array<string,mixed> $snapshot @return array<string,mixed> */
+    public function linkCustomer(int $cartId, ?int $companyId, ?int $contactId, array $snapshot): array
+    {
+        $cart = $this->requireCart($cartId);
+        if ((string) $cart['status'] !== 'active') {
+            throw new SaleValidationException('sale.cart_not_convertible');
+        }
+        if (($companyId ?? 0) < 1 && ($contactId ?? 0) < 1) {
+            throw new SaleValidationException('sale.customer_reconciliation_target_required');
+        }
+        $displayName = trim((string) ($snapshot['display_name'] ?? $snapshot['name'] ?? ''));
+        if ($displayName === '') {
+            throw new SaleValidationException('sale.customer_display_name_required');
+        }
+        $snapshot = [
+            'display_name' => $displayName,
+            'email' => trim((string) ($snapshot['email'] ?? '')) ?: null,
+            'phone' => trim((string) ($snapshot['phone'] ?? '')) ?: null,
+            'company_name' => trim((string) ($snapshot['company_name'] ?? '')) ?: null,
+            'company_id' => ($companyId ?? 0) > 0 ? $companyId : null,
+            'contact_id' => ($contactId ?? 0) > 0 ? $contactId : null,
+        ];
+        $customerRef = $this->rawDatabase()->one(
+            'SELECT id FROM sale_customer_refs WHERE site_id=? AND company_id IS ? AND contact_id IS ? ORDER BY id LIMIT 1',
+            [(int) $cart['site_id'], $snapshot['company_id'], $snapshot['contact_id']]
+        );
+        if ($customerRef === null) {
+            $this->rawDatabase()->run(
+                'INSERT INTO sale_customer_refs(site_id,company_id,contact_id,display_name,email,phone) VALUES(?,?,?,?,?,?)',
+                [(int) $cart['site_id'], $snapshot['company_id'], $snapshot['contact_id'], $displayName, $snapshot['email'], $snapshot['phone']]
+            );
+            $customerRefId = (int) $this->rawDatabase()->lastInsertId();
+        } else {
+            $customerRefId = (int) $customerRef['id'];
+            $this->rawDatabase()->run(
+                'UPDATE sale_customer_refs SET display_name=?,email=?,phone=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                [$displayName, $snapshot['email'], $snapshot['phone'], $customerRefId]
+            );
+        }
+        $this->rawDatabase()->run(
+            'UPDATE sale_carts SET customer_ref_id=?,customer_company_id=?,customer_contact_id=?,customer_snapshot_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',
+            [$customerRefId, $snapshot['company_id'], $snapshot['contact_id'], $this->json($snapshot), $cartId]
+        );
+        return $this->requireCart($cartId);
+    }
+
     /** @param array<string,mixed> $identity @param array<string,mixed> $billing @param array<string,mixed> $shipping @param array<string,mixed> $shippingMethod @param array<string,mixed> $paymentMethod */
     public function saveGuestCheckout(
         int $cartId,

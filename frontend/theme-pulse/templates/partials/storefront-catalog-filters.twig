@@ -1,0 +1,40 @@
+{% set catalog_en = language_code|default('fr')|slice(0, 2) == 'en' %}
+<section class="storefront-catalog-tools" aria-labelledby="storefront-catalog-title">
+  <h2 id="storefront-catalog-title" class="visually-hidden">{{ catalog_en ? 'Catalog' : 'Catalogue' }}</h2>
+  <form method="get" class="storefront-catalog-form">
+    <div class="storefront-catalog-search">
+      <label>{{ catalog_en ? 'Search' : 'Recherche' }} <input type="search" name="q" value="{{ storefront_selection.q|default('') }}" autocomplete="off"></label>
+      <label>{{ catalog_en ? 'Sort' : 'Tri' }}
+        <select name="sort">
+          {% for sort in storefront_sorts|default([]) %}<option value="{{ sort.key }}"{% if sort.key == storefront_selection.sort|default('name') %} selected{% endif %}>{{ sort.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn btn--primary" type="submit">{{ catalog_en ? 'Show' : 'Afficher' }}</button>
+      <a class="btn btn--ghost" href="{{ storefront_catalog.reset_url|default('/shop') }}">{{ catalog_en ? 'Reset' : 'Réinitialiser' }}</a>
+    </div>
+    <details class="storefront-filter-drawer" open>
+      <summary>{{ catalog_en ? 'Filters' : 'Filtres' }}</summary>
+      <div class="storefront-facet-grid">
+        {% for facet in storefront_facets|default([]) %}{% if facet.options|default([]) %}
+          <fieldset class="storefront-facet">
+            <legend>{{ facet.label }}</legend>
+            {% for option in facet.options %}
+              <label>
+                {% if facet.type == 'attribute' %}
+                  <input type="checkbox" name="attributes[{{ facet.key }}][]" value="{{ option.key }}"{% if option.selected %} checked{% endif %}>
+                {% else %}
+                  <input type="checkbox" name="{{ facet.key }}[]" value="{{ option.key }}"{% if option.selected %} checked{% endif %}>
+                {% endif %}
+                <span>{{ option.label }}</span> <small>({{ option.count }})</small>
+              </label>
+            {% endfor %}
+          </fieldset>
+        {% endif %}{% endfor %}
+      </div>
+    </details>
+  </form>
+  {% if storefront_catalog.active_filters|default([]) %}<nav class="storefront-filter-chips" aria-label="{{ catalog_en ? 'Active filters' : 'Filtres actifs' }}">
+    {% for chip in storefront_catalog.active_filters %}<a href="{{ chip.remove_url }}">{{ chip.label }} <span aria-hidden="true">×</span><span class="visually-hidden">{{ catalog_en ? 'Remove this filter' : 'Retirer ce filtre' }}</span></a>{% endfor %}
+  </nav>{% endif %}
+  <p class="storefront-result-count" role="status">{{ pagination.total|default(0) }} {{ catalog_en ? 'result(s)' : 'résultat(s)' }}</p>
+</section>

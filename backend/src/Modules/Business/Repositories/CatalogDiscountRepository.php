@@ -8,6 +8,47 @@ use DateTimeImmutable;
 
 final class CatalogDiscountRepository extends BusinessRepositoryBase
 {
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function preview(int $siteId, array $payload): array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $scopeType = $this->choice($payload['scope'] ?? $payload['scope_type'] ?? 'product', ['product', 'variant', 'category', 'brand'], 'discount_scope');
+        $scopeId = (int) ($payload['scope_id'] ?? 0);
+        $channel = $this->choice($payload['channel'] ?? 'all', ['all', 'ecommerce', 'pos', 'catalogue', 'admin'], 'discount_channel');
+        $this->assertScopeExists($siteId, $scopeType, $scopeId);
+        $this->assertDateRange($payload['starts_at'] ?? null, $payload['ends_at'] ?? null);
+        $affected = match ($scopeType) {
+            'product', 'variant' => 1,
+            'category' => (int) ($this->database()->one('SELECT COUNT(*) AS count FROM business_products WHERE site_id=? AND category_id=? AND archived_at IS NULL', [$siteId,$scopeId])['count'] ?? 0),
+            'brand' => (int) ($this->database()->one('SELECT COUNT(*) AS count FROM business_products WHERE site_id=? AND brand_id=? AND archived_at IS NULL', [$siteId,$scopeId])['count'] ?? 0),
+        };
+        $starts = trim((string) ($payload['starts_at'] ?? '')) ?: '0000-01-01';
+        $ends = trim((string) ($payload['ends_at'] ?? '')) ?: '9999-12-31';
+        $excludeId = max(0, (int) ($payload['id'] ?? 0));
+        $conflicts = $this->database()->all(
+            "SELECT id,name,status,channel,starts_at,ends_at,priority FROM business_catalog_discounts
+             WHERE site_id=? AND archived_at IS NULL AND status='active' AND id<>? AND scope_type=? AND scope_id=?
+               AND (channel='all' OR ?='all' OR channel=?)
+               AND COALESCE(ends_at,'9999-12-31')>=? AND ? >= COALESCE(starts_at,'0000-01-01')
+             ORDER BY priority,id LIMIT 20",
+            [$siteId,$excludeId,$scopeType,$scopeId,$channel,$channel,$starts,$ends]
+        );
+        $audience = $this->segment($payload['customer_segment'] ?? null);
+        $audienceCount = null;
+        if ($audience !== null && ($payload['include_audience_count'] ?? false) === true) {
+            $audienceCount = (int) ($this->database()->one("SELECT result_count FROM crm_segments WHERE site_id=? AND lower(name)=? AND status='active' LIMIT 1", [$siteId,$audience])['result_count'] ?? 0);
+        }
+        return [
+            'affected_products' => $affected,
+            'scope' => ['type' => $scopeType, 'id' => $scopeId],
+            'channel' => $channel,
+            'period' => ['starts_at' => $payload['starts_at'] ?? null, 'ends_at' => $payload['ends_at'] ?? null],
+            'conflicts' => $conflicts,
+            'audience' => $audience === null ? null : ['rule' => $audience, 'estimated_count' => $audienceCount, 'is_consent' => false],
+            'activation_allowed' => $conflicts === [] || ($payload['conflict_acknowledged'] ?? false) === true,
+        ];
+    }
+
     /** @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int} */
     public function list(int $siteId, int $limit = 50, int $offset = 0, bool $includeArchived = false): array
     {

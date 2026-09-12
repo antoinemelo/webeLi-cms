@@ -84,7 +84,7 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Endpoints documentés sans 500 | non vérifié | `API_SPEC` passe, tests publics existants pour contenu/media/cookies/catalogue. | Pas de test HTTP complet sur toutes les routes documentées, notamment Sale public absent de l'OpenAPI. | P1 |
 | Propriété CMS/Core contenu, blocs, routes, SEO | présent | Tables core `content_entries`, `layout_blocks`, `routes`, `seo_metadata`; validateurs content/projections OK. | À préserver lors du lien produit-contenu. | P1 |
 | Propriété IAM | présent | Tables IAM et validateurs permissions ; docs générées permissions. | Pas d'écart RM1 identifié dans ce lot. | P2 |
-| Propriété CRM Business | présent | `business.sqlite`, `backend/src/Modules/Business`, docs CRM, tests Business CRM. | Connecteur activité Sale -> CRM reste nul/incomplet. | P1 |
+| Propriété CRM Business | couvert | `business.sqlite`, `CrmActivityV2`, projection outbox et chronologie filtrable. | Connecteurs externes dépendants de leur configuration. | — |
 | Propriété PIM Business | présent | `business_products`, variantes, attributs, assets, tax classes ; docs Business/PIM ; tests catalogue. | Pas de lien canonique CMS content <-> product trouvé. | P1 |
 | Prix et catalogues par canal | partiel | `BusinessCatalogPricingRepository`, `BusinessCatalogSellableReadService`, routes catalog/POS. | Listes de prix avancées par segment/client/date/priorité non prouvées dans cet audit. | P2 |
 | Panier, commande, historique transactionnel | présent | `sale.sqlite`, `SaleCartService`, `SaleCheckoutService`, `SaleOrderRepository`, tests Sale. | Besoin de tests HTTP/E2E publics et critères de non-régression checkout. | P1 |
@@ -92,19 +92,19 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Stock, réservations, mouvements | présent | Tables Sale stock/reservations/movements ; `sale_inventory_service_test.php`. | Synchronisation Business disponibilité <-> Sale stock à formaliser via outbox/projection. | P1 |
 | Disponibilité catalogue calculée vers Business | partiel | Business expose stock, backorder, completeness ; Sale a stock transactionnel. | Projection retour Sale -> Business non industrialisée. | P1 |
 | Accès directs inter-modules | partiel | Ports Sale `SellableCatalogPort`, `CustomerSnapshotPort` et adaptateurs Business ; `DEPENDENCY_BOUNDARIES` OK. | Le validateur est peu profond ; Business routes restent majoritairement centralisées dans `backend/routes/api.php`. | P1 |
-| Adaptateurs nuls CRM/Sale | partiel | `NullCrmActivitySink`, `NullCmsAccountBridge`, `ServiceFactory::saleCrmActivitySink()`, `saleCmsAccountBridge()`. | Activité CRM et comptes clients ne sont pas branchés. | P1 |
+| Adaptateurs nuls CRM/Sale | couvert | `SaleCrmActivityProjectionService`, `CustomerIdentityBridge`, `SaleCustomerAccountService`. Les classes nulles restent des fallbacks de test compatibles. | Gate M7.1 et revue d’identité opérationnelle. | — |
 | Capacités métier actionnables | absent | `CapabilityRegistry` core ; aucun module trouvé avec `ModuleCapabilityProvider`. | RM1 attend des capacités type catalogue/pricing/cart/checkout/payment/fulfillment/CRM. | P1 |
 | PIM produits physiques/services/bundles/variantes | partiel | Business products, variants, bundles, services visibles dans code/tests. | Bons cadeaux et règles avancées non vérifiés. | P2 |
 | Import/export catalogue | présent | `CatalogCsvService`, imports/exports Business et Sale, docs d'administration. | À relier aux critères de release RM1. | P2 |
 | Checkout public | partiel | `PublicSaleApiHandler`, `SaleModuleProvider::publicHeadlessRoutes()`. | Non publié en OpenAPI/SDK ; pas de parcours CMS complet panier/paiement/livraison. | P0 |
 | Comptes clients | couvert | `SaleCustomerAccountService`, preuve post-achat à usage unique, session IAM client et liens explicites CRM/Sale. | Les téléchargements et cartes cadeaux ne sont exposés que lorsqu’un module métier les fournit. | P3 |
-| Livraison | partiel | Champs shipping address/totals et fulfillment status dans Sale ; docs Sale mentionnent le shipping avancé hors v1. | Méthodes/zones/tarifs/transporteurs et fulfilment complet absents. | P2 |
+| Livraison | couvert hors transporteur | Méthodes/zones, snapshot d’emplacement, fulfillments partiels, préparation, expédition, retrait prouvé et suivi Shop dans Sale M6.4. | Achat d’étiquette et connexion transporteur restent hors périmètre. | P3 |
 | Fiscalité | partiel | `business_tax_classes`, tax rate snapshots, tax lines Sale. | Fiscalité avancée multi-pays/règles légales non prouvée. | P2 |
 | Événements et outbox | partiel | `outbox_events` core, `sale_outbox`, `crm_message_outbox`, attempts/max_attempts côté Business. | Worker générique, dead-letter, retries observables et supervision non formalisés. | P1 |
 | Interface française/anglaise | partiel | UI et docs majoritairement en français ; certains contrats/messages structurés. | Couverture i18n anglaise non auditée et nombreuses chaînes probablement codées en dur. | P2 |
 | Documentation et aide par rôle | partiel | Docs administration, API, architecture, évaluation. | Aide contextuelle par rôle et parcours RM1 client/admin/dev à compléter. | P2 |
 | Reconstruction from scratch | présent | `database/modules/*.sql`, `tools/cms.py validate`, tests smoke Python Business/Sale. | Qualification rebuild complète non rejouée dans ce lot. | P1 |
-| Migrations | partiel | `database/migrations/business`, `database/migrations/sale`, `schema_migrations`. | Nouvelles migrations probables pour liens contenu-produit, comptes, fulfilment, outbox. | P1 |
+| Reconstruction sans migration | présent | Les changements actifs sont portés dans les schémas canoniques `database/modules/*.sql` et qualifiés sur une base recréée. | Les anciens répertoires de migration ne sont pas la voie d’évolution de ce projet. | P3 |
 | Sauvegarde/restauration | partiel | `tools/cms.py backup`, docs `reproducible-checks.md`, validateurs slow disponibles. | Roundtrip backup/restore toutes bases non exécuté dans cet audit. | P1 |
 | Tests HTTP | partiel | Tests publics contenu/media/cookies/catalogue ; tests Sale unitaires et intégration. | Pas de matrice HTTP couvrant toutes les routes admin/module/public, surtout Sale public. | P1 |
 | E2E | partiel | E2E blueprint, CRM, publication, webhook. | Pas d'E2E POS/Sale/checkout public RM1. | P1 |
@@ -159,9 +159,11 @@ robuste, tests HTTP/E2E de bout en bout et critères de performance.
 | Frontière | État | Commentaire |
 |---|---|---|
 | Sale -> Business catalogue | sain mais fragile | Sale passe par `SellableCatalogPort` et `BusinessSellableCatalogAdapter`; garder cette règle stricte. |
-| Sale -> Business clients | sain mais incomplet | `CustomerSnapshotPort` existe ; activité CRM post-vente non branchée. |
-| Sale -> CRM activity | incomplet | `NullCrmActivitySink` indique un connecteur volontairement nul. |
-| Sale -> comptes CMS/IAM | incomplet | `NullCmsAccountBridge` indique que comptes publics et historique client ne sont pas branchés. |
+| Sale -> Business clients | sain et couvert | `CustomerSnapshotPort`, `CrmActivitySink` réel, outbox idempotente, attente/rattachement et réconciliation M7.2. |
+| Segmentation et consentements CRM | sain et couvert | Segments manuels/calculés M7.3 depuis activités projetées, registre append-only, préférences séparées et aucun opt-in issu d’un achat/compte. |
+| Commande invitée et rapprochement CRM | sain et couvert | Gate M7.4 sur 12 scénarios : e-mail vérifié unique, ambiguïtés en revue, POS facultatif, token post-achat, fusion/séparation, panne/rejeu, retrait et panier abandonné. |
+| Sale -> CRM activity | couvert | Le port `CrmActivitySink` est branché sur la projection CRM réelle et rejouable. |
+| Sale -> comptes CMS/IAM | couvert | Le bridge réel IAM–CRM–Sale couvre compte facultatif post-achat, revue, fusion et séparation auditées. |
 | Business routes | fragile | Business expose beaucoup de routes depuis `backend/routes/api.php`; la gouvernance module provider n'est pas homogène avec Sale. |
 | Registry modules | fragile | Tables `module_routes`, `module_api_contracts`, `module_databases` vides malgré modules installés. |
 | Validation frontières | partielle | `DEPENDENCY_BOUNDARIES` passe, mais le validateur contrôle surtout des patterns directs ; il ne prouve pas toutes les dépendances métier. |

@@ -12,6 +12,7 @@ use App\Modules\Business\Catalog\CatalogPricingService;
 use App\Modules\Business\Repositories\PublicCatalogRepository;
 use App\Modules\Business\Services\BusinessProductBundleService;
 use App\Repository\SiteRepository;
+use InvalidArgumentException;
 use Throwable;
 
 final class PublicCatalogApiHandler
@@ -87,29 +88,38 @@ final class PublicCatalogApiHandler
 
     public function storefrontProducts(): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
         if ($channel<1 || $this->storefront===null) return $this->notFound('Projection Storefront indisponible.',[]);
-        $page=$this->storefront->products((int)$site['id'],$channel,$languageCode,$this->filters()+['limit'=>$this->limit(),'offset'=>$this->offset(),'sort'=>$this->request->query['sort']??'name']);
+        try {
+            $page=$this->storefront->products((int)$site['id'],$channel,$languageCode,$this->storefrontFilters()+['limit'=>$this->limit(),'offset'=>$this->offset()]);
+        } catch (InvalidArgumentException $exception) {
+            if ($exception->getMessage() === 'storefront.sort_invalid') return Response::validation(['sort'=>['Tri Storefront invalide.']]);
+            throw $exception;
+        }
         return $this->json($page,'public.storefront.products.index.v1',$site,$languageCode);
     }
 
     public function storefrontProduct(string $slug): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
         $product=$this->storefront?->product((int)$site['id'],$channel,$languageCode,$this->slug($slug));
         return $product ? $this->json(['product'=>$product],'public.storefront.products.show.v1',$site,$languageCode) : $this->notFound('Produit projeté introuvable.',['slug'=>$slug]);
     }
 
     public function storefrontCollections(): Response
     {
-        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'])??0;
+        [$site,$languageCode]=$this->context(); $channel=$this->storefront?->defaultChannelId((int)$site['id'],$languageCode)??0;
+        if ($channel<1 || $this->storefront===null) return $this->notFound('Projection Storefront indisponible.',[]);
         return $this->json(['items'=>$this->storefront?->collections((int)$site['id'],$channel,$languageCode)??[]],'public.storefront.collections.index.v1',$site,$languageCode);
     }
 
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
-        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        // App has already resolved and stripped the site's base path. Reusing
+        // that stripped path here would resolve `/campus/api/...` as the main
+        // site and leak its storefront projection into the secondary site.
+        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
         if (!preg_match('/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/i', $languageCode)) {
             $languageCode = (string) ($site['default_language_code'] ?? 'fr');
@@ -185,6 +195,35 @@ final class PublicCatalogApiHandler
             $payload['media'] = $media;
             $payload['main_asset'] = $this->mainAsset($media);
             $payload['gallery_assets'] = $this->galleryAssets($media);
+        }
+        if ((string) ($product['type'] ?? '') === 'bundle') {
+            $summary = $this->bundles->bundleSummaryForVariant($siteId, (int) $variant['id']);
+            if ((bool) ($summary['is_bundle'] ?? false)) $payload['bundle'] = $this->publicBundlePayload($summary, $detailed);
+        }
+        return $payload;
+    }
+
+    /** @param array<string,mixed> $summary @return array<string,mixed> */
+    private function publicBundlePayload(array $summary, bool $detailed): array
+    {
+        $status = (string) ($summary['bundle_availability_status'] ?? 'unavailable');
+        $limiting = is_array($summary['bundle_limiting_factor'] ?? null) ? $summary['bundle_limiting_factor'] : null;
+        $payload = [
+            'contract' => 'business.bundle.stock-strategy.v1',
+            'stock_strategy' => (string) ($summary['bundle_stock_strategy'] ?? 'COMPONENT_DERIVED'),
+            'availability_status' => $status,
+            'availability_explanation' => match ($status) { 'in_stock' => 'Bundle disponible', 'deliverable' => 'Bundle disponible sans suivi physique', 'backorder' => 'Bundle disponible sur commande', default => 'Bundle momentanément indisponible' },
+            'limiting_component' => $limiting === null ? null : ['name' => (string) ($limiting['name'] ?? ''), 'sku' => (string) ($limiting['sku'] ?? '')],
+            'return_policy' => (string) ($summary['bundle_component_return_policy'] ?? 'BUNDLE_ONLY'),
+            'partial_availability_policy' => (string) ($summary['bundle_partial_availability_policy'] ?? 'REQUIRE_ALL'),
+        ];
+        if ($detailed && (bool) ($summary['bundle_components_public'] ?? true)) {
+            $payload['included_components'] = array_values(array_map(static fn(array $component): array => [
+                'name' => (string) ($component['component_name'] ?? ''),
+                'variant_name' => (string) ($component['component_variant_name'] ?? ''),
+                'quantity' => (float) ($component['quantity'] ?? 1),
+                'required' => (bool) ($component['is_required'] ?? true),
+            ], array_values(array_filter((array) ($summary['bundle_components'] ?? []), 'is_array'))));
         }
         return $payload;
     }
@@ -303,20 +342,23 @@ final class PublicCatalogApiHandler
         }
         return $variants === []
             ? $this->availabilityPayload(true, false, 0.0, (int) ($product['backorder_delivery_days'] ?? 7))
-            : ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+            : $this->availabilityPayload(true, false, 0.0, (int) ($product['backorder_delivery_days'] ?? 7));
     }
 
     /** @return array<string,mixed> */
     private function availabilityPayload(bool $trackStock, bool $allowBackorder, float $availableQuantity, int $backorderDeliveryDays): array
     {
-        if (!$trackStock || $availableQuantity > 0.0) {
-            return ['available' => true, 'backorder_allowed' => false, 'status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null];
+        if (!$trackStock) {
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => false, 'status' => 'deliverable', 'label' => 'Livrable', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => false];
+        }
+        if ($availableQuantity > 0.0) {
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => false, 'status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => $availableQuantity === 1.0];
         }
         if ($allowBackorder) {
             $days = max(1, $backorderDeliveryDays);
-            return ['available' => true, 'backorder_allowed' => true, 'status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days];
+            return ['contract' => 'sale.inventory.availability.v1', 'available' => true, 'backorder_allowed' => true, 'status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days, 'last_available' => false];
         }
-        return ['available' => false, 'backorder_allowed' => false, 'status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null];
+        return ['contract' => 'sale.inventory.availability.v1', 'available' => false, 'backorder_allowed' => false, 'status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false, 'delivery_lead_time_days' => null, 'last_available' => false];
     }
 
     /** @param array<string,mixed> $summary @param array<string,mixed> $fallback @return array<string,mixed> */
@@ -327,7 +369,8 @@ final class PublicCatalogApiHandler
         }
         return match ((string) ($summary['bundle_availability_status'] ?? 'in_stock')) {
             'backorder' => $this->availabilityPayload(true, true, 0.0, max(1, (int) ($summary['bundle_backorder_delivery_days'] ?? $fallback['delivery_lead_time_days'] ?? 7))),
-            'contact_us' => $this->availabilityPayload(true, false, 0.0, 7),
+            'contact_us', 'unavailable' => $this->availabilityPayload(true, false, 0.0, 7),
+            'in_stock' => $this->availabilityPayload(true, false, max(1.0, (float) ($summary['bundle_available_quantity'] ?? 1)), 7),
             default => $this->availabilityPayload(false, false, 1.0, 7),
         };
     }
@@ -340,6 +383,16 @@ final class PublicCatalogApiHandler
             if (array_key_exists($key, $this->request->query)) {
                 $filters[$key] = in_array($key, ['brand_id','category_id','collection_id'], true) ? (int) $this->request->query[$key] : $this->slug((string) $this->request->query[$key]);
             }
+        }
+        return $filters;
+    }
+
+    /** @return array<string,mixed> */
+    private function storefrontFilters(): array
+    {
+        $filters=[];
+        foreach (['q','sort','brand','brands','category','categories','group','groups','availability','attributes','attr','collection_id'] as $key) {
+            if (array_key_exists($key,$this->request->query)) $filters[$key]=$this->request->query[$key];
         }
         return $filters;
     }

@@ -5,10 +5,12 @@ audience:
   - administrator
   - developer
 status: current
-last_verified: 2026-07-10
+last_verified: 2026-08-11
 source_of_truth: procedure
 source_paths:
   - tools/python/commands/instance.py
+  - tools/admin.py
+  - tools/python/operations/deployment/d3_deploy_ftp.py
   - tools/python/operations/deployment/d8_deploy_web_update.py
   - tools/python/operations/backup/d6_backup_sqlite.py
   - tools/python/operations/database/d9_migrate_sqlite.py
@@ -25,7 +27,7 @@ generated: false
 
 La commande `instance update` déploie une release du noyau sur une instance client en conservant les contenus, les bases SQLite, les médias, les sauvegardes, les secrets et les modules clients locaux.
 
-Ce document formalise le workflow recommandé. L'écran **Maintenance** du back-office aide à constater les versions disponibles, mais il ne remplace pas le plan, le backup et les validations locales.
+Ce document formalise le workflow recommandé pour les déploiements opérés hors du serveur. L'écran **Maintenance** du back-office propose aussi une mise à jour intégrée du canal stable, avec backup et contrôles automatiques, décrite dans [Mise à jour stable intégrée](stable-component-updates.md).
 
 ## Résumé du workflow
 
@@ -58,7 +60,7 @@ Les canaux ont le rôle suivant :
 
 | Canal | Usage |
 |---|---|
-| `dev` | Prévisualiser une version de développement/staging. Dans l'organisation webeLi, ce canal correspond à `/mod` et à la branche Git `staging`. |
+| `dev` | Prévisualiser une version de développement/staging. Dans l'organisation webeLi, ce canal correspond à `/cms` et à la branche Git `staging`. |
 | `stable` | Suivre la release stable destinée aux instances client. Dans l'organisation webeLi, ce canal correspond à `/maj` et à la branche Git `main`. |
 
 La source prioritaire est le manifeste public du canal :
@@ -71,13 +73,15 @@ Si le manifeste est absent ou incomplet, l'information peut être complétée de
 
 ## Choisir la source de mise à jour
 
-Le canal `stable` est le choix normal pour une instance client. Le canal `dev` peut servir à tester une correction ou une évolution sur un clone, mais il ne doit pas devenir la source habituelle d'une production client sans décision explicite.
+Le canal `stable` est le choix normal pour une instance client et le seul applicable depuis le bouton **Mettre à jour**. Le canal `dev` peut servir à tester une correction ou une évolution sur un clone ; il reste déployé depuis `staging` par FTP, SFTP ou CLI.
 
 La source fournie à `instance update` est généralement une archive release :
 
 ```text
 /chemin/release.zip
 ```
+
+Depuis `tools/admin.py`, le point 11 guide toute l'opération : il demande la release source, puis propose une cible locale ou FTP/FTPS. Lorsque la source proposée `storage/exports/release_stage` est conservée, le point 11 la reconstruit automatiquement depuis les fichiers courants de `/dev`, sans bases, sans vendor et sans artefacts de développement. Une archive ZIP ou un autre dossier explicitement choisi reste inchangé et permet toujours de déployer une release précise. Le point 5 demeure la procédure de préparation et de qualification d'une release officielle.
 
 Avant d'intervenir sur une instance client, vérifiez :
 
@@ -124,6 +128,26 @@ L’application crée un backup SQLite, applique le delta fichiers avec archive 
 `--apply` doit rester accompagné de `--backup` et `--yes` dans une procédure normale. L'option longue de risque explicite des migrations ne doit être utilisée que si un backup externe vérifié existe déjà.
 
 Pendant une intervention réelle, il est recommandé de bloquer les écritures applicatives ou de placer l'instance en maintenance, surtout si des éditeurs peuvent publier pendant la copie fichiers ou les migrations.
+
+## Cible FTP/FTPS depuis le point 11
+
+Le mode FTP du point 11 demande :
+
+- le fichier `ops/ftp.deploy.json` contenant la connexion ;
+- le chemin distant exact, par exemple `/www/webe.li/eve`, ou une URL `ftp://serveur/www/webe.li/eve` ;
+- si les fichiers retirés de la nouvelle release doivent aussi être supprimés.
+
+Une simulation est toujours exécutée avant la confirmation. Un manifeste différentiel distinct est conservé par configuration FTP et chemin distant sous `storage/deployments/ftp-manifests/`. Après le premier transfert suivi, les exécutions suivantes n'envoient que les fichiers ajoutés ou dont le hash a changé. Le premier transfert d'une cible sans manifeste constitue la référence et peut donc envoyer toute la release.
+
+Ce profil protège les bases, médias, uploads, secrets, logs, caches, backups, vendors et modules locaux. FTP ne permet pas d'exécuter de manière fiable les commandes du serveur : le point 11 réalise donc uniquement la mise à jour différentielle des fichiers. Si la release contient des migrations, exécutez ensuite sur le serveur, par SSH ou console d'hébergement :
+
+La simulation écrit en outre un plan propre à la cible. L'exécution réelle refuse de démarrer si le stage, le manifeste précédent, la cible ou la liste des différences a changé entre-temps. Si la simulation ne détecte aucune différence, le point 11 s'arrête sans lancer un second déploiement FTP.
+
+```bash
+python3 tools/cms.py migrate --plan
+python3 tools/cms.py migrate --apply --backup --yes
+python3 tools/cms.py validate
+```
 
 ## Chemins protégés
 

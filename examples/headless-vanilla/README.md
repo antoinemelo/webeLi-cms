@@ -42,7 +42,7 @@ http://localhost:8080/examples/headless-vanilla/
 La configuration se trouve en haut de `app.js`. Dans une page statique sans étape de build, on ne lit pas automatiquement un fichier `.env`, mais les mêmes noms de variables sont documentés pour garder une configuration cohérente avec Next, Nuxt et Astro :
 
 ```txt
-AMCMS_BASE_URL=https://example.com/mod/site_a
+AMCMS_BASE_URL=https://example.com/cms/site_a
 AMCMS_TOKEN=
 AMCMS_SITE=site_a
 AMCMS_LANG=fr
@@ -52,7 +52,7 @@ Exemple équivalent dans `app.js` :
 
 ```js
 const client = createAmCmsClient({
-  baseUrl: 'https://example.com/mod/site_a',
+  baseUrl: 'https://example.com/cms/site_a',
   token: '',
   site: 'site_a',
   lang: 'fr'

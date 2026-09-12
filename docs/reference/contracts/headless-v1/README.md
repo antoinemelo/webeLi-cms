@@ -78,6 +78,8 @@ Si `site` et `site_id` sont absents, le site est résolu comme le front public, 
 | `PATCH /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.update.v1` | `public.sale.cart.lines.update.v1` | Modifier la quantité d’une ligne de panier public. |
 | `DELETE /api/v1/sale/channels/{code}/cart/{token}/lines/{line_id}` | `public.sale.cart.lines.delete.v1` | `public.sale.cart.lines.delete.v1` | Supprimer une ligne d’un panier public. |
 | `POST /api/v1/sale/channels/{code}/checkout` | `public.sale.checkout.v1` | `public.sale.checkout.v1` | Convertir un panier public en commande e-commerce. |
+| `POST /api/v1/sale/channels/{code}/cart/{token}/payment-retry` | `public.sale.payment.retry.v1` | `public.sale.payment.retry.v1` | Relancer un paiement refusé sans perdre la commande ni le panier converti. |
+| `POST /api/v1/sale/payments/test/{reference}/simulate` | `public.sale.payment.test.simulate.v1` | `public.sale.payment.test.simulate.v1` | Piloter un scénario déterministe, uniquement hors production. |
 
 ## Structure minimale exigée
 
@@ -116,7 +118,7 @@ Les endpoints de contenu et de recherche s’appuient sur `public_content_snapsh
 
 ## Génération OpenAPI v1
 
-Depuis la racine du projet `mod/`, le fichier public OpenAPI est généré à partir des contrats JSON de ce dossier :
+Depuis la racine du projet `cms/`, le fichier public OpenAPI est généré à partir des contrats JSON de ce dossier :
 
 ```bash
 python3 tools/cms.py docs generate
@@ -126,7 +128,7 @@ Le générateur crée `docs/public-api/openapi.v1.json` et `docs/public-api/open
 
 ## Validation locale
 
-Depuis la racine du projet `mod/` :
+Depuis la racine du projet `cms/` :
 
 ```bash
 python3 tools/cms.py docs generate

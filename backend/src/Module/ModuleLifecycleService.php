@@ -95,6 +95,7 @@ final class ModuleLifecycleService
         $summary = ['modules' => 0, 'routes' => 0, 'contracts' => 0];
         foreach ($this->registry->activeProviders() as $provider) {
             $summary['modules']++;
+            $this->permissions->register($provider);
             $summary['routes'] += count($provider->adminRoutes()) + count($provider->apiRoutes()) + count($provider->publicHeadlessRoutes());
             $summary['contracts'] += count($provider->apiContracts());
             $this->syncDeclarations($provider, true);

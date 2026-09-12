@@ -6,6 +6,9 @@ namespace App\Application\Api\Admin;
 
 use App\Application\Api\Admin\Contract\AdminApiContract;
 use App\Application\Maintenance\DependencyInventoryService;
+use App\Infrastructure\Maintenance\StableUpdateCatalogService;
+use App\Infrastructure\Maintenance\StableUpdateException;
+use App\Infrastructure\Maintenance\StableUpdateService;
 use App\Application\Maintenance\VersionInventoryService;
 use App\Application\Publication\PublishedProjectionPipeline;
 use App\Core\Database;
@@ -30,6 +33,8 @@ final class MaintenanceApiController
         private readonly PublishedProjectionPipeline $projectionPipeline,
         private readonly VersionInventoryService $versions,
         private readonly DependencyInventoryService $dependencies,
+        private readonly StableUpdateCatalogService $stableUpdateCatalogs,
+        private readonly StableUpdateService $stableUpdates,
     ) {}
 
     public function index(): Response
@@ -41,12 +46,16 @@ final class MaintenanceApiController
 
         $siteId = (int) $site['id'];
 
+        $stableUpdates = $this->stableUpdateCatalogs->status();
+        unset($stableUpdates['catalog']);
+
         return Response::success([
             'status' => $this->status($siteId, $languageCode),
             'audit_logs' => $this->auditLogs(),
             'runtime_logs' => $this->runtimeLogs(),
             'versions' => $this->versions->maintenancePayload(),
             'dependencies' => $this->dependencies->maintenancePayload(true),
+            'stable_updates' => $stableUpdates,
             'actions' => $this->actions(),
         ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
     }
@@ -77,9 +86,62 @@ final class MaintenanceApiController
         $languageCode = AdminApiContract::language($this->request, $this->sites, $site);
 
         return Response::success([
-            'message' => 'Cache des versions de dépendances mis à jour.',
+            'message' => 'Affichage des versions actuellement installées mis à jour.',
             'dependencies' => $this->dependencies->maintenancePayload(true, true),
         ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
+    }
+
+    public function refreshStableUpdates(): Response
+    {
+        $this->auth->requireAuth();
+        $site = $this->site();
+        $this->authorization->require('maintenance.manage', (int) $site['id']);
+        $languageCode = AdminApiContract::language($this->request, $this->sites, $site);
+
+        $updates = $this->stableUpdateCatalogs->status(true);
+        unset($updates['catalog']);
+        return Response::success([
+            'message' => 'Catalogue des mises à jour stables actualisé.',
+            'stable_updates' => $updates,
+        ], self::CONTRACT, AdminApiContract::meta($site, $languageCode));
+    }
+
+    public function applyStableUpdate(): Response
+    {
+        $this->auth->requireAuth();
+        $site = $this->site();
+        $this->authorization->require('maintenance.manage', (int) $site['id']);
+        $languageCode = AdminApiContract::language($this->request, $this->sites, $site);
+
+        $type = trim((string) $this->request->input('component_type', ''));
+        $key = trim((string) $this->request->input('component_key', ''));
+        $version = trim((string) $this->request->input('expected_version', ''));
+        $fingerprint = trim((string) $this->request->input('catalog_fingerprint', ''));
+        if (!in_array($type, ['core', 'module'], true)
+            || preg_match('/^[a-z][a-z0-9-]{1,63}$/', $key) !== 1
+            || preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/', $version) !== 1
+            || preg_match('/^[a-f0-9]{64}$/', $fingerprint) !== 1) {
+            return Response::validation([
+                'update' => ['La publication stable doit être vérifiée à nouveau.'],
+            ]);
+        }
+
+        try {
+            @set_time_limit(240);
+            ignore_user_abort(true);
+            $result = $this->stableUpdates->apply($type, $key, $version, $fingerprint);
+            $this->audit('maintenance.stable_update_applied', 'application_component', null, [
+                'component_type' => $type,
+                'component_key' => $key,
+                'version' => $version,
+                'backup_path' => $result['backup_path'] ?? null,
+            ]);
+            return Response::success($result, self::CONTRACT, AdminApiContract::meta($site, $languageCode));
+        } catch (StableUpdateException $exception) {
+            return Response::error('api.error', $exception->getMessage(), 409);
+        } catch (\Throwable) {
+            return Response::error('api.error', 'La mise à jour a échoué. Consultez les journaux et sauvegardes.', 500);
+        }
     }
 
     public function reindexSearch(): Response
@@ -302,6 +364,8 @@ final class MaintenanceApiController
     {
         return [
             'refresh_dependencies' => ['method' => 'POST', 'path' => '/admin/api/maintenance/dependencies/refresh'],
+            'refresh_stable_updates' => ['method' => 'POST', 'path' => '/admin/api/maintenance/updates/stable/refresh'],
+            'apply_stable_update' => ['method' => 'POST', 'path' => '/admin/api/maintenance/updates/stable/apply'],
             'clear_cache' => ['method' => 'POST', 'path' => '/admin/api/maintenance/cache/clear'],
             'reindex_search' => ['method' => 'POST', 'path' => '/admin/api/maintenance/search/reindex'],
             'clear_audit_logs' => ['method' => 'DELETE', 'path' => '/admin/api/maintenance/audit-logs'],

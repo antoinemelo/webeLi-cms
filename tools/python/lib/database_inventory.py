@@ -8,6 +8,7 @@ bases déclarées par les manifestes de modules sans exécuter de code PHP.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable
@@ -32,6 +33,9 @@ class DatabaseSpec:
     description: str = ""
 
     def absolute_path(self, root: Path) -> Path:
+        database_dir = os.getenv("CMS_DATABASE_DIR", "").strip()
+        if database_dir and self.path.replace("\\", "/").startswith("storage/database/"):
+            return Path(database_dir).expanduser() / self.filename
         return root / self.path
 
     def absolute_schema_path(self, root: Path) -> Path | None:

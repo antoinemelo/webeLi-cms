@@ -17,20 +17,75 @@ final class SalePaymentRepository extends SaleRepositoryBase
         );
     }
 
+    /** @param array<string,mixed> $filters @return list<array<string,mixed>> */
+    public function paymentSessions(int $siteId, array $filters = [], int $limit = 100, int $offset = 0): array
+    {
+        $where = ['i.site_id=?'];
+        $params = [$siteId];
+        foreach (['status' => 'i.status', 'provider' => 'i.provider_key'] as $filter => $column) {
+            $value = strtolower(trim((string) ($filters[$filter] ?? '')));
+            if ($value !== '') { $where[] = $column . '=?'; $params[] = $value; }
+        }
+        $query = trim((string) ($filters['q'] ?? ''));
+        if ($query !== '') {
+            $where[] = '(o.order_number LIKE ? OR i.intent_reference LIKE ? OR o.customer_snapshot_json LIKE ?)';
+            $needle = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $query) . '%';
+            array_push($params, $needle, $needle, $needle);
+        }
+        $params[] = max(1, min(500, $limit));
+        $params[] = max(0, $offset);
+        $orderBy = (string) ($filters['sort'] ?? '') === 'oldest' ? 'i.created_at ASC,i.id ASC' : 'i.id DESC';
+        return $this->rawDatabase()->all(
+            'SELECT i.*,o.order_number,o.payment_status AS order_payment_status,o.status AS order_status,
+                    o.customer_snapshot_json,o.grand_total_minor,
+                    COALESCE((SELECT SUM(t.amount_minor) FROM sale_payment_transactions t WHERE t.payment_intent_id=i.id AND t.transaction_type IN (\'payment\',\'capture\') AND t.status=\'succeeded\'),0) AS settled_minor,
+                    COALESCE((SELECT SUM(r.amount_minor) FROM sale_refunds r JOIN sale_payment_transactions rt ON rt.id=r.payment_transaction_id WHERE rt.payment_intent_id=i.id AND r.status IN (\'pending\',\'succeeded\')),0) AS refund_total_minor
+             FROM sale_payment_intents i JOIN sale_orders o ON o.id=i.order_id
+             WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . $orderBy . ' LIMIT ? OFFSET ?',
+            $params
+        );
+    }
+
+    /** @return array<string,mixed> */
+    public function paymentSessionDetail(int $siteId, int $intentId): array
+    {
+        $session = $this->rawDatabase()->one(
+            'SELECT i.*,o.order_number,o.status AS order_status,o.payment_status AS order_payment_status,o.customer_snapshot_json,o.grand_total_minor
+             FROM sale_payment_intents i JOIN sale_orders o ON o.id=i.order_id WHERE i.site_id=? AND i.id=?',
+            [$siteId, $intentId]
+        );
+        if ($session === null) { throw new SalePaymentException('sale.payment_intent_not_found'); }
+        $session['attempts'] = $this->rawDatabase()->all('SELECT * FROM sale_payment_attempts WHERE payment_intent_id=? ORDER BY attempt_number', [$intentId]);
+        $session['transactions'] = $this->rawDatabase()->all('SELECT * FROM sale_payment_transactions WHERE payment_intent_id=? ORDER BY id', [$intentId]);
+        $session['refunds'] = $this->rawDatabase()->all('SELECT r.* FROM sale_refunds r JOIN sale_payment_transactions t ON t.id=r.payment_transaction_id WHERE t.payment_intent_id=? ORDER BY r.id', [$intentId]);
+        $session['provider_events'] = $this->rawDatabase()->all('SELECT * FROM sale_payment_webhook_events WHERE provider_key=? AND provider_reference=? ORDER BY provider_occurred_at,id', [(string) $session['provider_key'], (string) ($session['intent_reference'] ?? '')]);
+        $session['reconciliations'] = $this->rawDatabase()->all('SELECT * FROM sale_payment_reconciliation_runs WHERE payment_intent_id=? ORDER BY id', [$intentId]);
+        return $session;
+    }
+
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function createMethod(int $siteId, array $payload): array
     {
         $this->rawDatabase()->run(
-            'INSERT INTO sale_payment_methods(site_id, channel_id, code, name, provider_key, method_type, status, config_json)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO sale_payment_methods(site_id,channel_id,code,name,label_fr,label_en,description_fr,description_en,provider_key,method_type,status,is_public,currency,min_amount_minor,max_amount_minor,sort_order,config_json)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [
                 $siteId,
                 $payload['channel_id'] ?? null,
                 strtolower(trim((string) ($payload['code'] ?? ''))),
                 trim((string) ($payload['name'] ?? '')),
+                isset($payload['label_fr']) ? trim((string) $payload['label_fr']) : null,
+                isset($payload['label_en']) ? trim((string) $payload['label_en']) : null,
+                isset($payload['description_fr']) ? trim((string) $payload['description_fr']) : null,
+                isset($payload['description_en']) ? trim((string) $payload['description_en']) : null,
                 isset($payload['provider_key']) ? strtolower(trim((string) $payload['provider_key'])) : null,
                 $payload['method_type'] ?? 'cash',
                 $payload['status'] ?? 'active',
+                ($payload['is_public'] ?? false) === true ? 1 : 0,
+                isset($payload['currency']) ? strtoupper(trim((string) $payload['currency'])) : null,
+                isset($payload['min_amount_minor']) ? (int) $payload['min_amount_minor'] : null,
+                isset($payload['max_amount_minor']) ? (int) $payload['max_amount_minor'] : null,
+                max(0, (int) ($payload['sort_order'] ?? 100)),
                 $this->json($payload['config'] ?? []),
             ]
         );
@@ -94,8 +149,9 @@ final class SalePaymentRepository extends SaleRepositoryBase
         $this->rawDatabase()->run(
             'INSERT INTO sale_payment_transactions(
                 payment_intent_id, order_id, transaction_type, status, amount_minor, currency,
-                provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, created_by_iam_user_id, processed_at
-             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                provider_transaction_id, provider_payload_json, error_code, error_message, correlation_id, operation_key,
+                attempt_count, max_attempts, available_at, last_error, created_by_iam_user_id, processed_at
+             ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 $options['payment_intent_id'] ?? null,
                 $orderId,
@@ -108,6 +164,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
                 $options['error_code'] ?? null,
                 $options['error_message'] ?? null,
                 $options['correlation_id'] ?? null,
+                $options['operation_key'] ?? null,
+                max(0, (int) ($options['attempt_count'] ?? 0)),
+                max(1, (int) ($options['max_attempts'] ?? 5)),
+                $options['available_at'] ?? gmdate('Y-m-d H:i:s'),
+                $options['last_error'] ?? null,
                 $options['created_by_iam_user_id'] ?? null,
                 in_array($status, ['succeeded', 'failed', 'cancelled'], true) ? gmdate('Y-m-d H:i:s') : null,
             ]
@@ -144,9 +205,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
     public function requireTransactionWithOrder(int $transactionId): array
     {
         $row = $this->rawDatabase()->one(
-            'SELECT t.*, o.site_id, o.channel_id, o.grand_total_minor, o.paid_total_minor, o.refunded_total_minor
+            'SELECT t.*, o.site_id, o.channel_id, o.grand_total_minor, o.paid_total_minor, o.refunded_total_minor,
+                    i.provider_key AS intent_provider_key,i.intent_reference,i.authorized_minor,i.captured_minor,i.refunded_minor AS intent_refunded_minor
              FROM sale_payment_transactions t
              INNER JOIN sale_orders o ON o.id = t.order_id
+             LEFT JOIN sale_payment_intents i ON i.id=t.payment_intent_id
              WHERE t.id = ? LIMIT 1',
             [$transactionId]
         );
@@ -168,11 +231,11 @@ final class SalePaymentRepository extends SaleRepositoryBase
     }
 
     /** @return array<string,mixed> */
-    public function createRefund(int $orderId, int $transactionId, int $amountMinor, string $currency, ?string $reason, ?int $iamUserId, string $status = 'succeeded'): array
+    public function createRefund(int $orderId, int $transactionId, int $amountMinor, string $currency, ?string $reason, ?int $iamUserId, string $status = 'succeeded', array $options = []): array
     {
         $this->rawDatabase()->run(
-            'INSERT INTO sale_refunds(order_id, payment_transaction_id, refund_number, status, amount_minor, currency, reason, created_by_iam_user_id, processed_at)
-             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO sale_refunds(order_id,payment_transaction_id,refund_number,status,amount_minor,currency,reason,reason_code,reason_note,return_id,idempotency_key,provider_reference,provider_status,attempt_count,max_attempts,available_at,created_by_iam_user_id,processed_at)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             [
                 $orderId,
                 $transactionId,
@@ -181,10 +244,31 @@ final class SalePaymentRepository extends SaleRepositoryBase
                 $amountMinor,
                 strtoupper($currency),
                 $reason,
+                $options['reason_code'] ?? null,
+                $options['reason_note'] ?? $reason,
+                $options['return_id'] ?? null,
+                $options['idempotency_key'] ?? null,
+                $options['provider_reference'] ?? null,
+                $options['provider_status'] ?? null,
+                max(0,(int)($options['attempt_count']??0)),
+                max(1,(int)($options['max_attempts']??5)),
+                $options['available_at'] ?? gmdate('Y-m-d H:i:s'),
                 $iamUserId,
                 in_array($status, ['succeeded', 'failed', 'cancelled'], true) ? gmdate('Y-m-d H:i:s') : null,
             ]
         );
         return $this->rawDatabase()->one('SELECT * FROM sale_refunds WHERE id = ?', [(int) $this->rawDatabase()->lastInsertId()]) ?? [];
+    }
+
+    /** @return array<string,mixed>|null */
+    public function transactionByOperationKey(int $intentId, string $type, string $operationKey): ?array
+    {
+        return $this->rawDatabase()->one('SELECT * FROM sale_payment_transactions WHERE payment_intent_id=? AND transaction_type=? AND operation_key=?',[$intentId,$type,$operationKey]);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function refundByIdempotency(int $orderId, string $key): ?array
+    {
+        return $this->rawDatabase()->one('SELECT * FROM sale_refunds WHERE order_id=? AND idempotency_key=?',[$orderId,$key]);
     }
 }

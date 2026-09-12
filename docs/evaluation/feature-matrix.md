@@ -42,6 +42,9 @@ La référence exhaustive et extractible est [`machine-readable/features.json`](
 | SEO | métadonnées, canonical, robots, hreflang | `supported` | SEO/content | admin + SSR | schéma SEO, runtime, c9 | rendu à vérifier par site |
 | SEO | sitemap, redirections, JSON-LD, audit | `supported` | SEO/admin | public/admin | routes, services, validateurs | qualité sémantique dépend des données |
 | recherche | recherche publique native | `supported` | public | SSR/API | module Search, c21 | pas un moteur distribué |
+| catalogue public | recherche, facettes contextuelles, tris et pagination | `supported` | public | `/shop` et `/api/v1/storefront/products` | [preuve point 40](storefront-catalog-search-facets-40.md), test PHP et Playwright | SQLite ; tests Firefox/WebKit et volumétrie de production non exécutés |
+| merchandising Shop | huit sections, promotions, nouveautés et popularité agrégée | `supported` | public / Studio | `/shop`, page système Boutique | [preuve point 41](storefront-merchandising-popularity-41.md), tests PHP, build Vue et Playwright Chromium | pas de personnalisation individuelle ; Firefox/WebKit non exécutés |
+| expérience produit Shop | cartes canoniques, fiches automatiques, variantes, médias et relations typées | `supported` | public / Opérations | `/shop/products/{slug}`, API Storefront, fiche Produit | [preuve point 42](storefront-product-cards-details-relations-42.md), tests PHP, build Vue et gate Playwright ciblé | DTO public v3 ; Firefox/WebKit et lecteur d'écran réel non exécutés |
 | formulaires | modèles et soumissions | `supported` | module/permissions | public/admin/API | module Forms, g2/c73 | anti-spam externe à qualifier |
 | cookies | consentement | `supported` | admin/public | module/API | module Cookies, g3 | conformité juridique non certifiée |
 | import/export | paquet éditorial | `supported` | permissions import/export | admin/API | services EditorialPackage, c88 | compatibilité interversions à tester |

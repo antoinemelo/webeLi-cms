@@ -35,7 +35,21 @@ final class SaleCatalogSnapshotService
     /** @return array<string,mixed> */
     public function publicPayload(array $snapshot): array
     {
-        return $this->sellables->publicPayload($snapshot);
+        $payload = $this->sellables->publicPayload($snapshot);
+        unset($payload['stock_quantity'], $payload['stock_reserved'], $payload['available_quantity']);
+        if (is_array($payload['metadata'] ?? null)) {
+            unset($payload['metadata']['stock_quantity'], $payload['metadata']['stock_reserved'], $payload['metadata']['available_quantity']);
+        }
+        $availability = is_array($payload['availability'] ?? null) ? $payload['availability'] : [];
+        $payload['availability'] = [
+            'contract' => 'sale.inventory.availability.v1',
+            'status' => (string) ($availability['status'] ?? 'unavailable'),
+            'label' => (string) ($availability['label'] ?? ''),
+            'is_orderable' => (bool) ($availability['is_orderable'] ?? false),
+            'delivery_lead_time_days' => $availability['delivery_lead_time_days'] ?? null,
+            'last_available' => ($availability['last_available'] ?? false) === true,
+        ];
+        return $payload;
     }
 
     /** @param array<string,mixed> $filters @return array{items:list<array<string,mixed>>,limit:int,offset:int,total:int,has_more:bool} */
@@ -56,6 +70,8 @@ final class SaleCatalogSnapshotService
         $row = $this->database()->one(
             'SELECT business_variant_id,
                     MAX(tracked) AS tracked,
+                    MAX(allow_backorder) AS allow_backorder,
+                    MAX(backorder_delivery_days) AS backorder_delivery_days,
                     COALESCE(SUM(on_hand_quantity), 0) AS stock_quantity,
                     COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
                     COALESCE(SUM(available_quantity), 0) AS available_quantity
@@ -85,6 +101,8 @@ final class SaleCatalogSnapshotService
         $rows = $this->database()->all(
             'SELECT business_variant_id,
                     MAX(tracked) AS tracked,
+                    MAX(allow_backorder) AS allow_backorder,
+                    MAX(backorder_delivery_days) AS backorder_delivery_days,
                     COALESCE(SUM(on_hand_quantity), 0) AS stock_quantity,
                     COALESCE(SUM(reserved_quantity), 0) AS stock_reserved,
                     COALESCE(SUM(available_quantity), 0) AS available_quantity
@@ -126,13 +144,15 @@ final class SaleCatalogSnapshotService
         $metadata['available_quantity'] = $availableQuantity;
         $metadata['inventory_source'] = 'sale_transactional';
         $snapshot['metadata'] = $metadata;
-        $allowBackorder = (bool) ($snapshot['allow_backorder'] ?? $metadata['allow_backorder'] ?? false);
-        $days = max(1, (int) ($snapshot['backorder_delivery_days'] ?? $metadata['backorder_delivery_days'] ?? 7));
-        $snapshot['availability'] = !$snapshot['track_stock'] || $availableQuantity > 0
-            ? ['status' => 'in_stock', 'label' => 'Livrable immediatement', 'is_orderable' => true, 'delivery_lead_time_days' => null]
-            : ($allowBackorder
-                ? ['status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days]
-                : ['status' => 'contact_us', 'label' => 'Nous contacter pour commander ce produit', 'is_orderable' => false, 'delivery_lead_time_days' => null]);
+        $allowBackorder = (bool) ($inventory['allow_backorder'] ?? $snapshot['allow_backorder'] ?? $metadata['allow_backorder'] ?? false);
+        $days = max(1, (int) ($inventory['backorder_delivery_days'] ?? $snapshot['backorder_delivery_days'] ?? $metadata['backorder_delivery_days'] ?? 7));
+        $snapshot['availability'] = !$snapshot['track_stock']
+            ? ['status' => 'deliverable', 'label' => 'Livrable', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => false]
+            : ($availableQuantity > 0
+                ? ['status' => 'in_stock', 'label' => 'En stock', 'is_orderable' => true, 'delivery_lead_time_days' => null, 'last_available' => $availableQuantity === 1]
+                : ($allowBackorder
+                    ? ['status' => 'backorder', 'label' => 'Livraison sous ' . $days . ' jours', 'is_orderable' => true, 'delivery_lead_time_days' => $days, 'last_available' => false]
+                    : ['status' => 'unavailable', 'label' => 'Indisponible', 'is_orderable' => false, 'delivery_lead_time_days' => null, 'last_available' => false]));
         return $snapshot;
     }
 

@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Modules\Business\Services;
 
 use App\Core\Database;
-use App\Modules\Business\Contracts\CrmSaleActivityV1;
+use App\Modules\Business\Contracts\CrmActivityV2;
+use App\Modules\Sale\Contracts\CrmActivitySink;
 use App\Modules\Sale\Pricing\CustomerPricingContext;
 use App\Modules\Sale\Pricing\CustomerPricingContextProvider;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
 use InvalidArgumentException;
 
-final class SaleCrmActivityProjectionService implements CustomerPricingContextProvider
+final class SaleCrmActivityProjectionService implements CustomerPricingContextProvider, CrmActivitySink
 {
     private const EVENT_MAP = [
+        'sale.cart.abandoned' => ['cart.abandoned', 'abandoned'],
         'sale.order.placed' => ['order.placed', 'placed'],
         'sale.order.confirmed' => ['order.confirmed', 'confirmed'],
         'sale.payment.recorded' => ['payment.captured', 'captured'],
+        'sale.payment.capture.completed' => ['payment.captured', 'captured'],
         'sale.payment.failed' => ['payment.failed', 'failed'],
         'sale.fulfillment.completed' => ['fulfillment.completed', 'completed'],
         'sale.order.cancelled' => ['order.cancelled', 'cancelled'],
@@ -25,6 +28,7 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         'sale.gift_card.issued' => ['gift_card.issued', 'issued'],
         'sale.gift_card.redeemed' => ['gift_card.redeemed', 'redeemed'],
         'sale.pos.order.completed' => ['pos.order.completed', 'completed'],
+        'customer.account.created' => ['customer.account.created', 'created'],
     ];
 
     public function __construct(
@@ -32,8 +36,18 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         private readonly SaleDatabaseConnection $sale,
     ) {}
 
+    public function recordSaleEvent(array $event): void
+    {
+        $siteId = isset($event['site_id']) ? (int) $event['site_id'] : null;
+        try {
+            $this->consume($siteId !== null && $siteId > 0 ? $siteId : null, 200);
+        } catch (\Throwable) {
+            // The outbox remains the source of replay; CRM availability never blocks Sale.
+        }
+    }
+
     /** @return array{projected:int,replayed:int,failed:int} */
-    public function consume(?int $siteId = null, int $limit = 200): array
+    public function consume(?int $siteId = null, int $limit = 200, bool $refresh = false): array
     {
         $sale = $this->sale->database();
         if ($sale === null) {
@@ -49,25 +63,36 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
             $where .= ' AND e.site_id = ?';
             $params[] = $siteId;
         }
-        $rows = $sale->all(
-            'SELECT o.id AS outbox_id, o.payload_json AS envelope_json, e.*
-             FROM sale_outbox o JOIN sale_events e ON e.id = o.event_id
-             WHERE ' . $where . ' ORDER BY e.id ASC LIMIT ' . max(1, min(1000, $limit)),
-            $params
-        );
+        $target = max(1, min(1000, $limit));
+        $pageSize = min(250, $target);
+        $offset = 0;
         $result = ['projected' => 0, 'replayed' => 0, 'failed' => 0];
-        foreach ($rows as $row) {
-            if ($this->business->one('SELECT id FROM crm_sale_activities WHERE source_event_id = ?', [(int) $row['id']]) !== null) {
-                ++$result['replayed'];
-                continue;
+        do {
+            $rows = $sale->all(
+                'SELECT o.id AS outbox_id, o.payload_json AS envelope_json, e.*
+                 FROM sale_outbox o JOIN sale_events e ON e.id = o.event_id
+                 WHERE ' . $where . ' ORDER BY e.id ASC LIMIT ' . $pageSize . ' OFFSET ' . $offset,
+                $params
+            );
+            foreach ($rows as $row) {
+                try {
+                    $existing = $this->business->one(
+                        'SELECT id FROM crm_sale_activities WHERE source_type=? AND source_id=? AND contract_version=?',
+                        ['sale_event', (string) $row['id'], CrmActivityV2::CONTRACT_VERSION]
+                    ) !== null;
+                    if ($existing && !$refresh) {
+                        ++$result['replayed'];
+                        continue;
+                    }
+                    $this->store($this->dto($row));
+                    $existing ? ++$result['replayed'] : ++$result['projected'];
+                } catch (\Throwable) {
+                    ++$result['failed'];
+                }
+                if ($result['projected'] + $result['failed'] >= $target) break 2;
             }
-            try {
-                $this->store($this->dto($row));
-                ++$result['projected'];
-            } catch (\Throwable) {
-                ++$result['failed'];
-            }
-        }
+            $offset += count($rows);
+        } while (count($rows) === $pageSize);
         return $result;
     }
 
@@ -77,11 +102,11 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         $limit = max(1, min(200, $limit));
         $offset = max(0, $offset);
         $total = (int) ($this->business->one(
-            "SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=? AND resolution_strategy='anonymous'",
+            "SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=? AND resolution_strategy='pending'",
             [$siteId]
         )['count'] ?? 0);
         $items = $this->business->all(
-            "SELECT * FROM crm_sale_activities WHERE site_id=? AND resolution_strategy='anonymous' ORDER BY occurred_at DESC,id DESC LIMIT {$limit} OFFSET {$offset}",
+            "SELECT * FROM crm_sale_activities WHERE site_id=? AND resolution_strategy='pending' ORDER BY occurred_at DESC,id DESC LIMIT {$limit} OFFSET {$offset}",
             [$siteId]
         );
         return ['items' => array_map($this->cast(...), $items), 'limit' => $limit, 'offset' => $offset, 'total' => $total];
@@ -132,32 +157,53 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         $sale = $this->sale->database() ?? throw new InvalidArgumentException('sale.database_unavailable');
         $types = array_keys(self::EVENT_MAP);
         $params = array_merge([$siteId], $types);
-        $supported = (int) ($sale->one(
-            'SELECT COUNT(*) AS count FROM sale_events WHERE site_id=? AND event_type IN (' . implode(',', array_fill(0, count($types), '?')) . ')',
+        $events = $sale->all(
+            'SELECT id FROM sale_events WHERE site_id=? AND event_type IN (' . implode(',', array_fill(0, count($types), '?')) . ') ORDER BY id',
             $params
-        )['count'] ?? 0);
-        $before = (int) ($this->business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=?', [$siteId])['count'] ?? 0);
-        $missing = max(0, $supported - $before);
+        );
+        $sourceIds = array_map(static fn(array $row): string => (string) $row['id'], $events);
+        $projectedIds = array_map(
+            static fn(array $row): string => (string) $row['source_id'],
+            $this->business->all('SELECT source_id FROM crm_sale_activities WHERE site_id=? AND source_type=? AND contract_version=?', [$siteId, 'sale_event', CrmActivityV2::CONTRACT_VERSION])
+        );
+        $supported = count($sourceIds);
+        $missingIds = array_values(array_diff($sourceIds, $projectedIds));
+        $missing = count($missingIds);
         $consume = $repair ? $this->consume($siteId, 1000) : ['projected' => 0, 'replayed' => 0, 'failed' => 0];
-        $after = (int) ($this->business->one('SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=?', [$siteId])['count'] ?? 0);
+        $afterRows = $this->business->all('SELECT source_id FROM crm_sale_activities WHERE site_id=? AND source_type=? AND contract_version=?', [$siteId, 'sale_event', CrmActivityV2::CONTRACT_VERSION]);
+        $afterIds = array_map(static fn(array $row): string => (string) $row['source_id'], $afterRows);
+        $after = count($afterIds);
         $duplicates = (int) ($this->business->one(
-            'SELECT COUNT(*) AS count FROM (SELECT source_event_id FROM crm_sale_activities WHERE site_id=? GROUP BY source_event_id HAVING COUNT(*)>1)',
+            'SELECT COUNT(*) AS count FROM (SELECT source_type,source_id,contract_version FROM crm_sale_activities WHERE site_id=? GROUP BY source_type,source_id,contract_version HAVING COUNT(*)>1)',
             [$siteId]
         )['count'] ?? 0);
         $report = [
             'supported_events' => $supported,
             'projected_events' => $after,
-            'missing_events' => max(0, $supported - $after),
+            'missing_events' => count(array_diff($sourceIds, $afterIds)),
             'duplicate_events' => $duplicates,
             'repaired_events' => (int) $consume['projected'],
             'failed_events' => (int) $consume['failed'],
             'initial_missing_events' => $missing,
+            'initial_missing_source_ids' => array_slice($missingIds, 0, 100),
+            'pending_identity_events' => (int) ($this->business->one("SELECT COUNT(*) AS count FROM crm_sale_activities WHERE site_id=? AND resolution_strategy='pending'", [$siteId])['count'] ?? 0),
         ];
         $this->business->run(
             'INSERT INTO crm_sale_activity_reconciliation_runs(site_id,supported_events,projected_events,missing_events,duplicate_events,repaired_events,report_json,run_by_iam_user_id) VALUES(?,?,?,?,?,?,?,?)',
             [$siteId, $supported, $after, $report['missing_events'], $duplicates, $report['repaired_events'], $this->json($report), $actorId]
         );
         return $report;
+    }
+
+    /** Replays every available source event without deleting manual identity decisions. */
+    public function rebuild(int $siteId, ?int $actorId = null): array
+    {
+        $total = ['projected' => 0, 'replayed' => 0, 'failed' => 0];
+        do {
+            $result = $this->consume($siteId, 1000, true);
+            foreach ($total as $key => $_) $total[$key] += $result[$key];
+        } while ($result['projected'] === 1000 && $result['failed'] === 0);
+        return ['mode' => 'rebuild', 'consume' => $total, 'reconciliation' => $this->reconcile($siteId, $actorId, true)];
     }
 
     public function context(int $siteId, ?int $contactId, ?int $companyId, ?int $iamUserId = null): CustomerPricingContext
@@ -193,41 +239,56 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
     }
 
     /** @param array<string,mixed> $event */
-    private function dto(array $event): CrmSaleActivityV1
+    private function dto(array $event): CrmActivityV2
     {
         $payload = json_decode((string) ($event['payload_json'] ?? '{}'), true);
         $payload = is_array($payload) ? $payload : [];
         $orderId = (int) ($payload['order_id'] ?? ((string) $event['aggregate_type'] === 'order' ? $event['aggregate_id'] : 0));
-        $sale = $this->sale->database() ?? throw new InvalidArgumentException('sale.database_unavailable');
-        $order = $orderId > 0 ? $sale->one('SELECT * FROM sale_orders WHERE id=? AND site_id=?', [$orderId, (int) $event['site_id']]) : null;
-        $contactId = $order !== null && (int) ($order['customer_contact_id'] ?? 0) > 0 ? (int) $order['customer_contact_id'] : null;
-        $companyId = $order !== null && (int) ($order['customer_company_id'] ?? 0) > 0 ? (int) $order['customer_company_id'] : null;
-        $strategy = ($contactId !== null || $companyId !== null) ? 'explicit_order' : 'anonymous';
-        if ($contactId === null && $companyId === null) {
-            $iamUserId = (int) ($payload['iam_user_id'] ?? $event['created_by_iam_user_id'] ?? 0);
-            if ($iamUserId > 0) {
-                $link = $sale->one("SELECT crm_company_id,crm_contact_id FROM sale_customer_account_links WHERE site_id=? AND iam_user_id=? AND status='active'", [(int) $event['site_id'], $iamUserId]);
-                if ($link !== null) {
-                    $contactId = (int) ($link['crm_contact_id'] ?? 0) ?: null;
-                    $companyId = (int) ($link['crm_company_id'] ?? 0) ?: null;
-                    $strategy = ($contactId !== null || $companyId !== null) ? 'iam_account_link' : 'anonymous';
-                }
-            }
-        }
+        $context = $orderId > 0 ? $this->projectedOrderContext((int) $event['site_id'], $orderId) : null;
+        $contactId = (int) ($payload['customer_contact_id'] ?? 0) ?: ($context['related_contact_id'] ?? null);
+        $companyId = (int) ($payload['customer_company_id'] ?? 0) ?: ($context['related_company_id'] ?? null);
+        $strategy = ($contactId !== null || $companyId !== null)
+            ? (((int) ($payload['customer_contact_id'] ?? $payload['customer_company_id'] ?? 0)) > 0 ? 'explicit_event' : 'event_correlation')
+            : 'pending';
         [$contactId, $companyId, $strategy] = $this->validatedRelation((int) $event['site_id'], $contactId, $companyId, $strategy);
         [$type, $status] = self::EVENT_MAP[(string) $event['event_type']];
-        $source = (string) ($order['source'] ?? $payload['source'] ?? 'unknown');
-        $channel = match ($source) { 'ecommerce' => 'web', 'pos' => 'pos', 'admin' => 'admin', default => 'unknown' };
-        $reference = $order !== null ? (string) $order['order_number'] : null;
-        $amount = isset($payload['amount_minor']) ? (int) $payload['amount_minor'] : ($order !== null ? (int) $order['grand_total_minor'] : null);
-        $currency = (string) ($payload['currency'] ?? $order['currency'] ?? '');
+        $source = (string) ($payload['source'] ?? $context['channel'] ?? 'unknown');
+        $channel = match ($source) { 'ecommerce', 'web' => 'web', 'pos' => 'pos', 'admin' => 'admin', default => (string) ($context['channel'] ?? 'unknown') };
+        $channelId = (int) ($payload['channel_id'] ?? 0) ?: (isset($context['channel_id']) ? (int) $context['channel_id'] : null);
+        $languageCode = trim((string) ($payload['language_code'] ?? $payload['locale'] ?? $context['language_code'] ?? '')) ?: null;
+        $reference = trim((string) ($payload['order_number'] ?? $payload['return_number'] ?? $context['source_reference'] ?? '')) ?: null;
+        $amount = isset($payload['amount_minor']) ? (int) $payload['amount_minor'] : (isset($payload['grand_total_minor']) ? (int) $payload['grand_total_minor'] : null);
+        $currency = (string) ($payload['currency'] ?? $context['currency'] ?? '');
+        $retentionUntil = isset($payload['retention_until']) ? (string) $payload['retention_until'] : null;
+        if ((string) $event['event_type'] === 'sale.cart.abandoned') {
+            $this->assertEligibleAbandonedCart($event, $payload, $contactId, $companyId, $retentionUntil);
+        }
         $summary = $this->summary($type, $reference, $amount, $currency);
-        return new CrmSaleActivityV1(
-            (int) $event['site_id'], $type, (string) $event['created_at'], $channel,
+        $metadata = array_filter([
+            'order_id' => $orderId ?: null,
+            'cart_id' => isset($payload['cart_id']) ? (int) $payload['cart_id'] : null,
+            'transaction_id' => isset($payload['transaction_id']) ? (int) $payload['transaction_id'] : null,
+            'payment_intent_id' => isset($payload['payment_intent_id']) ? (int) $payload['payment_intent_id'] : null,
+            'return_id' => isset($payload['return_id']) ? (int) $payload['return_id'] : null,
+            'refund_id' => isset($payload['refund_id']) ? (int) $payload['refund_id'] : null,
+            'gift_card_id' => isset($payload['gift_card_id']) ? (int) $payload['gift_card_id'] : null,
+            'iam_user_id' => isset($payload['iam_user_id']) ? (int) $payload['iam_user_id'] : null,
+            'amount_minor' => $amount,
+            'currency' => $currency ?: null,
+            'payment_status' => $payload['payment_status'] ?? null,
+            'product_ids' => ($productIds = $this->positiveIds($payload['product_ids'] ?? [])) !== [] ? $productIds : null,
+            'category_ids' => ($categoryIds = $this->positiveIds($payload['category_ids'] ?? [])) !== [] ? $categoryIds : null,
+            'marketing_communication_allowed' => ($payload['marketing_consent'] ?? false) === true,
+        ], static fn(mixed $value): bool => $value !== null);
+        return new CrmActivityV2(
+            (int) $event['site_id'], $type, (string) $event['created_at'], $channel, $channelId, $languageCode,
             $contactId, $companyId, (int) $event['id'], (int) $event['outbox_id'],
+            'sale_event', (string) $event['id'],
             (string) $event['event_type'], (string) $event['aggregate_type'], (int) $event['aggregate_id'],
             $reference, $summary, $status, $strategy,
-            array_filter(['order_id' => $orderId ?: null, 'amount_minor' => $amount, 'currency' => $currency ?: null], static fn(mixed $value): bool => $value !== null)
+            ['event_type' => (string) $event['event_type'], 'event_id' => (int) $event['id'], 'outbox_id' => (int) $event['outbox_id'], 'correlation_id' => $event['correlation_id'] ?? null],
+            $metadata,
+            $retentionUntil,
         );
     }
 
@@ -237,31 +298,100 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
         if ($contactId !== null) {
             $contact = $this->business->one('SELECT id,company_id FROM business_contacts WHERE site_id=? AND id=? AND archived_at IS NULL', [$siteId, $contactId]);
             if ($contact === null) {
-                return [null, null, 'anonymous'];
+                return [null, null, 'pending'];
             }
             $companyId = (int) $contact['company_id'];
         } elseif ($companyId !== null && $this->business->one('SELECT id FROM business_companies WHERE site_id=? AND id=? AND archived_at IS NULL', [$siteId, $companyId]) === null) {
-            return [null, null, 'anonymous'];
+            return [null, null, 'pending'];
         }
         return [$contactId, $companyId, $strategy];
     }
 
-    private function store(CrmSaleActivityV1 $dto): void
+    /** @return array<string,mixed>|null */
+    private function projectedOrderContext(int $siteId, int $orderId): ?array
+    {
+        if ($orderId < 1) {
+            return null;
+        }
+        $row = $this->business->one(
+            "SELECT related_company_id,related_contact_id,channel,channel_id,language_code,source_reference,metadata_json
+             FROM crm_sale_activities
+             WHERE site_id=? AND resolution_strategy<>'pending' AND CAST(json_extract(metadata_json,'$.order_id') AS INTEGER)=?
+             ORDER BY CASE activity_type WHEN 'order.placed' THEN 0 ELSE 1 END,id LIMIT 1",
+            [$siteId, $orderId]
+        );
+        if ($row === null) {
+            return null;
+        }
+        $metadata = json_decode((string) $row['metadata_json'], true);
+        $row['currency'] = is_array($metadata) ? ($metadata['currency'] ?? null) : null;
+        return $row;
+    }
+
+    /** @param array<string,mixed> $event @param array<string,mixed> $payload */
+    private function assertEligibleAbandonedCart(array $event, array $payload, ?int $contactId, ?int $companyId, ?string $retentionUntil): void
+    {
+        $minimumAge = (int) ($payload['abandoned_after_seconds'] ?? 0);
+        $lawfulBasis = trim((string) ($payload['lawful_basis'] ?? ''));
+        $iamUserId = (int) ($payload['iam_user_id'] ?? 0);
+        $occurred = strtotime((string) ($event['created_at'] ?? '')) ?: time();
+        $retention = $retentionUntil === null ? false : strtotime($retentionUntil);
+        if ($minimumAge < 3600 || $lawfulBasis === '' || ($contactId === null && $companyId === null && $iamUserId < 1)
+            || $retention === false || $retention <= $occurred || $retention > $occurred + 86400 * 180) {
+            throw new InvalidArgumentException('business.abandoned_cart_activity_ineligible');
+        }
+    }
+
+    private function resolvePendingForOrder(CrmActivityV2 $dto): void
+    {
+        $orderId = (int) ($dto->metadata['order_id'] ?? 0);
+        if ($orderId < 1 || ($dto->contactId === null && $dto->companyId === null)) {
+            return;
+        }
+        $this->business->run(
+            "UPDATE crm_sale_activities SET related_company_id=?,related_contact_id=?,resolution_strategy='event_correlation',
+                    channel=CASE WHEN channel='unknown' THEN ? ELSE channel END,
+                    channel_id=COALESCE(channel_id,?),language_code=COALESCE(language_code,?),
+                    source_reference=COALESCE(source_reference,?),updated_at=CURRENT_TIMESTAMP
+             WHERE site_id=? AND resolution_strategy='pending' AND CAST(json_extract(metadata_json,'$.order_id') AS INTEGER)=?",
+            [$dto->companyId, $dto->contactId, $dto->channel, $dto->channelId, $dto->languageCode, $dto->sourceReference, $dto->siteId, $orderId]
+        );
+    }
+
+    private function store(CrmActivityV2 $dto): void
     {
         $this->business->run(
-            'INSERT OR IGNORE INTO crm_sale_activities(dto_version,site_id,activity_type,occurred_at,channel,related_company_id,related_contact_id,source_event_id,source_outbox_id,source_event_type,source_aggregate_type,source_aggregate_id,source_reference,summary,status,resolution_strategy,metadata_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            [CrmSaleActivityV1::VERSION, $dto->siteId, $dto->type, $dto->occurredAt, $dto->channel, $dto->companyId, $dto->contactId, $dto->sourceEventId, $dto->sourceOutboxId, $dto->sourceEventType, $dto->sourceAggregateType, $dto->sourceAggregateId, $dto->sourceReference, substr($dto->summary, 0, 500), $dto->status, $dto->resolutionStrategy, $this->json($dto->metadata)]
+            'INSERT INTO crm_sale_activities(dto_version,contract_version,site_id,activity_type,occurred_at,channel,channel_id,language_code,related_company_id,related_contact_id,source_event_id,source_outbox_id,source_type,source_id,source_event_type,source_aggregate_type,source_aggregate_id,source_reference,summary,status,resolution_strategy,provenance_json,metadata_json,retention_until)
+             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+             ON CONFLICT(source_type,source_id,contract_version) DO UPDATE SET
+                activity_type=excluded.activity_type,occurred_at=excluded.occurred_at,
+                channel=CASE WHEN crm_sale_activities.channel=\'unknown\' THEN excluded.channel ELSE crm_sale_activities.channel END,
+                channel_id=COALESCE(crm_sale_activities.channel_id,excluded.channel_id),
+                language_code=COALESCE(crm_sale_activities.language_code,excluded.language_code),
+                related_company_id=CASE WHEN crm_sale_activities.resolution_strategy=\'manual\' THEN crm_sale_activities.related_company_id ELSE COALESCE(excluded.related_company_id,crm_sale_activities.related_company_id) END,
+                related_contact_id=CASE WHEN crm_sale_activities.resolution_strategy=\'manual\' THEN crm_sale_activities.related_contact_id ELSE COALESCE(excluded.related_contact_id,crm_sale_activities.related_contact_id) END,
+                source_reference=COALESCE(crm_sale_activities.source_reference,excluded.source_reference),
+                summary=excluded.summary,status=excluded.status,
+                resolution_strategy=CASE WHEN crm_sale_activities.resolution_strategy=\'manual\' THEN \'manual\' WHEN excluded.resolution_strategy<>\'pending\' THEN excluded.resolution_strategy ELSE crm_sale_activities.resolution_strategy END,
+                provenance_json=excluded.provenance_json,metadata_json=excluded.metadata_json,
+                retention_until=COALESCE(excluded.retention_until,crm_sale_activities.retention_until),updated_at=CURRENT_TIMESTAMP',
+            [CrmActivityV2::VERSION, CrmActivityV2::CONTRACT_VERSION, $dto->siteId, $dto->type, $dto->occurredAt, $dto->channel, $dto->channelId, $dto->languageCode, $dto->companyId, $dto->contactId, $dto->sourceEventId, $dto->sourceOutboxId, $dto->sourceType, $dto->sourceId, $dto->sourceEventType, $dto->sourceAggregateType, $dto->sourceAggregateId, $dto->sourceReference, substr($dto->summary, 0, 500), $dto->status, $dto->resolutionStrategy, $this->json($dto->provenance), $this->json($dto->metadata), $dto->retentionUntil]
         );
+        if ($dto->resolutionStrategy !== 'pending') {
+            $this->resolvePendingForOrder($dto);
+        }
     }
 
     private function summary(string $type, ?string $reference, ?int $amount, string $currency): string
     {
         $label = match ($type) {
+            'cart.abandoned' => 'Panier abandonné',
             'order.placed' => 'Commande passée', 'order.confirmed' => 'Commande confirmée',
             'payment.captured' => 'Paiement capturé', 'payment.failed' => 'Paiement échoué',
             'fulfillment.completed' => 'Livraison terminée', 'order.cancelled' => 'Commande annulée',
             'return.created' => 'Retour créé', 'refund.completed' => 'Remboursement terminé',
             'gift_card.issued' => 'Carte cadeau émise', 'gift_card.redeemed' => 'Carte cadeau utilisée',
+            'customer.account.created' => 'Compte client créé',
             'pos.order.completed' => 'Vente POS terminée', default => 'Activité de vente',
         };
         $parts = [$label, $reference !== null && $reference !== '' ? $reference : null];
@@ -276,13 +406,15 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
     {
         if ($row === []) return [];
         $metadata = json_decode((string) ($row['metadata_json'] ?? '{}'), true);
+        $provenance = json_decode((string) ($row['provenance_json'] ?? '{}'), true);
         $row['id'] = (int) $row['id'];
         $row['dto_version'] = (int) $row['dto_version'];
-        foreach (['site_id','related_company_id','related_contact_id','source_event_id','source_outbox_id','source_aggregate_id','linked_by_iam_user_id'] as $key) {
+        foreach (['site_id','channel_id','related_company_id','related_contact_id','source_event_id','source_outbox_id','source_aggregate_id','linked_by_iam_user_id'] as $key) {
             $row[$key] = isset($row[$key]) ? (int) $row[$key] : null;
         }
         $row['metadata'] = is_array($metadata) ? $metadata : [];
-        unset($row['metadata_json']);
+        $row['provenance'] = is_array($provenance) ? $provenance : [];
+        unset($row['metadata_json'], $row['provenance_json']);
         return $row;
     }
 
@@ -290,5 +422,13 @@ final class SaleCrmActivityProjectionService implements CustomerPricingContextPr
     private function json(array $value): string
     {
         return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    /** @return list<int> */
+    private function positiveIds(mixed $value): array
+    {
+        $ids = [];
+        foreach (is_array($value) ? $value : [] as $id) if ((int) $id > 0) $ids[(int) $id] = true;
+        return array_map('intval', array_keys($ids));
     }
 }

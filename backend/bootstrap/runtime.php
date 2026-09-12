@@ -92,25 +92,127 @@ function cms_autoload_maps_prefix(string $autoload, string $prefix): bool
 }
 
 /**
- * Fallback Twig loader for installations without backend/vendor.
+ * Load dependencies from a portable/shared Composer vendor without allowing
+ * that vendor to supply application classes from another CMS instance.
+ */
+function cms_require_portable_composer_autoload(string $autoload): bool
+{
+    if (!is_file($autoload)) {
+        return false;
+    }
+
+    $mapsApplication = cms_autoload_maps_prefix($autoload, 'App\\');
+    $loader = require $autoload;
+    if (!$mapsApplication) {
+        return true;
+    }
+
+    // Composer returns its ClassLoader here. Remove the root project's App\\
+    // PSR-4 mapping so the native fallback below remains instance-local.
+    if (!is_object($loader)
+        || !method_exists($loader, 'setPsr4')
+        || !method_exists($loader, 'getClassMap')) {
+        if (is_object($loader) && method_exists($loader, 'unregister')) {
+            $loader->unregister();
+        }
+        return false;
+    }
+
+    // An optimized vendor may contain concrete App\\ class-map entries, which
+    // cannot be removed safely through Composer's public API. Reject it rather
+    // than risk loading application code from the shared instance.
+    foreach (array_keys($loader->getClassMap()) as $class) {
+        if (str_starts_with((string) $class, 'App\\')) {
+            if (method_exists($loader, 'unregister')) {
+                $loader->unregister();
+            }
+            return false;
+        }
+    }
+
+    $loader->setPsr4('App\\', []);
+    return true;
+}
+
+/** Resolve the conventional cms/vendor shared from the web root. */
+function cms_named_shared_vendor_root(): string
+{
+    $projectRoot = cms_project_path('');
+    $cursor = $projectRoot;
+    while ($cursor !== dirname($cursor)) {
+        if (basename($cursor) === 'cms') {
+            return dirname($cursor) . '/cms/vendor';
+        }
+        if (is_dir($cursor . '/cms')) {
+            return $cursor . '/cms/vendor';
+        }
+        $cursor = dirname($cursor);
+    }
+
+    foreach (['DOCUMENT_ROOT', 'CONTEXT_DOCUMENT_ROOT'] as $key) {
+        $documentRoot = trim((string) ($_SERVER[$key] ?? ''));
+        if ($documentRoot !== '') {
+            return rtrim($documentRoot, DIRECTORY_SEPARATOR . '/') . '/cms/vendor';
+        }
+    }
+
+    return dirname($projectRoot) . '/cms/vendor';
+}
+
+/**
+ * Composer vendor locations supported by every instance.
  *
- * A Composer autoloader mapping App\\ must never be loaded here: doing so before
- * backend/vendor/autoload.php registers two project autoloaders and can re-enter
- * a provider file while PHP is still declaring it.
+ * They resolve to instance/backend/vendor, instance/vendor, parent/vendor,
+ * the conventional web-root cms/vendor, then grandparent/vendor.
+ *
+ * @return list<string>
+ */
+function cms_vendor_roots(): array
+{
+    $projectRoot = cms_project_path('');
+    return array_values(array_unique([
+        $projectRoot . '/backend/vendor',
+        $projectRoot . '/vendor',
+        dirname($projectRoot) . '/vendor',
+        cms_named_shared_vendor_root(),
+        dirname($projectRoot, 2) . '/vendor',
+    ]));
+}
+
+/** @return list<string> */
+function cms_twig_vendor_roots(string $configuredPath = ''): array
+{
+    $roots = array_map(
+        static fn(string $vendorRoot): string => $vendorRoot . '/twig',
+        cms_vendor_roots(),
+    );
+    if (trim($configuredPath) !== '') {
+        $roots[] = cms_project_path($configuredPath);
+    }
+    return array_values(array_unique($roots));
+}
+
+/**
+ * Portable dependency loader for installations without backend/vendor.
+ *
+ * Shared Composer vendors are accepted after their App\\ mapping has been
+ * neutralized. Twig still has a direct PSR-4 fallback for older vendor layouts.
  */
 function cms_register_twig_fallback(string $configuredPath): void
 {
-    if (class_exists(\Twig\Environment::class, false)
-        && class_exists(\Twig\Loader\FilesystemLoader::class, false)) {
+    // Allow the canonical backend Composer loader, registered immediately
+    // before this call, to resolve Twig. Using ``false`` here would make us
+    // process that same loader as a portable vendor and clear its valid App\\
+    // mapping, leaving the application classes unavailable.
+    if (class_exists(\Twig\Environment::class)
+        && class_exists(\Twig\Loader\FilesystemLoader::class)) {
         return;
     }
 
-    $configuredRoot = cms_project_path($configuredPath ?: './vendor/twig/');
-    $twigRoots = array_values(array_unique([
-        $configuredRoot,
-        cms_project_path('./vendor/twig/'),
-        cms_project_path('../vendor/twig/'),
-    ]));
+    // Keep every instance portable: prefer its canonical Composer vendor,
+    // then its local portable vendor, then a vendor shared by the parent.
+    // APP_TWIG_VENDOR_PATH remains an additional custom fallback.
+    $twigRoots = cms_twig_vendor_roots($configuredPath);
 
     $autoloadCandidates = [];
     foreach ($twigRoots as $twigRoot) {
@@ -120,10 +222,9 @@ function cms_register_twig_fallback(string $configuredPath): void
     }
 
     foreach ($autoloadCandidates as $autoload) {
-        if (!is_file($autoload) || cms_autoload_maps_prefix($autoload, 'App\\')) {
+        if (!cms_require_portable_composer_autoload($autoload)) {
             continue;
         }
-        require_once $autoload;
         if (class_exists(\Twig\Environment::class)
             && class_exists(\Twig\Loader\FilesystemLoader::class)) {
             return;

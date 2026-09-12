@@ -198,7 +198,7 @@
       </div>
     {% endfor %}
   </section>
-{% elseif type in ['featured_product','product_card','product_grid','collection_grid','product_detail','add_to_cart'] %}
+{% elseif type in ['commerce_product','commerce_product_variants','commerce_product_list','storytelling'] %}
   {% include 'partials/storefront-block.twig' with { block_type: type, data: data } only %}
 {% else %}
   {% set fallback_markdown_text = data.text|default(data.markdown|default(block.text|default(''))) %}

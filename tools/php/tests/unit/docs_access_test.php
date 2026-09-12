@@ -16,6 +16,7 @@ $sections = $sectionsMethod->invoke($controller);
 $documentationFiles = (new ReflectionMethod($controller, 'documentationFiles'))->invoke($controller);
 $splitFrontMatter = new ReflectionMethod($controller, 'splitFrontMatter');
 $h->assertTrue(in_array('README.md', $documentationFiles, true), 'root documentation index is exposed');
+$h->assertTrue(in_array('business/README.md', $documentationFiles, true), 'business documentation has a task-oriented section index');
 $h->assertTrue(in_array('installation/README.md', $documentationFiles, true), 'installation documentation is exposed without a superadmin rule');
 $h->assertTrue(in_array('evaluation/machine-readable/features.json', $documentationFiles, true), 'machine-readable JSON documentation is exposed');
 $h->assertTrue(in_array('public-api/openapi.v1.yaml', $documentationFiles, true), 'OpenAPI YAML documentation is exposed');
@@ -26,6 +27,9 @@ $catalog = (new ReflectionMethod($controller, 'documents'))->invoke($controller)
 $h->assertSame(count($documentationFiles), count($catalog), 'every supported documentation file is present in the catalogue');
 $catalogIds = array_column($catalog, 'id');
 $h->assertSame(count($catalogIds), count(array_unique($catalogIds)), 'every documentation file has a unique stable identifier');
+$h->assertTrue(in_array('business~index', $catalogIds, true), 'business section index has a stable viewer identifier');
+$h->assertSame('Commencer', $sections['overview']['label'] ?? null, 'root section uses a reader-oriented label');
+$h->assertSame('Références techniques', $sections['reference']['label'] ?? null, 'technical inventories remain clearly separated');
 
 $renderSource = new ReflectionMethod($controller, 'renderSourceDocument');
 $safeHtmlSource = $renderSource->invoke($controller, '<script>alert(1)</script>', 'html-source');
@@ -44,6 +48,8 @@ $withResolvedLinks = new ReflectionMethod($controller, 'withResolvedMarkdownLink
 $allDocuments = [];
 $userGuideIndex = null;
 $userGuideBody = '';
+$businessIndex = null;
+$businessBody = '';
 foreach ($documentationFiles as $relativePath) {
     $sectionKey = str_contains($relativePath, '/') ? explode('/', $relativePath, 2)[0] : 'overview';
     if (!isset($sections[$sectionKey])) {
@@ -60,6 +66,10 @@ foreach ($documentationFiles as $relativePath) {
         $userGuideIndex = $document;
         $userGuideBody = $body;
     }
+    if ($relativePath === 'business/README.md') {
+        $businessIndex = $document;
+        $businessBody = $body;
+    }
 }
 $renderedUserGuide = $withResolvedLinks->invoke(
     $controller,
@@ -72,6 +82,19 @@ $h->assertSame(
     count($markdownLinks[0]),
     substr_count($renderedUserGuide, 'data-doc-id='),
     'every internal Markdown link in the user guide resolves to an indexed document'
+);
+
+$renderedBusiness = $withResolvedLinks->invoke(
+    $controller,
+    MarkdownRenderer::toHtml($businessBody),
+    $businessIndex,
+    $allDocuments
+);
+preg_match_all('/\[[^\]]+\]\((?!https?:|mailto:|#)[^)]+\.md(?:#[^)]*)?\)/i', $businessBody, $businessLinks);
+$h->assertSame(
+    count($businessLinks[0]),
+    substr_count($renderedBusiness, 'data-doc-id='),
+    'every internal Markdown link in the business entry page resolves to an indexed document'
 );
 
 $documents = [

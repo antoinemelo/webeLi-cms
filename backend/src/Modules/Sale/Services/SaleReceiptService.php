@@ -77,14 +77,14 @@ final class SaleReceiptService
     private function text(array $snapshot, string $language): string
     {
         $labels = $language === 'en'
-            ? ['title' => 'Receipt', 'date' => 'Date', 'operator' => 'Operator', 'total' => 'Total', 'paid' => 'Paid', 'refunded' => 'Refunded', 'balance' => 'Balance', 'tax' => 'Tax', 'payments' => 'Payments']
-            : ['title' => 'Ticket de caisse', 'date' => 'Date', 'operator' => 'Opérateur', 'total' => 'Total', 'paid' => 'Payé', 'refunded' => 'Remboursé', 'balance' => 'Solde', 'tax' => 'Taxes', 'payments' => 'Paiements'];
+            ? ['title' => 'Receipt', 'date' => 'Date', 'operator' => 'Operator', 'total' => 'Total', 'paid' => 'Paid', 'refunded' => 'Refunded', 'balance' => 'Balance', 'tax' => 'Taxes included', 'payments' => 'Payments']
+            : ['title' => 'Ticket de caisse', 'date' => 'Date', 'operator' => 'Opérateur', 'total' => 'Total', 'paid' => 'Payé', 'refunded' => 'Remboursé', 'balance' => 'Solde', 'tax' => 'Taxes incluses', 'payments' => 'Paiements'];
         $lines = [$labels['title'] . ' ' . $snapshot['order_number'], $labels['date'] . ': ' . $snapshot['placed_at'], $labels['operator'] . ': #' . ($snapshot['operator_iam_user_id'] ?? '-')];
         foreach ($snapshot['lines'] as $line) {
             $lines[] = $line['quantity'] . ' x ' . $line['label'] . ' = ' . $this->money((int) $line['line_total_minor'], (string) $snapshot['currency']);
         }
-        $lines[] = $labels['tax'] . ': ' . $this->money((int) $snapshot['tax_total_minor'], (string) $snapshot['currency']);
         $lines[] = $labels['total'] . ': ' . $this->money((int) $snapshot['grand_total_minor'], (string) $snapshot['currency']);
+        $lines[] = $labels['tax'] . ': ' . $this->money((int) $snapshot['tax_total_minor'], (string) $snapshot['currency']);
         $lines[] = $labels['payments'] . ': ' . count($snapshot['payments']);
         $lines[] = $labels['paid'] . ': ' . $this->money((int) $snapshot['paid_total_minor'], (string) $snapshot['currency']);
         $lines[] = $labels['refunded'] . ': ' . $this->money((int) $snapshot['refunded_total_minor'], (string) $snapshot['currency']);

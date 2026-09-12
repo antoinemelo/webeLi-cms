@@ -90,7 +90,30 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
         return $row ? $this->castRow($row) : null;
     }
 
-    public function upsertConsent(int $contactId, string $channel, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null): array
+    /**
+     * Returns a CRM contact only when one verified channel matches inside the site.
+     * Zero or several matches deliberately remain unresolved for operator review.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function uniqueVerifiedContactByChannel(int $siteId, string $channel, string $normalizedValue): ?array
+    {
+        $siteId = $this->requireSiteId($siteId);
+        $channel = $this->channel($channel);
+        $normalizedValue = $this->text(strtolower(trim($normalizedValue)), 'normalized_value', 255);
+        $rows = $this->database()->all(
+            'SELECT c.* FROM crm_contact_channels cc
+             JOIN business_contacts c ON c.id = cc.contact_id
+             WHERE c.site_id = :site_id AND c.archived_at IS NULL
+               AND cc.channel = :channel AND cc.normalized_value = :normalized
+               AND cc.is_verified = 1 AND cc.archived_at IS NULL
+             ORDER BY c.id LIMIT 2',
+            ['site_id' => $siteId, 'channel' => $channel, 'normalized' => $normalizedValue]
+        );
+        return count($rows) === 1 ? $this->castRow($rows[0]) : null;
+    }
+
+    public function upsertConsent(int $contactId, string $channel, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null, string $purpose = 'marketing', int $retentionDays = 2190): array
     {
         if ($contactId < 1) {
             throw new InvalidArgumentException('business.contact_id_invalid');
@@ -100,6 +123,11 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
         if (!in_array($source, ['manual', 'form', 'import', 'unsubscribe', 'api'], true)) {
             throw new InvalidArgumentException('business.consent_source_invalid');
         }
+        if ($purpose !== 'marketing') {
+            throw new InvalidArgumentException('business.consent_purpose_invalid');
+        }
+        $retentionDays = max(365, min(3650, $retentionDays));
+        return $this->database()->transaction(function () use ($contactId, $channel, $status, $source, $evidence, $actorId, $purpose, $retentionDays): array {
         $grantedAt = $status === 'opt_in' ? date('Y-m-d H:i:s') : null;
         $revokedAt = $status === 'opt_out' ? date('Y-m-d H:i:s') : null;
         $this->database()->run(
@@ -117,7 +145,36 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
                 'actor' => $actorId,
             ]
         );
-        return $this->consentForContact($contactId, $channel) ?? [];
+        $consent = $this->consentForContact($contactId, $channel) ?? [];
+        if ($this->database()->tableExists('crm_consent_events')) {
+            $contact = $this->database()->one('SELECT site_id FROM business_contacts WHERE id=:id', ['id' => $contactId]);
+            if ($contact === null) {
+                throw new InvalidArgumentException('business.contact_not_found');
+            }
+            $siteId = (int) $contact['site_id'];
+            $eventType = match ($status) { 'opt_in' => 'granted', 'opt_out' => 'withdrawn', default => 'recorded' };
+            $this->database()->run(
+                'INSERT INTO crm_consent_events(consent_id,site_id,contact_id,channel,purpose,scope_type,scope_id,consent_status,event_type,source,evidence,proof_json,retention_until,actor_iam_user_id)
+                 VALUES(:consent_id,:site_id,:contact_id,:channel,:purpose,\'site\',:scope_id,:status,:event_type,:source,:evidence,:proof,:retention,:actor)',
+                [
+                    'consent_id' => $consent['id'] ?? null,
+                    'site_id' => $siteId,
+                    'contact_id' => $contactId,
+                    'channel' => $channel,
+                    'purpose' => $purpose,
+                    'scope_id' => $siteId,
+                    'status' => $status,
+                    'event_type' => $eventType,
+                    'source' => $source,
+                    'evidence' => $this->nullableText($evidence, 'evidence', 2000),
+                    'proof' => json_encode(['evidence' => $evidence, 'actor_iam_user_id' => $actorId], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}',
+                    'retention' => gmdate('Y-m-d H:i:s', time() + $retentionDays * 86400),
+                    'actor' => $actorId,
+                ]
+            );
+        }
+        return $consent + ['purpose' => $purpose, 'scope' => 'site'];
+        });
     }
 
     public function find(int $siteId, int $id): ?array
@@ -133,13 +190,13 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
         return $row ? $this->castRow($row) : null;
     }
 
-    public function updateById(int $siteId, int $id, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null): ?array
+    public function updateById(int $siteId, int $id, string $status, string $source = 'manual', ?string $evidence = null, ?int $actorId = null, string $purpose = 'marketing', int $retentionDays = 2190): ?array
     {
         $current = $this->find($siteId, $id);
         if ($current === null) {
             return null;
         }
-        return $this->upsertConsent((int) $current['contact_id'], (string) $current['channel'], $status, $source, $evidence, $actorId);
+        return $this->upsertConsent((int) $current['contact_id'], (string) $current['channel'], $status, $source, $evidence, $actorId, $purpose, $retentionDays);
     }
 
     public function consentForContact(int $contactId, string $channel): ?array
@@ -162,6 +219,62 @@ final class BusinessConsentRepository extends BusinessRepositoryBase
     {
         $rows = $this->database()->all('SELECT * FROM crm_consents WHERE contact_id = :contact_id ORDER BY channel', ['contact_id' => $contactId]);
         return array_map(fn(array $row): array => $this->castRow($row), $rows);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function historyForContact(int $contactId): array
+    {
+        if (!$this->database()->tableExists('crm_consent_events')) {
+            return [];
+        }
+        $rows = $this->database()->all(
+            'SELECT * FROM crm_consent_events WHERE contact_id=:contact_id ORDER BY occurred_at DESC,id DESC',
+            ['contact_id' => $contactId]
+        );
+        return array_map(fn(array $row): array => $this->castRow($row), $rows);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function preferenceForContact(int $siteId, int $contactId): ?array
+    {
+        if (!$this->database()->tableExists('crm_contact_preferences')) {
+            return null;
+        }
+        $row = $this->database()->one('SELECT * FROM crm_contact_preferences WHERE site_id=:site_id AND contact_id=:contact_id', ['site_id' => $siteId, 'contact_id' => $contactId]);
+        if ($row === null) return null;
+        $row = $this->castRow($row);
+        $row['do_not_contact'] = (bool) ($row['do_not_contact'] ?? false);
+        return $row;
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function upsertPreference(int $siteId, int $contactId, array $payload, ?int $actorId = null): array
+    {
+        if (!$this->database()->tableExists('crm_contact_preferences')) {
+            throw new InvalidArgumentException('business.contact_preferences_unavailable');
+        }
+        $contact = $this->database()->one('SELECT id FROM business_contacts WHERE site_id=:site_id AND id=:id AND archived_at IS NULL', ['site_id' => $siteId, 'id' => $contactId]);
+        if ($contact === null) throw new InvalidArgumentException('business.contact_not_found');
+        $preferred = trim((string) ($payload['preferred_channel'] ?? ''));
+        $preferred = $preferred === '' ? null : $this->channel($preferred);
+        $source = strtolower(trim((string) ($payload['source'] ?? 'manual')));
+        if (!in_array($source, ['manual','form','import','api'], true)) throw new InvalidArgumentException('business.preference_source_invalid');
+        $this->database()->run(
+            'INSERT INTO crm_contact_preferences(site_id,contact_id,preferred_channel,contact_window,do_not_contact,source,note,created_by_iam_user_id,updated_by_iam_user_id)
+             VALUES(:site_id,:contact_id,:channel,:window,:do_not_contact,:source,:note,:actor,:actor)
+             ON CONFLICT(site_id,contact_id) DO UPDATE SET preferred_channel=excluded.preferred_channel,contact_window=excluded.contact_window,do_not_contact=excluded.do_not_contact,source=excluded.source,note=excluded.note,updated_by_iam_user_id=excluded.updated_by_iam_user_id,updated_at=CURRENT_TIMESTAMP',
+            [
+                'site_id' => $siteId,
+                'contact_id' => $contactId,
+                'channel' => $preferred,
+                'window' => $this->nullableText($payload['contact_window'] ?? null, 'contact_window', 120),
+                'do_not_contact' => $this->boolInt($payload['do_not_contact'] ?? false),
+                'source' => $source,
+                'note' => $this->nullableText($payload['note'] ?? null, 'preference_note', 500),
+                'actor' => $actorId,
+            ]
+        );
+        return $this->preferenceForContact($siteId, $contactId) ?? [];
     }
 
     private function status(string $status): string

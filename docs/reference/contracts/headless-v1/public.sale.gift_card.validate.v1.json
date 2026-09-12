@@ -1,0 +1,15 @@
+{
+  "contract": "public.sale.gift_card.validate.v1",
+  "kind": "schema",
+  "summary": "Valider un bon cadeau pour un panier public.",
+  "description": "Retourne un résultat neutre et le seul montant applicable. Le code complet et le solde hors panier ne sont jamais exposés.",
+  "method": "POST",
+  "path": "/api/v1/sale/channels/{code}/gift-cards/validate",
+  "source": "sale_gift_cards + sale_gift_card_public_attempts",
+  "security": "Jeton de panier opaque, code à forte entropie et limitation persistée par empreinte de requérant.",
+  "path_params": {"code": {"type": "string", "required": true, "pattern": "^[a-z0-9_-]+$"}},
+  "request_body": {"required": true, "schema": {"type": "object", "required": ["data"], "properties": {"data": {"type": "object", "required": ["cart_token", "code"], "properties": {"cart_token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,128}$"}, "code": {"type": "string", "minLength": 20, "maxLength": 80}}, "additionalProperties": false}}, "additionalProperties": false}},
+  "response": {"status": 200, "schema": {"type": "object", "required": ["data", "meta"], "properties": {"data": {"type": "object", "additionalProperties": true}, "meta": {"$ref": "#/components/schemas/PublicMeta"}}}},
+  "errors": [{"code": "VALIDATION_FAILED", "status": 422, "description": "Panier, canal ou bon indisponible."}, {"code": "RATE_LIMIT_EXCEEDED", "status": 429, "description": "Trop de tentatives dans la fenêtre autorisée."}],
+  "examples": {"request": {"data": {"cart_token": "opaque-cart-token", "code": "GC-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"}}, "response": {"data": {"gift_card": {"valid": true, "masked_code": "•••• 7K2P", "applicable_minor": 2900, "currency": "CHF", "status": "active"}}, "meta": {"contract": "public.sale.gift_card.validate.v1", "site_id": 1, "language_code": "fr"}}}
+}

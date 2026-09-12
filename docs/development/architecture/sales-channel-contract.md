@@ -4,7 +4,7 @@ audience:
   - developer
   - administrator
 status: stable
-last_verified: 2026-07-12
+last_verified: 2026-07-17
 source_of_truth: code
 source_paths:
   - database/modules/sale.sql
@@ -12,6 +12,7 @@ source_paths:
   - database/schema/core.sql
   - backend/src/Modules/Sale/Services/SalesChannelResolverService.php
   - backend/src/Modules/Sale/Services/SalesChannelIntegrityService.php
+  - backend/src/Application/Commerce/ShopConfigurationService.php
 owners:
   - sale
   - business
@@ -47,6 +48,8 @@ Le `SalesChannelResolverService` est le seul point de résolution partagé :
 - headless : `channel_id` ou code explicite, sinon storefront par défaut ;
 - back-office : canal admin explicite ou défaut admin actif ;
 - POS : caisse active, canal POS actif et lieu de stock actif.
+
+Pour le storefront public, `cms_shop_configurations` ajoute le verrou localisé `(site_id, language_code)`. Le mapping `cms_sales_channel_storefronts` reste le pont de compatibilité au niveau du site ; il ne suffit plus, seul, à publier un catalogue. SSR et `/api/v1/storefront/*` exigent une configuration locale `active` disposant d’un snapshot Studio publié. Une autre langue du même site peut donc rester inactive même si elle partage le canal Sale.
 
 Une valeur explicite inconnue, inactive, d’un autre site ou du mauvais type produit une erreur. Il n’existe aucun repli silencieux. Les modules lisent leur propre configuration ; le résolveur et le validateur sont des coordinateurs applicatifs, pas des dépendances SQL entre modules.
 

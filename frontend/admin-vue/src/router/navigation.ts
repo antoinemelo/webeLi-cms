@@ -46,7 +46,8 @@ export const studioLinks: SectionLink[] = [
 
 
 export const moduleWorkbenchLinks: SectionLink[] = [
-  { label: 'Vente', labelKey: 'business.nav.sale', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read'], hint: 'Commandes, POS, paiements et stock transactionnel.', hintKey: 'business.nav.sale.hint' }
+  { label: 'Ventes', labelKey: 'business.nav.sale', route: '/sale', anyPermission: ['sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.payments.read', 'sale.stock.read', 'sale.reports.read', 'sale.settings.manage'], hint: 'Commandes, paiements, factures, points de vente et configuration des sites e-commerce.', hintKey: 'business.nav.sale.hint' },
+  { label: 'Comptabilité', route: '/accounting', anyPermission: ['accounting.read', 'accounting.chart.manage', 'accounting.opening.manage'], hint: 'Plan comptable, règles débit/crédit, rubriques et soldes d’ouverture.' }
 ];
 
 export const iamLinks: SectionLink[] = [
@@ -73,7 +74,7 @@ export const assetLinks: SectionLink[] = [
 export const mainNavigation: MainNavigationItem[] = [
   { key: 'dashboard', label: 'Cockpit', labelKey: 'core.nav.dashboard', route: '/', children: dashboardLinks },
   { key: 'studio', label: 'Studio', labelKey: 'core.nav.studio', route: '/studio', permission: 'content.read', children: studioLinks },
-  { key: 'modules', label: 'Modules', labelKey: 'core.nav.modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use'], children: moduleWorkbenchLinks },
+  { key: 'modules', label: 'Modules', labelKey: 'core.nav.modules', route: '/modules', anyPermission: ['modules.read', 'modules.manage', 'blueprints.read', 'forms.read', 'forms.manage', 'business.crm.read', 'business.catalog.read', 'sale.read', 'sale.orders.read', 'sale.pos.use', 'sale.settings.manage', 'accounting.read', 'accounting.chart.manage', 'accounting.opening.manage'], children: moduleWorkbenchLinks },
   { key: 'assets', label: 'Actifs', labelKey: 'core.nav.assets', route: '/media', children: assetLinks }
 ];
 

@@ -8,11 +8,16 @@ final class SaleIntegrationEventContracts
 {
     public const CART_CREATED = 'sale.cart.created';
     public const CART_LINE_ADDED = 'sale.cart.line_added';
+    public const CART_ABANDONED = 'sale.cart.abandoned';
     public const ORDER_PLACED = 'sale.order.placed';
     public const ORDER_CONFIRMED = 'sale.order.confirmed';
     public const ORDER_CANCELLED = 'sale.order.cancelled';
     public const PAYMENT_RECORDED = 'sale.payment.recorded';
     public const PAYMENT_FAILED = 'sale.payment.failed';
+    public const PAYMENT_CAPTURE_REQUESTED = 'sale.payment.capture.requested';
+    public const PAYMENT_CAPTURE_COMPLETED = 'sale.payment.capture.completed';
+    public const PAYMENT_CAPTURE_RETRY_SCHEDULED = 'sale.payment.capture.retry_scheduled';
+    public const PAYMENT_CAPTURE_DEAD_LETTERED = 'sale.payment.capture.dead_lettered';
     public const FULFILLMENT_COMPLETED = 'sale.fulfillment.completed';
     public const RETURN_CREATED = 'sale.return.created';
     public const POS_SESSION_OPENED = 'sale.pos.session.opened';
@@ -20,12 +25,17 @@ final class SaleIntegrationEventContracts
     public const POS_ORDER_COMPLETED = 'sale.pos.order.completed';
     public const REFUND_CREATED = 'sale.refund.created';
     public const REFUND_COMPLETED = 'sale.refund.completed';
+    public const REFUND_REQUESTED = 'sale.refund.requested';
+    public const REFUND_RETRY_SCHEDULED = 'sale.refund.retry_scheduled';
+    public const REFUND_DEAD_LETTERED = 'sale.refund.dead_lettered';
     public const GIFT_CARD_ISSUED = 'sale.gift_card.issued';
     public const GIFT_CARD_REDEEMED = 'sale.gift_card.redeemed';
+    public const CUSTOMER_ACCOUNT_CREATED = 'customer.account.created';
     public const STOCK_RESERVED = 'sale.stock.reserved';
     public const STOCK_CONSUMED = 'sale.stock.consumed';
     public const STOCK_RELEASED = 'sale.stock.released';
     public const INVOICE_SENT = 'sale.invoice.sent';
+    public const NOTIFICATION_REQUESTED = 'sale.notification.requested';
 
     /** @return array<string,array<string,mixed>> */
     public static function payloads(): array
@@ -41,10 +51,15 @@ final class SaleIntegrationEventContracts
                 'required' => ['site_id', 'cart_id', 'line_id', 'business_variant_id', 'quantity'],
                 'optional' => ['sku', 'unit_price_minor', 'currency', 'iam_user_id'],
             ],
+            self::CART_ABANDONED => [
+                'entity' => 'cart',
+                'required' => ['site_id', 'cart_id', 'channel_id', 'abandoned_after_seconds', 'lawful_basis', 'retention_until'],
+                'optional' => ['customer_contact_id', 'customer_company_id', 'iam_user_id', 'language_code'],
+            ],
             self::ORDER_PLACED => [
                 'entity' => 'order',
                 'required' => ['site_id', 'order_id', 'order_number', 'grand_total_minor', 'currency'],
-                'optional' => ['cart_id', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id'],
+                'optional' => ['cart_id', 'channel_id', 'language_code', 'customer_ref_id', 'customer_contact_id', 'customer_company_id', 'payment_status', 'source', 'iam_user_id', 'product_ids', 'category_ids'],
             ],
             self::ORDER_CONFIRMED => [
                 'entity' => 'order', 'required' => ['site_id', 'order_id'], 'optional' => ['order_number', 'source', 'iam_user_id'],
@@ -63,6 +78,22 @@ final class SaleIntegrationEventContracts
                 'entity' => 'payment',
                 'required' => ['site_id', 'order_id', 'transaction_id', 'amount_minor', 'currency', 'provider_key'],
                 'optional' => ['error_code', 'error_message', 'iam_user_id'],
+            ],
+            self::PAYMENT_CAPTURE_REQUESTED => [
+                'entity' => 'payment', 'required' => ['site_id', 'order_id', 'payment_intent_id', 'transaction_id', 'amount_minor', 'currency'],
+                'optional' => ['reason_code', 'iam_user_id'],
+            ],
+            self::PAYMENT_CAPTURE_COMPLETED => [
+                'entity' => 'payment', 'required' => ['site_id', 'order_id', 'payment_intent_id', 'transaction_id', 'amount_minor', 'currency'],
+                'optional' => ['iam_user_id'],
+            ],
+            self::PAYMENT_CAPTURE_RETRY_SCHEDULED => [
+                'entity' => 'payment', 'required' => ['site_id', 'order_id', 'payment_intent_id', 'transaction_id', 'attempt_count'],
+                'optional' => ['iam_user_id'],
+            ],
+            self::PAYMENT_CAPTURE_DEAD_LETTERED => [
+                'entity' => 'payment', 'required' => ['site_id', 'order_id', 'payment_intent_id', 'transaction_id', 'attempt_count'],
+                'optional' => ['iam_user_id'],
             ],
             self::FULFILLMENT_COMPLETED => [
                 'entity' => 'fulfillment', 'required' => ['site_id', 'order_id', 'fulfillment_id'], 'optional' => ['order_number', 'iam_user_id'],
@@ -91,11 +122,28 @@ final class SaleIntegrationEventContracts
             self::REFUND_COMPLETED => [
                 'entity' => 'refund', 'required' => ['site_id', 'order_id', 'refund_id', 'amount_minor', 'currency'], 'optional' => ['transaction_id', 'reason', 'iam_user_id'],
             ],
+            self::REFUND_REQUESTED => [
+                'entity' => 'refund', 'required' => ['site_id', 'order_id', 'refund_id', 'payment_transaction_id', 'amount_minor', 'currency'],
+                'optional' => ['reason_code', 'iam_user_id'],
+            ],
+            self::REFUND_RETRY_SCHEDULED => [
+                'entity' => 'refund', 'required' => ['site_id', 'order_id', 'refund_id', 'amount_minor', 'currency', 'attempt_count'],
+                'optional' => ['iam_user_id'],
+            ],
+            self::REFUND_DEAD_LETTERED => [
+                'entity' => 'refund', 'required' => ['site_id', 'order_id', 'refund_id', 'amount_minor', 'currency', 'attempt_count'],
+                'optional' => ['iam_user_id'],
+            ],
             self::GIFT_CARD_ISSUED => [
-                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'order_line_id', 'amount_minor', 'currency', 'status', 'iam_user_id'],
             ],
             self::GIFT_CARD_REDEEMED => [
-                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'iam_user_id'],
+                'entity' => 'gift_card', 'required' => ['site_id', 'gift_card_id'], 'optional' => ['order_id', 'amount_minor', 'currency', 'status', 'iam_user_id'],
+            ],
+            self::CUSTOMER_ACCOUNT_CREATED => [
+                'entity' => 'customer_account',
+                'required' => ['site_id', 'iam_user_id'],
+                'optional' => ['customer_contact_id', 'customer_company_id', 'language_code'],
             ],
             self::STOCK_RESERVED => [
                 'entity' => 'stock',
@@ -116,6 +164,11 @@ final class SaleIntegrationEventContracts
                 'entity' => 'invoice',
                 'required' => ['site_id', 'order_id', 'invoice_id', 'sent_at'],
                 'optional' => ['recipient', 'amount_due_minor', 'currency', 'iam_user_id'],
+            ],
+            self::NOTIFICATION_REQUESTED => [
+                'entity' => 'order_notification',
+                'required' => ['site_id','order_id','order_number','notification_type','language_code','recipient_hash'],
+                'optional' => ['fulfillment_id','document_id'],
             ],
         ];
     }

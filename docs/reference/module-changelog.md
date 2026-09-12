@@ -7,7 +7,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-13
+last_verified: 2026-07-17
 source_of_truth: manual
 source_paths:
   - backend/src/Modules
@@ -19,9 +19,75 @@ owners:
 document_type: reference
 generated: false
 ---
+
+# 2026-07-17 — Gate release Shop opérationnel 48
+
+- consolidation des parcours 38a à 47 dans une seule gate de décision, sans module Commerce ni suite métier parallèle ;
+- reconstruction Playwright depuis les schémas canoniques, sans migration, avec deux sites/sous-répertoires, deux langues et cinq profils de permission ;
+- contrôles bloquants des scénarios activation, découverte, fiche/panier, achats et exploitation ;
+- contrôles négatifs multisite, permissions, concurrence, webhooks, facturation et dépendances ;
+- rapport runtime à empreintes SHA-256 sans données personnelles, secrets ni charges utiles de prestataire ;
+- intégration aux profils `complete` (couverture statique) et `release` (preuve navigateur et performance).
+
+# 2026-07-17 — Sale M8.9 : facturation, analyse des ventes et inventaire
+
+- séries de factures et notes de crédit par site/période, instantanés vendeur/client/taxes, empreinte et immutabilité ;
+- politique de facturation et bons cadeaux configurable sans revendication juridique implicite ;
+- envoi et renvoi audités via outbox avec permissions séparées ;
+- indicateurs filtrables fondés sur les snapshots Sale et exports CSV contrôlés ;
+- inventaire Opérations enrichi sans duplication du ledger Sale.
+
+# 2026-07-14 — Business M7.4 : gate commande invitée et CRM
+
+- ajout de la gate M7.4 couvrant les douze scénarios checkout invité, POS, rattachement post-achat, rapprochement, rejeu, panne CRM, consentement et panier abandonné ;
+- rapprochement d'un compte post-achat avec une relation CRM uniquement lorsque l'e-mail est vérifié, unique et limité au site ;
+- maintien des correspondances non vérifiées ou ambiguës dans la revue humaine, sans réécriture des snapshots Sale ni consentement marketing implicite ;
+- ajout du rapport machine-readable, des métriques UX opérateur et des tests Python/PHP/Playwright associés ;
+- schémas canoniques inchangés et aucune migration requise.
+
+# 2026-07-14 — Business M7.3 : segmentation, préférences et consentements
+
+- ajout de segments CRM manuels ou calculés, avec règles simples explicables et versionnées ;
+- calcul complet/incrémental depuis `crm_sale_activities`, sans lecture des tables transactionnelles Sale ;
+- ajout d’un aperçu anonymisé, d’une rétention configurable et d’un constructeur admin FR/EN ;
+- ajout du registre append-only des consentements marketing et du retrait sans perte d’historique ;
+- séparation des préférences de contact, achats, comptes et nécessités transactionnelles ;
+- ajout des permissions dédiées, tests PHP/E2E et de la gate de qualification M7.3.
 # Changelog par module
 
+# 2026-07-14 — Sale M6.1 : ledger de stock et source de vérité unique
+
+- ledger Sale immuable enrichi de l’emplacement, la corrélation et du solde résultant ;
+- état physique, réservé et disponible reconstructible et réparable depuis mouvements et réservations ;
+- stocks from scratch initialisés exclusivement par mouvements d’ouverture idempotents, sans migration ;
+- écritures transactionnelles Business désactivées au profit de Sale et projection Business conservée ;
+- contrat Shop `sale.inventory.availability.v1` limité à quatre statuts et `last_available`, sans quantité brute ;
+- vue Vente > Stock avec recherche scanner, filtres persistants, alertes, détail, export et assistant en cinq étapes ;
+- gate M6 statique, tests PHP/Python/Playwright et preuve machine-readable.
+
 Cette page centralise le suivi lisible des changements module par module. Les versions installées et attendues sont inventoriées dans **Maintenance** ; les sources techniques restent les manifests et schémas canoniques des modules.
+
+# 2026-07-17 — Core × Business M8.2 : catalogue public, facettes et tris
+
+- projection normalisée des champs de recherche, tris et valeurs de facette dans Core ;
+- recherche sans lecture du JSON DTO, facettes contextuelles et combinaison OR/AND ;
+- groupes produit multiples et attributs publics filtrables/recherchables issus du PIM canonique ;
+- sept tris stables, pagination déterministe et validation explicite des tris inconnus ;
+- requête unique partagée entre SSR et API headless ;
+- interface des trois thèmes avec filtres partageables, compteurs, puces, pagination et retour au contexte ;
+- protection contre l’archivage silencieux des groupes, attributs et options PIM utilisés ;
+- migration Core incrémentale `081_storefront_catalog_facets.sql` et reconstruction Storefront requise après application.
+
+# 2026-07-17 — Core × Sale M8.1 : Shop système et activation localisée
+
+- configuration canonique et versionnée par `(site_id, language_code)` dans Core ;
+- matrice opérationnelle sous `Ventes > Réglages > E-Commerce`, sans module Commerce autonome ;
+- page `/shop` protégée et configurable dans Studio, sans page CMS par produit ;
+- séparation stricte entre brouillon, publication Studio et activation publique ;
+- route, API Storefront, menu et panier conditionnés par le même état actif ;
+- activation idempotente, désactivation non destructive et réparation après échec de projection ;
+- permissions serveur distinctes pour lecture, édition, publication et activation ;
+- schéma et seed canoniques reconstruits from scratch, avec migration Core incrémentale `080_shop_system_configurations.sql` pour les instances existantes.
 
 | Module | État documentaire | Source de vérité | Notes de changement |
 |---|---|---|---|
@@ -36,6 +102,59 @@ Cette page centralise le suivi lisible des changements module par module. Les ve
 ## Règle de release
 
 Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de preuve dans [Scénarios vérifiables](../getting-started/verified-scenarios.md), un test automatisé ou une procédure reproductible.
+
+# 2026-07-13 — Sale M5 : contrat provider et modèle paiement
+
+- contrat canonique versionné `sale.payment_provider.v1` et registry de capacités ;
+- résolution Shop des moyens par site, canal, langue, devise et montant ;
+- états récupérables et prochaines actions publiques ;
+- liste/détail Paiements dans l'administration, chronologie et panneau technique ;
+- schéma canonique et fixtures reconstruits from scratch, sans migration.
+
+# 2026-07-13 — Sale M5.2 : providers de référence
+
+- providers manuel, virement et test déterministe derrière le contrat v1 ;
+- confirmation partielle auditée, idempotente et permissionnée ;
+- instructions de virement copiables/imprimables et file de rapprochement ;
+- badge `MODE TEST`, scénarios développeur et verrou absolu en production ;
+- fixtures fictives dans le schéma canonique, sans migration.
+
+# 2026-07-13 — Sale M5.3 : Stripe Checkout réel
+
+- Stripe Checkout derrière le contrat provider v1 et le SDK PHP officiel ;
+- sélection par configuration de site/canal, page de retour Shop récupérable ;
+- signature du corps brut avec tolérance temporelle, rotation et déduplication ;
+- rate-limit webhook, payload expurgé, métriques et reprise idempotente ;
+- secrets exclusivement hors base et aucune donnée de carte persistée.
+- TWINT proposé dans Stripe Checkout pour les commandes CHF, en mode dynamique ou explicite ; distinction documentée avec TWINT Express Checkout direct.
+
+# 2026-07-13 — Sale M5.3 extension : Revolut Checkout réel
+
+- Hosted Checkout Revolut derrière le même contrat provider v1, activable seul ou avec Stripe ;
+- Merchant API `2026-04-20`, environnements sandbox/production et ordre à capture automatique ;
+- redirection Shop récupérable, lecture serveur de l'état et annulation ;
+- signatures HMAC Revolut vérifiées sur le corps brut avec tolérance et rotation de secret ;
+- moyen de paiement ajouté au schéma canonique reconstruit from scratch, sans migration.
+
+# 2026-07-13 — Sale M5.4 : captures, remboursements et réconciliation
+
+- captures immédiates, différées, partielles et multiples pilotées par les capacités du provider ;
+- journal durable idempotent avant tout appel externe, reprises exponentielles et dead-letter sans faux échec financier ;
+- remboursements partiels, multiples et asynchrones avec motif structuré et lien facultatif vers un retour ;
+- réconciliation manuelle ou planifiée des statuts, montants, devises, captures, remboursements et webhooks manquants ;
+- centre d'exceptions orienté métier, priorisé, prévisualisation de lot sûre et résolution humaine auditée ;
+- écran Paiements enrichi avec capture et remboursement guidés, santé et opérations en attente ;
+- scénarios de test couvrant rejeu, dépassements, capture multiple, crash ambigu et réparation contrôlée.
+
+# 2026-07-13 — Sale M5.5 : gate d’interchangeabilité providers
+
+- matrice explicite authorize, capture différée/partielle, remboursement partiel, webhook et réconciliation ;
+- suite contractuelle commune au provider test, au manuel, au virement, à Stripe et à Revolut ;
+- gate M5 machine-readable intégrée aux profils de qualification `complete` et `release` ;
+- comparaison UX Stripe/Revolut sur desktop, mobile, clavier, FR/EN, refus et reprise sans cul-de-sac ;
+- sélection par méthode de paiement du canal, support de `PROVIDER_REAL_2` et absence de branche provider dans les contrôleurs ou le Shop ;
+- rapport UX et preuves de sécurité sans PII ni secret.
+
 # 2026-07-13 — CRM × Vente : timeline commerciale v1
 
 - projection idempotente des événements Vente web et POS dans la timeline CRM ;
@@ -51,3 +170,109 @@ Un module ne doit pas annoncer une capacité comme stable si elle n’a pas de p
 - schéma de commande partagé, snapshots immuables, stock et CRM idempotent ;
 - rapport JSON sans PII ni secret, validé indépendamment et bloquant pour la qualification release ;
 - mutations canal, prix, stock et permission couvertes par tests négatifs.
+
+# 2026-07-14 — Sale M6.2 : réservations, disponibilité et backorder
+
+- politique de réservation configurable par canal, avec déclencheur documenté par défaut au début du checkout ;
+- réservation atomique, renouvellement borné, confirmation, consommation, libération, annulation et expiration idempotente ;
+- backorder explicite et traçable, désactivé pour POS et retrait, avec délai annoncé pour la livraison ;
+- projection reconstruisible des états `deliverable`, `in_stock`, `backorder` et `unavailable` depuis Sale vers Business/Storefront ;
+- récupération Shop sans perte du panier en cas de conflit, vue opérateur dédiée et libération manuelle motivée/auditée ;
+- schémas canoniques reconstruits from scratch uniquement, sans migration.
+
+# 2026-07-14 — Business × Sale M6.3 : bundles et stock composé
+
+- stratégies obligatoires `OWN_STOCK`, `COMPONENT_DERIVED` et `NON_STOCKED`, avec compatibilité déterministe de l'ancien mode ;
+- plan de composants imbriqués aplati, ratios fusionnés, facteur limitant et disponibilité globale Shop ;
+- assistant catalogue avec recherche, quantité, réorganisation, explications et estimation immédiate ;
+- réservation atomique par emplacement, consommation idempotente et rattachement opérateur au bundle parent ;
+- retours de bundle complet ou de composants explicitement autorisés depuis le snapshot historique ;
+- gate M6.3 machine-readable, tests de concurrence/multi-location et schémas canoniques from scratch sans migration.
+
+# 2026-07-14 — Sale M6.4 : fulfillment, transferts, retrait et inventaire
+
+- allocations par emplacement et fulfillments partiels sans double consommation du stock ;
+- préparation progressive, problèmes reprenables, expédition et retrait avec code et preuve opérateur ;
+- transferts demandés, expédiés puis reçus avec mouvements séparés et écarts motivés ;
+- inventaires progressifs ou à l’aveugle, revue et validation permissionnée des ajustements ;
+- retours orientés vers le stock vendable, la quarantaine ou le non-vendable ;
+- file Opérations responsive et suivi client Shop des retraits, colis et fulfillments partiels ;
+- schéma canonique reconstruit from scratch uniquement, sans aucune migration.
+
+# 2026-07-14 — Sale M6.5 : reconstruction et réconciliation du stock
+
+- diagnostic dry-run par défaut comparant caches, journal, réservations, fulfillments, retours, transferts et projection Business/Shop ;
+- rapport persistant avec sévérité, causes probables, impact, références et aperçu avant/après ;
+- réparation jamais automatique, permission et motif obligatoires, sauvegarde Sale/Business avant écriture et preuve par correction ;
+- comptage physique externe traduit en mouvement correctif, sans modification du journal immuable ;
+- administration autonome avec téléchargement du rapport, progression, historique et reprise ciblée des échecs ;
+- scénario complet et gate M6.5 machine-readable, base vide et restauration vérifiées depuis les schémas canoniques actuels, sans migration.
+
+# 2026-07-14 — IAM × CRM × Sale M7.1 : identité client et dédoublonnage
+
+- bridges réels pour la projection CRM et les identités clients, avec renommage compatible du bridge historique CMS ;
+- séparation formelle des profils transactionnel, CRM, IAM et organisation, sans FK inter-base ;
+- file de revue avec provenance des champs, concordances, divergences et score de confiance expliqué ;
+- résolution conservative par preuve post-achat, e-mail vérifié, téléphone vérifié explicitement autorisé ou action administrative, jamais sur le nom seul ;
+- fusion prévisualisée champ par champ, journal complet et séparation auditée sans modification rétrospective des commandes ;
+- gate M7.1, tests invité/doublons/multisite et parcours Playwright, sur schémas canoniques from scratch sans migration.
+
+# 2026-07-14 — Business × Sale M7.2 : activités CRM par événements
+
+- contrat non sensible `crm.activity.v2` avec canal, source stable et provenance ;
+- projection outbox sans lecture continue des tables transactionnelles ;
+- conservation et rattachement ultérieur des événements sans identité ;
+- relecture, rebuild non destructif et réconciliation des manquants/doublons ;
+- garde-fous de durée, base licite et rétention pour les paniers abandonnés ;
+- chronologie CRM recherchable, filtrable, paginée et liée à Vente selon permissions.
+# 2026-07-17 — M8.3 merchandising, promotions et popularité
+
+- huit sections Shop ordonnables et configurables dans Studio, avec limite, mode d’affichage, règle, état vide et override manuel facultatif ;
+- promotions achetables classées par montant ou pourcentage, groupes et catégories seulement lorsqu’ils contiennent un produit public applicable ;
+- nouveauté fondée sur la première publication e-commerce, conservée à travers mises à jour et reconstructions ;
+- vues produit et recherches avec résultat agrégées par site, langue et jour, dédupliquées par HMAC à rétention bornée ;
+- previews, administration, robots connus, rafraîchissements abusifs et termes potentiellement sensibles exclus ; aucune IP, identité, compte ou jeton brut persisté ;
+- repli déterministe sans audience, invalidation par reconstruction Storefront et rendu SSR partagé par les thèmes Default, Aurora et Pulse.
+
+# 2026-07-17 — M8.4 cartes, fiches, variantes et produits liés
+
+- DTO public `storefront.product.v3` commun au SSR et au headless, avec résumé carte borné, prix normal et final, promotion explicite et quatre états de disponibilité ;
+- fiche `/shop/products/{slug}` automatique, galerie image/vidéo, absence de média explicite, attributs publics, variantes et quantité ;
+- changement de variante sans rechargement mettant à jour média, prix, SKU, promotion, délai, disponibilité, CTA et URL avec annonce accessible ;
+- méthodes réelles de livraison et paiement du canal, contenus CMS publiés liés, canonical, hreflang et JSON-LD Product/Service ;
+- relations manuelles typées et ordonnées, plus règles automatiques explicites par catégorie ou groupe, isolées par site et filtrées sur les produits publics ;
+- composant canonique partagé et surchargeable par Default, Aurora et Pulse ; migration Business incrémentale `0015_storefront_product_relations.sql`.
+
+# 2026-07-17 — M8.5 blocs Commerce dans Studio
+
+- activation dans Studio des six identifiants historiques `featured_product`, `product_card`, `product_grid`, `collection_grid`, `product_detail` et `add_to_cart`, sans page produit CMS ni seconde entité produit éditoriale dans Core ;
+- neuf modes de sélection projetée pour les listes, override manuel ordonné et paramètres communs de rendu ;
+- recherche nom/SKU, résultat prévisualisé, avertissement des références non projetées, réordonnancement clavier et accès autorisé au produit Business dans un nouvel onglet ;
+- même hydratation `storefront.product.v3` au preview, en SSR, en headless et lors de la construction statique ;
+- ajout direct seulement pour un vendable sans ambiguïté, sinon redirection vers la fiche produit ;
+- migration Core incrémentale `083_studio_commerce_blocks.sql`, compatibilité des champs historiques et rendu partagé par Default, Aurora et Pulse.
+
+# 2026-07-17 — M8.6 panier, tiroir et checkout résilients
+
+- exposition du panier, du checkout SSR et des routes Sale publiques conditionnée au Shop actif du site, de la langue et du canal ;
+- tiroir modal partagé par les trois thèmes, mobile plein écran, focus piégé/restauré, états chargement/erreur/expiration et annonces accessibles ;
+- revalidation prix/disponibilité à la lecture avec version optimiste, changements avant/après et récupération explicite sans vidage silencieux ;
+- clé de panier navigateur unifiée, brouillon checkout repris après rafraîchissement et clé d'idempotence conservée jusqu'au résultat ;
+- adresses, livraison, paiement et consentements séparés, avec politique explicite pour payer maintenant ou lorsque les articles sur commande deviennent disponibles ;
+- gate Chromium point 44 couvrant conflit multi-onglets, reprise, double soumission, mobile et refus hors Shop actif.
+# 2026-07-17 — Point 45, bons cadeaux M8.7
+
+- cycle `gift_card` opérationnel après paiement confirmé ;
+- code HMAC non réversible et révélation chiffrée à usage unique ;
+- ledger immuable, débit atomique, complément provider et remboursement ;
+- validation publique rate-limitée et back-office masqué ;
+- événements CRM minimaux sans code ni changement de consentement.
+
+# 2026-07-17 — Point 46, commande, logistique et suivi M8.8
+
+- confirmation de commande automatique, immuable et distincte d’une facture ;
+- préparation progressive et partielle conservée dans les fulfillments M6 ;
+- transporteur, référence et URL HTTPS validée avec événements provider séparés ;
+- retrait audité sans exposition publique du code de vérification ;
+- notifications transactionnelles idempotentes, consultables et renvoyables via outbox ;
+- suivi client authentifié ou invité par preuve opaque expirante et révocable.

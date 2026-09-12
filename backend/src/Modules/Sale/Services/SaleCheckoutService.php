@@ -17,7 +17,10 @@ final class SaleCheckoutService
         private readonly SaleInventoryService $inventory,
         private readonly SaleEventService $events,
         private readonly SaleIdempotencyService $idempotency,
-        private readonly ?SaleStateMachineService $states = null
+        private readonly ?SaleStateMachineService $states = null,
+        private readonly ?SaleGiftCardService $giftCards = null,
+        private readonly ?SaleOrderDocumentService $documents = null,
+        private readonly ?SaleOrderNotificationService $notifications = null,
     ) {}
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -27,6 +30,10 @@ final class SaleCheckoutService
         $request = ['cart_id' => $cartId, 'source' => $payload['source'] ?? 'admin'];
         if (isset($payload['request_fingerprint'])) {
             $request['request_fingerprint'] = (string) $payload['request_fingerprint'];
+        }
+        if (trim((string) ($payload['gift_card_code'] ?? '')) !== '') {
+            // Empreinte uniquement : le code ne rejoint jamais l'idempotency store.
+            $request['gift_card_fingerprint'] = hash('sha256', strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) $payload['gift_card_code']) ?? ''));
         }
         $correlationId = SaleStateMachineService::correlationId($payload['correlation_id'] ?? null);
         return $this->idempotency->run((int) $cart['site_id'], 'checkout.place_order', $payload['idempotency_key'] ?? null, $request, function () use ($cartId, $payload, $correlationId): array {
@@ -50,12 +57,12 @@ final class SaleCheckoutService
                 if ((int) $cart['grand_total_minor'] < 0) {
                     throw new SaleValidationException('sale.total_negative');
                 }
-                $this->inventory->prepareCartForCheckout($cart, $lines, true);
                 if (array_key_exists('shipping_method_snapshot', $payload) || array_key_exists('shipping_method', $payload)) {
                     $shippingMethod = $payload['shipping_method_snapshot'] ?? $payload['shipping_method'];
                     $cart['shipping_method_snapshot_json'] = json_encode(is_array($shippingMethod) ? $shippingMethod : ['label' => (string) $shippingMethod], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
                 }
                 $deferInventory = ($payload['defer_inventory_until_payment'] ?? false) === true;
+                $this->inventory->prepareCartForCheckout($cart, $lines, true, 1800, $deferInventory ? 'order_placement' : 'payment_capture');
                 $initialStatus = $deferInventory ? 'pending_payment' : 'placed';
                 $order = $this->orders->createFromCart(
                     $cart,
@@ -78,6 +85,17 @@ final class SaleCheckoutService
                     $this->inventory->consumeCartReservations($cartId, (int) $order['id']);
                 }
                 $states->convertCart($cartId, (int) $order['id'], $payload['iam_user_id'] ?? null, $correlationId);
+                $giftCode = trim((string) ($payload['gift_card_code'] ?? ''));
+                if ($giftCode !== '') {
+                    if ($this->giftCards === null) throw new SaleValidationException('sale.gift_card_unavailable');
+                    $order['gift_card'] = $this->giftCards->redeemOrder((int)$order['id'],$giftCode,(string)($payload['idempotency_key']??''),$correlationId);
+                    $order = $this->orders->requireOrder((int)$order['id']) + ['gift_card'=>$order['gift_card']];
+                    if ((string)$order['payment_status']==='paid' && (string)$order['status']==='pending_payment') {
+                        $this->inventory->consumeCartReservations($cartId,(int)$order['id']);
+                        $order = $states->transition('order',(int)$order['id'],'confirmed',$payload['iam_user_id']??null,'gift card payment completed',$correlationId) + ['gift_card'=>$order['gift_card']];
+                        $db->run('UPDATE sale_orders SET placed_at=COALESCE(placed_at,CURRENT_TIMESTAMP) WHERE id=?',[(int)$order['id']]);
+                    }
+                }
                 $this->events->emit((int) $cart['site_id'], 'sale.order.placed', 'order', (int) $order['id'], [
                     'site_id' => (int) $cart['site_id'],
                     'order_id' => (int) $order['id'],
@@ -85,15 +103,46 @@ final class SaleCheckoutService
                     'grand_total_minor' => (int) $order['grand_total_minor'],
                     'currency' => (string) $order['currency'],
                     'cart_id' => $cartId,
+                    'channel_id' => (int) $cart['channel_id'],
+                    'language_code' => (string) ($cart['locale'] ?? ''),
                     'customer_ref_id' => $order['customer_contact_id'] ?? $order['customer_company_id'] ?? null,
                     'customer_contact_id' => $order['customer_contact_id'] ?? null,
                     'customer_company_id' => $order['customer_company_id'] ?? null,
                     'payment_status' => (string) $order['payment_status'],
                     'source' => (string) $order['source'],
                     'iam_user_id' => $payload['iam_user_id'] ?? null,
+                    'product_ids' => array_values(array_unique(array_map(static fn(array $line): int => (int) ($line['business_product_id'] ?? 0), $lines))),
+                    'category_ids' => $this->categoryIds($lines),
                 ], $payload['iam_user_id'] ?? null, $correlationId);
+                if ($this->documents !== null) {
+                    $language = (string)($cart['locale'] ?? 'fr');
+                    $confirmation = $this->documents->issue(
+                        (int)$order['id'], 'order_confirmation', $language,
+                        isset($payload['iam_user_id']) ? (int)$payload['iam_user_id'] : null,
+                        ['order_policy' => is_array($payload['order_policy'] ?? null) ? $payload['order_policy'] : []]
+                    );
+                    $order['confirmation'] = $confirmation;
+                    $this->notifications?->queue(
+                        (int)$order['id'], 'order_confirmed', $language, null, (int)$confirmation['id'],
+                        isset($payload['iam_user_id']) ? (int)$payload['iam_user_id'] : null,
+                        'order-confirmed:'.(int)$order['id'].':'.(int)$confirmation['id']
+                    );
+                }
                 return $order;
             });
         });
+    }
+
+    /** @param list<array<string,mixed>> $lines @return list<int> */
+    private function categoryIds(array $lines): array
+    {
+        $ids = [];
+        foreach ($lines as $line) {
+            $snapshot = json_decode((string) ($line['metadata_json'] ?? $line['snapshot_json'] ?? '{}'), true);
+            if (!is_array($snapshot)) continue;
+            $candidates = array_merge((array) ($snapshot['category_ids'] ?? []), isset($snapshot['category_id']) ? [$snapshot['category_id']] : []);
+            foreach ($candidates as $id) if ((int) $id > 0) $ids[(int) $id] = true;
+        }
+        return array_map('intval', array_keys($ids));
     }
 }

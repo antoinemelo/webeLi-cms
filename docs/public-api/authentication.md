@@ -31,7 +31,7 @@ Sur Apache/FastCGI, le serveur doit transmettre cet en-tête à PHP. La release 
 Exemple `fetch` :
 
 ```js
-const response = await fetch('https://example.com/mod/site_a/api/v1/content?site=site_a&lang=fr', {
+const response = await fetch('https://example.com/cms/site_a/api/v1/content?site=site_a&lang=fr', {
   headers: {
     'Accept': 'application/json',
     'Authorization': 'Bearer <token>'
@@ -92,7 +92,7 @@ L’authentification ne remplace pas le contexte multisite/multilingue. En sous-
 - `lang` demande la langue de réponse.
 
 ```js
-const response = await fetch('https://example.com/mod/site_a/api/v1/menus/main?site=site_a&lang=fr', {
+const response = await fetch('https://example.com/cms/site_a/api/v1/menus/main?site=site_a&lang=fr', {
   headers: { 'Authorization': 'Bearer <token>' }
 });
 ```

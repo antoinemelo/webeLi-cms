@@ -146,26 +146,13 @@ try {
     $h->assertSame('amount', $discount['discount_type'], 'discount is created');
     $h->assertSame('0.00', $pricing->calculateFinalSalePrice($variantId, 'ecommerce')->formatted(), 'amount discount never produces a negative sale price');
 
-    $stock = $stockService->move($variantId, 'initial', 2, 'Initial stock count', 1);
-    $h->assertSame(12, (int) $stock['stock_quantity'], 'initial stock movement increases denormalized stock');
-    $stock = $stockService->move($variantId, 'purchase', 5, 'Restock', 1);
-    $h->assertSame(17, (int) $stock['stock_quantity'], 'stock purchase movement increases denormalized stock');
-    $stock = $stockService->move($variantId, 'reservation', 3, 'Cart hold', 1);
-    $h->assertSame(3, (int) $stock['stock_reserved'], 'reservation movement increases reserved stock');
     $h->expectException(
-        fn() => $stockService->move($variantId, 'sale', 20, 'Oversell', 1),
+        fn() => $stockService->move($variantId, 'purchase', 5, 'Restock', 1),
         InvalidArgumentException::class,
-        'stock cannot become negative when backorder is disabled'
+        'Business refuses transactional stock movements because Sale is authoritative'
     );
-    $stock = $stockService->move($variantId, 'release', 3, 'Cart released', 1);
-    $h->assertSame(0, (int) $stock['stock_reserved'], 'release movement decreases reserved stock');
-    $stock = $stockService->move($variantId, 'sale', 4, 'Sale', 1);
-    $h->assertSame(13, (int) $stock['stock_quantity'], 'sale movement decreases denormalized stock');
-    $adjusted = $stockService->createMovement(1, $variantId, 'adjustment', -1, 'Inventory correction', 'inventory_count', 77, 1);
-    $h->assertSame(12, (int) $adjusted['variant']['stock_quantity'], 'adjustment movement corrects denormalized stock');
-    $h->assertSame('inventory_count', $adjusted['movement']['reference_type'] ?? null, 'stock movement stores reference type');
     $history = $stockService->movements(1, ['variant_id' => $variantId], 20, 0);
-    $h->assertSame(6, $history['total'], 'stock movement history keeps all movements');
+    $h->assertSame(0, $history['total'], 'deprecated Business movement history remains read-only');
 
     $serviceProduct = $productService->create(1, [
         'name' => 'Service sans stock',
@@ -184,9 +171,11 @@ try {
         'track_stock' => false,
         'stock_quantity' => 0,
     ], 1);
-    $serviceStock = $stockService->move((int) $serviceVariant['id'], 'purchase', 5, 'Ignored for service', 1);
-    $h->assertSame(0, (int) $serviceStock['stock_quantity'], 'product without stock tracking ignores stock movements on quantity');
-    $h->assertSame(1, $stockService->movements(1, ['variant_id' => (int) $serviceVariant['id']], 20, 0)['total'], 'ignored stock movement is still historized');
+    $h->expectException(
+        fn() => $stockService->move((int) $serviceVariant['id'], 'purchase', 5, 'Ignored for service', 1),
+        InvalidArgumentException::class,
+        'Business never records stock movements, including for untracked services'
+    );
 
     $summary = $pricing->pricingSummary($variantId, 'ecommerce');
     $public = $visibility->publicPayload($summary);

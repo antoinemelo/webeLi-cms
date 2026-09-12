@@ -88,9 +88,14 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     public function variantById(int $siteId, int $variantId): ?array
     {
         $row = $this->database()->one(
-            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at, p.site_id
+            'SELECT v.id, v.product_id, v.sku, v.name,
+                    COALESCE(ip.on_hand_quantity, v.stock_quantity) AS stock_quantity,
+                    COALESCE(ip.reserved_quantity, v.stock_reserved) AS stock_reserved,
+                    v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at, p.site_id
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
+             LEFT JOIN business_sellables s ON s.site_id = p.site_id AND s.variant_id = v.id AND s.status = \'active\'
+             LEFT JOIN business_inventory_availability_projections ip ON ip.site_id = p.site_id AND ip.sellable_id = s.sellable_id
              WHERE v.id = ? AND v.status = \'active\' AND v.archived_at IS NULL
                AND p.site_id = ? AND p.status = \'active\' AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
              LIMIT 1',
@@ -103,9 +108,14 @@ final class PublicCatalogRepository extends BusinessRepositoryBase
     public function activeVariants(int $siteId, int $productId): array
     {
         return array_map(fn(array $row): array => $this->castRow($row), $this->database()->all(
-            'SELECT v.id, v.product_id, v.sku, v.name, v.stock_quantity, v.stock_reserved, v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at
+            'SELECT v.id, v.product_id, v.sku, v.name,
+                    COALESCE(ip.on_hand_quantity, v.stock_quantity) AS stock_quantity,
+                    COALESCE(ip.reserved_quantity, v.stock_reserved) AS stock_reserved,
+                    v.track_stock, v.allow_backorder, v.backorder_delivery_days, v.updated_at
              FROM business_product_variants v
              INNER JOIN business_products p ON p.id = v.product_id
+             LEFT JOIN business_sellables s ON s.site_id = p.site_id AND s.variant_id = v.id AND s.status = \'active\'
+             LEFT JOIN business_inventory_availability_projections ip ON ip.site_id = p.site_id AND ip.sellable_id = s.sellable_id
              WHERE v.product_id = ? AND v.status = \'active\' AND v.archived_at IS NULL
                AND p.site_id = ? AND p.status = \'active\' AND p.is_public = 1 AND p.is_ecommerce_enabled = 1 AND p.archived_at IS NULL
              ORDER BY v.sort_order ASC, v.id ASC',

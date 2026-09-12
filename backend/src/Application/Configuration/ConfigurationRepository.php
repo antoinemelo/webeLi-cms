@@ -440,15 +440,16 @@ final class ConfigurationRepository
                     throw new \RuntimeException('Une langue par défaut est requise.');
                 }
 
+                // Une langue retirée de la configuration est désactivée, jamais
+                // supprimée : ses contenus et localisations restent disponibles
+                // si elle est réactivée plus tard.
+                $db->run("UPDATE site_languages SET is_default = 0, is_active = 0, url_prefix = '/__inactive-' || id, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site_id", ['site_id' => $siteId]);
+
                 foreach ($values['enabled_languages'] as $item) {
                     $db->run('INSERT OR IGNORE INTO languages(code, name, native_name, locale, is_default, is_active, sort_order) VALUES(:code, :name, :native_name, :locale, 0, 1, :sort_order)', [
                         'code' => $item['code'], 'name' => strtoupper((string) $item['code']), 'native_name' => strtoupper((string) $item['code']), 'locale' => $item['locale'], 'sort_order' => $item['sort_order'],
                     ]);
                 }
-
-                // L'index partiel idx_site_languages_one_default_per_site interdit deux défauts.
-                // On neutralise donc explicitement l'ancien défaut avant tout upsert.
-                $db->run('UPDATE site_languages SET is_default = 0, updated_at = CURRENT_TIMESTAMP WHERE site_id = :site_id', ['site_id' => $siteId]);
 
                 foreach ($values['enabled_languages'] as $item) {
                     $db->run('INSERT INTO site_languages(site_id, language_code, locale, url_prefix, hreflang_code, fallback_language_code, is_default, is_active, is_rtl, sort_order, updated_at) VALUES(:site_id, :code, :locale, :prefix, :hreflang, :fallback, 0, :is_active, :is_rtl, :sort_order, CURRENT_TIMESTAMP) ON CONFLICT(site_id, language_code) DO UPDATE SET locale = excluded.locale, url_prefix = excluded.url_prefix, hreflang_code = excluded.hreflang_code, fallback_language_code = excluded.fallback_language_code, is_active = excluded.is_active, is_rtl = excluded.is_rtl, sort_order = excluded.sort_order, updated_at = CURRENT_TIMESTAMP', [
@@ -822,7 +823,7 @@ final class ConfigurationRepository
     {
         return array_map(static fn(array $row): array => [
             'code' => (string) $row['language_code'], 'name' => (string) ($row['name'] ?? $row['language_code']), 'locale' => (string) ($row['locale'] ?? ''), 'url_prefix' => (string) ($row['url_prefix'] ?? ''), 'hreflang_code' => (string) ($row['hreflang_code'] ?? ''), 'fallback_language_code' => $row['fallback_language_code'] ?? null, 'is_default' => (bool) $row['is_default'], 'is_active' => (bool) $row['is_active'], 'is_rtl' => (bool) $row['is_rtl'], 'sort_order' => (int) $row['sort_order'],
-        ], $this->db->all('SELECT sl.*, l.name FROM site_languages sl LEFT JOIN languages l ON l.code = sl.language_code WHERE sl.site_id = :site_id ORDER BY sl.sort_order, sl.language_code', ['site_id' => $siteId]));
+        ], $this->db->all('SELECT sl.*, l.name FROM site_languages sl LEFT JOIN languages l ON l.code = sl.language_code WHERE sl.site_id = :site_id AND sl.is_active = 1 ORDER BY sl.sort_order, sl.language_code', ['site_id' => $siteId]));
     }
 
     private function settings(int $siteId): array

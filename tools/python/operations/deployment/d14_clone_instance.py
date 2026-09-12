@@ -3,7 +3,7 @@
 
 The destination directory and the public runtime configuration are deliberately
 separate. This allows workflows such as creating ``../mod2`` while keeping the
-clone configured as ``/mod`` for a later filesystem rename.
+clone configured as ``/cms`` for a later filesystem rename.
 """
 from __future__ import annotations
 
@@ -57,8 +57,20 @@ DEFAULT_EXCLUDES = [
     "frontend/admin-vue/node_modules",
     "frontend/admin-vue/node_modules/*",
     "frontend/admin-vue/node_modules/**",
+    "vendor",
+    "vendor/*",
+    "vendor/**",
+    "backend/vendor",
+    "backend/vendor/*",
+    "backend/vendor/**",
     "storage/cache/*",
     "storage/cache/**",
+    "storage/audit-results",
+    "storage/audit-results/*",
+    "storage/audit-results/**",
+    "storage/backups/sqlite",
+    "storage/backups/sqlite/*",
+    "storage/backups/sqlite/**",
     "storage/logs/*.log",
     "storage/exports",
     "storage/exports/*",
@@ -138,6 +150,14 @@ BINARY_SUFFIXES = {
     ".mp3",
 }
 
+# These files define portable dependency discovery, including the deliberately
+# conventional shared path ``cms/vendor``. They are application code rather
+# than instance content, so APP_BASE_PATH replacement must leave them intact.
+INSTANCE_TEXT_REWRITE_EXCLUDES = {
+    "backend/bootstrap/runtime.php",
+    "backend/src/Application/Maintenance/DependencyInventoryService.php",
+}
+
 
 @dataclass
 class Stats:
@@ -161,6 +181,19 @@ def normalize_public_base_path(value: str) -> str:
 
 def default_base_path_from_dir(path: Path) -> str:
     return normalize_public_base_path(path.name)
+
+
+def configured_base_path_from_source(source: Path) -> str:
+    """Read the source runtime base path before falling back to its directory name."""
+    template = env_template_source(source)
+    if template is not None:
+        configured = env_value(
+            template.read_text(encoding="utf-8", errors="replace"),
+            "APP_BASE_PATH",
+        )
+        if configured is not None:
+            return normalize_public_base_path(configured)
+    return default_base_path_from_dir(source)
 
 
 def is_relative_to(path: Path, parent: Path) -> bool:
@@ -342,6 +375,8 @@ def replace_in_text_files(
 ) -> None:
     for path in sorted(destination.rglob("*")):
         if not path.is_file() or not is_text_candidate(path):
+            continue
+        if path.relative_to(destination).as_posix() in INSTANCE_TEXT_REWRITE_EXCLUDES:
             continue
         try:
             original = path.read_text(encoding="utf-8")
@@ -579,8 +614,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Clone a local DEC CMS instance into another directory.")
     parser.add_argument("--source", type=Path, default=ROOT, help="Source instance directory. Default: current project root.")
     parser.add_argument("--destination", type=Path, required=True, help="Destination directory to create, for example ../mod2 or ../eve.")
-    parser.add_argument("--old-base-path", default=None, help="Source public APP_BASE_PATH. Default: source directory name.")
-    parser.add_argument("--new-base-path", "--target-base-path", dest="new_base_path", default=None, help="Public APP_BASE_PATH written into the clone. Default: destination directory name.")
+    parser.add_argument("--old-base-path", default=None, help="Source public APP_BASE_PATH. Default: source ops/.env, then source directory name.")
+    parser.add_argument("--new-base-path", "--target-base-path", dest="new_base_path", required=True, help="Exact public APP_BASE_PATH written into the clone, for example /cms/main, /new/main or /cms2.")
     parser.add_argument("--new-public-base-url", default=None, help="Exact APP_PUBLIC_BASE_URL to write into ops/.env.")
     parser.add_argument("--force", action="store_true", help="Replace destination if it already exists.")
     parser.add_argument("--dry-run", action="store_true", help="Show planned work without writing files.")
@@ -608,8 +643,12 @@ def main() -> int:
     if source == destination or is_relative_to(destination, source):
         raise RuntimeError("Destination must not be identical to the source or placed inside the source.")
 
-    old_base_path = normalize_public_base_path(args.old_base_path) if args.old_base_path else default_base_path_from_dir(source)
-    new_base_path = normalize_public_base_path(args.new_base_path) if args.new_base_path else default_base_path_from_dir(destination)
+    old_base_path = (
+        normalize_public_base_path(args.old_base_path)
+        if args.old_base_path
+        else configured_base_path_from_source(source)
+    )
+    new_base_path = normalize_public_base_path(args.new_base_path)
     old_abs_path = str(source)
     new_abs_path = str(destination)
     stats = Stats()
@@ -631,6 +670,11 @@ def main() -> int:
     excludes = build_excludes(args.include_dev_admin_vue, args.include_docs)
     copy_runtime_tree(source, destination, excludes, stats, dry_run=args.dry_run)
     ensure_runtime_directories(destination, dry_run=args.dry_run)
+    replace_in_text_files(destination, old_base_path, new_base_path, old_abs_path, new_abs_path, stats, dry_run=args.dry_run)
+    replace_in_sqlite_databases(destination, old_base_path, new_base_path, old_abs_path, new_abs_path, stats, dry_run=args.dry_run)
+    # Write the final runtime environment after generic path rewriting. Writing
+    # it before this pass would transform /cms/main into /cms/main/main when
+    # cloning a /cms source to /cms/main.
     ensure_env_file(
         source,
         destination,
@@ -641,8 +685,6 @@ def main() -> int:
         args.new_public_base_url,
         dry_run=args.dry_run,
     )
-    replace_in_text_files(destination, old_base_path, new_base_path, old_abs_path, new_abs_path, stats, dry_run=args.dry_run)
-    replace_in_sqlite_databases(destination, old_base_path, new_base_path, old_abs_path, new_abs_path, stats, dry_run=args.dry_run)
 
     suspicious_rewrites = [] if args.dry_run else detect_suspicious_path_rewrites(destination, destination.name)
     if suspicious_rewrites:

@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
   alt?: string;
   caption?: string;
   title?: string;
-  acceptType?: 'image'|'video'|'audio'|'document'|'any';
+  acceptType?: 'image'|'video'|'audio'|'document'|'visual'|'any';
   label?: string;
   help?: string;
   required?: boolean;
@@ -44,13 +44,23 @@ const hasCurrentExternalSource = computed(() => Boolean(props.src) && !selected.
 const currentPreviewUrl = computed(() => selected.value ? String(selected.value.thumbnail_url || selected.value.public_url || props.src || '') : String(props.src || ''));
 const selectedVariantUrl = computed(() => selected.value ? variantUrl(selected.value) : String(props.src || ''));
 const currentIsImage = computed(() => selected.value ? String(selected.value.mime_type || '').startsWith('image/') : Boolean(currentPreviewUrl.value));
+const selectedKindLabel = computed(() => {
+  const type=String(selected.value?.media_type||'').toLowerCase();
+  if(type==='video')return 'Vidéo';
+  if(type==='document')return 'Document';
+  if(type==='audio')return 'Audio';
+  return 'Fichier';
+});
 const filtered = computed(() => assets.value.filter((asset) => {
-  const kindOk = props.acceptType === 'any' || String(asset.media_type ?? '').toLowerCase() === props.acceptType || String(asset.mime_type ?? '').startsWith(`${props.acceptType}/`);
+  const mediaType=String(asset.media_type??'').toLowerCase();const mimeType=String(asset.mime_type??'').toLowerCase();
+  const kindOk = props.acceptType === 'any' || (props.acceptType==='visual'?(mediaType==='image'||mediaType==='video'||mimeType.startsWith('image/')||mimeType.startsWith('video/')):mediaType === props.acceptType || mimeType.startsWith(`${props.acceptType}/`));
   const needle = q.value.trim().toLowerCase();
   const haystack = [asset.original_filename, asset.filename, asset.mime_type, asset.alt_text, asset.caption, asset.title, asset.folder_name].filter(Boolean).join(' ').toLowerCase();
   return kindOk && (!needle || haystack.includes(needle));
 }));
-const acceptAttr = computed(() => props.acceptType === 'image'
+const acceptAttr = computed(() => props.acceptType === 'visual'
+  ? 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm'
+  : props.acceptType === 'image'
   ? 'image/jpeg,image/png,image/webp,image/gif'
   : props.acceptType === 'video'
     ? 'video/mp4,video/webm'
@@ -66,7 +76,7 @@ async function load() {
   loading.value = true; error.value = '';
   try {
     const query: Record<string,string|number> = { limit: 160 };
-    if (props.acceptType !== 'any') query.type = props.acceptType;
+    if (!['any','visual'].includes(props.acceptType)) query.type = props.acceptType;
     const response = await adminApi.get<{ assets?: MediaAsset[] } | MediaAsset[]>('/media', query);
     const data = response.data;
     assets.value = Array.isArray(data) ? data : (data.assets ?? []);
@@ -157,10 +167,10 @@ onMounted(load);
     <div v-if="selected || hasCurrentExternalSource" class="media-picker__selected media-picker__selected--large">
       <div class="media-picker__selected-preview">
         <img v-if="currentPreviewUrl && currentIsImage && !imageFailed(currentPreviewUrl)" :src="currentPreviewUrl" :alt="selected?.alt_text || ''" @error="markImageFailed(currentPreviewUrl)">
-        <span v-else class="media-picker__placeholder" aria-hidden="true">Image</span>
+        <span v-else class="media-picker__placeholder" aria-hidden="true">{{ selectedKindLabel }}</span>
       </div>
       <div class="media-picker__selected-meta">
-        <strong>{{ selected ? fileLabel(selected) : 'Image déjà renseignée' }}</strong>
+        <strong>{{ selected ? fileLabel(selected) : 'Média déjà renseigné' }}</strong>
         <small v-if="selected">{{ selected.mime_type }} · {{ dimensions(selected) }} · variante {{ variantLabel(selected) }}</small>
         <small v-if="selected?.alt_text">Alt : {{ selected.alt_text }}</small>
         <small class="media-picker__url">URL enregistrée : {{ selectedVariantUrl }}</small>

@@ -18,20 +18,26 @@ import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
+from urllib.parse import urlparse
 
 BASE = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
 from tools.python.cms.runtime import resolve_php_binary
+from tools.python.lib.database_inventory import database_specs
+from tools.python.lib.deploylib import load_ops_env
 from tools.python.lib.processes import cms_subprocess_env
-CORE_DB = BASE / "storage" / "database" / "core.sqlite"
-BUSINESS_DB = BASE / "storage" / "database" / "business.sqlite"
-IAM_DB = BASE / "storage" / "database" / "iam.sqlite"
-FORMS_DB = BASE / "storage" / "database" / "forms.sqlite"
-COOKIES_DB = BASE / "storage" / "database" / "cookies.sqlite"
-AI_DB = BASE / "storage" / "database" / "ai.sqlite"
+DATABASES = {spec.key: spec.absolute_path(BASE) for spec in database_specs(root=BASE)}
+CORE_DB = DATABASES["core"]
+BUSINESS_DB = DATABASES["business"]
+SALE_DB = DATABASES["sale"]
+IAM_DB = DATABASES["iam"]
+FORMS_DB = DATABASES["forms"]
+COOKIES_DB = DATABASES["cookies"]
+AI_DB = DATABASES["ai"]
 CONSOLE = BASE / "backend" / "bin" / "console"
 DEFAULT_SEED_DIR = BASE / "database" / "seeds" / "default"
 CORE_DEFAULT_SEED = DEFAULT_SEED_DIR / "core_default_seed.sql"
@@ -66,12 +72,12 @@ def now() -> str:
 
 
 def hash_pw(_password: str) -> str:
-    # Hash PHP PASSWORD_DEFAULT pour 'admin123'.
-    return "$2y$12$IQ1A5lwkoWrPfypHOTGlT.aPMvbImII5mHeLb/wC4b/DaCmUyvLba"
+    # Hash PHP PASSWORD_DEFAULT pour 'ChangeMe123!go'.
+    return "$2y$10$vojNo7wjLjCbl00/RvAxHuhu3fT1U6lj2XTRfKN8o6yvM4pYhkuVa"
 
 
 def ensure_databases_exist() -> None:
-    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB) if not path.exists()]
+    missing = [str(path) for path in (CORE_DB, IAM_DB, FORMS_DB, COOKIES_DB, AI_DB, BUSINESS_DB, SALE_DB) if not path.exists()]
     if missing:
         raise RuntimeError(
             "Base(s) SQLite introuvable(s): "
@@ -89,6 +95,156 @@ def run_seed_file(connection: sqlite3.Connection, sql_path: Path) -> None:
         connection.commit()
 
 
+def _normalized_base_path(value: str) -> str:
+    value = str(value or "").strip()
+    if value in {"", "/"}:
+        return ""
+    return "/" + value.strip("/")
+
+
+def seed_core_runtime_bootstrap(
+    db_path: Path = CORE_DB,
+    *,
+    env_values: dict[str, str] | None = None,
+) -> None:
+    """Crée le socle Core indispensable, sans contenu éditorial de démo.
+
+    Le runtime public et l'administration ont besoin d'un site résoluble avant
+    de pouvoir créer les premiers contenus. Ce bootstrap conserve uniquement
+    les références techniques (site, langue, domaine, thèmes et modules natifs)
+    et ne peuple ni pages, ni articles, ni menus, ni médias, ni taxonomies.
+    """
+    values = load_ops_env(BASE) if env_values is None else env_values
+    public_url = str(values.get("APP_PUBLIC_BASE_URL", "")).strip()
+    parsed = urlparse(public_url) if public_url else None
+
+    configured_base_path = str(values.get("APP_BASE_PATH", "")).strip()
+    base_path = _normalized_base_path(
+        configured_base_path or (parsed.path if parsed is not None else "")
+    )
+    host = str(parsed.hostname or "localhost") if parsed is not None else "localhost"
+    scheme = str(parsed.scheme or "").lower() if parsed is not None else ""
+    if scheme not in {"http", "https"}:
+        scheme = "http" if host in {"localhost", "127.0.0.1", "::1"} else "https"
+    local_host = host in {"localhost", "127.0.0.1", "::1"}
+
+    language_code = str(values.get("APP_LOCALE", "fr")).strip().lower() or "fr"
+    if not re.fullmatch(r"[a-z]{2}(?:-[a-z0-9]{2,8})?", language_code):
+        language_code = "fr"
+    language_presets = {
+        "fr": ("French", "Français", "fr-CH"),
+        "en": ("English", "English", "en-GB"),
+        "de": ("German", "Deutsch", "de-CH"),
+        "it": ("Italian", "Italiano", "it-CH"),
+    }
+    language_name, native_name, locale = language_presets.get(
+        language_code,
+        (language_code.upper(), language_code.upper(), language_code),
+    )
+    site_name = str(values.get("APP_NAME", "DEC CMS")).strip() or "DEC CMS"
+
+    themes = (
+        (
+            "default",
+            "Default Theme",
+            "2.0.0",
+            1,
+            {"path": "frontend/theme-default", "supports": {"custom_blocks": True, "seo_meta_preview": True}},
+        ),
+        (
+            "aurora",
+            "Aurora Fullscreen",
+            "1.0.0",
+            0,
+            {"path": "frontend/theme-aurora", "supports": {"custom_blocks": True, "seo_meta_preview": True}},
+        ),
+        (
+            "pulse",
+            "Pulse",
+            "1.0.0",
+            0,
+            {"path": "frontend/theme-pulse", "supports": {"custom_blocks": True, "seo_meta_preview": True, "fullscreen_hero": True}},
+        ),
+    )
+    native_modules = (
+        ("core", "Core"),
+        ("pages", "Pages"),
+        ("articles", "Articles"),
+        ("seo", "SEO"),
+        ("taxonomy", "Taxonomy"),
+        ("media", "Media"),
+        ("editor", "Editorial Blocks"),
+    )
+
+    with connect_sqlite(db_path) as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """
+            INSERT INTO languages(code, name, native_name, locale, is_default, is_active, sort_order)
+            VALUES(?,?,?,?,1,1,1)
+            """,
+            (language_code, language_name, native_name, locale),
+        )
+        cursor.execute(
+            "INSERT INTO sites(site_key, name, default_language_code, is_active) VALUES('main',?,?,1)",
+            (site_name, language_code),
+        )
+        site_id = int(cursor.lastrowid)
+        cursor.execute(
+            """
+            INSERT INTO site_languages(
+                site_id, language_code, locale, url_prefix, hreflang_code,
+                fallback_language_code, is_default, is_active, is_rtl, sort_order
+            ) VALUES(?,?,?,'',?,NULL,1,1,0,1)
+            """,
+            (site_id, language_code, locale, locale),
+        )
+        cursor.execute(
+            """
+            INSERT INTO site_domains(
+                site_id, host, base_path, scheme, is_primary, is_active,
+                enforce_https, canonical_host_strategy
+            ) VALUES(?,?,?,?,1,1,?,'primary')
+            """,
+            (site_id, host, base_path, scheme, 0 if local_host else 1),
+        )
+        cursor.execute(
+            """
+            INSERT INTO site_localizations(
+                site_id, language_code, site_title, baseline, footer_text,
+                default_meta_title_suffix, default_meta_description
+            ) VALUES(?,?,?,'','','','')
+            """,
+            (site_id, language_code, site_name),
+        )
+        cursor.executemany(
+            """
+            INSERT INTO themes(theme_key, name, version, is_default, is_active, config_json)
+            VALUES(?,?,?,?,1,?)
+            """,
+            [
+                (key, name, version, is_default, json.dumps(config, ensure_ascii=False, separators=(",", ":")))
+                for key, name, version, is_default, config in themes
+            ],
+        )
+        cursor.executemany(
+            """
+            INSERT INTO modules(
+                module_key, name, version, provider_class, is_system,
+                is_installed, is_enabled
+            ) VALUES(?,?,'2.0.0',NULL,1,1,1)
+            """,
+            native_modules,
+        )
+        connection.commit()
+
+    print(
+        "Socle Core minimal initialise: "
+        f"site=main, langue={language_code}, domaine={scheme}://{host}{base_path or '/'} "
+        "(aucun contenu editorial de demonstration)."
+    )
+
+
 def normalize_seed_sql(sql_path: Path, sql: str) -> str:
     """Ignore les anciennes traces outbox incompatibles avec le schéma M0."""
     if sql_path != CORE_DEFAULT_SEED:
@@ -104,19 +260,10 @@ def normalize_seed_sql(sql_path: Path, sql: str) -> str:
 
 
 def rebuild_seed_product_content_projections() -> None:
-    """Materialise les liens CMS/PIM seedes sans lecture inter-base au runtime."""
+    """Materialise les éventuels liens CMS/PIM seedés sans lecture inter-base au runtime."""
     with connect_sqlite(CORE_DB) as core, connect_sqlite(BUSINESS_DB) as business:
         core.row_factory = sqlite3.Row
         business.row_factory = sqlite3.Row
-        core.execute(
-            """
-            INSERT OR IGNORE INTO business_product_content_links(
-                site_id,product_id,content_entry_id,relation_type,locale,is_canonical,status,seo_config_json
-            )
-            SELECT 1,1,ce.id,'storytelling',NULL,1,'active','{"schema_type":"Service"}'
-            FROM content_entries ce WHERE ce.site_id=1 AND ce.entry_key='home' LIMIT 1
-            """
-        )
         links = core.execute(
             "SELECT * FROM business_product_content_links WHERE status='active' ORDER BY id"
         ).fetchall()
@@ -176,6 +323,109 @@ def rebuild_seed_product_content_projections() -> None:
             )
         core.commit()
 
+
+def seed_sale_opening_inventory() -> None:
+    """Initialise Sale exclusivement par des mouvements d'ouverture traçables."""
+    with connect_sqlite(BUSINESS_DB) as business, connect_sqlite(SALE_DB) as sale:
+        business.row_factory = sqlite3.Row
+        sale.row_factory = sqlite3.Row
+        rows = business.execute(
+            """
+            SELECT s.sellable_id,p.site_id,p.id AS product_id,p.name AS product_name,p.type AS product_type,
+                   v.id AS variant_id,v.sku,v.barcode,v.name AS variant_name,v.stock_quantity,
+                   COALESCE(v.track_stock,p.track_stock,0) AS tracked,
+                   COALESCE(v.allow_backorder,p.allow_backorder,0) AS allow_backorder,
+                   COALESCE(v.backorder_delivery_days,p.backorder_delivery_days,7) AS backorder_delivery_days
+            FROM business_sellables s
+            INNER JOIN business_product_variants v ON v.id=s.variant_id
+            INNER JOIN business_products p ON p.id=v.product_id AND p.site_id=s.site_id
+            WHERE s.status='active' AND v.archived_at IS NULL AND p.archived_at IS NULL
+            ORDER BY p.site_id,s.sellable_id
+            """
+        ).fetchall()
+        for row in rows:
+            site_id = int(row["site_id"])
+            location = sale.execute(
+                "SELECT id FROM sale_stock_locations WHERE site_id=? AND status='active' ORDER BY code='channel-default' DESC,id LIMIT 1",
+                (site_id,),
+            ).fetchone()
+            if location is None:
+                sale.execute(
+                    "INSERT INTO sale_stock_locations(site_id,code,name,location_type,status) VALUES(?,'channel-default','Stock principal','main','active')",
+                    (site_id,),
+                )
+                location_id = int(sale.execute("SELECT last_insert_rowid()").fetchone()[0])
+            else:
+                location_id = int(location[0])
+            sale.execute(
+                """
+                INSERT INTO sale_catalog_variant_refs(
+                    site_id,business_product_id,business_variant_id,sellable_id,sku,barcode,
+                    product_name,variant_name,product_type,track_stock,last_snapshot_json
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(site_id,business_variant_id) DO UPDATE SET
+                    sellable_id=excluded.sellable_id,sku=excluded.sku,barcode=excluded.barcode,
+                    product_name=excluded.product_name,variant_name=excluded.variant_name,
+                    product_type=excluded.product_type,track_stock=excluded.track_stock,
+                    last_snapshot_json=excluded.last_snapshot_json,synced_at=CURRENT_TIMESTAMP,archived_at=NULL
+                """,
+                (
+                    site_id,int(row["product_id"]),int(row["variant_id"]),int(row["sellable_id"]),
+                    row["sku"],row["barcode"],row["product_name"],row["variant_name"],row["product_type"],
+                    int(row["tracked"]),json.dumps({"source": "business.seed", "sellable_id": int(row["sellable_id"])}, separators=(",", ":")),
+                ),
+            )
+            existing = sale.execute(
+                "SELECT id FROM sale_inventory_items WHERE site_id=? AND sellable_id=? AND stock_location_id=?",
+                (site_id, int(row["sellable_id"]), location_id),
+            ).fetchone()
+            if existing is not None:
+                continue
+            opening = max(0, int(Decimal(str(row["stock_quantity"] or 0)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)))
+            sale.execute(
+                """
+                INSERT INTO sale_inventory_items(
+                    site_id,business_variant_id,sellable_id,stock_location_id,sku,tracked,
+                    allow_backorder,backorder_delivery_days,on_hand_quantity,reserved_quantity,available_quantity
+                ) VALUES(?,?,?,?,?,?,?,?,0,0,0)
+                """,
+                (
+                    site_id,int(row["variant_id"]),int(row["sellable_id"]),location_id,row["sku"],int(row["tracked"]),
+                    int(row["allow_backorder"]),max(1,int(row["backorder_delivery_days"] or 7)),
+                ),
+            )
+            item_id = int(sale.execute("SELECT last_insert_rowid()").fetchone()[0])
+            if opening > 0:
+                key = f"opening:site:{site_id}:sellable:{int(row['sellable_id'])}:location:{location_id}"
+                sale.execute(
+                    """
+                    INSERT INTO sale_stock_movements(
+                        inventory_item_id,stock_location_id,movement_type,quantity,balance_after_quantity,
+                        idempotency_key,reference_type,reference_id,correlation_id,reason
+                    ) VALUES(?,?,'initial',?,?,?,?,? ,?,'Seed from scratch — stock d ouverture')
+                    """,
+                    (item_id,location_id,opening,opening,key,"catalog_seed",int(row["variant_id"]),key),
+                )
+                sale.execute(
+                    "UPDATE sale_inventory_items SET on_hand_quantity=?,available_quantity=?,version=1,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (opening,opening,item_id),
+                )
+            status = "deliverable" if int(row["tracked"]) == 0 else ("in_stock" if opening > 0 else ("backorder" if int(row["allow_backorder"]) == 1 else "unavailable"))
+            business.execute(
+                """
+                INSERT INTO business_inventory_availability_projections(
+                    sellable_id,site_id,tracked,on_hand_quantity,reserved_quantity,available_quantity,availability_status,source_version
+                ) VALUES(?,?,?,?,0,?,?,?)
+                ON CONFLICT(sellable_id) DO UPDATE SET
+                    tracked=excluded.tracked,on_hand_quantity=excluded.on_hand_quantity,reserved_quantity=0,
+                    available_quantity=excluded.available_quantity,availability_status=excluded.availability_status,
+                    source_version=excluded.source_version,projected_at=CURRENT_TIMESTAMP
+                """,
+                (int(row["sellable_id"]),site_id,int(row["tracked"]),opening,opening,status,1 if opening > 0 else 0),
+            )
+        sale.commit()
+        business.commit()
+
 def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
     """Synchronise la politique IAM native des modules.
 
@@ -191,6 +441,10 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         ("forms.manage", "Gérer les formulaires", "Créer et configurer les formulaires."),
         ("business.crm.read", "Lire le CRM Business", "Lire les entreprises, contacts, tags, consentements et données CRM autorisées."),
         ("business.crm.manage", "Gérer le CRM Business", "Créer, modifier et archiver entreprises, contacts, tags et consentements."),
+        ("business.segment.read", "Lire les segments CRM", "Consulter règles, calculs et membres des segments CRM."),
+        ("business.segment.manage", "Gérer les segments CRM", "Créer, modifier et recalculer les segments CRM."),
+        ("business.consent.read", "Lire les consentements CRM", "Consulter consentements marketing, preuves et historique."),
+        ("business.consent.manage", "Gérer les consentements CRM", "Enregistrer et retirer les consentements marketing, séparément des préférences."),
         ("business.memo.read", "Lire les mémos CRM", "Consulter les mémos CRM accessibles et leurs partages internes."),
         ("business.memo.manage", "Gérer les mémos CRM", "Créer, modifier, commenter et archiver les mémos CRM."),
         ("business.memo.share", "Partager les mémos CRM", "Créer ou révoquer des partages internes et liens publics de mémos."),
@@ -198,6 +452,52 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         ("business.mailing.manage", "Gérer le mailing Business", "Gérer listes, campagnes simples, destinataires et désabonnements."),
         ("business.messaging.send", "Envoyer des messages Business", "Planifier ou déclencher un envoi après contrôle du consentement."),
         ("business.messaging.admin", "Administrer le messaging Business", "Configurer providers, templates et outbox messaging sans stocker de secret en clair."),
+        ("business.advanced_tools.manage", "Utiliser les outils avancés Opérations", "Exécuter les rapprochements et reconstructions de projections CRM, PIM et storefront."),
+        ("business.form_links.review", "Réviser les rattachements de formulaires", "Examiner et décider les rattachements ambigus entre soumissions et Relations."),
+        ("business.catalog.read", "Lire le catalogue Opérations", "Consulter marques, catégories, produits, variantes, options, prix publics et réductions catalogue."),
+        ("business.catalog.write", "Gérer le catalogue Opérations", "Créer, modifier et archiver marques, catégories, produits, options et variantes."),
+        ("business.catalog.prices.read", "Lire les prix catalogue", "Consulter les prix de vente et prix calculés du catalogue."),
+        ("business.catalog.prices.write", "Gérer les prix catalogue", "Modifier prix de base et ajustements de variantes."),
+        ("business.catalog.purchase_prices.read", "Lire les prix achat catalogue", "Consulter les prix d'achat et marges catalogue protégés."),
+        ("business.catalog.discounts.write", "Gérer les réductions catalogue", "Créer, modifier et archiver les réductions et offres catalogue."),
+        ("business.catalog.stock.write", "Gérer le stock catalogue", "Modifier les mouvements de stock simples du catalogue."),
+        ("sale.read", "Lire Vente", "Consulter le tableau de bord Vente et les données commerciales autorisées."),
+        ("sale.manage", "Gérer Vente", "Administrer les données et réglages généraux du module Vente."),
+        ("sale.advanced_tools.manage", "Utiliser les outils avancés Ventes", "Accéder aux réservations, au ledger, à la logistique, aux identités et aux diagnostics provider/projection."),
+        ("sale.orders.read", "Lire les commandes", "Consulter les paniers convertis, commandes, lignes et statuts."),
+        ("sale.orders.manage", "Gérer les commandes", "Créer, confirmer, compléter ou annuler des commandes."),
+        ("sale.payments.read", "Lire les paiements", "Consulter moyens de paiement, intentions, transactions et allocations."),
+        ("sale.payments.manage", "Gérer les paiements", "Enregistrer, capturer, annuler ou rapprocher des paiements."),
+        ("sale.payments.confirm", "Confirmer les paiements", "Confirmer manuellement un paiement ou rapprocher un virement avec une trace opérateur."),
+        ("sale.payments.test", "Utiliser le provider de test", "Exécuter des scénarios de paiement déterministes uniquement hors production."),
+        ("sale.refunds.manage", "Gérer les remboursements", "Créer et suivre les remboursements sans modifier la transaction originale."),
+        ("sale.gift_cards.read", "Lire les bons cadeaux", "Consulter les bons masqués, leurs soldes et leur journal."),
+        ("sale.gift_cards.manage", "Gérer les bons cadeaux", "Renvoyer ou annuler un bon cadeau avec une trace opérateur."),
+        ("sale.returns.manage", "Gérer les retours", "Créer, approuver, recevoir et terminer les retours physiques."),
+        ("sale.pos.use", "Utiliser le POS", "Utiliser une caisse et finaliser une vente POS."),
+        ("sale.pos.manage", "Gérer le POS", "Configurer registres, terminaux et appareils de caisse."),
+        ("sale.cash.manage", "Gérer la caisse", "Ouvrir, fermer et ajuster les sessions de caisse."),
+        ("sale.pos.sessions.open", "Ouvrir une caisse", "Ouvrir une session sur une caisse et un appareil autorisés."),
+        ("sale.pos.sessions.close", "Fermer une caisse", "Compter et fermer une session de caisse avec justification des écarts."),
+        ("sale.pos.discounts.manage", "Accorder une remise POS", "Appliquer une remise ou une majoration manuelle au panier POS."),
+        ("sale.pos.refunds.manage", "Rembourser au POS", "Effectuer un retour ou remboursement POS lié à la commande originale."),
+        ("sale.pos.cash.correct", "Corriger le cash POS", "Enregistrer une entrée, sortie ou correction de cash auditée."),
+        ("sale.pos.receipts.reprint", "Réimprimer un ticket POS", "Réimprimer un ticket avec motif et audit opérateur."),
+        ("sale.stock.read", "Lire le stock Vente", "Consulter les stocks transactionnels, disponibilités et réservations Vente."),
+        ("sale.stock.manage", "Gérer le stock Vente", "Créer réservations, mouvements et corrections de stock transactionnel."),
+        ("sale.fulfillment.manage", "Gérer les préparations", "Allouer, préparer, expédier et remettre les commandes avec preuve opérateur."),
+        ("sale.transfers.manage", "Gérer les transferts", "Demander, expédier, recevoir ou annuler les transferts entre emplacements."),
+        ("sale.inventory.count", "Compter le stock", "Créer et saisir progressivement une session d'inventaire."),
+        ("sale.inventory.approve", "Valider un inventaire", "Valider les écarts et produire les mouvements d'ajustement audités."),
+        ("sale.inventory.repair", "Réparer la projection de stock", "Appliquer après aperçu une reconstruction sauvegardée et des mouvements correctifs justifiés."),
+        ("sale.reports.read", "Lire les rapports Vente", "Consulter les rapports commerciaux et POS."),
+        ("sale.sales.read", "Lire les indicateurs de ventes", "Consulter les indicateurs calculés depuis les instantanés de commandes."),
+        ("sale.exports.manage", "Exporter les ventes", "Exporter des données de ventes dans un périmètre site audité."),
+        ("sale.documents.issue", "Émettre les documents de vente", "Émettre une facture ou une note de crédit numérotée et immuable."),
+        ("sale.documents.resend", "Renvoyer les documents de vente", "Mettre en file un envoi ou renvoi audité via l'outbox."),
+        ("sale.settings.manage", "Gérer les réglages Vente", "Configurer canaux, moyens de paiement et réglages du module Vente."),
+        ("sale.channels.manage", "Gérer les canaux de vente", "Résoudre, configurer et contrôler les références SalesChannel intermodules."),
+        ("sale.customer_accounts.manage", "Fusionner les comptes clients", "Réaliser une fusion IAM–CRM–Vente contrôlée et auditée."),
     ]:
         i.execute(
             """
@@ -222,6 +522,8 @@ def enforce_modules_permissions_policy(iam: sqlite3.Connection) -> None:
         JOIN iam_permissions p ON p.permission_key IN (
             'forms.read','forms.manage',
             'business.crm.read','business.crm.manage',
+            'business.segment.read','business.segment.manage',
+            'business.consent.read','business.consent.manage',
             'business.memo.read','business.memo.manage','business.memo.share',
             'business.mailing.read','business.mailing.manage',
             'business.messaging.send','business.messaging.admin'
@@ -276,7 +578,7 @@ def ensure_seed_support_tables(connection: sqlite3.Connection, seed_path: Path) 
     connection.commit()
 
 
-def seed_from_default_sql_files() -> bool:
+def seed_from_default_sql_files(*, skip_core_seed: bool = False) -> bool:
     """Injecte le jeu par defaut versionne dans database/seeds/default/.
 
     Retourne True si ces fichiers existent et ont ete appliques. Les fichiers
@@ -287,13 +589,16 @@ def seed_from_default_sql_files() -> bool:
     if not default_seed_files_available():
         return False
 
-    for db_path, seed_path in [
+    default_seeds = [
         (CORE_DB, CORE_DEFAULT_SEED),
         (IAM_DB, IAM_DEFAULT_SEED),
         (FORMS_DB, FORMS_DEFAULT_SEED),
         (COOKIES_DB, COOKIES_DEFAULT_SEED),
         (AI_DB, AI_DEFAULT_SEED),
-    ]:
+    ]
+    if skip_core_seed:
+        default_seeds = [(db_path, seed_path) for db_path, seed_path in default_seeds if db_path != CORE_DB]
+    for db_path, seed_path in default_seeds:
         con = connect_sqlite(db_path)
         try:
             ensure_seed_support_tables(con, seed_path)
@@ -301,13 +606,19 @@ def seed_from_default_sql_files() -> bool:
         finally:
             con.close()
 
+    if skip_core_seed:
+        seed_core_runtime_bootstrap()
+
     # Scenario contractuel multisite/multilingue. Il est applique apres le
     # snapshot database.zip pour prouver l'isolation site/language/media/menu
     # sans devoir regenerer manuellement le gros seed par defaut.
-    for db_path, seed_path in [
+    contract_seeds = [
         (CORE_DB, CORE_MULTISITE_CONTRACT_SEED),
         (IAM_DB, IAM_MULTISITE_CONTRACT_SEED),
-    ]:
+    ]
+    if skip_core_seed:
+        contract_seeds = [(db_path, seed_path) for db_path, seed_path in contract_seeds if db_path != CORE_DB]
+    for db_path, seed_path in contract_seeds:
         if not seed_path.exists():
             continue
         con = connect_sqlite(db_path)
@@ -319,14 +630,15 @@ def seed_from_default_sql_files() -> bool:
     with connect_sqlite(IAM_DB) as iam:
         enforce_modules_permissions_policy(iam)
 
-    repair_multisite_primary_domains_for_webe_li_deployment()
-    repair_published_revision_documents_for_projection_inputs()
-    with connect_sqlite(CORE_DB) as con:
-        cur = con.cursor()
-        rebuild_seed_public_projections(cur)
-        rebuild_seed_taxonomy_projections(cur)
-        con.commit()
-    sanitize_existing_public_media_urls()
+    if not skip_core_seed:
+        repair_multisite_primary_domains_for_webe_li_deployment()
+        repair_published_revision_documents_for_projection_inputs()
+        with connect_sqlite(CORE_DB) as con:
+            cur = con.cursor()
+            rebuild_seed_public_projections(cur)
+            rebuild_seed_taxonomy_projections(cur)
+            con.commit()
+        sanitize_existing_public_media_urls()
     return True
 
 
@@ -620,7 +932,7 @@ def _seed_is_internal_storage_media_path(value: str) -> bool:
     return '/storage/' in path or 'storage/media/' in path or path.startswith('storage/')
 
 
-def _seed_public_media_url(value: str, app_base_path: str = '/mod') -> str:
+def _seed_public_media_url(value: str, app_base_path: str = '/cms') -> str:
     path = str(value or '').strip().replace('\\', '/')
     if path == '' or re.match(r'^https?://', path, re.I) or path.startswith('//') or path.startswith('data:'):
         return path
@@ -638,7 +950,7 @@ def _seed_public_media_url(value: str, app_base_path: str = '/mod') -> str:
     return path
 
 
-def _seed_sanitize_srcset(value: str, app_base_path: str = '/mod') -> str:
+def _seed_sanitize_srcset(value: str, app_base_path: str = '/cms') -> str:
     items: list[str] = []
     for raw in str(value or '').split(','):
         item = raw.strip()
@@ -653,7 +965,7 @@ def _seed_sanitize_srcset(value: str, app_base_path: str = '/mod') -> str:
     return ', '.join(items)
 
 
-def _seed_sanitize_media_urls(value: object, key: str = '', app_base_path: str = '/mod') -> object:
+def _seed_sanitize_media_urls(value: object, key: str = '', app_base_path: str = '/cms') -> object:
     if isinstance(value, dict):
         return {str(k): _seed_sanitize_media_urls(v, str(k), app_base_path) for k, v in value.items()}
     if isinstance(value, list):
@@ -1220,20 +1532,20 @@ def _seed_fallback_block(entry_id: int, language_code: str, document: dict[str, 
 
 
 def _replace_multisite_demo_urls(value: object) -> object:
-    """Remplace les anciens domaines de démonstration par l'URL réelle webe.li/mod.
+    """Remplace les anciens domaines de démonstration par l'URL réelle webe.li/cms.
 
     Le seed multisite a d'abord utilisé multi-a.example.test / multi-b.example.test
     comme domaines primaires. En production de démonstration, le back-office et
-    le public sont servis sous webe.li/mod/site-a et webe.li/mod/site-b. Cette
+    le public sont servis sous webe.li/cms/site-a et webe.li/cms/site-b. Cette
     réparation évite les redirections vers des hosts inexistants.
     """
     if isinstance(value, str):
         return (
             value
-            .replace('https://multi-a.example.test/site-a', 'https://webe.li/mod/site-a')
-            .replace('http://multi-a.example.test/site-a', 'https://webe.li/mod/site-a')
-            .replace('https://multi-b.example.test/site-b', 'https://webe.li/mod/site-b')
-            .replace('http://multi-b.example.test/site-b', 'https://webe.li/mod/site-b')
+            .replace('https://multi-a.example.test/site-a', 'https://webe.li/cms/site-a')
+            .replace('http://multi-a.example.test/site-a', 'https://webe.li/cms/site-a')
+            .replace('https://multi-b.example.test/site-b', 'https://webe.li/cms/site-b')
+            .replace('http://multi-b.example.test/site-b', 'https://webe.li/cms/site-b')
         )
     if isinstance(value, list):
         return [_replace_multisite_demo_urls(item) for item in value]
@@ -1243,19 +1555,19 @@ def _replace_multisite_demo_urls(value: object) -> object:
 
 
 def repair_multisite_primary_domains_for_webe_li_deployment() -> None:
-    """Aligne les sites de contrat sur le déploiement réel /mod/site-a|site-b.
+    """Aligne les sites de contrat sur le déploiement réel /cms/site-a|site-b.
 
     Les domaines multi-*.example.test restent des alias de test, mais ne doivent
     plus être primaires. Sinon le runtime public redirige
-    https://webe.li/mod/site-a vers https://multi-a.example.test/site-a/.
+    https://webe.li/cms/site-a vers https://multi-a.example.test/site-a/.
     """
     if not CORE_DB.exists():
         return
     with connect_sqlite(CORE_DB) as con:
         cur = con.cursor()
         cur.execute("UPDATE site_domains SET is_primary=0 WHERE site_id IN (10,11)")
-        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=10 AND host='webe.li' AND base_path='/mod/site-a'")
-        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=11 AND host='webe.li' AND base_path='/mod/site-b'")
+        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=10 AND host='webe.li' AND base_path='/cms/site-a'")
+        cur.execute("UPDATE site_domains SET is_primary=1, scheme='https', is_active=1, enforce_https=1 WHERE site_id=11 AND host='webe.li' AND base_path='/cms/site-b'")
         cur.execute("UPDATE site_domains SET is_primary=0, is_active=1 WHERE site_id=10 AND host='multi-a.example.test' AND base_path='/site-a'")
         cur.execute("UPDATE site_domains SET is_primary=0, is_active=1 WHERE site_id=11 AND host='multi-b.example.test' AND base_path='/site-b'")
 
@@ -1291,7 +1603,7 @@ def repair_multisite_primary_domains_for_webe_li_deployment() -> None:
                 repaired_snapshot_json += 1
         con.commit()
     if repaired_seo_json or repaired_snapshot_json:
-        print(f"Correctif seed: domaines primaires multisite alignes sur webe.li/mod (json SEO: {repaired_seo_json}, snapshots: {repaired_snapshot_json}).")
+        print(f"Correctif seed: domaines primaires multisite alignes sur webe.li/cms (json SEO: {repaired_seo_json}, snapshots: {repaired_snapshot_json}).")
 
 
 def _canonical_seed_block_type(block_type: object) -> str:
@@ -1589,6 +1901,31 @@ def rebuild_public_projections(required: bool = True) -> int:
     return proc.returncode
 
 
+def rebuild_storefront_projections(required: bool = True) -> int:
+    try:
+        php = resolve_php_binary()
+    except (FileNotFoundError, PermissionError) as exc:
+        php_error = str(exc)
+    else:
+        php_error = ""
+    if php_error or not CONSOLE.exists():
+        message = f"{php_error or 'backend/bin/console introuvable'}: le catalogue public de la boutique n'est pas reconstruit."
+        if required:
+            print(f"ERREUR: {message}", file=sys.stderr)
+            return 2
+        print(f"AVERTISSEMENT: {message}")
+        return 0
+
+    proc = subprocess.run([php, str(CONSOLE), "storefront:rebuild"], cwd=str(BASE), env=cms_subprocess_env(), text=True, capture_output=True)
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.stderr:
+        print(proc.stderr, file=sys.stderr, end="")
+    if proc.returncode != 0:
+        print("ERREUR: projections du catalogue public non reconstruites après le seed.", file=sys.stderr)
+    return proc.returncode
+
+
 def sync_php_modules(required: bool = True) -> int:
     try:
         php = resolve_php_binary()
@@ -1804,10 +2141,12 @@ def demo_article_blocks(body: str) -> list[dict[str, object]]:
         }
     ]
 
-def seed() -> None:
+def seed(*, skip_core_seed: bool = False) -> None:
     ensure_databases_exist()
-    if seed_from_default_sql_files():
+    if seed_from_default_sql_files(skip_core_seed=skip_core_seed):
         return
+    if skip_core_seed:
+        raise RuntimeError("Le profil sans seed Core exige les snapshots SQL de database/seeds/default/.")
 
     core = connect_sqlite(CORE_DB)
     iam = connect_sqlite(IAM_DB)
@@ -1828,7 +2167,7 @@ def seed() -> None:
         i.execute("DELETE FROM iam_users")
         i.execute(
             "INSERT INTO iam_users(email, email_normalized, password_hash, first_name, last_name, is_active, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)",
-            ("admin@example.test", "admin@example.test", hash_pw("admin123"), "Admin", "User", 1, now(), now()),
+            ("admin@example.test", "admin@example.test", hash_pw("ChangeMe123!go"), "Admin", "User", 1, now(), now()),
         )
         user_id = i.lastrowid
         role_id = fetch_required_id(i, "SELECT id FROM iam_roles WHERE role_key=?", ("super_admin",), "role IAM super_admin")
@@ -2091,14 +2430,29 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="N'echoue pas si PHP CLI manque; utile uniquement pour preparer une DB sans projections.",
     )
+    parser.add_argument(
+        "--skip-commerce-seed",
+        action="store_true",
+        help="N'injecte aucune donnee Business/Sale ni projection commerciale derivee.",
+    )
+    parser.add_argument(
+        "--skip-core-seed",
+        action="store_true",
+        help=(
+            "N'injecte pas les contenus Core de demonstration; conserve le socle "
+            "technique minimal requis par le runtime."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
-        seed()
-        rebuild_seed_product_content_projections()
+        seed(skip_core_seed=args.skip_core_seed)
+        if not args.skip_commerce_seed and not args.skip_core_seed:
+            seed_sale_opening_inventory()
+            rebuild_seed_product_content_projections()
     except Exception as exc:  # noqa: BLE001
         print(f"ERREUR seed: {exc}", file=sys.stderr)
         return 1
@@ -2119,6 +2473,13 @@ def main() -> int:
         code = rebuild_public_projections(required=not args.allow_missing_php)
         if code != 0:
             return code
+
+        if args.skip_commerce_seed or args.skip_core_seed:
+            print("Storefront projections skipped: Business/Sale seed disabled.")
+        else:
+            code = rebuild_storefront_projections(required=not args.allow_missing_php)
+            if code != 0:
+                return code
 
         # Le bootstrap PHP peut resynchroniser les déclarations des modules.
         # La source native doit donc être réappliquée en dernière étape afin que

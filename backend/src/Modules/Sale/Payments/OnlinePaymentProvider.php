@@ -12,6 +12,9 @@ interface OnlinePaymentProvider extends PaymentProvider
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function readState(array $payload): array;
 
+    /** @param array<string,string> $headers */
+    public function verifyWebhookSignature(string $rawBody, array $headers): void;
+
     /** @param array<string,string> $headers @return array<string,mixed> */
     public function parseWebhook(string $rawBody, array $headers): array;
 }

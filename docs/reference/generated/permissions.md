@@ -18,6 +18,9 @@ generated: true
 
 | Permission |
 |---|
+| `accounting.chart.manage` |
+| `accounting.opening.manage` |
+| `accounting.read` |
 | `admin.blueprints.delete` |
 | `admin.blueprints.versions.write` |
 | `admin.blueprints.write` |
@@ -57,6 +60,7 @@ generated: true
 | `audit.read` |
 | `blueprints.manage` |
 | `blueprints.read` |
+| `business.advanced_tools.manage` |
 | `business.catalog.discounts.write` |
 | `business.catalog.prices.read` |
 | `business.catalog.prices.write` |
@@ -64,6 +68,8 @@ generated: true
 | `business.catalog.read` |
 | `business.catalog.stock.write` |
 | `business.catalog.write` |
+| `business.consent.manage` |
+| `business.consent.read` |
 | `business.crm.manage` |
 | `business.crm.read` |
 | `business.mailing.manage` |
@@ -71,9 +77,13 @@ generated: true
 | `business.memo.manage` |
 | `business.memo.read` |
 | `business.messaging.admin` |
+| `business.segment.manage` |
+| `business.segment.read` |
+| `business.segments.create` |
 | `catalog.product.read` |
 | `common.create` |
 | `common.delete` |
+| `contacts.consents.update` |
 | `content.approve` |
 | `content.create` |
 | `content.delete` |
@@ -117,9 +127,16 @@ generated: true
 | `relations.restore` |
 | `roles.manage` |
 | `roles.read` |
+| `sale.advanced_tools.manage` |
 | `sale.cash.manage` |
 | `sale.channels.manage` |
 | `sale.customer_accounts.manage` |
+| `sale.dashboard.export` |
+| `sale.exports.manage` |
+| `sale.fulfillment.manage` |
+| `sale.gift_cards.manage` |
+| `sale.gift_cards.read` |
+| `sale.inventory.approve` |
 | `sale.manage` |
 | `sale.orders.manage` |
 | `sale.orders.read` |
@@ -132,10 +149,13 @@ generated: true
 | `sale.refunds.manage` |
 | `sale.reports.read` |
 | `sale.returns.manage` |
+| `sale.sales.read` |
 | `sale.settings.manage` |
 | `sale.status.admin` |
+| `sale.stock.export` |
 | `sale.stock.manage` |
 | `sale.stock.read` |
+| `sale.transfers.manage` |
 | `search.keyword.create` |
 | `search.section.create` |
 | `security.cors.manage` |

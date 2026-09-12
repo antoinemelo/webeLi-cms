@@ -28,6 +28,13 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
             $rows = array_merge($rows, $this->companies($siteId, $q, $status, null, $filters));
         }
 
+        $view = trim((string) ($filters['view'] ?? ''));
+        if ($view === 'follow_up') {
+            $rows = array_values(array_filter($rows, static fn(array $row): bool => trim((string) ($row['next_action_title'] ?? '')) !== ''));
+        } elseif ($view === 'duplicates') {
+            $rows = array_values(array_filter($rows, static fn(array $row): bool => ($row['duplicate_candidate'] ?? false) === true));
+        }
+
         $sort = (string) ($filters['sort'] ?? 'activity_desc');
         usort($rows, static function (array $a, array $b) use ($sort): int {
             return match ($sort) {
@@ -63,6 +70,20 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
     /** @return list<array<string,mixed>> */
     private function contacts(int $siteId, string $q, string $status, ?int $id = null, array $filters = []): array
     {
+        $hasRoles = $this->database()->tableExists('business_relation_roles');
+        $hasTasks = $this->database()->tableExists('business_relation_tasks');
+        $hasSale = $this->database()->tableExists('crm_sale_activities');
+        $hasForms = $this->database()->tableExists('crm_form_submission_activities');
+        $roleLabels = $hasRoles ? "(SELECT group_concat(r.role_key, ', ') FROM business_relation_roles r WHERE r.site_id=c.site_id AND r.relation_type='contact' AND r.contact_id=c.id)" : 'NULL';
+        $nextTitle = $hasTasks ? "(SELECT t.title FROM business_relation_tasks t WHERE t.site_id=c.site_id AND t.relation_type='contact' AND t.contact_id=c.id AND t.status='open' ORDER BY COALESCE(t.due_at,'9999-12-31'),t.id LIMIT 1)" : 'NULL';
+        $nextDue = $hasTasks ? "(SELECT t.due_at FROM business_relation_tasks t WHERE t.site_id=c.site_id AND t.relation_type='contact' AND t.contact_id=c.id AND t.status='open' ORDER BY COALESCE(t.due_at,'9999-12-31'),t.id LIMIT 1)" : 'NULL';
+        $activitySources = [
+            'SELECT COALESCE(m.updated_at,m.created_at) AS activity_at FROM crm_memos m WHERE m.site_id=c.site_id AND m.contact_id=c.id AND m.archived_at IS NULL',
+            'SELECT a.created_at FROM business_activity_log a WHERE a.site_id=c.site_id AND a.related_contact_id=c.id',
+        ];
+        if ($hasSale) $activitySources[] = 'SELECT s.occurred_at FROM crm_sale_activities s WHERE s.site_id=c.site_id AND s.related_contact_id=c.id';
+        if ($hasForms) $activitySources[] = 'SELECT f.occurred_at FROM crm_form_submission_activities f WHERE f.site_id=c.site_id AND f.related_contact_id=c.id';
+        $lastActivity = '(SELECT MAX(activity_at) FROM (' . implode(' UNION ALL ', $activitySources) . '))';
         $includeArchived = (string) ($filters['archived'] ?? '') === 'all';
         $onlyArchived = (string) ($filters['archived'] ?? '') === 'archived';
         $where = ['c.site_id = :site_id'];
@@ -125,6 +146,7 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
                 c.phone,
                 c.mobile,
                 c.status,
+                {$roleLabels} AS role_labels,
                 (SELECT group_concat(t.label, ', ') FROM business_tag_links tl JOIN business_tags t ON t.id = tl.tag_id WHERE tl.target_type = 'contact' AND tl.contact_id = c.id AND t.archived_at IS NULL) AS tag_labels,
                 COALESCE((SELECT cs.consent_status FROM crm_consents cs WHERE cs.contact_id = c.id AND cs.channel = 'email' LIMIT 1), 'unknown') AS email_consent_status,
                 co.id AS company_id,
@@ -134,10 +156,18 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
                 (SELECT COUNT(*) FROM crm_memos m WHERE m.site_id = c.site_id AND m.contact_id = c.id AND m.archived_at IS NULL) AS memo_count,
                 (SELECT COUNT(DISTINCT m.id) FROM crm_memos m JOIN crm_memo_shares s ON s.memo_id = m.id AND s.revoked_at IS NULL WHERE m.site_id = c.site_id AND m.contact_id = c.id AND m.archived_at IS NULL) AS shared_memo_count,
                 COALESCE(
-                    (SELECT MAX(COALESCE(m.updated_at, m.created_at)) FROM crm_memos m WHERE m.site_id = c.site_id AND m.contact_id = c.id AND m.archived_at IS NULL),
+                    {$lastActivity},
                     COALESCE(c.updated_at, c.created_at)
                 ) AS last_activity_at,
-                (SELECT substr(m.body, 1, 160) FROM crm_memos m WHERE m.site_id = c.site_id AND m.contact_id = c.id AND m.archived_at IS NULL ORDER BY COALESCE(m.updated_at, m.created_at) DESC, m.id DESC LIMIT 1) AS last_memo_excerpt
+                (SELECT substr(m.body, 1, 160) FROM crm_memos m WHERE m.site_id = c.site_id AND m.contact_id = c.id AND m.archived_at IS NULL ORDER BY COALESCE(m.updated_at, m.created_at) DESC, m.id DESC LIMIT 1) AS last_memo_excerpt,
+                {$nextTitle} AS next_action_title,
+                {$nextDue} AS next_action_due_at,
+                CASE WHEN EXISTS(
+                    SELECT 1 FROM crm_contact_channels own
+                    JOIN crm_contact_channels other ON other.channel=own.channel AND other.normalized_value=own.normalized_value AND other.contact_id<>own.contact_id AND other.is_verified=1 AND other.archived_at IS NULL
+                    JOIN business_contacts oc ON oc.id=other.contact_id AND oc.site_id=c.site_id AND oc.archived_at IS NULL
+                    WHERE own.contact_id=c.id AND own.is_verified=1 AND own.archived_at IS NULL
+                ) THEN 1 ELSE 0 END AS duplicate_candidate
              FROM business_contacts c
              JOIN business_companies co ON co.id = c.company_id
              WHERE " . implode(' AND ', $where),
@@ -149,6 +179,20 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
     /** @return list<array<string,mixed>> */
     private function companies(int $siteId, string $q, string $status, ?int $id = null, array $filters = []): array
     {
+        $hasRoles = $this->database()->tableExists('business_relation_roles');
+        $hasTasks = $this->database()->tableExists('business_relation_tasks');
+        $hasSale = $this->database()->tableExists('crm_sale_activities');
+        $hasForms = $this->database()->tableExists('crm_form_submission_activities');
+        $roleLabels = $hasRoles ? "(SELECT group_concat(r.role_key, ', ') FROM business_relation_roles r WHERE r.site_id=co.site_id AND r.relation_type='company' AND r.company_id=co.id)" : 'NULL';
+        $nextTitle = $hasTasks ? "(SELECT t.title FROM business_relation_tasks t WHERE t.site_id=co.site_id AND t.relation_type='company' AND t.company_id=co.id AND t.status='open' ORDER BY COALESCE(t.due_at,'9999-12-31'),t.id LIMIT 1)" : 'NULL';
+        $nextDue = $hasTasks ? "(SELECT t.due_at FROM business_relation_tasks t WHERE t.site_id=co.site_id AND t.relation_type='company' AND t.company_id=co.id AND t.status='open' ORDER BY COALESCE(t.due_at,'9999-12-31'),t.id LIMIT 1)" : 'NULL';
+        $activitySources = [
+            'SELECT COALESCE(m.updated_at,m.created_at) AS activity_at FROM crm_memos m WHERE m.site_id=co.site_id AND m.company_id=co.id AND m.archived_at IS NULL',
+            'SELECT a.created_at FROM business_activity_log a WHERE a.site_id=co.site_id AND a.related_company_id=co.id',
+        ];
+        if ($hasSale) $activitySources[] = 'SELECT s.occurred_at FROM crm_sale_activities s WHERE s.site_id=co.site_id AND s.related_company_id=co.id';
+        if ($hasForms) $activitySources[] = 'SELECT f.occurred_at FROM crm_form_submission_activities f WHERE f.site_id=co.site_id AND f.related_company_id=co.id';
+        $lastActivity = '(SELECT MAX(activity_at) FROM (' . implode(' UNION ALL ', $activitySources) . '))';
         $includeArchived = (string) ($filters['archived'] ?? '') === 'all';
         $onlyArchived = (string) ($filters['archived'] ?? '') === 'archived';
         $where = ['co.site_id = :site_id'];
@@ -214,6 +258,7 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
                 NULL AS mobile,
                 co.website_url,
                 co.status,
+                {$roleLabels} AS role_labels,
                 (SELECT group_concat(t.label, ', ') FROM business_tag_links tl JOIN business_tags t ON t.id = tl.tag_id WHERE tl.target_type = 'company' AND tl.company_id = co.id AND t.archived_at IS NULL) AS tag_labels,
                 NULL AS email_consent_status,
                 co.id AS company_id,
@@ -223,10 +268,13 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
                 (SELECT COUNT(*) FROM crm_memos m WHERE m.site_id = co.site_id AND m.company_id = co.id AND m.archived_at IS NULL) AS memo_count,
                 (SELECT COUNT(DISTINCT m.id) FROM crm_memos m JOIN crm_memo_shares s ON s.memo_id = m.id AND s.revoked_at IS NULL WHERE m.site_id = co.site_id AND m.company_id = co.id AND m.archived_at IS NULL) AS shared_memo_count,
                 COALESCE(
-                    (SELECT MAX(COALESCE(m.updated_at, m.created_at)) FROM crm_memos m WHERE m.site_id = co.site_id AND m.company_id = co.id AND m.archived_at IS NULL),
+                    {$lastActivity},
                     COALESCE(co.updated_at, co.created_at)
                 ) AS last_activity_at,
-                (SELECT substr(m.body, 1, 160) FROM crm_memos m WHERE m.site_id = co.site_id AND m.company_id = co.id AND m.archived_at IS NULL ORDER BY COALESCE(m.updated_at, m.created_at) DESC, m.id DESC LIMIT 1) AS last_memo_excerpt
+                (SELECT substr(m.body, 1, 160) FROM crm_memos m WHERE m.site_id = co.site_id AND m.company_id = co.id AND m.archived_at IS NULL ORDER BY COALESCE(m.updated_at, m.created_at) DESC, m.id DESC LIMIT 1) AS last_memo_excerpt,
+                {$nextTitle} AS next_action_title,
+                {$nextDue} AS next_action_due_at,
+                0 AS duplicate_candidate
              FROM business_companies co
              WHERE " . implode(' AND ', $where),
             $params
@@ -272,6 +320,7 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
             'phone' => $row['phone'] ?? null,
             'mobile' => $row['mobile'] ?? null,
             'status' => (string) $row['status'],
+            'roles' => $this->tagLabels($row['role_labels'] ?? null),
             'tags' => $this->tagLabels($row['tag_labels'] ?? null),
             'email_consent_status' => $row['email_consent_status'] ?? null,
             'memo_count' => (int) ($row['memo_count'] ?? 0),
@@ -279,6 +328,9 @@ final class BusinessRelationRepository extends BusinessRepositoryBase
             'linked_contacts_count' => (int) ($row['linked_contacts_count'] ?? 0),
             'last_activity_at' => $row['last_activity_at'] ?? null,
             'last_memo_excerpt' => $row['last_memo_excerpt'] ?? null,
+            'next_action_title' => $row['next_action_title'] ?? null,
+            'next_action_due_at' => $row['next_action_due_at'] ?? null,
+            'duplicate_candidate' => (bool) ((int) ($row['duplicate_candidate'] ?? 0)),
         ];
     }
 

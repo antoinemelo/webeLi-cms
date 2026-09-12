@@ -1,4 +1,4 @@
--- Seed snapshot genere depuis database.zip pour mod2_v02-e21e.
+-- Seed snapshot genere depuis database.zip pour cms_v02-e21e.
 -- Ne contient pas de DDL durable; les structures restent dans database/schema, database/modules et database/iam.sql.
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;
@@ -16,7 +16,7 @@ DELETE FROM "schema_migrations";
 INSERT INTO "schema_migrations" ("id", "migration", "migrated_at") VALUES (1, '0001_init.sql', '2026-05-09 06:14:28');
 INSERT INTO "schema_migrations" ("id", "migration", "migrated_at") VALUES (2, '0002_admin_security_hardening.sql', '2026-05-09 06:14:28');
 INSERT INTO "schema_migrations" ("id", "migration", "migrated_at") VALUES (3, '0003_api_tokens.sql', '2026-05-31 00:00:00');
-INSERT INTO "iam_users" ("id", "email", "email_normalized", "password_hash", "first_name", "last_name", "locale", "is_active", "disabled_at", "disabled_reason", "last_login_at", "password_reset_selector", "password_reset_token_hash", "password_reset_expires_at", "password_reset_requested_at", "password_reset_sent_at", "last_password_change_at", "created_at", "updated_at") VALUES (1, 'admin@example.test', 'admin@example.test', '$2y$12$IQ1A5lwkoWrPfypHOTGlT.aPMvbImII5mHeLb/wC4b/DaCmUyvLba', 'Super', 'Admin', 'fr-CH', 1, NULL, NULL, '2026-05-12 13:27:12', NULL, NULL, NULL, NULL, NULL, NULL, '2026-05-09 06:14:27', '2026-05-12 15:06:08');
+INSERT INTO "iam_users" ("id", "email", "email_normalized", "password_hash", "first_name", "last_name", "locale", "is_active", "disabled_at", "disabled_reason", "last_login_at", "password_reset_selector", "password_reset_token_hash", "password_reset_expires_at", "password_reset_requested_at", "password_reset_sent_at", "last_password_change_at", "created_at", "updated_at") VALUES (1, 'admin@example.test', 'admin@example.test', '$2y$10$vojNo7wjLjCbl00/RvAxHuhu3fT1U6lj2XTRfKN8o6yvM4pYhkuVa', 'Super', 'Admin', 'fr-CH', 1, NULL, NULL, '2026-05-12 13:27:12', NULL, NULL, NULL, NULL, NULL, NULL, '2026-05-09 06:14:27', '2026-05-12 15:06:08');
 INSERT INTO "iam_users" ("id", "email", "email_normalized", "password_hash", "first_name", "last_name", "locale", "is_active", "disabled_at", "disabled_reason", "last_login_at", "password_reset_selector", "password_reset_token_hash", "password_reset_expires_at", "password_reset_requested_at", "password_reset_sent_at", "last_password_change_at", "created_at", "updated_at") VALUES (2, 'demo.user@example.test', 'demo.user@example.test', '$2y$10$TGEH/AsOFmgvnFnxR3mjUOCy7OElnK14HvD8OEVcWNb4xG5yYrUQi', 'Demo', 'User', 'fr-CH', 1, NULL, NULL, '2026-05-12 18:54:20', NULL, NULL, NULL, NULL, NULL, NULL, '2026-05-12 15:06:50', '2026-05-12 18:54:20');
 INSERT INTO "iam_roles" ("id", "role_key", "name", "description") VALUES (1, 'super_admin', 'Super admin', 'Accès complet sans restriction fonctionnelle.');
 INSERT INTO "iam_roles" ("id", "role_key", "name", "description") VALUES (2, 'admin', 'Admin', 'Administration opérationnelle du CMS hors sécurité système sensible.');
@@ -333,6 +333,16 @@ INSERT OR IGNORE INTO "iam_role_permissions" ("role_id", "permission_id")
 SELECT r.id, p.id
 FROM "iam_roles" r
 JOIN "iam_permissions" p ON p.permission_key IN ('imports_exports.read','imports_exports.write','imports_exports.manage')
+WHERE r.role_key IN ('super_admin','admin');
+
+-- Comptabilité: accès opérationnel par défaut pour les administrateurs.
+INSERT OR IGNORE INTO "iam_permissions" ("permission_key", "name", "description") VALUES
+('accounting.read', 'Lire la comptabilité', 'Consulter le plan comptable et les soldes d’ouverture.'),
+('accounting.chart.manage', 'Gérer le plan comptable', 'Modifier les règles de sens, rubriques et comptes.'),
+('accounting.opening.manage', 'Gérer les ouvertures comptables', 'Créer les exercices et modifier les soldes d’ouverture.');
+INSERT OR IGNORE INTO "iam_role_permissions" ("role_id", "permission_id")
+SELECT r.id, p.id FROM "iam_roles" r JOIN "iam_permissions" p
+ON p.permission_key IN ('accounting.read','accounting.chart.manage','accounting.opening.manage')
 WHERE r.role_key IN ('super_admin','admin');
 
 COMMIT;

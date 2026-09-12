@@ -5,7 +5,7 @@ audience:
   - superadministrator
   - publisher
 status: draft
-last_verified: 2026-06-27
+last_verified: 2026-07-17
 source_of_truth: manual
 source_paths:
   - frontend/admin-vue/src/views/modules/BusinessCrmView.vue
@@ -121,6 +121,18 @@ Pour qu'un produit soit lisible par l'API publique catalogue :
 4. vérifiez qu'au moins une variante active dispose d'un prix de vente exploitable.
 
 Les APIs publiques ne retournent jamais le prix d'achat, les marges ou les quantités exactes de stock.
+
+### Groupes, attributs et facettes publiques
+
+Un produit peut être associé à plusieurs groupes d’attributs. Un attribut peut être :
+
+- **Public**, donc visible dans la fiche produit projetée ;
+- **Recherchable**, donc ajouté à l’index textuel public ;
+- **Filtrable**, donc utilisable comme facette publique.
+
+Un attribut filtrable ou recherchable doit être public. Dans la boutique, les facettes d’attribut n’apparaissent qu’après sélection d’un seul groupe produit : cela évite de mélanger des notions homonymes appartenant à des familles différentes. Les options ou attributs déjà utilisés ne peuvent pas être archivés silencieusement ; retirez d’abord leurs valeurs des produits et variantes concernés.
+
+Après une modification de marque, catégorie, groupe, valeur, option, prix ou disponibilité, reconstruisez les projections Storefront pour publier le nouvel index.
 
 ## Activer pour POS
 

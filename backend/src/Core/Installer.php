@@ -94,7 +94,7 @@ final class Installer
             }
             $stmt = $iamPdo->prepare('INSERT INTO iam_users(email, email_normalized, password_hash, first_name, last_name, is_active, created_at, updated_at) VALUES(?,?,?,?,?,?,?,?)');
             $now = now_utc();
-            $stmt->execute(['admin@example.test', 'admin@example.test', password_hash('admin123', PASSWORD_DEFAULT), 'Admin', 'User', 1, $now, $now]);
+            $stmt->execute(['admin@example.test', 'admin@example.test', password_hash('ChangeMe123!go', PASSWORD_DEFAULT), 'Admin', 'User', 1, $now, $now]);
             $userId = (int) $iamPdo->lastInsertId();
             $roleId = (int) $iamPdo->query("SELECT id FROM iam_roles WHERE role_key='super_admin' LIMIT 1")->fetchColumn();
             if ($roleId > 0) {

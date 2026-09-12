@@ -24,6 +24,8 @@ final class SaleGuestCheckoutService
         private readonly SaleInventoryService $inventory,
         private readonly SaleStateMachineService $states,
         ?SaleFulfillmentService $fulfillment = null,
+        private readonly ?SalePaymentMethodService $paymentMethods = null,
+        private readonly ?SaleEventService $events = null,
     ) { $this->fulfillment = $fulfillment ?? new SaleFulfillmentService($connection); }
 
     /** @param array<string,mixed> $payload @return array{cart:array<string,mixed>,price_changed:bool} */
@@ -71,8 +73,17 @@ final class SaleGuestCheckoutService
         $priceChanged = false;
         if (in_array($step, ['review','validated'], true)) {
             $priceChanged = $this->revalidateLines($cart);
-            $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated');
+            $this->inventory->prepareCartForCheckout($cart, $this->carts->lines($cartId), $step === 'validated', 1800, 'checkout_start', isset($shippingMethod['stock_location_id']) ? (int) $shippingMethod['stock_location_id'] : null);
             $shippingMethod = $this->fulfillment->quote((int) $cart['site_id'], $this->carts->lines($cartId), $shipping, (string) $shippingMethod['code'], (string) ($payload['language'] ?? 'fr'));
+            if ($this->paymentMethods !== null) {
+                $freshCart = $this->carts->requireCart($cartId);
+                $paymentMethod = $this->paymentMethods->requireAvailable(
+                    (int) $freshCart['site_id'], (int) $freshCart['channel_id'], (string) ($payload['language'] ?? 'fr'),
+                    (string) $freshCart['currency'], (int) $freshCart['grand_total_minor'], (string) ($paymentMethod['code'] ?? '')
+                );
+                unset($paymentMethod['provider_key']);
+                foreach (array_keys($paymentMethod) as $key) { if (str_starts_with((string)$key, '_')) unset($paymentMethod[$key]); }
+            }
             $this->requireMethod($paymentMethod, 'sale.checkout.payment_method_required');
         }
         $saved = $this->carts->saveGuestCheckout(
@@ -108,6 +119,25 @@ final class SaleGuestCheckoutService
             }
             $this->inventory->releaseCartReservations($cartId, 'guest cart expired');
             $this->states->transition('cart', $cartId, 'expired', null, 'guest cart expired');
+            $identitySufficient = (int) ($cart['customer_contact_id'] ?? 0) > 0
+                || (int) ($cart['customer_company_id'] ?? 0) > 0
+                || (int) ($cart['created_by_iam_user_id'] ?? 0) > 0;
+            if ($identitySufficient && (int) ($cart['marketing_consent'] ?? 0) === 1) {
+                $createdAt = strtotime((string) ($cart['created_at'] ?? '')) ?: time() - 3600;
+                $this->events?->emit((int) $cart['site_id'], 'sale.cart.abandoned', 'cart', $cartId, [
+                    'site_id' => (int) $cart['site_id'],
+                    'cart_id' => $cartId,
+                    'channel_id' => (int) $cart['channel_id'],
+                    'language_code' => (string) ($cart['locale'] ?? ''),
+                    'customer_contact_id' => (int) ($cart['customer_contact_id'] ?? 0) ?: null,
+                    'customer_company_id' => (int) ($cart['customer_company_id'] ?? 0) ?: null,
+                    'iam_user_id' => (int) ($cart['created_by_iam_user_id'] ?? 0) ?: null,
+                    'abandoned_after_seconds' => max(3600, time() - $createdAt),
+                    'lawful_basis' => 'consent',
+                    'marketing_consent' => true,
+                    'retention_until' => gmdate('Y-m-d H:i:s', time() + 86400 * 90),
+                ], (int) ($cart['created_by_iam_user_id'] ?? 0) ?: null, 'abandoned-cart:' . $cartId);
+            }
         });
     }
 
@@ -129,6 +159,12 @@ final class SaleGuestCheckoutService
             } catch (\InvalidArgumentException) {
                 throw new SaleValidationException('sale.checkout.product_unavailable');
             }
+            $availability = (string) ($snapshot['availability']['status'] ?? 'unavailable');
+            $snapshot['availability_state'] = match ($availability) {
+                'in_stock', 'deliverable' => 'available',
+                'backorder' => 'backorder',
+                default => 'unavailable',
+            };
             $amounts = $this->pricing->lineAmounts($snapshot);
             $changed = $changed || (int) $amounts['unit_price_minor'] !== (int) $line['unit_price_minor']
                 || (int) $amounts['tax_rate_basis_points'] !== (int) $line['tax_rate_basis_points'];

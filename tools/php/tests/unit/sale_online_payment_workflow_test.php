@@ -6,6 +6,7 @@ require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
 use App\Modules\Sale\Exceptions\SalePaymentException;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
+use App\Modules\Sale\Payments\PaymentProvider;
 use App\Modules\Sale\Payments\SandboxPaymentProvider;
 use App\Modules\Sale\Repositories\SaleEventRepository;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
@@ -17,6 +18,29 @@ use App\Modules\Sale\Services\SaleInventoryService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SalePaymentService;
 use App\Modules\Sale\Services\SaleStateMachineService;
+
+final class CrashOncePaymentProvider implements PaymentProvider
+{
+    public int $captureCalls = 0;
+    public int $refundCalls = 0;
+    public function key(): string { return 'crash_once'; }
+    public function supports(string $operation): bool { return in_array($operation, ['capture', 'multiple_capture', 'refund'], true); }
+    public function createIntent(array $payload): array { return ['status' => 'authorized']; }
+    public function recordPayment(array $payload): array { return ['status' => 'succeeded']; }
+    public function capture(array $payload): array
+    {
+        $this->captureCalls++;
+        if ($this->captureCalls === 1) throw new RuntimeException('ambiguous provider timeout after capture');
+        return ['status' => 'succeeded', 'provider_transaction_id' => 'crash-cap-' . $payload['idempotency_key'], 'payload' => ['provider' => $this->key()]];
+    }
+    public function refund(array $payload): array
+    {
+        $this->refundCalls++;
+        if ($this->refundCalls === 1) throw new RuntimeException('ambiguous provider timeout after refund');
+        return ['status' => 'succeeded', 'provider_transaction_id' => 'crash-ref-' . $payload['idempotency_key'], 'payload' => ['provider' => $this->key()]];
+    }
+    public function void(array $payload): array { return ['status' => 'cancelled']; }
+}
 
 $h = new TestHarness();
 [$dir, $path, $db] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/sale.sql');
@@ -30,8 +54,11 @@ try {
     $events = new SaleEventService(new SaleEventRepository($connection));
     $inventory = new SaleInventoryService(new SaleInventoryRepository($connection), null, null, $events);
     $states = new SaleStateMachineService($serviceDb);
-    $sandbox = new SandboxPaymentProvider($serviceDb, $secret);
-    $registry = new PaymentProviderRegistry([$sandbox]);
+    $registry = new PaymentProviderRegistry(null, $serviceDb, $secret, 'test');
+    $sandbox = $registry->get('sandbox');
+    if (!$sandbox instanceof SandboxPaymentProvider) {
+        throw new RuntimeException('sandbox provider unavailable');
+    }
     $online = new SaleOnlinePaymentService($connection, $payments, $orders, $inventory, $states, $registry);
     $paymentService = new SalePaymentService($payments, $orders, $events, null, $registry, $states);
     $channelId = (int) ($db->one("SELECT id FROM sale_channels WHERE code='web-main'")['id'] ?? 0);
@@ -116,15 +143,64 @@ try {
     $h->assertSame(1000, (int) $orders->requireOrder($partial['order_id'])['paid_total_minor'], 'successive captures converge to exact order total');
     $h->assertSame(2, (int) ($db->one('SELECT COUNT(*) AS c FROM sale_payment_transactions WHERE order_id=? AND transaction_type=\'capture\'', [$partial['order_id']])['c'] ?? 0), 'partial captures keep an immutable transaction trail');
 
+    $delayed = $pendingOrder();
+    $delayedIntent = $online->createIntentForOrder($delayed['order_id'], 'test', ['idempotency_key' => 'delayed-capture', 'scenario' => 'authorize_then_capture']);
+    $captureOne = $paymentService->captureIntent((int) $delayedIntent['id'], 400, 1, ['idempotency_key' => 'capture-400', 'reason_code' => 'partial_fulfillment']);
+    $captureReplay = $paymentService->captureIntent((int) $delayedIntent['id'], 400, 1, ['idempotency_key' => 'capture-400', 'reason_code' => 'partial_fulfillment']);
+    $captureTwo = $paymentService->captureIntent((int) $delayedIntent['id'], 600, 1, ['idempotency_key' => 'capture-600', 'reason_code' => 'order_ready']);
+    $h->assertSame('succeeded', $captureOne['transaction']['status'] ?? null, 'delayed partial capture succeeds through the provider contract');
+    $h->assertSame(true, $captureReplay['replayed'] ?? false, 'capture idempotency key replays the durable local operation');
+    $h->assertSame('captured', $captureTwo['intent']['status'] ?? null, 'multiple captures converge to the authorized total');
+    $h->assertSame(2, (int) ($db->one("SELECT COUNT(*) AS c FROM sale_payment_transactions WHERE payment_intent_id=? AND transaction_type='capture'", [(int) $delayedIntent['id']])['c'] ?? 0), 'capture replay does not duplicate the immutable ledger');
+    $h->expectException(
+        fn() => $paymentService->captureIntent((int) $delayedIntent['id'], 1, 1, ['idempotency_key' => 'capture-over', 'reason_code' => 'order_ready']),
+        SalePaymentException::class,
+        'capture beyond the authorization is rejected'
+    );
+
+    $crashOrder = $pendingOrder(500);
+    $db->run("INSERT INTO sale_payment_intents(site_id,channel_id,order_id,provider_key,intent_reference,status,amount_minor,currency,authorized_minor) VALUES(1,?,?,?,'crash-ref','authorized',500,'CHF',500)", [$channelId, $crashOrder['order_id'], 'crash_once']);
+    $crashIntentId = (int) $db->lastInsertId();
+    $crashProvider = new CrashOncePaymentProvider();
+    $crashRegistry = new PaymentProviderRegistry([$crashProvider]);
+    $crashService = new SalePaymentService($payments, $orders, $events, null, $crashRegistry, $states);
+    $deferredCapture = $crashService->captureIntent($crashIntentId, 500, 1, ['idempotency_key' => 'crash-capture', 'reason_code' => 'order_ready']);
+    $h->assertSame('pending', $deferredCapture['transaction']['status'] ?? null, 'ambiguous capture timeout preserves a durable pending operation');
+    $db->run('UPDATE sale_payment_transactions SET available_at=CURRENT_TIMESTAMP WHERE id=?', [(int) $deferredCapture['transaction']['id']]);
+    $retryResult = $crashService->processDueOperations(1);
+    $h->assertSame(1, $retryResult['captures'] ?? 0, 'scheduled worker retries due capture operations');
+    $h->assertSame(1, (int) ($db->one("SELECT COUNT(*) AS c FROM sale_payment_transactions WHERE payment_intent_id=? AND status='succeeded'", [$crashIntentId])['c'] ?? 0), 'crash replay finalizes exactly one capture ledger entry');
+
     foreach (['decline' => 'failed', 'abandon' => 'cancelled', 'timeout' => 'expired'] as $outcome => $providerStatus) {
         $failed = $pendingOrder();
         $failedIntent = $online->createIntentForOrder($failed['order_id'], 'sandbox', ['idempotency_key' => 'online-payment-' . $outcome]);
         $failureEvent = $sandbox->simulate((string) $failedIntent['reference'], (string) $failedIntent['sandbox_token'], $outcome);
         $online->processWebhook('sandbox', $failureEvent['body'], ['x-sale-signature' => $failureEvent['signature']]);
-        $h->assertSame('cancelled', $orders->requireOrder($failed['order_id'])['status'], $outcome . ' cancels pending order');
-        $h->assertSame('released', $db->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$failed['cart_id']])['status'] ?? null, $outcome . ' releases reservation');
+        $expectedOrderStatus = $outcome === 'decline' ? 'pending_payment' : 'cancelled';
+        $expectedReservationStatus = $outcome === 'decline' ? 'confirmed' : 'released';
+        $h->assertSame($expectedOrderStatus, $orders->requireOrder($failed['order_id'])['status'], $outcome . ' applies the retry policy to the pending order');
+        $h->assertSame($expectedReservationStatus, $db->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$failed['cart_id']])['status'] ?? null, $outcome . ' applies the retry policy to the reservation');
         $h->assertSame($providerStatus, $db->one('SELECT status FROM sale_payment_intents WHERE id=?', [(int) $failedIntent['id']])['status'] ?? null, $outcome . ' persists normalized intent status');
     }
+
+    $duplicateTest = $pendingOrder();
+    $duplicateIntent = $online->createIntentForOrder($duplicateTest['order_id'], 'test', ['idempotency_key' => 'deterministic-duplicate', 'scenario' => 'duplicate_webhook']);
+    $duplicateResult = $online->simulateDeterministicTest((string) $duplicateIntent['reference'], (string) $duplicateIntent['test_token'], 'duplicate_webhook', true);
+    $h->assertSame(true, $duplicateResult['webhook']['duplicate_delivery']['duplicate'] ?? false, 'deterministic duplicate scenario delivers the same event twice');
+    $h->assertSame('confirmed', $orders->requireOrder($duplicateTest['order_id'])['status'], 'first deterministic duplicate delivery confirms the order once');
+
+    $outOfOrderTest = $pendingOrder();
+    $outOfOrderIntent = $online->createIntentForOrder($outOfOrderTest['order_id'], 'test', ['idempotency_key' => 'deterministic-out-of-order', 'scenario' => 'out_of_order_webhook']);
+    $outOfOrderResult = $online->simulateDeterministicTest((string) $outOfOrderIntent['reference'], (string) $outOfOrderIntent['test_token'], 'out_of_order_webhook', true);
+    $h->assertSame(true, $outOfOrderResult['webhook']['ignored_out_of_order'] ?? false, 'deterministic out-of-order scenario first establishes a newer provider event');
+    $h->assertSame('authorized', $db->one('SELECT status FROM sale_payment_intents WHERE id=?', [(int) $outOfOrderIntent['id']])['status'] ?? null, 'ignored deterministic capture cannot overwrite the newer authorization');
+
+    $divergenceTest = $pendingOrder();
+    $divergenceIntent = $online->createIntentForOrder($divergenceTest['order_id'], 'test', ['idempotency_key' => 'deterministic-divergence', 'scenario' => 'reconciliation_divergence']);
+    $divergenceResult = $online->simulateDeterministicTest((string) $divergenceIntent['reference'], (string) $divergenceIntent['test_token'], 'reconciliation_divergence', true);
+    $h->assertSame(false, $divergenceResult['webhook_delivered'] ?? true, 'deterministic divergence updates the provider without delivering a webhook');
+    $divergenceRepair = $online->reconcile(1, (int) $divergenceIntent['id'], 1);
+    $h->assertSame('repaired', $divergenceRepair['results'][0]['status'] ?? null, 'reconciliation repairs deterministic provider divergence');
 
     $reconcile = $pendingOrder();
     $reconcileIntent = $online->createIntentForOrder($reconcile['order_id'], 'sandbox', ['idempotency_key' => 'online-payment-reconcile']);
@@ -140,12 +216,39 @@ try {
     $h->assertSame('succeeded', $refund['refund']['status'] ?? null, 'sandbox refund succeeds through provider contract');
     $h->assertSame(300, (int) $orders->requireOrder($first['order_id'])['refunded_total_minor'], 'refund updates order financial state');
     $h->assertSame(300, (int) ($db->one('SELECT refunded_minor FROM sale_payment_intents WHERE id=?', [(int) $intent['id']])['refunded_minor'] ?? 0), 'refund updates provider intent totals');
+    $refundReplay = $paymentService->refundPayment((int) ($captureTx['id'] ?? 0), 300, 'unit refund', 1, 'online-refund-first');
+    $secondRefund = $paymentService->refundPayment((int) ($captureTx['id'] ?? 0), 200, 'commercial gesture', 1, 'online-refund-second', ['reason_code' => 'commercial_gesture']);
+    $h->assertSame(true, $refundReplay['replayed'] ?? false, 'refund replay does not call or book the provider twice');
+    $h->assertSame(500, (int) $secondRefund['order']['refunded_total_minor'], 'multiple partial refunds preserve the exact order total');
+    $h->expectException(
+        fn() => $paymentService->refundPayment((int) ($captureTx['id'] ?? 0), 501, 'too much', 1, 'online-refund-over'),
+        SalePaymentException::class,
+        'concurrent refund reservation prevents over-refunding'
+    );
+
+    $db->run('UPDATE sale_sandbox_payment_states SET amount_minor=amount_minor+100 WHERE provider_reference=?', [(string) $intent['reference']]);
+    $mismatch = $online->reconcile(1, (int) $intent['id'], 1);
+    $h->assertSame('attention_required', $mismatch['results'][0]['status'] ?? null, 'amount mismatch is never repaired silently');
+    $exceptions = $online->exceptionCenter(1);
+    $h->assertSame('attention', $exceptions['health'] ?? null, 'payment exception center exposes degraded health');
+    $runId = (int) ($exceptions['items'][0]['id'] ?? 0);
+    $preview = $online->previewExceptionResolution(1, [$runId]);
+    $h->assertSame(false, $preview['safe_bulk_reconcile'] ?? true, 'human financial divergence cannot use unsafe bulk repair');
+    $resolved = $online->resolveException(1, $runId, 'Verified against sandbox statement', 1);
+    $h->assertSame('resolved', $resolved['resolution_status'] ?? null, 'manual resolution is explicit and audited');
 
     $observability = $online->observability(1);
     $h->assertTrue(count($observability['metrics']) > 0, 'payment metrics are queryable');
     $h->assertTrue(count($observability['alerts']) > 0, 'duplicate and out-of-order webhook alerts are queryable');
     $h->assertSame(0, (int) ($db->one("SELECT COUNT(*) AS c FROM sale_payment_webhook_events WHERE lower(payload_json) LIKE '%card_number%' OR lower(payload_json) LIKE '%cvc%' OR lower(payload_json) LIKE '%pan%'")['c'] ?? -1), 'webhook storage contains no raw card fields');
     $h->assertSame(1, (int) ($db->one('SELECT COUNT(*) AS c FROM sale_payment_attempts WHERE payment_intent_id=?', [(int) $intent['id']])['c'] ?? 0), 'payment attempt is persisted separately');
+    $adminSessions = $online->adminSessions(1, 'fr', ['q' => 'PAY-UNIT-1']);
+    $h->assertSame('Paiement reçu', $adminSessions[0]['state']['label'] ?? null, 'admin payment list exposes a friendly business status');
+    $h->assertSame('none', $adminSessions[0]['state']['next_action'] ?? null, 'admin payment list exposes the next action');
+    $adminDetail = $online->adminSession(1, (int) $intent['id'], 'fr');
+    $h->assertTrue(count($adminDetail['captures'] ?? []) >= 1, 'admin payment detail exposes captures');
+    $h->assertTrue(count($adminDetail['timeline'] ?? []) >= 3, 'admin payment detail exposes a consolidated timeline');
+    $h->assertSame('sale.payment_provider.v1', $adminDetail['technical']['contract_version'] ?? null, 'technical provider details remain in the secondary panel payload');
 } finally {
     $db = null;
     gc_collect_cycles();

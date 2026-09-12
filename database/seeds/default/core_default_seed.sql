@@ -1,4 +1,4 @@
--- Seed snapshot genere depuis database.zip pour mod2_v02-e21e.
+-- Seed snapshot genere depuis database.zip pour cms_v02-e21e.
 -- Ne contient pas de DDL durable; les structures restent dans database/schema, database/modules et database/iam.sql.
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;
@@ -81,7 +81,7 @@ INSERT INTO "modules" ("id", "module_key", "name", "version", "provider_class", 
 INSERT INTO "modules" ("id", "module_key", "name", "version", "provider_class", "is_system", "is_installed", "is_enabled", "config_json", "installed_at", "updated_at") VALUES (6, 'media', 'Media', '2.0.0', NULL, 1, 1, 1, NULL, '2026-05-09 06:08:23', '2026-05-09 06:08:23');
 INSERT INTO "modules" ("id", "module_key", "name", "version", "provider_class", "is_system", "is_installed", "is_enabled", "config_json", "installed_at", "updated_at") VALUES (7, 'editor', 'Editorial Blocks', '2.0.0', NULL, 1, 1, 1, NULL, '2026-05-09 06:08:23', '2026-05-09 06:08:23');
 INSERT INTO "sites" ("id", "site_key", "name", "default_language_code", "is_active", "created_at", "updated_at") VALUES (1, 'main', 'DEC CMS', 'fr', 1, '2026-05-09 06:08:22', '2026-05-09 20:00:36');
-INSERT INTO "site_domains" ("id", "site_id", "host", "base_path", "scheme", "is_primary", "is_active", "enforce_https", "canonical_host_strategy", "created_at", "updated_at") VALUES (1, 1, 'webe.li', '/mod', 'https', 1, 1, 1, 'primary', '2026-05-09 06:08:23', '2026-05-09 20:00:36');
+INSERT INTO "site_domains" ("id", "site_id", "host", "base_path", "scheme", "is_primary", "is_active", "enforce_https", "canonical_host_strategy", "created_at", "updated_at") VALUES (1, 1, 'webe.li', '/cms', 'https', 1, 1, 1, 'primary', '2026-05-09 06:08:23', '2026-05-09 20:00:36');
 INSERT INTO "site_settings" ("id", "site_id", "namespace", "setting_key", "value_json", "is_public", "updated_by_iam_user_id", "created_at", "updated_at") VALUES (9, 1, 'api', 'cors_allowed_origins', '[]', 0, NULL, '2026-05-31 00:00:00', '2026-05-31 00:00:00');
 INSERT INTO "site_languages" ("id", "site_id", "language_code", "locale", "url_prefix", "hreflang_code", "fallback_language_code", "is_default", "is_active", "is_rtl", "sort_order", "created_at", "updated_at") VALUES (1, 1, 'fr', 'fr-CH', '', 'fr-CH', NULL, 1, 1, 0, 1, '2026-05-09 06:08:22', '2026-05-09 06:08:22');
 INSERT INTO "site_languages" ("id", "site_id", "language_code", "locale", "url_prefix", "hreflang_code", "fallback_language_code", "is_default", "is_active", "is_rtl", "sort_order", "created_at", "updated_at") VALUES (2, 1, 'en', 'en-GB', '/en', 'en-GB', 'fr', 0, 1, 0, 2, '2026-05-09 06:08:22', '2026-05-09 06:08:22');
@@ -178,6 +178,10 @@ INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "sche
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (7, 'hero', 'Hero', 'layout', '{"fields":["eyebrow","title","lead","heading_level","layout","image_media_id","image_src","image_alt","background_media_id","background_src","buttons"]}', 1, 70);
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (8, 'gallery', 'Galerie', 'media', '{"fields":["items","columns"]}', 1, 80);
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (9, 'buttons', 'Boutons', 'cta', '{"fields":["items"]}', 1, 90);
+INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (15, 'commerce_product', 'Variante produit', 'commerce', '{"fields":["product_id","sellable_id","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id","sellable_id"]}', 1, 200);
+INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (16, 'commerce_product_variants', 'Variantes produit', 'commerce', '{"fields":["product_id","columns","limit","pagination","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id"]}', 1, 201);
+INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (17, 'commerce_product_list', 'Produits', 'commerce', '{"fields":["selection_mode","product_ids","brand","category","group","attribute_code","attribute_values","promotion_rule","relation_type","source_product_id","manual_product_ids","window_days","limit","sort","columns","pagination","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"selection_modes":["explicit","brand","category","group","attribute","promotion","new","popular","relation"],"stable_references":["product_ids","source_product_id","manual_product_ids"]}', 1, 202);
+INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (18, 'storytelling', 'Storytelling', 'commerce', '{"fields":["storytelling_id"],"required":["storytelling_id"]}', 1, 203);
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (14, 'card', 'Carte', 'content', '{"fields":["icon","title","text","url","link_label","style"]}', 1, 95);
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (10, 'columns', 'Colonnes', 'layout', '{"fields":["layout","columns"],"layouts":["2","3","cards-3","sidebar-left","sidebar-right"]}', 1, 100);
 INSERT INTO "editor_block_types" ("id", "block_type", "label", "category", "schema_json", "is_enabled", "sort_order") VALUES (11, 'form', 'Formulaire', 'module', '{"fields":["form_key","title","intro","layout"]}', 1, 110);
@@ -283,7 +287,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "background_media_id": 0,
                     "background_src": "",
                     "image_media_id": 1,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                     "image_alt": "",
                     "image_width": 1280,
                     "image_height": 853,
@@ -292,13 +296,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -407,7 +411,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "background_media_id": 0,
                 "background_src": "",
                 "image_media_id": 1,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                 "image_alt": "",
                 "image_width": 1280,
                 "image_height": 853,
@@ -416,13 +420,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -538,7 +542,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '4703a2e146edef5b12b9b1a70528dda1e2903b166ca3fac6636668fab2eb95a7', NULL, 1, 1, 1, '2026-05-09 20:02:06', '2026-05-12 11:05:03', '2026-05-09 20:02:07');
+}', '2fe2ed5a0057e916e8c4ed20f4dd377b11e08484772a4f12acc9b33d59e8a967', NULL, 1, 1, 1, '2026-05-09 20:02:06', '2026-05-12 11:05:03', '2026-05-09 20:02:07');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (38, 'content_entry', 1, 5, 'de', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -564,7 +568,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "background_media_id": 0,
                     "background_src": "",
                     "image_media_id": 1,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                     "image_alt": "",
                     "image_width": 1280,
                     "image_height": 853,
@@ -573,13 +577,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "CMS entdecken",
-                            "url": "/mod/de/articles",
+                            "url": "/cms/de/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Kontakt",
-                            "url": "/mod/de/contact",
+                            "url": "/cms/de/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -688,7 +692,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "background_media_id": 0,
                 "background_src": "",
                 "image_media_id": 1,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                 "image_alt": "",
                 "image_width": 1280,
                 "image_height": 853,
@@ -697,13 +701,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "CMS entdecken",
-                        "url": "/mod/de/articles",
+                        "url": "/cms/de/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Kontakt",
-                        "url": "/mod/de/contact",
+                        "url": "/cms/de/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -819,7 +823,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'accc046c2dff3c607c40996e05479b39788873a847ebf30b4e8466af9eea2215', NULL, 1, 1, 1, '2026-05-09 20:02:37', '2026-05-09 20:03:24', '2026-05-09 20:02:39');
+}', 'a06ef4582bbfbb1590fab57b9f1ae94b1a8a2bdec42793604d2189c61a91c038', NULL, 1, 1, 1, '2026-05-09 20:02:37', '2026-05-09 20:03:24', '2026-05-09 20:02:39');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (39, 'content_entry', 1, 6, 'en', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -845,7 +849,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "background_media_id": 0,
                     "background_src": "",
                     "image_media_id": 1,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                     "image_alt": "",
                     "image_width": 1280,
                     "image_height": 853,
@@ -854,13 +858,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -969,7 +973,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "background_media_id": 0,
                 "background_src": "",
                 "image_media_id": 1,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                 "image_alt": "",
                 "image_width": 1280,
                 "image_height": 853,
@@ -978,13 +982,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -1100,7 +1104,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '8fe89406cd1a5ba76b54f0ce4799b56d413027894d8b6ab2481a35710ce394d8', NULL, 1, 1, NULL, '2026-05-09 20:02:56', '2026-05-09 20:02:56', NULL);
+}', 'e19ba4273fd5c1b0780327811167d873a63bd58816de7915650905096a666fd3', NULL, 1, 1, NULL, '2026-05-09 20:02:56', '2026-05-09 20:02:56', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (40, 'content_entry', 1, 7, 'en', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -1126,7 +1130,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "background_media_id": 0,
                     "background_src": "",
                     "image_media_id": 1,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                     "image_alt": "",
                     "image_width": 1280,
                     "image_height": 853,
@@ -1135,13 +1139,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -1250,7 +1254,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "background_media_id": 0,
                 "background_src": "",
                 "image_media_id": 1,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                 "image_alt": "",
                 "image_width": 1280,
                 "image_height": 853,
@@ -1259,13 +1263,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -1381,7 +1385,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '52d2b95ceb17d55d9994a7cf1bc672e37f10e39dba9ff3ea45e3caeb5b559ec2', NULL, 1, 1, 1, '2026-05-09 20:03:09', '2026-05-12 11:05:31', '2026-05-09 20:03:10');
+}', '00e2939cf68eac110feb733050dd4b6e001de7f5652c157bf8c9036857df6322', NULL, 1, 1, 1, '2026-05-09 20:03:09', '2026-05-12 11:05:31', '2026-05-09 20:03:10');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (41, 'content_entry', 1, 8, 'de', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -1407,7 +1411,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "background_media_id": 0,
                     "background_src": "",
                     "image_media_id": 1,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                     "image_alt": "",
                     "image_width": 1280,
                     "image_height": 853,
@@ -1416,13 +1420,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "CMS entdecken",
-                            "url": "/mod/de/articles",
+                            "url": "/cms/de/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Kontakt",
-                            "url": "/mod/de/contact",
+                            "url": "/cms/de/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -1531,7 +1535,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "background_media_id": 0,
                 "background_src": "",
                 "image_media_id": 1,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-4a63b815-hero_960.webp",
                 "image_alt": "",
                 "image_width": 1280,
                 "image_height": 853,
@@ -1540,13 +1544,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "CMS entdecken",
-                        "url": "/mod/de/articles",
+                        "url": "/cms/de/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Kontakt",
-                        "url": "/mod/de/contact",
+                        "url": "/cms/de/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -1662,7 +1666,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '9187cd81e3a5efb0e7b0a50b8bff7189293bd1d2228458582f168722164c2e09', NULL, 1, 1, 1, '2026-05-09 20:03:23', '2026-05-12 11:05:16', '2026-05-09 20:03:24');
+}', 'f7b4e073909ebda9234cabf99776cd7a9ebbc07b4782b0254c9257c46e6afb65', NULL, 1, 1, 1, '2026-05-09 20:03:23', '2026-05-12 11:05:16', '2026-05-09 20:03:24');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (42, 'content_entry', 6, 4, 'fr', 'published', 1, NULL, NULL, NULL, 'Working draft', 'Informations sur les cookies, traceurs et préférences de consentement du site de démonstration CMS SEO-first.', '', '{
     "schema_version": 2,
     "entry_id": 6,
@@ -3858,13 +3862,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -3983,13 +3987,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -4105,7 +4109,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'db3908e6bd84aa3d994b3a74b3c55a0c91617eca4d86ae9f9febb8ba0c9baa2d', NULL, 1, 1, 1, '2026-05-12 11:05:02', '2026-05-12 11:06:23', '2026-05-12 11:05:03');
+}', 'a6cdaeb4dfe4dbb568f45cbfd8d9fe7a9d7b30a70f8afa8c3a7de0523ba96358', NULL, 1, 1, 1, '2026-05-12 11:05:02', '2026-05-12 11:06:23', '2026-05-12 11:05:03');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (61, 'content_entry', 1, 10, 'de', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -4141,13 +4145,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "CMS entdecken",
-                            "url": "/mod/de/articles",
+                            "url": "/cms/de/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Kontakt",
-                            "url": "/mod/de/contact",
+                            "url": "/cms/de/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -4266,13 +4270,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "CMS entdecken",
-                        "url": "/mod/de/articles",
+                        "url": "/cms/de/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Kontakt",
-                        "url": "/mod/de/contact",
+                        "url": "/cms/de/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -4388,7 +4392,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '2d253f225903c1e16db0b790f3310deffdff29789b9022a72263d5f6cf2be016', NULL, 1, 1, 1, '2026-05-12 11:05:14', '2026-05-12 11:06:45', '2026-05-12 11:05:16');
+}', '1be822c9978c85fdfbe734e49b296800dd9b45ece5cb6e11c4da4651436e8377', NULL, 1, 1, 1, '2026-05-12 11:05:14', '2026-05-12 11:06:45', '2026-05-12 11:05:16');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (62, 'content_entry', 1, 11, 'en', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -4424,13 +4428,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -4549,13 +4553,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -4671,7 +4675,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '7cfdd048ed7546ee993ca31775168b19dd4cf2fd108d7153242b478b74c7280b', NULL, 1, 1, 1, '2026-05-12 11:05:27', '2026-05-12 11:06:34', '2026-05-12 11:05:31');
+}', 'a16990707605e79f518f92c36514dc0160d771a0ee63890202366c7393c2af6d', NULL, 1, 1, 1, '2026-05-12 11:05:27', '2026-05-12 11:06:34', '2026-05-12 11:05:31');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (63, 'content_entry', 1, 12, 'fr', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -4695,7 +4699,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -4707,13 +4711,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -4820,7 +4824,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -4832,13 +4836,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -4954,7 +4958,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '08218837c269b7acb408f847ac882eca78e55ba4929d03433c7a869ba9246031', NULL, 1, 1, 1, '2026-05-12 11:06:10', '2026-05-12 15:30:01', '2026-05-12 11:06:23');
+}', 'dc703220a593e01bd94e174917c8b91d0c7f8d6dc4c1d7764d68fcd82b8228a6', NULL, 1, 1, 1, '2026-05-12 11:06:10', '2026-05-12 15:30:01', '2026-05-12 11:06:23');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (64, 'content_entry', 1, 13, 'en', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -4978,7 +4982,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "A reference public front end for an SEO-first editorial CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -4990,13 +4994,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -5103,7 +5107,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "A reference public front end for an SEO-first editorial CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -5115,13 +5119,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -5237,7 +5241,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '2dc435649f430967cd884ecc093993e16375d46bd74e45bf005257616c270c80', NULL, 1, 1, 1, '2026-05-12 11:06:33', '2026-05-12 15:30:35', '2026-05-12 11:06:34');
+}', '7ef50d1eb934e26bcb096eea17fd68cb2d7c712980877399e7e4e6000ebba10b', NULL, 1, 1, 1, '2026-05-12 11:06:33', '2026-05-12 15:30:35', '2026-05-12 11:06:34');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (65, 'content_entry', 1, 14, 'de', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -5261,7 +5265,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -5273,13 +5277,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "CMS entdecken",
-                            "url": "/mod/de/articles",
+                            "url": "/cms/de/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Kontakt",
-                            "url": "/mod/de/contact",
+                            "url": "/cms/de/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -5386,7 +5390,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -5398,13 +5402,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "CMS entdecken",
-                        "url": "/mod/de/articles",
+                        "url": "/cms/de/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Kontakt",
-                        "url": "/mod/de/contact",
+                        "url": "/cms/de/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -5520,7 +5524,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'b06da04ba6d5fdc1440ada86fe77421e5413136e5451eae8b91e42496b5afc76', NULL, 1, 1, 1, '2026-05-12 11:06:44', '2026-05-12 15:32:02', '2026-05-12 11:06:45');
+}', 'c3e7ee7735543e40605aa961d7c5ad7b79cc804ab78c2491904149726adafa07', NULL, 1, 1, 1, '2026-05-12 11:06:44', '2026-05-12 15:32:02', '2026-05-12 11:06:45');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (66, 'content_entry', 13, 10, 'de', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.', '', '{
     "schema_version": 2,
     "entry_id": 13,
@@ -7944,7 +7948,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -7956,13 +7960,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -8088,7 +8092,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -8100,13 +8104,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -8241,7 +8245,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'fa84ec3abd1075bcf26a3d53b3791813302b47247a2ade6fd2e56c3551996c48', NULL, 2, 2, NULL, '2026-05-12 15:26:52', '2026-05-12 15:26:52', NULL);
+}', '66232f65c83af1779bc45121d48b748b45c26b388de795907ac5b579d44c6d05', NULL, 2, 2, NULL, '2026-05-12 15:26:52', '2026-05-12 15:26:52', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (79, 'content_entry', 1, 16, 'fr', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -8265,7 +8269,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -8277,13 +8281,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -8409,7 +8413,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -8421,13 +8425,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -8562,7 +8566,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '1108f92993dc48775354c06c322114c80572181e9ae94478d4e2bb50ff67ee96', NULL, 2, 2, NULL, '2026-05-12 15:28:19', '2026-05-12 15:28:19', NULL);
+}', '44b06bb58c6585ae3fd85e9175ccbce0cc2dfb3394512179d263799fe28ef4d7', NULL, 2, 2, NULL, '2026-05-12 15:28:19', '2026-05-12 15:28:19', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (80, 'content_entry', 1, 17, 'fr', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -8586,7 +8590,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -8598,13 +8602,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -8730,7 +8734,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -8742,13 +8746,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -8883,7 +8887,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'b6b45966af3234cf2ef04f3cb827a3c6530c0c3691f3c9afa9894ea89c6bd8af', NULL, 2, 2, NULL, '2026-05-12 15:29:13', '2026-05-12 15:29:13', NULL);
+}', '2eb4d9929b6673a34da258be4614acea6ca51f59822fd2dd8a053f82247133c1', NULL, 2, 2, NULL, '2026-05-12 15:29:13', '2026-05-12 15:29:13', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (81, 'content_entry', 1, 18, 'fr', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -8907,7 +8911,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -8919,13 +8923,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -9051,7 +9055,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -9063,13 +9067,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -9204,7 +9208,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '2be3f8b17a2cc875339b50e77096edc5ff3b3ff94749796b18464a689e136ff9', NULL, 2, 2, 2, '2026-05-12 15:30:00', '2026-05-12 19:10:25', '2026-05-12 15:30:01');
+}', '2f82187cc2bf7c7de6a6ceed88fb2417dfae69cd42418ebc4e54e0bc9023f928', NULL, 2, 2, 2, '2026-05-12 15:30:00', '2026-05-12 19:10:25', '2026-05-12 15:30:01');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (82, 'content_entry', 1, 19, 'en', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -9228,7 +9232,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "A reference public front end for an SEO-first editorial CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -9240,13 +9244,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -9372,7 +9376,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "A reference public front end for an SEO-first editorial CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -9384,13 +9388,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -9525,7 +9529,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '496428d3f5de94acb48960ba1253a3bbb7aa451d524c5797c0cff43c5accd336', NULL, 2, 2, 2, '2026-05-12 15:30:33', '2026-05-12 15:31:23', '2026-05-12 15:30:35');
+}', 'f2f4dd4a51a318ab1a60b16ce4ce1252842cb42b8a0aec2bc05a240c9b24ca03', NULL, 2, 2, 2, '2026-05-12 15:30:33', '2026-05-12 15:31:23', '2026-05-12 15:30:35');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (83, 'content_entry', 1, 20, 'en', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -9549,7 +9553,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "A reference public front end for an SEO-first editorial CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -9561,13 +9565,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -9693,7 +9697,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "A reference public front end for an SEO-first editorial CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -9705,13 +9709,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -9846,7 +9850,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '9b4e62e17bd0be094cd2083f1a4fc4095eb3685390e159e03d055782a39975c3', NULL, 2, 2, NULL, '2026-05-12 15:30:40', '2026-05-12 15:30:40', NULL);
+}', 'f75bb37c75758d08ee8db76c37d7dd5a4ad3d44bddfdbe48e125482a9922e277', NULL, 2, 2, NULL, '2026-05-12 15:30:40', '2026-05-12 15:30:40', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (84, 'content_entry', 1, 21, 'en', 'superseded', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -9870,7 +9874,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "A reference public front end for an SEO-first editorial CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -9882,13 +9886,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -10014,7 +10018,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "A reference public front end for an SEO-first editorial CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -10026,13 +10030,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -10167,7 +10171,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '496428d3f5de94acb48960ba1253a3bbb7aa451d524c5797c0cff43c5accd336', NULL, 2, 2, 2, '2026-05-12 15:31:21', '2026-05-12 15:32:21', '2026-05-12 15:31:23');
+}', 'f2f4dd4a51a318ab1a60b16ce4ce1252842cb42b8a0aec2bc05a240c9b24ca03', NULL, 2, 2, 2, '2026-05-12 15:31:21', '2026-05-12 15:32:21', '2026-05-12 15:31:23');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (85, 'content_entry', 1, 22, 'de', 'published', 1, NULL, NULL, NULL, 'Working draft', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -10191,7 +10195,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -10203,13 +10207,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "CMS entdecken",
-                            "url": "/mod/de/articles",
+                            "url": "/cms/de/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Kontakt",
-                            "url": "/mod/de/contact",
+                            "url": "/cms/de/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -10335,7 +10339,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -10347,13 +10351,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "CMS entdecken",
-                        "url": "/mod/de/articles",
+                        "url": "/cms/de/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Kontakt",
-                        "url": "/mod/de/contact",
+                        "url": "/cms/de/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -10488,7 +10492,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', NULL, 2, 2, 2, '2026-05-12 15:32:01', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
+}', '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', NULL, 2, 2, 2, '2026-05-12 15:32:01', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (86, 'content_entry', 1, 23, 'en', 'published', 1, NULL, NULL, NULL, 'Working draft', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -10512,7 +10516,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "A reference public front end for an SEO-first editorial CMS.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -10524,13 +10528,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Discover the CMS",
-                            "url": "/mod/en/articles",
+                            "url": "/cms/en/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/en/contact",
+                            "url": "/cms/en/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -10656,7 +10660,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "A reference public front end for an SEO-first editorial CMS.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -10668,13 +10672,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Discover the CMS",
-                        "url": "/mod/en/articles",
+                        "url": "/cms/en/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/en/contact",
+                        "url": "/cms/en/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -10809,7 +10813,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', NULL, 2, 2, 2, '2026-05-12 15:32:20', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
+}', 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', NULL, 2, 2, 2, '2026-05-12 15:32:20', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (87, 'content_entry', 1, 24, 'fr', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -10833,7 +10837,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -10845,13 +10849,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -10976,7 +10980,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -10988,13 +10992,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -11128,7 +11132,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', 'dd07a25cf1661456dc73cf6a0166acb695fb0526f73a4de4df8c484f4742c07c', NULL, 2, 2, NULL, '2026-05-12 19:09:44', '2026-05-12 19:09:44', NULL);
+}', '92f7454c52bc7fb22caecaee5998bb67fa51a5ad57397c07d7a786c2abff8b69', NULL, 2, 2, NULL, '2026-05-12 19:09:44', '2026-05-12 19:09:44', NULL);
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (88, 'content_entry', 1, 25, 'fr', 'published', 1, NULL, NULL, NULL, 'Working draft', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', '', '{
     "schema_version": 2,
     "entry_id": 1,
@@ -11152,7 +11156,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                     "heading_level": "h1",
                     "image_media_id": 4,
-                    "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                    "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                     "image_srcset": "",
                     "image_sizes": "",
                     "image_alt": "",
@@ -11164,13 +11168,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                     "buttons": [
                         {
                             "label": "Découvrir le CMS",
-                            "url": "/mod/articles",
+                            "url": "/cms/articles",
                             "style": "primary",
                             "target": "_self"
                         },
                         {
                             "label": "Contact",
-                            "url": "/mod/contact",
+                            "url": "/cms/contact",
                             "style": "ghost",
                             "target": "_self"
                         }
@@ -11295,7 +11299,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "lead": "Un front public de référence pour un CMS éditorial SEO-first.",
                 "heading_level": "h1",
                 "image_media_id": 4,
-                "image_src": "/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
+                "image_src": "/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp",
                 "image_srcset": "",
                 "image_sizes": "",
                 "image_alt": "",
@@ -11307,13 +11311,13 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
                 "buttons": [
                     {
                         "label": "Découvrir le CMS",
-                        "url": "/mod/articles",
+                        "url": "/cms/articles",
                         "style": "primary",
                         "target": "_self"
                     },
                     {
                         "label": "Contact",
-                        "url": "/mod/contact",
+                        "url": "/cms/contact",
                         "style": "ghost",
                         "target": "_self"
                     }
@@ -11447,7 +11451,7 @@ INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number"
         "taxonomies": true
     },
     "template": "page.twig"
-}', '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', NULL, 2, 2, 2, '2026-05-12 19:10:23', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
+}', '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', NULL, 2, 2, 2, '2026-05-12 19:10:23', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
 INSERT INTO "revisions" ("id", "resource_type", "resource_id", "revision_number", "language_code", "workflow_status", "document_schema_version", "base_revision_id", "source_published_revision_id", "created_from_event", "revision_label", "summary", "change_notes", "document_json", "checksum_sha256", "scheduled_for", "created_by_iam_user_id", "updated_by_iam_user_id", "published_by_iam_user_id", "created_at", "updated_at", "published_at") VALUES (89, 'content_entry', 13, 22, 'fr', 'draft', 1, NULL, NULL, NULL, 'Working draft', 'Vue claire et structurée des contenus publiés et indexables du site.', '', '{
     "schema_version": 2,
     "entry_id": 13,
@@ -13443,18 +13447,18 @@ INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (90, 13, 39, 1, 4, 'tag_limit', 'de', 'draft_index', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:15:52');
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (91, 13, 39, 1, 5, 'article_show_published_date', 'de', 'draft_index', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:15:52');
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (92, 13, 39, 1, 6, 'article_show_author', 'de', 'draft_index', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:15:52');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (121, 1, 3, 1, 3, 'article_limit', 'de', 'draft_index', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (122, 1, 3, 1, 4, 'tag_limit', 'de', 'draft_index', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (123, 1, 3, 1, 5, 'article_show_published_date', 'de', 'draft_index', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (124, 1, 3, 1, 6, 'article_show_author', 'de', 'draft_index', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (125, 1, 2, 1, 3, 'article_limit', 'en', 'draft_index', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (126, 1, 2, 1, 4, 'tag_limit', 'en', 'draft_index', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (127, 1, 2, 1, 5, 'article_show_published_date', 'en', 'draft_index', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (128, 1, 2, 1, 6, 'article_show_author', 'en', 'draft_index', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (133, 1, 1, 1, 3, 'article_limit', 'fr', 'draft_index', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (134, 1, 1, 1, 4, 'tag_limit', 'fr', 'draft_index', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (135, 1, 1, 1, 5, 'article_show_published_date', 'fr', 'draft_index', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
-INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (136, 1, 1, 1, 6, 'article_show_author', 'fr', 'draft_index', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (121, 1, 3, 1, 3, 'article_limit', 'de', 'draft_index', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (122, 1, 3, 1, 4, 'tag_limit', 'de', 'draft_index', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (123, 1, 3, 1, 5, 'article_show_published_date', 'de', 'draft_index', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (124, 1, 3, 1, 6, 'article_show_author', 'de', 'draft_index', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:01');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (125, 1, 2, 1, 3, 'article_limit', 'en', 'draft_index', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (126, 1, 2, 1, 4, 'tag_limit', 'en', 'draft_index', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (127, 1, 2, 1, 5, 'article_show_published_date', 'en', 'draft_index', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (128, 1, 2, 1, 6, 'article_show_author', 'en', 'draft_index', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 15:32:20');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (133, 1, 1, 1, 3, 'article_limit', 'fr', 'draft_index', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (134, 1, 1, 1, 4, 'tag_limit', 'fr', 'draft_index', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (135, 1, 1, 1, 5, 'article_show_published_date', 'fr', 'draft_index', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
+INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (136, 1, 1, 1, 6, 'article_show_author', 'fr', 'draft_index', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:10:23');
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (165, 13, 37, 1, 3, 'article_limit', 'fr', 'draft_index', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:33:04');
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (166, 13, 37, 1, 4, 'tag_limit', 'fr', 'draft_index', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', NULL, 0.0, NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:33:04');
 INSERT INTO "content_entry_field_values" ("id", "entry_id", "localization_id", "content_type_id", "field_id", "field_key", "language_code", "projection_scope", "source_revision_id", "source_revision_checksum_sha256", "value_text", "value_number", "value_boolean", "value_date", "value_datetime", "value_json", "value_media_id", "value_relation_entry_id", "sort_order", "projected_at") VALUES (167, 13, 37, 1, 5, 'article_show_published_date', 'fr', 'draft_index', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, '2026-05-12 19:33:04');
@@ -13661,7 +13665,7 @@ INSERT INTO "menu_item_localizations" ("id", "menu_item_id", "language_code", "l
 INSERT INTO "menu_item_localizations" ("id", "menu_item_id", "language_code", "label", "title_attr") VALUES (31, 11, 'fr', 'Contact', NULL);
 INSERT INTO "menu_item_localizations" ("id", "menu_item_id", "language_code", "label", "title_attr") VALUES (32, 11, 'en', 'Contact', NULL);
 INSERT INTO "menu_item_localizations" ("id", "menu_item_id", "language_code", "label", "title_attr") VALUES (33, 11, 'de', 'Kontakt', NULL);
-INSERT INTO "configuration_revisions" ("id", "site_id", "group_key", "value_json", "updated_by_iam_user_id", "created_at") VALUES (1, 1, 'site', '{"site_key":"main","name":"DEC CMS","default_language_code":"fr","is_active":true,"primary_domain_host":"webe.li","base_path":"/mod","scheme":"https","enforce_https":true}', 1, '2026-05-09 20:00:36');
+INSERT INTO "configuration_revisions" ("id", "site_id", "group_key", "value_json", "updated_by_iam_user_id", "created_at") VALUES (1, 1, 'site', '{"site_key":"main","name":"DEC CMS","default_language_code":"fr","is_active":true,"primary_domain_host":"webe.li","base_path":"/cms","scheme":"https","enforce_https":true}', 1, '2026-05-09 20:00:36');
 INSERT INTO "configuration_revisions" ("id", "site_id", "group_key", "value_json", "updated_by_iam_user_id", "created_at") VALUES (2, 1, 'localization', '{"language_code":"fr","site_title":"DEC CMS","baseline":"Publication propre, rapide et multilingue","footer_text":"Moteur public léger, routes propres et SEO natif.","default_meta_title_suffix":"· CMS SEO-first","default_meta_description":"CMS éditorial SEO-first, multi-site et multilingue, avec routes canoniques, hreflang, sitemap, Open Graph, JSON-LD et recherche publique propre.","og_default_image_media_id":null}', 1, '2026-05-09 20:00:44');
 INSERT INTO "configuration_revisions" ("id", "site_id", "group_key", "value_json", "updated_by_iam_user_id", "created_at") VALUES (3, 1, 'localization', '{"language_code":"en","site_title":"DEC CMS","baseline":"Clean, fast and multilingual publishing","footer_text":"Lightweight public runtime, clean routes and native SEO.","default_meta_title_suffix":"· SEO-first CMS","default_meta_description":"SEO-first, multi-site and multilingual editorial CMS with canonical routes, hreflang, sitemap, Open Graph, JSON-LD and clean public search.","og_default_image_media_id":null}', 1, '2026-05-09 20:00:48');
 INSERT INTO "configuration_revisions" ("id", "site_id", "group_key", "value_json", "updated_by_iam_user_id", "created_at") VALUES (4, 1, 'localization', '{"language_code":"de","site_title":"DEC CMS","baseline":"Saubere, schnelle und mehrsprachige Veröffentlichung","footer_text":"Leichtes öffentliches Runtime, saubere Routen und natives SEO.","default_meta_title_suffix":"· SEO-first CMS","default_meta_description":"SEO-first, multisite- und mehrsprachiges Redaktions-CMS mit kanonischen Routen, hreflang, Sitemap, Open Graph, JSON-LD und sauberer öffentlicher Suche.","og_default_image_media_id":null}', 1, '2026-05-09 20:00:52');
@@ -13719,9 +13723,9 @@ INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resour
 INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (310, 1, 'fr', 'taxonomy_term', 9, 'taxonomy', 'edition', '/tags/edition', 1, 1, 'active', NULL, NULL, '2026-05-12 10:52:48', '2026-05-12 10:52:48');
 INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (330, 1, 'en', 'content_entry', 13, 'content', 'sitemap', '/sitemap', 1, 1, 'active', 76, '432d12fef3fe1ef451d989a1d613d3aa5acd06442bafd763914f8ccda9f28d2b', '2026-05-12 15:14:35', '2026-05-12 15:14:35');
 INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (331, 1, 'de', 'content_entry', 13, 'content', 'sitemap', '/sitemap', 1, 1, 'active', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', '2026-05-12 15:15:55', '2026-05-12 15:15:55');
-INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (335, 1, 'de', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
-INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (336, 1, 'en', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
-INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (337, 1, 'fr', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
+INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (335, 1, 'de', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
+INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (336, 1, 'en', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
+INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (337, 1, 'fr', 'content_entry', 1, 'content', 'home', '/', 1, 1, 'active', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
 INSERT INTO "routes" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_type", "slug", "full_path", "is_primary", "is_canonical", "status", "source_published_revision_id", "source_revision_checksum_sha256", "created_at", "updated_at") VALUES (340, 1, 'fr', 'content_entry', 13, 'content', 'sitemap', '/sitemap', 1, 1, 'active', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', '2026-05-12 19:33:06', '2026-05-12 19:33:06');
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (260, 1, 'content_entry', 2, 'de', 'Artikel · SEO-first Redaktions-CMS', 'Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.', 'index,follow', '/articles', 'Artikel · SEO-first Redaktions-CMS', 'Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.', NULL, 'Artikel · SEO-first Redaktions-CMS', 'Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.', NULL, NULL, NULL, 100, 6, '79df68ab36c0a993acde3556e15d874564abf45083e499a6a99a637502425ac6', '2026-05-12 10:52:48');
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (261, 1, 'content_entry', 2, 'en', 'Articles · SEO-first editorial CMS', 'Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.', 'index,follow', '/articles', 'Articles · SEO-first editorial CMS', 'Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.', NULL, 'Articles · SEO-first editorial CMS', 'Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.', NULL, NULL, NULL, 100, 5, '2bb719e379af25bfe704151c245a52a69faae68fe3871b2560d78f9b63a430c8', '2026-05-12 10:52:48');
@@ -13773,9 +13777,9 @@ INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "la
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (310, 1, 'taxonomy_term', 9, 'fr', 'Édition · CMS', 'Contenus liés à l’expérience d’édition du CMS.', 'index,follow', NULL, 'Édition · CMS', 'Contenus liés à l’expérience d’édition du CMS.', NULL, 'Édition · CMS', 'Contenus liés à l’expérience d’édition du CMS.', NULL, 'fr-CH', NULL, 100, NULL, NULL, '2026-05-12 10:52:48');
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (330, 1, 'content_entry', 13, 'en', 'Sitemap', 'A clear and structured view of the published, indexable content on the site.', 'index,follow', '/sitemap', 'Sitemap', 'A clear and structured view of the published, indexable content on the site.', NULL, 'Sitemap', 'A clear and structured view of the published, indexable content on the site.', NULL, NULL, NULL, 65, 76, '432d12fef3fe1ef451d989a1d613d3aa5acd06442bafd763914f8ccda9f28d2b', '2026-05-12 15:14:35');
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (331, 1, 'content_entry', 13, 'de', 'Sitemap', 'Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.', 'index,follow', '/sitemap', 'Sitemap', 'Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.', NULL, 'Sitemap', 'Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.', NULL, NULL, NULL, 85, 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', '2026-05-12 15:15:55');
-INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (335, 1, 'content_entry', 1, 'de', 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', 'index,follow', '/', 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', NULL, 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', NULL, NULL, NULL, 100, 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', '2026-05-12 15:32:02');
-INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (336, 1, 'content_entry', 1, 'en', 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', 'index,follow', '/', 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', NULL, 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', NULL, NULL, NULL, 100, 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', '2026-05-12 15:32:21');
-INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (337, 1, 'content_entry', 1, 'fr', 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', 'index,follow', '/', 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', NULL, 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', NULL, NULL, NULL, 100, 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', '2026-05-12 19:10:25');
+INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (335, 1, 'content_entry', 1, 'de', 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', 'index,follow', '/', 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', NULL, 'SEO-first mehrsprachiges und multisite Redaktions-CMS', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', NULL, NULL, NULL, 100, 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', '2026-05-12 15:32:02');
+INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (336, 1, 'content_entry', 1, 'en', 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', 'index,follow', '/', 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', NULL, 'SEO-first multilingual and multi-site editorial CMS', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', NULL, NULL, NULL, 100, 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', '2026-05-12 15:32:21');
+INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (337, 1, 'content_entry', 1, 'fr', 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', 'index,follow', '/', 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', NULL, 'CMS éditorial SEO-first multilingue et multi-site', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', NULL, NULL, NULL, 100, 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', '2026-05-12 19:10:25');
 INSERT INTO "seo_metadata" ("id", "site_id", "resource_type", "resource_id", "language_code", "meta_title", "meta_description", "meta_robots", "canonical_url", "og_title", "og_description", "og_image_media_id", "twitter_title", "twitter_description", "twitter_image_media_id", "hreflang_code", "json_ld", "seo_score", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (340, 1, 'content_entry', 13, 'fr', 'Plan du site', 'Vue claire et structurée des contenus publiés et indexables du site.', 'index,follow', '/sitemap', 'Plan du site', 'Vue claire et structurée des contenus publiés et indexables du site.', NULL, 'Plan du site', 'Vue claire et structurée des contenus publiés et indexables du site.', NULL, NULL, NULL, 65, 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', '2026-05-12 19:33:06');
 INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (212, 1, 'content_entry', 2, 'de', '/articles', 'Artikel', 'Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.', 'Artikel Redaktionelles Journal Artikel Leitfäden, Designnotizen und Erfahrungsberichte zum CMS.', 6, '79df68ab36c0a993acde3556e15d874564abf45083e499a6a99a637502425ac6', '2026-05-12 10:52:48');
 INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (213, 1, 'content_entry', 2, 'en', '/articles', 'Articles', 'Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.', 'Articles Editorial journal Articles Guides, design notes and field feedback about the CMS.', 5, '2bb719e379af25bfe704151c245a52a69faae68fe3871b2560d78f9b63a430c8', '2026-05-12 10:52:48');
@@ -13833,9 +13837,9 @@ INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id",
 Expérience d’édition, blocs, champs et publication.', NULL, NULL, '2026-05-12 10:52:48');
 INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (273, 1, 'content_entry', 13, 'en', '/sitemap', 'Sitemap', 'A clear and structured view of the published, indexable content on the site.', 'Sitemap A clear and structured view of the published, indexable content on the site. Pages Articles Categories Tags', 76, '432d12fef3fe1ef451d989a1d613d3aa5acd06442bafd763914f8ccda9f28d2b', '2026-05-12 15:14:35');
 INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (274, 1, 'content_entry', 13, 'de', '/sitemap', 'Sitemap', 'Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.', 'Sitemap Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website. Seiten Artikel Kategorien Tags', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', '2026-05-12 15:15:55');
-INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (278, 1, 'content_entry', 1, 'de', '/', 'Startseite', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', 'Startseite Saubere, schnelle und mehrsprachige Veröffentlichung Startseite Ein Referenz-Frontend für ein SEO-first Redaktions-CMS. CMS entdecken Kontakt ↝SEO-firstCanonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen. 文MehrsprachigReferenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation. ⚡Leichtes RuntimeNatives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht. Referenz-FrontendSaubere, schnelle und mehrsprachige VeröffentlichungDiese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation. Neueste Artikel', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', '2026-05-12 15:32:02');
-INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (279, 1, 'content_entry', 1, 'en', '/', 'Home', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', 'Home Clean, fast and multilingual publishing Home A reference public front end for an SEO-first editorial CMS. Discover the CMS Contact ↝SEO-firstCanonical URLs, hreflang, Open Graph, meta description and clean published routes. 文MultilingualFrench, English and German references with navigation adapted to each language. ⚡Lightweight runtimeNative HTML, Twig templates, compact CSS and a minimal public layer. Reference front endClean, fast and multilingual publishingThis homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation. Latest posts', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', '2026-05-12 15:32:21');
-INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (280, 1, 'content_entry', 1, 'fr', '/', 'Accueil', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', 'Accueil Publication propre, rapide et multilingue Accueil Un front public de référence pour un CMS éditorial SEO-first. Découvrir le CMS Contact ↝SEO-firstCanonical, hreflang, Open Graph, meta description et routes publiées propres. 文MultilingueRéférences en français, anglais et allemand avec navigation adaptée à la langue. ⚡Runtime légerHTML natif, templates Twig, CSS compact et couche publique minimale. Front de référenceUne publication propre,rapide et multilingueCette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire. Derniers articles', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', '2026-05-12 19:10:25');
+INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (278, 1, 'content_entry', 1, 'de', '/', 'Startseite', 'Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.', 'Startseite Saubere, schnelle und mehrsprachige Veröffentlichung Startseite Ein Referenz-Frontend für ein SEO-first Redaktions-CMS. CMS entdecken Kontakt ↝SEO-firstCanonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen. 文MehrsprachigReferenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation. ⚡Leichtes RuntimeNatives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht. Referenz-FrontendSaubere, schnelle und mehrsprachige VeröffentlichungDiese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation. Neueste Artikel', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', '2026-05-12 15:32:02');
+INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (279, 1, 'content_entry', 1, 'en', '/', 'Home', 'Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.', 'Home Clean, fast and multilingual publishing Home A reference public front end for an SEO-first editorial CMS. Discover the CMS Contact ↝SEO-firstCanonical URLs, hreflang, Open Graph, meta description and clean published routes. 文MultilingualFrench, English and German references with navigation adapted to each language. ⚡Lightweight runtimeNative HTML, Twig templates, compact CSS and a minimal public layer. Reference front endClean, fast and multilingual publishingThis homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation. Latest posts', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', '2026-05-12 15:32:21');
+INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (280, 1, 'content_entry', 1, 'fr', '/', 'Accueil', 'Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.', 'Accueil Publication propre, rapide et multilingue Accueil Un front public de référence pour un CMS éditorial SEO-first. Découvrir le CMS Contact ↝SEO-firstCanonical, hreflang, Open Graph, meta description et routes publiées propres. 文MultilingueRéférences en français, anglais et allemand avec navigation adaptée à la langue. ⚡Runtime légerHTML natif, templates Twig, CSS compact et couche publique minimale. Front de référenceUne publication propre,rapide et multilingueCette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire. Derniers articles', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', '2026-05-12 19:10:25');
 INSERT INTO "search_documents" ("id", "site_id", "resource_type", "resource_id", "language_code", "path", "title", "summary", "search_text", "source_published_revision_id", "source_revision_checksum_sha256", "updated_at") VALUES (283, 1, 'content_entry', 13, 'fr', '/sitemap', 'Plan du site', 'Vue claire et structurée des contenus publiés et indexables du site.', 'Plan du site Plan du site Vue claire et structurée des contenus publiés et indexables du site. Pages Articles Catégories Tags', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', '2026-05-12 19:33:06');
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (200, 1, 'de', 'content_entry', 2, '/articles', 'Artikel', 'articles', '[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Artikel Einführung","css_class":"","anchor":"","data":{"eyebrow":"Redaktionelles Journal","title":"Artikel","lead":"Leitfäden, Designnotizen und Erfahrungsberichte zum CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}]', 1, '{"schema_version":1,"entry_id":2,"language_code":"de","content":{"title":"Artikel","slug":"articles","blocks":[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Artikel Einführung","css_class":"","anchor":"","data":{"eyebrow":"Redaktionelles Journal","title":"Artikel","lead":"Leitfäden, Designnotizen und Erfahrungsberichte zum CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}]},"settings":{"article_limit":6,"tag_limit":12,"article_show_published_date":true,"article_show_author":false},"fields":{"article_limit":6,"tag_limit":12,"article_show_published_date":true,"article_show_author":false},"seo":{"meta_title":"Artikel · SEO-first Redaktions-CMS","meta_description":"Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.","meta_robots":"index,follow"},"blocks":[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Artikel Einführung","css_class":"","anchor":"","data":{"eyebrow":"Redaktionelles Journal","title":"Artikel","lead":"Leitfäden, Designnotizen und Erfahrungsberichte zum CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}],"audit":{"created_by_iam_user_id":1,"updated_by_iam_user_id":1,"published_by_iam_user_id":1}}', '{"resource_type":"content_entry","resource_id":0,"language_code":"de","meta_title":"Artikel · SEO-first Redaktions-CMS","meta_description":"Lesen Sie die neuesten CMS-Artikel mit Kategorien, beliebten Tags, Pagination und konfigurierbaren redaktionellen Blöcken.","canonical_url":"/articles","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 6, '79df68ab36c0a993acde3556e15d874564abf45083e499a6a99a637502425ac6', '2026-05-09 06:14:27', '2026-05-12 10:52:48');
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (201, 1, 'en', 'content_entry', 2, '/articles', 'Articles', 'articles', '[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Articles introduction","css_class":"","anchor":"","data":{"eyebrow":"Editorial journal","title":"Articles","lead":"Guides, design notes and field feedback about the CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}]', 1, '{"schema_version":1,"entry_id":2,"language_code":"en","content":{"title":"Articles","slug":"articles","blocks":[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Articles introduction","css_class":"","anchor":"","data":{"eyebrow":"Editorial journal","title":"Articles","lead":"Guides, design notes and field feedback about the CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}]},"settings":{"article_limit":6,"tag_limit":12,"article_show_published_date":true,"article_show_author":false},"fields":{"article_limit":6,"tag_limit":12,"article_show_published_date":true,"article_show_author":false},"seo":{"meta_title":"Articles · SEO-first editorial CMS","meta_description":"Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.","meta_robots":"index,follow"},"blocks":[{"id":"articles_intro_01","type":"hero","enabled":true,"editorial_status":"published","label":"Articles introduction","css_class":"","anchor":"","data":{"eyebrow":"Editorial journal","title":"Articles","lead":"Guides, design notes and field feedback about the CMS.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0}],"audit":{"created_by_iam_user_id":1,"updated_by_iam_user_id":1,"published_by_iam_user_id":1}}', '{"resource_type":"content_entry","resource_id":0,"language_code":"en","meta_title":"Articles · SEO-first editorial CMS","meta_description":"Browse the latest CMS articles with category filters, popular tags, pagination and configurable editorial blocks.","canonical_url":"/articles","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 5, '2bb719e379af25bfe704151c245a52a69faae68fe3871b2560d78f9b63a430c8', '2026-05-09 06:14:27', '2026-05-12 10:52:48');
@@ -13872,9 +13876,9 @@ INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resou
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (232, 1, 'fr', 'content_entry', 12, '/articles/seo-jsonld', 'SEO technique : canonical, hreflang et JSON-LD', 'seo-jsonld', '[{"id":"article_body_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Corps de l’article","css_class":"","anchor":"","data":{"text":"Le CMS doit générer automatiquement canonical, hreflang, Open Graph, sitemap et JSON-LD à partir des données publiées. L’éditeur reste concentré sur la qualité du contenu."},"sort_order":0}]', 1, '{"schema_version":1,"entry_id":12,"language_code":"fr","content":{"title":"SEO technique : canonical, hreflang et JSON-LD","slug":"seo-jsonld","blocks":[{"id":"article_body_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Corps de l’article","css_class":"","anchor":"","data":{"text":"Le CMS doit générer automatiquement canonical, hreflang, Open Graph, sitemap et JSON-LD à partir des données publiées. L’éditeur reste concentré sur la qualité du contenu."},"sort_order":0}]},"settings":[],"fields":{"author_name":"Équipe DEC CMS"},"seo":{"meta_title":"SEO technique natif dans un CMS","meta_description":"Canonical, hreflang, Open Graph, sitemap et JSON-LD générés depuis les projections publiées du CMS.","meta_robots":"index,follow"},"blocks":[{"id":"article_body_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Corps de l’article","css_class":"","anchor":"","data":{"text":"Le CMS doit générer automatiquement canonical, hreflang, Open Graph, sitemap et JSON-LD à partir des données publiées. L’éditeur reste concentré sur la qualité du contenu."},"sort_order":0}],"audit":{"created_by_iam_user_id":1,"updated_by_iam_user_id":1,"published_by_iam_user_id":1}}', '{"resource_type":"content_entry","resource_id":0,"language_code":"fr","meta_title":"SEO technique natif dans un CMS","meta_description":"Canonical, hreflang, Open Graph, sitemap et JSON-LD générés depuis les projections publiées du CMS.","canonical_url":"/articles/seo-jsonld","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 34, 'a7e9a5a9fa388bb3c425c4ae3e1505cd5cdb51e31d92449617aa91351775f511', '2026-05-09 06:14:27', '2026-05-12 10:52:48');
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (255, 1, 'en', 'content_entry', 13, '/sitemap', 'Sitemap', 'sitemap', '[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"A clear and structured view of the published, indexable content on the site."},"sort_order":0},{"id":"block_9r6vlzza983x","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_bq5k518o9tb9","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_gbwnpehvb0t9","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Categories","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_gpauisj6c23h","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]', 5, '{"schema_version":2,"entry_id":13,"content_type":"page","language_code":"en","content":{"title":"Sitemap","slug":"sitemap","blocks":[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"A clear and structured view of the published, indexable content on the site."},"sort_order":0},{"id":"block_9r6vlzza983x","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_bq5k518o9tb9","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_gbwnpehvb0t9","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Categories","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_gpauisj6c23h","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]},"blocks":[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"A clear and structured view of the published, indexable content on the site."},"sort_order":0},{"id":"block_9r6vlzza983x","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_bq5k518o9tb9","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_gbwnpehvb0t9","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Categories","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_gpauisj6c23h","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"Sitemap","meta_description":"A clear and structured view of the published, indexable content on the site.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"en","meta_title":"Sitemap","meta_description":"A clear and structured view of the published, indexable content on the site.","canonical_url":"/sitemap","meta_robots":"index,follow","json_ld":null,"seo_score":65,"is_indexable":true,"issues":[]}', 76, '432d12fef3fe1ef451d989a1d613d3aa5acd06442bafd763914f8ccda9f28d2b', '2026-05-12 15:14:35', '2026-05-12 15:14:35');
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (256, 1, 'de', 'content_entry', 13, '/sitemap', 'Sitemap', 'sitemap', '[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website."},"sort_order":0},{"id":"block_vgftyjwbm0d1","type":"plan","enabled":true,"editorial_status":"published","label":"Seiten","css_class":"","anchor":"","data":{"title":"Seiten","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_u10otrbxs95f","type":"plan","enabled":true,"editorial_status":"published","label":"Artikel","css_class":"","anchor":"","data":{"title":"Artikel","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_bsesst87t0qb","type":"plan","enabled":true,"editorial_status":"published","label":"Kategorien","css_class":"","anchor":"","data":{"title":"Kategorien","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_at5dle0vtzea","type":"plan","enabled":true,"editorial_status":"published","label":"Tags","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]', 5, '{"schema_version":2,"entry_id":13,"content_type":"page","language_code":"de","content":{"title":"Sitemap","slug":"sitemap","blocks":[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website."},"sort_order":0},{"id":"block_vgftyjwbm0d1","type":"plan","enabled":true,"editorial_status":"published","label":"Seiten","css_class":"","anchor":"","data":{"title":"Seiten","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_u10otrbxs95f","type":"plan","enabled":true,"editorial_status":"published","label":"Artikel","css_class":"","anchor":"","data":{"title":"Artikel","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_bsesst87t0qb","type":"plan","enabled":true,"editorial_status":"published","label":"Kategorien","css_class":"","anchor":"","data":{"title":"Kategorien","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_at5dle0vtzea","type":"plan","enabled":true,"editorial_status":"published","label":"Tags","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]},"blocks":[{"id":"sitemap_intro_01","type":"markdown","enabled":true,"editorial_status":"published","label":"Introduction","css_class":"","anchor":"","data":{"text":"Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website."},"sort_order":0},{"id":"block_vgftyjwbm0d1","type":"plan","enabled":true,"editorial_status":"published","label":"Seiten","css_class":"","anchor":"","data":{"title":"Seiten","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_u10otrbxs95f","type":"plan","enabled":true,"editorial_status":"published","label":"Artikel","css_class":"","anchor":"","data":{"title":"Artikel","source":"articles","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_bsesst87t0qb","type":"plan","enabled":true,"editorial_status":"published","label":"Kategorien","css_class":"","anchor":"","data":{"title":"Kategorien","source":"taxonomies","taxonomy_key":"categories","limit":4,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_at5dle0vtzea","type":"plan","enabled":true,"editorial_status":"published","label":"Tags","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"Sitemap","meta_description":"Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"de","meta_title":"Sitemap","meta_description":"Eine klare und strukturierte Übersicht der veröffentlichten und indexierbaren Inhalte der Website.","canonical_url":"/sitemap","meta_robots":"index,follow","json_ld":null,"seo_score":85,"is_indexable":true,"issues":[]}', 77, 'faf25f935ddd084de90b95c45655950a0ec173d6b038c4ae6847e76bbe9dd70e', '2026-05-12 15:15:55', '2026-05-12 15:15:55');
-INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (260, 1, 'de', 'content_entry', 1, '/', 'Startseite', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/mod/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/mod/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"de","content":{"title":"Startseite","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/mod/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/mod/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/mod/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/mod/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"SEO-first mehrsprachiges und multisite Redaktions-CMS","meta_description":"Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"de","meta_title":"SEO-first mehrsprachiges und multisite Redaktions-CMS","meta_description":"Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":["meta_description_too_long"]}', 85, '1694240e54df19d99e49159c8483871c53ab47075e0eedb9027d299f65d5db09', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
-INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (261, 1, 'en', 'content_entry', 1, '/', 'Home', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/mod/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"en","content":{"title":"Home","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/mod/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/mod/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"SEO-first multilingual and multi-site editorial CMS","meta_description":"Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"en","meta_title":"SEO-first multilingual and multi-site editorial CMS","meta_description":"Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 86, '229173203f698f1770c81b2833ee94585f4bf207df78e05e1cf499a7e4537a69', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
-INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (262, 1, 'fr', 'content_entry', 1, '/', 'Accueil', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/mod/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"fr","content":{"title":"Accueil","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/mod/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /mod/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/mod/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/mod/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"CMS éditorial SEO-first multilingue et multi-site","meta_description":"Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"fr","meta_title":"CMS éditorial SEO-first multilingue et multi-site","meta_description":"Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 88, '240049cc697e66cdc9ce31e997ee9e54849b947111d6ec7c76c0ab22f1809c6e', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
+INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (260, 1, 'de', 'content_entry', 1, '/', 'Startseite', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/cms/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/cms/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"de","content":{"title":"Startseite","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/cms/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/cms/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Saubere, schnelle und mehrsprachige Veröffentlichung","title":"Startseite","lead":"Ein Referenz-Frontend für ein SEO-first Redaktions-CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"CMS entdecken","url":"/cms/de/articles","style":"primary","target":"_self"},{"label":"Kontakt","url":"/cms/de/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, Meta-Beschreibung und saubere veröffentlichte Routen.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Mehrsprachig","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Mehrsprachig</h2><p>Referenzen auf Französisch, Englisch und Deutsch mit sprachgerechter Navigation.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Leichtes Runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Leichtes Runtime</h2><p>Natives HTML, Twig-Templates, kompaktes CSS und eine minimale öffentliche Schicht.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Referenz-Frontend</p><h2 id=\"publication-title\">Saubere, schnelle und mehrsprachige Veröffentlichung</h2></div><p>Diese Startseite zeigt eine responsive, mehrsprachige und suchmaschinenfreundliche öffentliche Präsentation: kanonische Routen, Meta-Titel, Meta-Beschreibung, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, öffentliche Suche und klare Navigation.</p></section>"},"sort_order":2},{"id":"block_rqmy2b6mg8xb","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Neueste Artikel","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Alle Artikel","page_param":"articles_page"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"SEO-first mehrsprachiges und multisite Redaktions-CMS","meta_description":"Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"de","meta_title":"SEO-first mehrsprachiges und multisite Redaktions-CMS","meta_description":"Entdecken Sie ein SEO-first Redaktions-CMS mit sauberen Routen, Canonical-URLs, hreflang, Sitemap, robots.txt, Open Graph, JSON-LD, nativer Suche und leichtem Runtime.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":["meta_description_too_long"]}', 85, '8d7c446517102fe728c1d710019acab5624126d0c2cb50f00cdb0e3f661bcc76', '2026-05-12 15:32:02', '2026-05-12 15:32:02');
+INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (261, 1, 'en', 'content_entry', 1, '/', 'Home', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/cms/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"en","content":{"title":"Home","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/cms/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Clean, fast and multilingual publishing","title":"Home","lead":"A reference public front end for an SEO-first editorial CMS.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Discover the CMS","url":"/cms/en/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/en/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical URLs, hreflang, Open Graph, meta description and clean published routes.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingual","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingual</h2><p>French, English and German references with navigation adapted to each language.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Lightweight runtime","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Lightweight runtime</h2><p>Native HTML, Twig templates, compact CSS and a minimal public layer.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Reference front end</p><h2 id=\"publication-title\">Clean, fast and multilingual publishing</h2></div><p>This homepage demonstrates a responsive, multilingual and search-friendly public showcase: canonical routes, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, public search and clear navigation.</p></section>"},"sort_order":2},{"id":"block_jfpapjyoegra","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Latest posts","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"All posts","page_param":"articles_page"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"SEO-first multilingual and multi-site editorial CMS","meta_description":"Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"en","meta_title":"SEO-first multilingual and multi-site editorial CMS","meta_description":"Explore an SEO-first editorial CMS with clean routes, canonical URLs, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, native search and lightweight runtime.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 86, 'a9676abc3953763d41526d6257ec12c1e7a4a04d849ee78a6215571dbd3cf9c4', '2026-05-12 15:32:21', '2026-05-12 15:32:21');
+INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (262, 1, 'fr', 'content_entry', 1, '/', 'Accueil', 'home', '[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/cms/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}]', 4, '{"schema_version":2,"entry_id":1,"content_type":"page","language_code":"fr","content":{"title":"Accueil","slug":"home","blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/cms/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}]},"blocks":[{"id":"home_hero_01","type":"hero","enabled":true,"editorial_status":"published","label":"Hero accueil","css_class":"","anchor":"","data":{"eyebrow":"Publication propre, rapide et multilingue","title":"Accueil","lead":"Un front public de référence pour un CMS éditorial SEO-first.","heading_level":"h1","image_media_id":4,"image_src":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp","image_srcset":"/cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_640.webp 640w, /cms/storage/media/public/1/2026/05/variants/cms-hero-1280-9ff7381c-hero_960.webp 960w","image_sizes":"(min-width: 992px) 50vw, 100vw","image_alt":"","image_width":960,"image_height":640,"image_mime_type":"image/webp","image_loading":"eager","layout":"split","buttons":[{"label":"Découvrir le CMS","url":"/cms/articles","style":"primary","target":"_self"},{"label":"Contact","url":"/cms/contact","style":"ghost","target":"_self"}]},"sort_order":0},{"id":"home_cards_01","type":"columns","enabled":true,"editorial_status":"published","label":"Cartes forces","css_class":"section","anchor":"","data":{"layout":"cards-3","columns":[{"width":"auto","blocks":[{"id":"home_card_1","type":"html","enabled":true,"editorial_status":"published","label":"SEO-first","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">↝</span><h2>SEO-first</h2><p>Canonical, hreflang, Open Graph, meta description et routes publiées propres.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_2","type":"html","enabled":true,"editorial_status":"published","label":"Multilingue","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">文</span><h2>Multilingue</h2><p>Références en français, anglais et allemand avec navigation adaptée à la langue.</p>"},"sort_order":0}]},{"width":"auto","blocks":[{"id":"home_card_3","type":"html","enabled":true,"editorial_status":"published","label":"Runtime léger","css_class":"card feature-card","anchor":"","data":{"html":"<span class=\"feature-card__icon\" aria-hidden=\"true\">⚡</span><h2>Runtime léger</h2><p>HTML natif, templates Twig, CSS compact et couche publique minimale.</p>"},"sort_order":0}]}]},"sort_order":1},{"id":"home_split_01","type":"html","enabled":true,"editorial_status":"published","label":"Section publication","css_class":"section","anchor":"","data":{"html":"<section class=\"split-panel\" aria-labelledby=\"publication-title\"><div><p class=\"eyebrow\">Front de référence</p><h2 id=\"publication-title\">Une publication propre,<br>rapide et multilingue</h2></div><p>Cette page d’accueil démontre une vitrine publique responsive, multilingue et pensée pour le référencement naturel : routes canoniques, meta title, meta description, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche publique et navigation claire.</p></section>"},"sort_order":2},{"id":"block_z6o083bu91yt","type":"articles","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Derniers articles","limit":3,"category":"","tag":"","show_more_button":true,"more_label":"Tous les articles"},"sort_order":3}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"CMS éditorial SEO-first multilingue et multi-site","meta_description":"Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"fr","meta_title":"CMS éditorial SEO-first multilingue et multi-site","meta_description":"Découvrez un CMS éditorial SEO-first avec routes propres, canonical, hreflang, sitemap, robots.txt, Open Graph, JSON-LD, recherche native et runtime léger.","canonical_url":"/","meta_robots":"index,follow","json_ld":null,"seo_score":100,"is_indexable":true,"issues":[]}', 88, '38ef62001fd56bd582f00e19711391718a7e3e93a8e632757c03bd4863c3baac', '2026-05-12 19:10:25', '2026-05-12 19:10:25');
 INSERT INTO "public_content_snapshots" ("id", "site_id", "language_code", "resource_type", "resource_id", "route_path", "title", "slug", "blocks_json", "block_count", "document_json", "seo_json", "source_published_revision_id", "source_revision_checksum_sha256", "published_at", "projected_at") VALUES (265, 1, 'fr', 'content_entry', 13, '/sitemap', 'Plan du site', 'sitemap', '[{"id":"block_3vmwprbldaxv","type":"hero","enabled":true,"editorial_status":"published","label":"Hero","css_class":"","anchor":"","data":{"eyebrow":"","title":"Plan du site","lead":"Vue claire et structurée des contenus publiés et indexables du site.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0},{"id":"block_hyb1d7u1jjgk","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_k5zwi9a5pss1","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":12,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_onky34rkqqff","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Catégories","source":"taxonomies","taxonomy_key":"categories","limit":5,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_54j45kozs00t","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie  tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]', 5, '{"schema_version":2,"entry_id":13,"content_type":"page","language_code":"fr","content":{"title":"Plan du site","slug":"sitemap","blocks":[{"id":"block_3vmwprbldaxv","type":"hero","enabled":true,"editorial_status":"published","label":"Hero","css_class":"","anchor":"","data":{"eyebrow":"","title":"Plan du site","lead":"Vue claire et structurée des contenus publiés et indexables du site.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0},{"id":"block_hyb1d7u1jjgk","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_k5zwi9a5pss1","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":12,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_onky34rkqqff","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Catégories","source":"taxonomies","taxonomy_key":"categories","limit":5,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_54j45kozs00t","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie  tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}]},"blocks":[{"id":"block_3vmwprbldaxv","type":"hero","enabled":true,"editorial_status":"published","label":"Hero","css_class":"","anchor":"","data":{"eyebrow":"","title":"Plan du site","lead":"Vue claire et structurée des contenus publiés et indexables du site.","heading_level":"h1","image_media_id":0,"image_src":"","image_srcset":"","image_sizes":"","image_alt":"","image_width":1280,"image_height":853,"image_mime_type":"","image_loading":"eager","layout":"simple","buttons":[]},"sort_order":0},{"id":"block_hyb1d7u1jjgk","type":"plan","enabled":true,"editorial_status":"published","label":"Pages","css_class":"","anchor":"","data":{"title":"Pages","source":"pages","taxonomy_key":"","limit":8,"show_pagination":true,"page_param":"plan_pages"},"sort_order":1},{"id":"block_k5zwi9a5pss1","type":"plan","enabled":true,"editorial_status":"published","label":"Articles","css_class":"","anchor":"","data":{"title":"Articles","source":"articles","taxonomy_key":"","limit":12,"show_pagination":true,"page_param":"plan_articles"},"sort_order":2},{"id":"block_onky34rkqqff","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie cat.","css_class":"","anchor":"","data":{"title":"Catégories","source":"taxonomies","taxonomy_key":"categories","limit":5,"show_pagination":false,"page_param":"plan_cat"},"sort_order":3},{"id":"block_54j45kozs00t","type":"plan","enabled":true,"editorial_status":"published","label":"Taxonomie  tag","css_class":"","anchor":"","data":{"title":"Tags","source":"taxonomies","taxonomy_key":"tags","limit":4,"show_pagination":false,"page_param":"plan_tags"},"sort_order":4}],"fields":{"article_limit":0,"tag_limit":0,"article_show_published_date":false,"article_show_author":false},"taxonomy_terms":[],"seo":{"meta_title":"Plan du site","meta_description":"Vue claire et structurée des contenus publiés et indexables du site.","meta_robots":"index,follow","og_image_media_id":0,"og_image_src":"","twitter_image_media_id":0,"twitter_image_src":""},"capabilities":{"localizations":true,"revisions":true,"workflow":true,"permalink":true,"seo":true,"taxonomies":true},"template":"page.twig"}', '{"resource_type":"content_entry","resource_id":0,"language_code":"fr","meta_title":"Plan du site","meta_description":"Vue claire et structurée des contenus publiés et indexables du site.","canonical_url":"/sitemap","meta_robots":"index,follow","json_ld":null,"seo_score":65,"is_indexable":true,"issues":[]}', 96, '740fb92851ba54b7b605f0009c4547d20165a93124e3b12f2df9a7d7ad5e03db', '2026-05-12 19:33:06', '2026-05-12 19:33:06');
 INSERT INTO "outbox_events" ("id", "topic", "payload_json", "status", "attempts", "last_error", "created_at", "available_at", "claimed_at", "processed_at") VALUES (1, 'content.published_projection_ready', '{"entry_id":1,"languages":["de","en","fr"]}', 'processed', 1, NULL, '2026-05-09 06:14:28', '2026-05-09 06:14:28', '2026-05-09 06:20:30', '2026-05-09 06:20:30');
 INSERT INTO "outbox_events" ("id", "topic", "payload_json", "status", "attempts", "last_error", "created_at", "available_at", "claimed_at", "processed_at") VALUES (2, 'content.published_projection_ready', '{"entry_id":2,"languages":["de","en","fr"]}', 'processed', 1, NULL, '2026-05-09 06:14:28', '2026-05-09 06:14:28', '2026-05-09 06:20:30', '2026-05-09 06:20:30');
@@ -14103,6 +14107,20 @@ WHERE sm.site_id = public_content_snapshots.site_id
   AND sm.language_code = public_content_snapshots.language_code
   AND sm.source_published_revision_id = public_content_snapshots.source_published_revision_id
   AND sm.source_revision_checksum_sha256 = public_content_snapshots.source_revision_checksum_sha256;
+
+-- M8.1 : fixture explicite du Shop système français. Les autres langues
+-- restent non initialisées jusqu'à une action Studio puis une activation Ventes.
+INSERT OR REPLACE INTO cms_shop_configurations(
+    site_id,language_code,channel_id,channel_code,status,currency,route_path,theme_key,menu_key,menu_label,menu_position,
+    cart_visible,show_quantities,last_available_threshold,draft_json,published_json,config_version,published_version,
+    activated_at,published_at,last_rebuild_at
+)
+SELECT s.id,'fr',3,'web-main','active','CHF','/shop','default','main','Boutique',100,
+       1,0,1,
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       '{"title":"Boutique","introduction":"Découvrez nos produits.","seo":{"title":"Boutique","description":"Catalogue de la boutique","robots":"index,follow"},"sections":[{"key":"search","enabled":true,"title":"Recherche, filtres et tri"},{"key":"groups","enabled":true,"title":"Groupes de produits"},{"key":"promotions","enabled":true,"title":"Meilleures promotions"},{"key":"collections","enabled":true,"title":"Explorer les catégories"},{"key":"popular","enabled":true,"title":"Produits populaires"},{"key":"keywords","enabled":true,"title":"Mots-clés populaires"},{"key":"new","enabled":true,"title":"Nouveaux produits"},{"key":"catalog","enabled":true,"title":"Tous les produits"}]}',
+       1,1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,NULL
+FROM sites s WHERE s.site_key='main';
 
 COMMIT;
 PRAGMA foreign_keys = ON;

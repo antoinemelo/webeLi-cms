@@ -4,7 +4,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-06-14
+last_verified: 2026-07-14
 source_of_truth: manual
 owners:
   - core
@@ -31,6 +31,19 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 | Multisite | colonnes et seeds | intégration PHP + E2E | accès et permissions isolés par site | ajouté |
 | Multilingue | colonnes et seeds | intégration PHP | documents de recherche isolés par langue | ajouté |
 | API | routes non dupliquées | test API/Playwright request | refus 401/403 sur appel direct webhook | ajouté partiellement |
+| Providers de paiement | tests séparés par adapter | contrat commun + gate PHP/Python/Playwright | capacités explicites, succès, refus/reprise, capture/remboursement, signature, doublon, réconciliation et UX Stripe/Revolut | ajouté pour M5.5 |
+| Ledger de stock | quantités Business/Sale dispersées | ledger Sale + gate PHP/Python/Playwright | mouvements immuables, reconstruction, seed d’ouverture, contrat Shop, recherche scanner, assistant, erreurs et mobile | ajouté pour M6.1 |
+| Réservations et disponibilité | réservation implicite sans politique de canal | concurrence PHP + gate Python + API/Playwright | déclencheurs configurables, TTL borné, expiration idempotente, backorder explicite, reprise Shop et libération opérateur auditée | ajouté pour M6.2 |
+| Bundles et stock composé | modes historiques ambigus et stock du parent | tests Business/Sale + gate Python + UX opérateur | trois stratégies, ratios imbriqués, facteur limitant, cycles, concurrence, multi-location, consommation et retours | ajouté pour M6.3 |
+| Reconstruction du stock | réparation historique implicite et comparaison partielle | scénario PHP + gate Python + UX opérateur | dry-run, journal/cache/réservations/logistique/Shop, sauvegarde-restauration, correction prouvée et reprise ciblée | ajouté pour M6.5 |
+| Identité client | bridges nuls et fusion opaque | scénario IAM/CRM/Sale + gate Python + Playwright | invité, token post-achat, provenance, scores, doublons, multisite, aperçu, fusion et séparation sans toucher aux snapshots | ajouté pour M7.1 |
+| Activités CRM événementielles | projection partielle relisant les commandes | scénario outbox + gate Python + chronologie Vue | DTO v2, désordre, panne CRM, attente/rattachement, confidentialité, rejeu et réconciliation | ajouté pour M7.2 |
+| Segmentation, préférences et consentements CRM | tags et état courant sans historique | scénario métier + gate Python + E2E Business | règles explicables, calcul complet/incrémental, résultat nul, retrait conservé, permissions et FR/EN | ajouté pour M7.3 |
+| Commande invitée vers CRM | preuves M7 dispersées | gate M7.4 + PHP + deux parcours Playwright | 12 scénarios, e-mail vérifié unique, ambiguïtés en revue, panne/rejeu, consentement et mesure UX | ajouté pour M7.4 |
+| Panier public et checkout résilient | stockage client et reprise partiels | contrats Sale + tests PHP/HTTP + gate Chromium point 44 | Shop actif, jeton opaque, version optimiste, conflit multi-onglets, brouillon repris, double soumission et mobile | ajouté pour M8.6 |
+| Bons cadeaux | type produit, politique et événements seulement déclarés | ledger Sale + test PHP + Playwright point 45 | émission après paiement, code non stocké, révélation unique, débit/rejeu, complément, recrédit, remboursement et back-office masqué | ajouté pour M8.7 |
+| Commande, logistique et suivi | références libres et preuves dispersées | snapshots + fulfillments M6 + test PHP point 46 | confirmation automatique, préparation partielle, suivi HTTPS validé, retrait sans fuite du code, notifications idempotentes et suivi invité signé | ajouté pour M8.8 |
+| Shop opérationnel release | preuves 38a–47 dispersées | gate composite Python/Playwright point 48 | reconstruction sans migration, multisite/sous-répertoires, langues, rôles, scénarios A–E, négatifs, UX et empreintes sans données personnelles | ajouté à la qualification release courante |
 
 ## Tests ajoutés
 
@@ -41,6 +54,30 @@ Les validateurs Python restent limités aux invariants statiques et déterminist
 - `tools/python/tests/integration/test_php_functional_suites.py`
 - `tools/python/tests/integration/test_webhook_ping_persistence.py`
 - `frontend/admin-vue/tests/e2e/webhook-ping-persistence.spec.ts`
+- `tools/php/tests/unit/sale_payment_provider_interchangeability_test.php`
+- `tools/python/tests/test_payment_provider_gate.py`
+- `frontend/admin-vue/tests/e2e/payment-provider-interchangeability.spec.ts`
+- `tools/php/tests/unit/sale_inventory_reconciliation_test.php`
+- `tools/python/tests/test_inventory_ledger_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-stock-ledger.spec.ts`
+- `tools/php/tests/unit/sale_reservation_lifecycle_test.php`
+- `tools/python/tests/test_reservation_availability_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-reservations.spec.ts`
+- `tools/php/tests/unit/business_bundle_stock_strategies_test.php`
+- `tools/php/tests/unit/sale_inventory_service_test.php` (scénarios bundle)
+- `tools/php/tests/unit/sale_internal_sales_test.php` (retours bundle)
+- `tools/python/tests/test_bundle_stock_strategy_gate.py`
+- `tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php`
+- `tools/python/tests/test_stock_reconstruction_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-stock-reconstruction.spec.ts`
+- `tools/python/tests/test_customer_identity_gate.py`
+- `frontend/admin-vue/tests/e2e/sale-identity-review.spec.ts`
+- `tools/python/tests/test_crm_guest_order_gate.py`
+- `docs/evaluation/machine-readable/crm-guest-order-gate-m7.json`
+- `tools/php/tests/unit/sale_gift_card_lifecycle_test.php`
+- `frontend/admin-vue/tests/e2e/gift-card-lifecycle-45.spec.ts`
+- `tools/python/tests/test_shop_operational_gate.py`
+- `frontend/admin-vue/tests/e2e/shop-operational-release-gate-48.spec.ts`
 
 ## Tests volontairement non automatisés dans ce lot
 

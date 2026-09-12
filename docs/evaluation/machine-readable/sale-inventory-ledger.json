@@ -1,0 +1,55 @@
+{
+  "format_version": 1,
+  "gate": "sale.inventory-ledger.m6.v1",
+  "status": "passed",
+  "source_of_truth": "sale.sqlite",
+  "quantity_unit": "integer_unit",
+  "public_contract": {
+    "version": "sale.inventory.availability.v1",
+    "statuses": ["in_stock", "deliverable", "backorder", "unavailable"],
+    "exposes_internal_quantity": false,
+    "last_available_indicator": true
+  },
+  "ledger": {
+    "immutable": true,
+    "fields": ["id", "inventory_item_id", "stock_location_id", "quantity", "movement_type", "reference_type", "reference_id", "idempotency_key", "created_by_iam_user_id", "created_at", "correlation_id", "balance_after_quantity"],
+    "movement_types": ["initial", "receipt", "sale", "return", "correction", "adjustment", "inventory_adjustment", "transfer_out", "transfer_in", "bundle_consumption"],
+    "opening_movements_seeded": true
+  },
+  "derived_state": {
+    "on_hand": "sum(non_reservation_movements.quantity)",
+    "reserved": "sum(active_or_confirmed_reservations.quantity)",
+    "available": "on_hand-reserved",
+    "materialized_table": "sale_inventory_items",
+    "reconstructible": true,
+    "reconciliation_repairs_derived_state": true
+  },
+  "business": {
+    "transactional_writes_enabled": false,
+    "legacy_columns": ["business_product_variants.stock_quantity", "business_product_variants.stock_reserved", "business_stock_movements"],
+    "legacy_role": "deprecated_catalog_bootstrap_only",
+    "projection_table": "business_inventory_availability_projections"
+  },
+  "ux": {
+    "search_fields": ["product_name", "sku", "barcode", "location"],
+    "persistent_filters": true,
+    "alerts": ["out_of_stock", "low_stock", "inconsistent"],
+    "movement_wizard_steps": 5,
+    "direct_total_edit": false,
+    "mobile_read": true,
+    "empty_state": true,
+    "permission_error": true,
+    "controlled_export": true,
+    "languages": ["fr", "en"]
+  },
+  "security": {"contains_pii": false, "contains_secret": false},
+  "evidence": {
+    "schema": "database/modules/sale.sql",
+    "seed": "tools/python/operations/database/b0_db_seed.py",
+    "repository": "backend/src/Modules/Sale/Repositories/SaleInventoryRepository.php",
+    "reconciliation": "backend/src/Modules/Sale/Services/SaleInventoryReconciliationService.php",
+    "shop_projection": "backend/src/Modules/Sale/Services/SaleCatalogSnapshotService.php",
+    "admin_ui": "frontend/admin-vue/src/views/modules/SaleStockView.vue",
+    "ux_test": "frontend/admin-vue/tests/e2e/sale-stock-ledger.spec.ts"
+  }
+}

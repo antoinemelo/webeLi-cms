@@ -47,6 +47,21 @@ function asset_path(string $path): string
     return url_path($path);
 }
 
+function public_asset_url_path(string $url): string
+{
+    $url = trim($url);
+    if ($url === '' || !str_starts_with($url, '/') || str_starts_with($url, '//')) {
+        return $url;
+    }
+
+    $base = app_base_path();
+    if ($base !== '' && ($url === $base || str_starts_with($url, $base . '/'))) {
+        return $url;
+    }
+
+    return url_path($url);
+}
+
 function current_site_base_path(): string
 {
     $basePath = (string) ($_SERVER['CMS_SITE_BASE_PATH'] ?? '');
@@ -61,7 +76,20 @@ function public_api_url_path(string $path = ''): string
 {
     $path = trim($path);
     $apiPath = '/api/v1' . ($path !== '' ? '/' . ltrim($path, '/') : '');
-    return url_path(current_site_base_path() . $apiPath);
+    $appBase = app_base_path();
+    $siteBase = current_site_base_path();
+
+    if ($siteBase === '') {
+        $prefix = $appBase;
+    } elseif ($appBase === '' || $siteBase === $appBase || str_starts_with($siteBase, $appBase . '/')) {
+        $prefix = $siteBase;
+    } elseif (str_starts_with($appBase, $siteBase . '/')) {
+        $prefix = $appBase;
+    } else {
+        $prefix = $appBase . $siteBase;
+    }
+
+    return $prefix . $apiPath;
 }
 
 function admin_url_path(string $path = '/admin/app'): string
@@ -219,6 +247,18 @@ function localized_path(string $path = '/', ?string $languageCode = null): strin
     return url_path($siteBasePath . localized_site_path($cleanPath . $query, $languageCode));
 }
 
+/**
+ * Browser-facing home links deliberately avoid a trailing slash when the CMS
+ * is installed below a directory. This keeps navigation away from stale
+ * permanent redirects that may still be cached for an older installation
+ * root, while preserving `/` for a domain-root installation.
+ */
+function localized_home_path(?string $languageCode = null): string
+{
+    $path = localized_path('/', $languageCode);
+    return $path === '/' ? '/' : rtrim($path, '/');
+}
+
 function localized_absolute_url(string $path = '/', ?string $languageCode = null, ?string $siteBaseUrl = null): string
 {
     if (preg_match('#^https?://#i', $path)) {
@@ -229,7 +269,7 @@ function localized_absolute_url(string $path = '/', ?string $languageCode = null
     if ($base) {
         // siteBaseUrl already contains the canonical domain base path from
         // site_domains.base_path. Do not prepend APP_BASE_PATH again, otherwise
-        // installations under /mod generate /mod/mod URLs in SEO outputs.
+        // installations under /cms generate /cms/cms URLs in SEO outputs.
         return rtrim($base, '/') . localized_site_path($path, $languageCode);
     }
 
@@ -249,8 +289,8 @@ function absolute_url(string $path = '/', ?string $siteBaseUrl = null): string
     $base = $siteBaseUrl;
     if ($base) {
         // siteBaseUrl may already include the public deployment base path
-        // (for example https://webe.li/mod). Do not call url_path() here:
-        // url_path() would prepend APP_BASE_PATH again and create /mod/mod
+        // (for example https://webe.li/cms). Do not call url_path() here:
+        // url_path() would prepend APP_BASE_PATH again and create /cms/cms
         // in canonical SEO assets such as og:image and twitter:image.
         $basePath = (string) (parse_url($base, PHP_URL_PATH) ?: '');
         $basePath = $basePath !== '' && $basePath !== '/' ? '/' . trim($basePath, '/') : '';

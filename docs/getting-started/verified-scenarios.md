@@ -12,7 +12,7 @@ audience:
   - developer
   - evaluator
 status: stable
-last_verified: 2026-07-13
+last_verified: 2026-07-17
 source_of_truth: procedure
 source_paths:
   - frontend/admin-vue/tests/e2e
@@ -37,6 +37,7 @@ Les scénarios ci-dessous indiquent l’état démontré par le dépôt. Lorsqu�
 | `internal-sale` | Effectuer une vente POS comptant, émettre le reçu et fermer la caisse. | Démontré par E2E isolé. | `python3 tools/cms.py e2e --use-built-assets --omnichannel-only` |
 | `sale-return` | Traiter un retour web et un retour POS, puis un remboursement web. | Démontré par la gate omnicanale. | [Gate E2E omnicanale](../development/testing-validation/OMNICHANNEL_E2E_GATE.md) |
 | `public-cart` | Acheter en invité avec paiement sandbox capturé. | Démontré par E2E isolé. | `python3 tools/cms.py e2e --use-built-assets --omnichannel-only` |
+| `shop-system-activation` | Configurer la page système dans Studio, puis activer ou désactiver route, menu, panier et API Storefront pour une langue. | Démontré par test de service, IAM et E2E isolé from scratch. | `python3 tools/cms.py e2e --use-built-assets --spec shop-system-activation-39.spec.ts` |
 | `omnichannel-sale` | Acheter le même vendable sur le storefront et le POS avec contrats, stock et CRM cohérents. | Gate release bloquante et preuve JSON. | [Gate E2E omnicanale](../development/testing-validation/OMNICHANNEL_E2E_GATE.md) |
 | `backup-restore` | Sauvegarder et restaurer une instance. | Procédure documentée et validateur dédié. | [Sauvegarde et restauration](../operations/backup-restore.md) |
 

@@ -1,0 +1,70 @@
+name: Publish stable CMS components
+
+on:
+  push:
+    tags:
+      - "dec_v*-e*[a-z]"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dec-cms-stable-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: sqlite3, pdo_sqlite, mbstring, intl, gd, curl, phar
+          tools: composer:v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: frontend/admin-vue/package-lock.json
+      - name: Verify stable tag
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          version="$(php -r '$r=json_decode(file_get_contents("config/release.json"),true); echo $r["technical_version"] ?? "";')"
+          test "$version" = "$GITHUB_REF_NAME"
+      - name: Install runtime dependencies
+        run: composer install --working-dir backend --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+      - name: Build administration
+        working-directory: frontend/admin-vue
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Initialize and validate the release candidate
+        run: |
+          python3 tools/cms.py rebuild
+          python3 tools/cms.py validate
+          python3 tools/cms.py test
+          php tools/php/tests/unit/stable_update_catalog_service_test.php
+          php tools/php/tests/unit/stable_update_service_test.php
+      - name: Build qualified release staging
+        run: >-
+          python3 tools/python/operations/deployment/d2_package_release.py
+          --no-zip --exclude-databases --include-vendor
+      - name: Build stable component packages
+        run: >-
+          python3 tools/python/operations/deployment/d15_package_stable_components.py
+          --release-tag "$GITHUB_REF_NAME"
+      - name: Publish immutable GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          storage/exports/stable-components/*
+          --verify-tag --latest
+          --title "DEC CMS $GITHUB_REF_NAME"
+          --notes "Publication stable des composants DEC CMS. Le core doit être installé avant les modules."

@@ -1,0 +1,72 @@
+.site-header__inner > .site-navigation {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.site-header__inner > .storefront-cart-toggle {
+  grid-column: 4;
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+}
+
+.site-header .login-shortcut {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: none;
+}
+
+.site-header .login-shortcut:hover,
+.site-header .login-shortcut:focus-visible {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  outline-offset: 3px;
+  transform: none;
+}
+
+.site-header .login-shortcut .bi-person {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: currentColor;
+}
+
+@media (max-width: 991.98px) {
+  .site-header .navbar > .container.site-header__inner {
+    grid-template-columns: auto minmax(0, 1fr) 2.5rem 2.85rem !important;
+    grid-template-areas:
+      "brand search cart toggle"
+      "navigation navigation navigation navigation" !important;
+  }
+
+  .site-header__inner > .brand {
+    grid-area: brand !important;
+  }
+
+  .site-header__inner > .header-search--primary {
+    grid-area: search !important;
+  }
+
+  .site-header__inner > .storefront-cart-toggle {
+    grid-area: cart !important;
+    margin-inline: 0;
+    justify-self: center;
+  }
+
+  .site-header__inner > .nav-toggle {
+    grid-area: toggle !important;
+  }
+
+  .site-header__inner > .site-navigation {
+    grid-area: navigation !important;
+    grid-column: 1 / -1 !important;
+  }
+}

@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { adminApi, apiErrorMessage } from '@/api/client';
+import { useAdminContextStore } from '@/stores/adminContext';
+import { useI18n } from '@/i18n';
 import BusinessPageHeader from './business/BusinessPageHeader.vue';
 import BusinessQuickSearch from './business/BusinessQuickSearch.vue';
 import EmptyState from './business/EmptyState.vue';
@@ -27,6 +29,10 @@ type Relation = {
   linked_contacts_count?: number;
   last_activity_at?: string | null;
   last_memo_excerpt?: string | null;
+  next_action_title?: string | null;
+  next_action_due_at?: string | null;
+  roles?: string[];
+  duplicate_candidate?: boolean;
   archived_at?: string | null;
 };
 type SearchItem = Record<string, unknown> & {
@@ -71,6 +77,10 @@ const emit = defineEmits<{
   'delete-company': [relation: Relation];
   'delete-contact': [relation: Relation];
 }>();
+const context = useAdminContextStore();
+const { t } = useI18n();
+const canConsentRead = computed(() => context.can('business.consent.read'));
+const canReviewDuplicates = computed(() => context.can('business.advanced_tools.manage') && context.can('sale.advanced_tools.manage'));
 
 const loading = ref(false);
 const searchLoading = ref(false);
@@ -78,7 +88,7 @@ const error = ref('');
 const searchError = ref('');
 const relations = ref<Relation[]>([]);
 const pagination = ref({ total: 0, limit: 25, offset: 0 });
-const filters = reactive({ q: '', type: '', status: '', sort: 'activity_desc', has_memos: false, has_shared_memos: false, has_email: false, has_phone: false, missing_email_consent: false, linked_iam: false, archived: 'active' });
+const filters = reactive({ q: '', type: '', status: '', view: '', sort: 'activity_desc', has_memos: false, has_shared_memos: false, has_email: false, has_phone: false, missing_email_consent: false, linked_iam: false, archived: 'active' });
 const appliedAdvancedFilters = reactive({ type: '', status: '', sort: 'activity_desc', archived: 'active' });
 const relationSort = reactive<{ key: RelationSortKey; direction: 'asc' | 'desc' }>({ key: 'info', direction: 'asc' });
 const relationPage = ref(1);
@@ -97,19 +107,15 @@ const searchInput = ref<{ focus: () => void } | null>(null);
 const filtersMenu = ref<HTMLDetailsElement | null>(null);
 let searchTimer: ReturnType<typeof window.setTimeout> | null = null;
 
-type QuickFilterKey = 'all' | 'contact' | 'company' | 'prospect' | 'client' | 'supplier' | 'former_client' | 'has_email' | 'has_phone' | 'missing_email_consent';
-const quickFilters: Array<{ key: QuickFilterKey; label: string }> = [
-  { key: 'all', label: 'Tous' },
-  { key: 'contact', label: 'Personnes' },
-  { key: 'company', label: 'Organisations' },
-  { key: 'prospect', label: 'Prospects' },
-  { key: 'client', label: 'Clients' },
-  { key: 'supplier', label: 'Fournisseurs' },
-  { key: 'former_client', label: 'Anciens' },
-  { key: 'has_email', label: 'Avec email' },
-  { key: 'has_phone', label: 'Avec téléphone' },
-  { key: 'missing_email_consent', label: 'Sans consentement email' },
-];
+type QuickFilterKey = 'all' | 'prospect' | 'client' | 'supplier' | 'follow_up' | 'duplicates';
+const quickFilters = computed<Array<{ key: QuickFilterKey; label: string }>>(() => [
+  { key: 'all', label: t('business.relations.views.all') },
+  { key: 'prospect', label: t('business.relations.views.prospects') },
+  { key: 'client', label: t('business.relations.views.clients') },
+  { key: 'supplier', label: t('business.relations.views.suppliers') },
+  { key: 'follow_up', label: t('business.relations.views.followUp') },
+  ...(canReviewDuplicates.value ? [{ key: 'duplicates' as const, label: t('business.relations.views.duplicates') }] : []),
+]);
 
 const searchGroups = computed(() => [
   { key: 'relations', label: 'Relations', items: searchResults.relations },
@@ -262,29 +268,23 @@ function setRelationPage(page: number): void {
 function resetQuickFilters(): void {
   filters.type = '';
   filters.status = '';
+  filters.view = '';
   filters.has_email = false;
   filters.has_phone = false;
   filters.missing_email_consent = false;
 }
 
 function quickFilterActive(key: QuickFilterKey): boolean {
-  if (key === 'all') return filters.type === '' && filters.status === '' && !filters.has_email && !filters.has_phone && !filters.missing_email_consent;
-  if (key === 'contact') return filters.type === 'contact' && filters.status === '' && !filters.has_email && !filters.has_phone && !filters.missing_email_consent;
-  if (key === 'company') return filters.type === 'company' && filters.status === '' && !filters.has_email && !filters.has_phone && !filters.missing_email_consent;
-  if (key === 'has_email') return filters.type === '' && filters.status === '' && filters.has_email && !filters.has_phone && !filters.missing_email_consent;
-  if (key === 'has_phone') return filters.type === '' && filters.status === '' && !filters.has_email && filters.has_phone && !filters.missing_email_consent;
-  if (key === 'missing_email_consent') return filters.type === '' && filters.status === '' && !filters.has_email && !filters.has_phone && filters.missing_email_consent;
-  return filters.type === '' && filters.status === key && !filters.has_email && !filters.has_phone && !filters.missing_email_consent;
+  if (key === 'all') return filters.status === '' && filters.view === '';
+  if (key === 'follow_up' || key === 'duplicates') return filters.view === key && filters.status === '';
+  return filters.status === key && filters.view === '';
 }
 
 function applyQuickFilter(key: QuickFilterKey): void {
   relationPage.value = 1;
   resetQuickFilters();
   Object.assign(appliedAdvancedFilters, { type: '', status: '', sort: 'activity_desc', archived: 'active' });
-  if (key === 'contact' || key === 'company') filters.type = key;
-  else if (key === 'has_email') filters.has_email = true;
-  else if (key === 'has_phone') filters.has_phone = true;
-  else if (key === 'missing_email_consent') filters.missing_email_consent = true;
+  if (key === 'follow_up' || key === 'duplicates') filters.view = key;
   else if (key !== 'all') filters.status = key;
   void loadRelations();
 }
@@ -316,6 +316,7 @@ function query(): Record<string, string | number | boolean> {
   const params: Record<string, string | number | boolean> = { q: filters.q, sort: filters.sort, limit, offset };
   if (filters.type) params.type = filters.type;
   if (filters.status) params.status = filters.status;
+  if (filters.view) params.view = filters.view;
   if (filters.has_memos) params.has_memos = true;
   if (filters.has_shared_memos) params.has_shared_memos = true;
   if (filters.has_email) params.has_email = true;
@@ -445,6 +446,7 @@ watch(() => filters.q, () => {
 });
 
 onMounted(() => {
+  restorePreferences();
   window.addEventListener('keydown', onKeyboardShortcut);
   document.addEventListener('pointerdown', onDocumentPointerDown);
   void loadRelations();
@@ -454,6 +456,22 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onDocumentPointerDown);
   if (searchTimer !== null) window.clearTimeout(searchTimer);
 });
+
+const preferencesKey = computed(() => `webeli.business.relations.preferences.site.${context.siteId || 0}`);
+function restorePreferences(): void {
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferencesKey.value) || '{}');
+    if (saved.filters && typeof saved.filters === 'object') Object.assign(filters, saved.filters, { q: '' });
+    if (saved.columns && typeof saved.columns === 'object') Object.assign(visibleColumns, saved.columns);
+    if ([10, 25, 50, 100, 'all'].includes(saved.pageSize)) relationPageSize.value = saved.pageSize;
+  } catch (_) { /* Invalid local preferences are ignored. */ }
+}
+watch([filters, visibleColumns, relationPageSize], () => {
+  try {
+    const { q: _search, ...persistedFilters } = filters;
+    localStorage.setItem(preferencesKey.value, JSON.stringify({ filters: persistedFilters, columns: visibleColumns, pageSize: relationPageSize.value }));
+  } catch (_) { /* Storage can be disabled by the browser. */ }
+}, { deep: true });
 </script>
 
 <template>
@@ -573,7 +591,7 @@ onBeforeUnmount(() => {
 
     <EmptyState v-if="error" :title="error" />
     <EmptyState v-else-if="loading" title="Chargement des relations..." />
-    <EmptyState v-else-if="!relations.length" title="Aucune relation trouvée." action-label="Créer une relation" @action="emit('new-relation')" />
+    <EmptyState v-else-if="!relations.length" title="Aucune relation trouvée. Créez une relation ou importez un fichier depuis le menu Actions." action-label="Créer une relation" @action="emit('new-relation')" />
 
     <table v-else class="relations-table">
       <thead>
@@ -623,6 +641,7 @@ onBeforeUnmount(() => {
           <td v-if="columnVisible('activity')">
             <div class="relations-activity">
               <small v-if="relation.last_activity_at" :title="relation.last_activity_at">Act. {{ shortDate(relation.last_activity_at) }}</small>
+              <small v-if="relation.next_action_title" class="relation-next-action">À suivre : {{ relation.next_action_title }}<template v-if="relation.next_action_due_at"> · {{ shortDate(relation.next_action_due_at) }}</template></small>
               <small v-if="relation.last_memo_excerpt" class="relation-excerpt">{{ relation.last_memo_excerpt }}</small>
               <small v-if="!relation.last_activity_at && !relation.last_memo_excerpt">—</small>
             </div>
@@ -646,7 +665,7 @@ onBeforeUnmount(() => {
                     <button type="button" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="emit('new-message', relation)">Nouveau message</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="emit('new-message', relation, 'email')">Email</button>
                     <button type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="emit('new-message', relation, 'whatsapp')">WhatsApp</button>
-                    <button type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
+                    <button v-if="canConsentRead" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="emit('open-consent', relation)">Consentement</button>
                     <button type="button" :aria-label="`Archiver ${relation.display_name}`" @click="archive(relation)">Archiver</button>
                   </template>
                 </div>
@@ -680,6 +699,8 @@ onBeforeUnmount(() => {
         :company-label="companyLabel(relation)"
         :phone-label="phoneLabel(relation)"
         :consent-label="emailConsentLabel(relation)"
+        :next-action="relation.next_action_title || ''"
+        :can-consent="canConsentRead"
         @view="edit(relation)"
         @memo="emit('new-memo', relation)"
         @message="emit('new-message', relation)"
@@ -1100,7 +1121,7 @@ onBeforeUnmount(() => {
 }
 
 .relations-menu-panel button:disabled {
-  color: #98a2b3;
+  color: #475467;
 }
 
 .relations-filter-panel {

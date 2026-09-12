@@ -6,6 +6,7 @@ import { useAdminContextStore } from '@/stores/adminContext';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
+import IamUsersTransferModal from './IamUsersTransferModal.vue';
 
 type Role = { id:number; role_key:string; name:string; description?:string };
 type SiteOption = { id:number; site_key:string; name:string; default_language_code?:string; is_active?:boolean; host?:string; base_path?:string };
@@ -40,6 +41,7 @@ const pendingLoginMode = ref<LoginMode>('password');
 const totpSetup = ref<TotpSetup | null>(null);
 const totpConfirmCode = ref('');
 const recoveryCodes = ref<string[]>([]);
+const transferOpen = ref(false);
 
 const activeCount = computed(() => users.value.filter((u) => u.is_active).length);
 const inactiveCount = computed(() => users.value.filter((u) => !u.is_active).length);
@@ -298,12 +300,19 @@ function addSiteRole(): void {
 }
 function removeSiteRole(index: number): void { form.value.site_roles.splice(index, 1); }
 
+async function importCompleted(summary: string): Promise<void> {
+  transferOpen.value = false;
+  message.value = summary;
+  await load();
+}
+
 onMounted(() => { newUser(); load(); });
 </script>
 
 <template>
   <PageHeader title="Utilisateurs et profils" intro="Une gestion IAM lisible : recherche, statuts, rôles globaux, accès par site, sessions et réinitialisation contrôlée.">
     <template #actions>
+      <button v-if="context.can('users.manage')" class="btn ghost" type="button" @click="transferOpen = true">Importer / exporter</button>
       <RouterLink v-if="!isSiteScopedAdmin" class="btn ghost" to="/iam/roles">Rôles / permissions</RouterLink>
     </template>
   </PageHeader>
@@ -461,4 +470,5 @@ onMounted(() => { newUser(); load(); });
       </form>
     </aside>
   </section>
+  <IamUsersTransferModal v-if="transferOpen" :roles="roles" :sites="siteOptions" :is-site-scoped-admin="isSiteScopedAdmin" :current-site-id="currentSiteId" @close="transferOpen = false" @imported="importCompleted" />
 </template>

@@ -316,11 +316,21 @@ final class BusinessCatalogSellableReadService
                 $snapshot['metadata']['allow_backorder'] = true;
                 $snapshot['metadata']['backorder_delivery_days'] = $days;
                 $snapshot['metadata']['availability_status'] = 'backorder';
-            } elseif ($bundleStatus === 'contact_us') {
+            } elseif ($bundleStatus === 'unavailable' || $bundleStatus === 'contact_us') {
                 $snapshot['allow_backorder'] = false;
                 $snapshot['availability'] = $this->availability(true, false, 0.0, $backorderDeliveryDays);
                 $snapshot['metadata']['allow_backorder'] = false;
-                $snapshot['metadata']['availability_status'] = 'contact_us';
+                $snapshot['metadata']['availability_status'] = 'unavailable';
+            } elseif ($bundleStatus === 'in_stock') {
+                $available = max(1.0, (float) ($bundle['bundle_available_quantity'] ?? 1));
+                $snapshot['allow_backorder'] = false;
+                $snapshot['availability'] = $this->availability(true, false, $available, $backorderDeliveryDays);
+                $snapshot['metadata']['available_quantity'] = $available;
+                $snapshot['metadata']['availability_status'] = 'in_stock';
+            } else {
+                $snapshot['allow_backorder'] = false;
+                $snapshot['availability'] = $this->availability(false, false, 1.0, $backorderDeliveryDays);
+                $snapshot['metadata']['availability_status'] = 'deliverable';
             }
         }
         if (($bundle['bundle_missing_requirements'] ?? []) !== []) {

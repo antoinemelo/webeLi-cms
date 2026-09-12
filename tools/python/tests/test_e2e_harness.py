@@ -6,10 +6,30 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tools.python.commands.e2e import E2E_TIMEOUT_SECONDS
 from tools.python.operations.testing import run_playwright_e2e as harness
 
 
 class E2EHarnessTest(unittest.TestCase):
+    def test_complete_e2e_command_allows_the_measured_release_duration(self) -> None:
+        self.assertEqual(3600, E2E_TIMEOUT_SECONDS)
+
+    def test_targeted_e2e_gates_are_mutually_exclusive(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "mutuellement exclusifs"):
+            harness.run_playwright({}, headed=False, omnichannel_only=True, usability_only=True)
+        with self.assertRaisesRegex(RuntimeError, "mutuellement exclusifs"):
+            harness.run_playwright({}, headed=False, usability_only=True, admin_convergence_only=True)
+        with self.assertRaisesRegex(RuntimeError, "mutuellement exclusifs"):
+            harness.run_playwright({}, headed=False, omnichannel_only=True, specs=("tests/e2e/example.spec.ts",))
+
+    def test_specs_are_normalized_and_restricted_to_e2e_files(self) -> None:
+        self.assertEqual(
+            ("tests/e2e/public-guest-checkout.spec.ts",),
+            harness.normalize_specs(["public-guest-checkout.spec.ts", "tests/e2e/public-guest-checkout.spec.ts"]),
+        )
+        with self.assertRaisesRegex(RuntimeError, "Spec E2E invalide"):
+            harness.normalize_specs(["../playwright.config.ts"])
+
     def test_partial_external_configuration_is_rejected(self) -> None:
         with patch.dict(
             harness.os.environ,

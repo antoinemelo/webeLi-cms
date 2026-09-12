@@ -26,7 +26,10 @@ Cette surface alimente le back-office Vente. Elle exige une session admin, le co
 |---|---|---|
 | GET | `/admin/api/sale/schema` | `sale.read` |
 | GET | `/admin/api/sale/dashboard` | `sale.read` |
+| GET | `/admin/api/sale/sales-dashboard` | `sale.sales.read` |
 | GET | `/admin/api/sale/settings` | `sale.settings.manage` |
+| GET | `/admin/api/sale/document-policy` | `sale.settings.manage` |
+| PUT | `/admin/api/sale/document-policy` | `sale.settings.manage` |
 
 ## Canaux
 
@@ -53,6 +56,9 @@ Cette surface alimente le back-office Vente. Elle exige une session admin, le co
 | GET | `/admin/api/sale/orders` | `sale.orders.read` |
 | POST | `/admin/api/sale/orders` | `sale.orders.manage` |
 | GET | `/admin/api/sale/orders/{id}` | `sale.orders.read` |
+| GET | `/admin/api/sale/orders/{id}/dossier` | `sale.orders.read` |
+| POST | `/admin/api/sale/orders/{id}/documents` | `sale.documents.issue` |
+| POST | `/admin/api/sale/orders/{id}/documents/{document_id}/send` | `sale.documents.resend` |
 | PATCH | `/admin/api/sale/orders/{id}` | `sale.orders.manage` |
 | POST | `/admin/api/sale/orders/{id}/cancel` | `sale.orders.manage` |
 | GET | `/admin/api/sale/orders/{id}/events` | `sale.orders.read` |
@@ -108,12 +114,13 @@ Le bootstrap retourne `offline_supported=false`. Une vente requiert une session 
 | Methode | Route | Permission |
 |---|---|---|
 | GET | `/admin/api/sale/catalog/export.pdf` | `sale.read` |
-| GET | `/admin/api/sale/export/orders.csv` | `sale.reports.read` |
-| GET | `/admin/api/sale/export/order-lines.csv` | `sale.reports.read` |
-| GET | `/admin/api/sale/export/payments.csv` | `sale.reports.read` |
-| GET | `/admin/api/sale/export/pos-sessions.csv` | `sale.reports.read` |
-| GET | `/admin/api/sale/export/stock-movements.csv` | `sale.stock.read` |
-| GET | `/admin/api/sale/export/returns-refunds.csv` | `sale.reports.read` |
+| GET | `/admin/api/sale/export/orders.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/order-lines.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/payments.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/pos-sessions.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/stock-movements.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/returns-refunds.csv` | `sale.exports.manage` |
+| GET | `/admin/api/sale/export/sales-dashboard.csv` | `sale.exports.manage` |
 | POST | `/admin/api/sale/import/stock/preview` | `sale.stock.manage` |
 | POST | `/admin/api/sale/import/stock/apply` | `sale.stock.manage` |
 | GET | `/admin/api/sale/reports/daily` | `sale.reports.read` |

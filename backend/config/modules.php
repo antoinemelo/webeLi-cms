@@ -1,5 +1,10 @@
 <?php
 
+$databaseDirOverride = $_ENV['CMS_DATABASE_DIR'] ?? $_SERVER['CMS_DATABASE_DIR'] ?? getenv('CMS_DATABASE_DIR');
+$databaseDir = is_string($databaseDirOverride) && trim($databaseDirOverride) !== ''
+    ? rtrim($databaseDirOverride, DIRECTORY_SEPARATOR)
+    : base_path('storage/database');
+
 return [
     // Modules core connus du produit. Ils restent chargés par le noyau éditorial
     // et ne passent pas par le cycle de vie destructif des modules métier.
@@ -15,6 +20,7 @@ return [
         'forms',
         'business',
         'sale',
+        'accounting',
         // Shell applicatif activé pour publier l'entrée de navigation dans Modules.
         // L'IA elle-même reste désactivée par défaut dans ai.sqlite (ai.enabled = false).
         'ai-assistant',
@@ -27,6 +33,7 @@ return [
         App\Modules\Forms\FormsModuleProvider::class,
         App\Modules\Business\BusinessModuleProvider::class,
         App\Modules\Sale\SaleModuleProvider::class,
+        App\Modules\Accounting\AccountingModuleProvider::class,
         App\Modules\AiAssistant\AiAssistantModuleProvider::class,
         // App\Modules\Example\ExampleModuleProvider::class,
     ],
@@ -39,6 +46,7 @@ return [
         base_path('backend/src/Modules/Forms/module.json'),
         base_path('backend/src/Modules/Business/module.json'),
         base_path('backend/src/Modules/Sale/module.json'),
+        base_path('backend/src/Modules/Accounting/module.json'),
         base_path('backend/src/Modules/AiAssistant/module.json'),
     ],
 
@@ -52,5 +60,5 @@ return [
     'auto_install_providers' => false,
 
     // Dossier par défaut pour les bases SQLite dédiées aux modules métier.
-    'database_dir' => base_path('storage/database'),
+    'database_dir' => $databaseDir,
 ];

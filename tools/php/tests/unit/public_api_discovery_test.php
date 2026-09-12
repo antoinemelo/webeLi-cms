@@ -29,11 +29,11 @@ $h->assertSame('public.discovery.v1', $payload['meta']['contract'] ?? null, 'API
 $h->assertTrue(str_ends_with((string) ($payload['data']['openapi']['json'] ?? ''), '/api/v1/openapi.json'), 'discovery exposes JSON specification');
 $h->assertTrue(str_ends_with((string) ($payload['data']['openapi']['yaml'] ?? ''), '/api/v1/openapi.yaml'), 'discovery exposes YAML specification');
 
-$_ENV['APP_BASE_PATH'] = '/mod';
+$_ENV['APP_BASE_PATH'] = '/cms';
 $prefixedPayload = json_decode($controller->discovery()->body(), true);
-$h->assertSame('/mod/api/v1', $prefixedPayload['data']['base_path'] ?? null, 'discovery preserves the production application base path');
-$h->assertSame('/mod/api/v1/openapi.json', $prefixedPayload['data']['openapi']['json'] ?? null, 'JSON specification preserves the production application base path');
-$h->assertSame('/mod/api/v1/openapi.yaml', $prefixedPayload['data']['openapi']['yaml'] ?? null, 'YAML specification preserves the production application base path');
+$h->assertSame('/cms/api/v1', $prefixedPayload['data']['base_path'] ?? null, 'discovery preserves the production application base path');
+$h->assertSame('/cms/api/v1/openapi.json', $prefixedPayload['data']['openapi']['json'] ?? null, 'JSON specification preserves the production application base path');
+$h->assertSame('/cms/api/v1/openapi.yaml', $prefixedPayload['data']['openapi']['yaml'] ?? null, 'YAML specification preserves the production application base path');
 unset($_ENV['APP_BASE_PATH']);
 
 $json = $controller->openApiJson();

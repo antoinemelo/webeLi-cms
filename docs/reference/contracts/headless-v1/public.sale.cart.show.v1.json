@@ -2,7 +2,7 @@
   "contract": "public.sale.cart.show.v1",
   "kind": "schema",
   "summary": "Lire un panier e-commerce public.",
-  "description": "Recharge un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé.",
+  "description": "Recharge et revalide un panier actif depuis son token opaque. Le hash interne du token n'est jamais exposé. Les changements commerciaux sont retournés avec un avant/après explicite.",
   "method": "GET",
   "path": "/api/v1/sale/channels/{code}/cart/{token}",
   "source": "sale_carts + sale_cart_lines",
@@ -23,7 +23,18 @@
         "data": {
           "type": "object",
           "required": ["cart"],
-          "properties": {"cart": {"$ref": "#/components/schemas/PublicSaleCart"}},
+          "properties": {
+            "cart": {"$ref": "#/components/schemas/PublicSaleCart"},
+            "changes": {
+              "type": "array",
+              "description": "Changements de prix ou de disponibilité détectés pendant la revalidation.",
+              "items": {
+                "type": "object",
+                "required": ["line_id", "product_name", "before", "after", "requires_confirmation", "recovery_options"],
+                "additionalProperties": true
+              }
+            }
+          },
           "additionalProperties": true
         },
         "meta": {"$ref": "#/components/schemas/PublicMeta"}
@@ -37,7 +48,8 @@
   "examples": {
     "response": {
       "data": {
-        "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []}
+        "cart": {"id": 10, "status": "active", "currency": "CHF", "subtotal_minor": 2900, "discount_total_minor": 0, "tax_total_minor": 0, "grand_total_minor": 2900, "lines": []},
+        "changes": []
       },
       "meta": {"contract": "public.sale.cart.show.v1", "site_id": 1, "language_code": "fr"}
     }

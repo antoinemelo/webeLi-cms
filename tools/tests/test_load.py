@@ -16,7 +16,7 @@ Dépendance :
 Exemples :
     python test_load.py --profile smoke --target local --yes
     python test_load.py --profile baseline --target remote --mode public --yes
-    python test_load.py --profile baseline --base-url http://127.0.0.1:8080/mod/ --mode all --yes
+    python test_load.py --profile baseline --base-url http://127.0.0.1:8080/cms/ --mode all --yes
 
 IMPORTANT : ce programme génère une charge réelle. Ne l'exécutez que sur une
 infrastructure que vous êtes explicitement autorisé à tester.
@@ -55,8 +55,8 @@ import requests
 
 PROGRAM_VERSION = "3.0.0"
 USER_AGENT = f"webeLi-load-evidence/{PROGRAM_VERSION} (+authorized-load-test)"
-DEFAULT_REMOTE_URL = "https://webe.li/mod/"
-DEFAULT_LOCAL_URL = "http://127.0.0.1:8080/mod/"
+DEFAULT_REMOTE_URL = "https://webe.li/cms/"
+DEFAULT_LOCAL_URL = "http://127.0.0.1:8080/cms/"
 DEFAULT_CREDENTIALS_FILENAME = "users.csv"
 DEFAULT_TOKENS_FILENAME = "token.csv"
 SENSITIVE_HEADERS = {"set-cookie", "cookie", "authorization", "proxy-authorization"}

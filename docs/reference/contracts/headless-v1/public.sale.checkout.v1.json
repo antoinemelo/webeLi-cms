@@ -33,7 +33,7 @@
             "shipping_address": {"$ref": "#/components/schemas/PublicSaleAddress"},
             "shipping_same_as_billing": {"type": "boolean"},
             "shipping_method": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "pattern": "^[a-z0-9_-]+$"}}, "additionalProperties": false},
-            "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual", "sandbox_online"]}}, "additionalProperties": false},
+            "payment": {"type": "object", "required": ["code"], "properties": {"code": {"type": "string", "enum": ["bank_transfer", "manual", "sandbox_online", "test_deterministic"]}, "scenario": {"type": "string"}}, "additionalProperties": false},
             "return_url": {"type": "string", "format": "uri"},
             "cancel_url": {"type": "string", "format": "uri"},
             "terms_accepted": {"type": "boolean", "enum": [true]},

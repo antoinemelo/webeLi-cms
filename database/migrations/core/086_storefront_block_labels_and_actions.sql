@@ -1,0 +1,7 @@
+PRAGMA foreign_keys = ON;
+
+INSERT INTO editor_block_types(block_type,label,category,schema_json,is_enabled,sort_order) VALUES
+('commerce_product','Variante produit','commerce','{"fields":["product_id","sellable_id","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id","sellable_id"]}',1,200),
+('commerce_product_variants','Variantes produit','commerce','{"fields":["product_id","columns","limit","pagination","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"required":["product_id"],"stable_references":["product_id"]}',1,201),
+('commerce_product_list','Produits','commerce','{"fields":["selection_mode","product_ids","brand","category","group","attribute_code","attribute_values","promotion_rule","relation_type","source_product_id","manual_product_ids","window_days","limit","sort","columns","pagination","show_price","show_promotion","show_availability","show_cta","view_label","cart_label","empty_state","empty_message"],"selection_modes":["explicit","brand","category","group","attribute","promotion","new","popular","relation"],"stable_references":["product_ids","source_product_id","manual_product_ids"]}',1,202)
+ON CONFLICT(block_type) DO UPDATE SET label=excluded.label,category=excluded.category,schema_json=excluded.schema_json,is_enabled=excluded.is_enabled,sort_order=excluded.sort_order;

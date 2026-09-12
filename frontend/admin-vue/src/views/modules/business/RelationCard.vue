@@ -19,6 +19,7 @@ type Relation = {
   shared_memo_count?: number;
   linked_contacts_count?: number;
   last_activity_at?: string | null;
+  next_action_title?: string | null;
   archived_at?: string | null;
 };
 
@@ -27,6 +28,8 @@ defineProps<{
   companyLabel: string;
   phoneLabel: string;
   consentLabel?: string;
+  canConsent?: boolean;
+  nextAction?: string;
 }>();
 
 defineEmits<{
@@ -60,6 +63,7 @@ defineEmits<{
     <div class="relation-card-meta">
       <span>{{ phoneLabel }}</span>
       <span v-if="relation.last_activity_at">Act. {{ relation.last_activity_at.slice(0, 10) }}</span>
+      <span v-if="nextAction">À suivre : {{ nextAction }}</span>
     </div>
 
     <div class="relation-card-badges">
@@ -81,7 +85,7 @@ defineEmits<{
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Préparer un message pour ${relation.display_name}`" @click="$emit('message')">Message</button>
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.primary_email" :aria-label="`Préparer un email pour ${relation.display_name}`" @click="$emit('email')">Email</button>
         <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact' || !relation.mobile" :aria-label="`Préparer un message WhatsApp pour ${relation.display_name}`" @click="$emit('whatsapp')">WhatsApp</button>
-        <button class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
+        <button v-if="canConsent" class="btn ghost small" type="button" :disabled="relation.type !== 'contact'" :aria-label="`Gérer les consentements de ${relation.display_name}`" @click="$emit('consent')">Consentement</button>
         <button class="btn ghost small" type="button" :aria-label="`Archiver ${relation.display_name}`" @click="$emit('archive')">Archiver</button>
       </template>
     </div>

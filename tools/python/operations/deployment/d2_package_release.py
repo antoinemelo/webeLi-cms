@@ -445,6 +445,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-vendor", action="store_true", help="Inclut les dépendances PHP de runtime (vendor, backend/vendor et chemin Twig configuré). Les node_modules de build restent toujours exclus.")
     parser.add_argument("--no-zip", action="store_true", help="Prépare seulement le staging sans créer de zip.")
     parser.add_argument("--clean-stage", action="store_true", help="Supprime le staging à la fin. À éviter avant d3_deploy_ftp.py.")
+    parser.add_argument(
+        "--skip-generated-artifacts-refresh",
+        action="store_true",
+        help=(
+            "Prépare un stage différentiel depuis les fichiers courants sans régénérer la documentation. "
+            "Réservé à la mise à jour d'instance du point 11; une release officielle doit l'omettre."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -473,7 +481,8 @@ def main() -> int:
     release_id = args.release_id or default_release_id(package_name, ROOT)
     include_databases = not args.exclude_databases
 
-    ensure_generated_artifacts_fresh()
+    if not args.skip_generated_artifacts_refresh:
+        ensure_generated_artifacts_fresh()
 
     # Le manifeste source doit être frais avant la copie: sinon l’archive de
     # release embarquerait un TREE.txt déjà obsolète.
@@ -512,7 +521,8 @@ def main() -> int:
         release_metadata=release_metadata.to_dict(),
     )
     manifest["release_root_prefix"] = release_metadata.package_root
-    manifest["generated_docs_fresh"] = True
+    manifest["generated_docs_fresh"] = not args.skip_generated_artifacts_refresh
+    manifest["update_stage_only"] = bool(args.skip_generated_artifacts_refresh)
     manifest["verified_commands"] = RELEASE_VERIFIED_COMMANDS
     manifest_path = stage_dir / "storage" / "deployments" / "release-manifest.json"
     write_json(manifest_path, manifest)

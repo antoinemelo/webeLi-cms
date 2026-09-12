@@ -34,7 +34,26 @@ const headers = (csrf: string) => ({
 
 test.describe('M4 omnichannel POS', () => {
   test.skip(!enabled, 'Dedicated E2E environment and administrator credentials are required');
+  test('opens an explicit register and adds a product from the POS interface', async ({ page }) => {
+    test.setTimeout(120_000);
+    await signIn(page);
+    await page.goto(cmsPath('/admin/app/sale/pos'));
+
+    await expect(page.getByLabel('Caisse', { exact: true })).toHaveValue(/\d+/);
+    await expect(page.getByLabel('Fond de caisse')).toBeVisible();
+    await expect(page.getByText('Montant en espèces déjà présent dans le tiroir au début de la session.')).toHaveCount(0);
+    await page.getByLabel('Fond de caisse').fill('10.00');
+    await page.getByRole('button', { name: 'Ouvrir', exact: true }).click();
+    await expect(page.getByText('Session caisse ouverte.')).toBeVisible();
+
+    const product = page.locator('.sale-pos__product').first();
+    await expect(product).toBeEnabled();
+    await product.click();
+    await expect(page.locator('.sale-pos__line')).toHaveCount(1);
+  });
+
   test('uses shared order, location stock, audited receipt and reconciled session', async ({ page }) => {
+    test.setTimeout(120_000);
     const csrf = await signIn(page);
     let bootstrap = await body(await page.request.get(cmsPath('/admin/api/sale/pos/bootstrap'), { headers: headers(csrf) }), 'POS bootstrap');
     expect(bootstrap.data.offline_supported).toBe(false);
@@ -68,6 +87,13 @@ test.describe('M4 omnichannel POS', () => {
     expect(order.source).toBe('pos');
     expect(Number(order.pos_session_id)).toBe(Number(session.id));
     expect(Number(order.stock_location_id)).toBe(Number(session.stock_location_id));
+    expect(order.fulfillment_status).toBe('fulfilled');
+    expect(order.status).toBe('completed');
+
+    const dossier = await body(await page.request.get(cmsPath(`/admin/api/sale/orders/${order.id}/dossier`), { headers: headers(csrf) }), 'immediate POS order dossier');
+    expect(dossier.data.dossier.fulfillment.operations).toHaveLength(0);
+    const dashboard = await body(await page.request.get(cmsPath('/admin/api/sale/dashboard'), { headers: headers(csrf) }), 'sale actionable dashboard');
+    expect(dashboard.data.actionable.tasks.some((task: any) => Number(task.order_id) === Number(order.id))).toBe(false);
 
     const reprint = await body(await page.request.post(cmsPath(`/admin/api/sale/pos/orders/${order.id}/receipt/reprint`), {
       headers: headers(csrf), data: { data: { reason: 'qualification M4 POS' } },
@@ -78,5 +104,9 @@ test.describe('M4 omnichannel POS', () => {
     const reportRow = sessionReport.data.sessions.find((row: any) => Number(row.id) === Number(session.id));
     expect(Number(reportRow.orders_count)).toBeGreaterThan(0);
     expect(Number(reportRow.sales_minor)).toBeGreaterThan(0);
+    expect(Number(reportRow.opening_cash_minor)).toBeGreaterThanOrEqual(0);
+    expect(Number(reportRow.operational_movements_count)).toBeGreaterThan(0);
+    expect(Number(reportRow.net_cash_movement_minor)).toBeGreaterThan(0);
   });
+
 });

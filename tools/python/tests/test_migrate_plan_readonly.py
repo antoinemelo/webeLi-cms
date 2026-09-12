@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +9,6 @@ from pathlib import Path
 from tools.python.operations.database import d9_migrate_sqlite as migrator
 
 ROOT = next(parent for parent in Path(__file__).resolve().parents if (parent / "tools" / "cms.py").is_file())
-DB_DIR = ROOT / "storage" / "database"
 
 
 def sha256(path: Path) -> str:
@@ -29,19 +26,34 @@ def table_exists(path: Path, table: str) -> bool:
 
 class MigratePlanReadOnlyTest(unittest.TestCase):
     def test_migrate_plan_does_not_modify_sqlite_files(self) -> None:
-        dbs = sorted(DB_DIR.glob("*.sqlite"))
-        self.assertTrue(dbs, "Aucune base SQLite trouvée dans storage/database")
-        before = {path.name: sha256(path) for path in dbs}
-        completed = subprocess.run(
-            [sys.executable, "tools/cms.py", "migrate", "--plan"],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            timeout=120,
-        )
-        self.assertEqual(completed.returncode, 0, completed.stderr or completed.stdout)
-        after = {path.name: sha256(path) for path in dbs}
-        self.assertEqual(before, after, completed.stdout)
+        scopes = [scope for scope in migrator.SCOPES.values() if scope.path.is_file()]
+        self.assertTrue(scopes, "Aucune base SQLite migratable trouvée dans storage/database")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            isolated_scopes: list[migrator.DatabaseScope] = []
+            for scope in scopes:
+                clone = base / scope.path.name
+                with sqlite3.connect(f"file:{scope.path.as_posix()}?mode=ro", uri=True) as source:
+                    with sqlite3.connect(clone) as target:
+                        source.backup(target)
+                isolated_scopes.append(
+                    migrator.DatabaseScope(
+                        scope.name,
+                        clone,
+                        scope.migrations,
+                        key=scope.key,
+                        kind=scope.kind,
+                        module_key=scope.module_key,
+                    )
+                )
+
+            before = {scope.path.name: sha256(scope.path) for scope in isolated_scopes}
+            for scope in isolated_scopes:
+                migrator.plan_scope(scope)
+            after = {scope.path.name: sha256(scope.path) for scope in isolated_scopes}
+
+        self.assertEqual(before, after)
 
     def test_plan_scope_with_missing_log_reports_without_creating_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

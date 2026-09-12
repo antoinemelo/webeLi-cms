@@ -681,6 +681,9 @@ final class CatalogCsvService
         if ($plan['existing_variant_id'] === null) {
             return ['product' => $productDiff, 'variant' => $this->changedFields([], $variantAfter)];
         }
+        // La quantité Business n'est qu'un amorçage à la création. Toute
+        // variation ultérieure passe par le ledger Sale.
+        unset($variantAfter['stock_quantity']);
         $variantBefore = $this->db->one(
             'SELECT v.sku, v.barcode, v.name, v.status, v.stock_quantity,
                     purchase.adjustment_type AS purchase_adjustment_type, purchase.adjustment_value AS purchase_adjustment_value,
@@ -693,6 +696,7 @@ final class CatalogCsvService
         ) ?? [];
         $variantBefore['purchase_adjustment_type'] ??= 'none';
         $variantBefore['sale_adjustment_type'] ??= 'none';
+        unset($variantBefore['stock_quantity']);
         return ['product' => $productDiff, 'variant' => $this->changedFields($variantBefore, array_intersect_key($variantAfter, $variantBefore))];
     }
 

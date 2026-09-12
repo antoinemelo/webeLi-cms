@@ -28,8 +28,11 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/development/database/README.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/operations/client-instance-update.md",
         "ops/deployment-notes.md",
+        "tools/python/tests/test_admin_menu.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -44,6 +47,7 @@
       "public": true,
       "entrypoint": true,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         ".github/workflows/quality.yml",
         ".github/workflows/release.yml",
         "README.md",
@@ -67,6 +71,7 @@
         "docs/development/architecture/business-module-plan.md",
         "docs/development/architecture/business-pim-lite-final-review.md",
         "docs/development/architecture/sale-internal-payments-returns-timeline.md",
+        "docs/development/architecture/sale-inventory-availability.md",
         "docs/development/architecture/sale-module-guardrails.md",
         "docs/development/architecture/sale-module.md",
         "docs/development/architecture/sale-state-machines-snapshots.md",
@@ -91,16 +96,33 @@
         "docs/development/testing-validation/business-pim-lite.md",
         "docs/development/testing-validation/load-testing.md",
         "docs/development/testing-validation/sale-module.md",
+        "docs/evaluation/admin-architecture-modules-navigation-38a.md",
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
+        "docs/evaluation/admin-relation-360-crm-38b.md",
+        "docs/evaluation/admin-ventes-commande-paiement-livraison-38c.md",
         "docs/evaluation/audit-evidence-troubleshooting.md",
         "docs/evaluation/business-crm-review.md",
         "docs/evaluation/evidence-index.md",
+        "docs/evaluation/gift-card-lifecycle-45.md",
+        "docs/evaluation/m8-9-invoicing-sales-inventory.md",
         "docs/evaluation/machine-readable/cms-evaluation-manifest.json",
+        "docs/evaluation/machine-readable/sale-stock-reconstruction-m6.json",
+        "docs/evaluation/machine-readable/shop-operational-release-48.json",
         "docs/evaluation/machine-readable/tests.json",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/evaluation/order-logistics-tracking-46.md",
+        "docs/evaluation/public-cart-checkout-resilience-44.md",
         "docs/evaluation/release-audit-policy.md",
         "docs/evaluation/reproducible-checks.md",
         "docs/evaluation/rm1-gap-analysis.md",
         "docs/evaluation/sale-module-review.md",
+        "docs/evaluation/shop-operational-release-gate-48.md",
+        "docs/evaluation/shop-system-activation-39.md",
+        "docs/evaluation/storefront-catalog-search-facets-40.md",
+        "docs/evaluation/storefront-merchandising-popularity-41.md",
+        "docs/evaluation/storefront-product-cards-details-relations-42.md",
+        "docs/evaluation/studio-commerce-blocks-43.md",
         "docs/getting-started/README.md",
         "docs/getting-started/role-guides.md",
         "docs/getting-started/verified-scenarios.md",
@@ -179,6 +201,7 @@
         "tools/python/operations/deployment/d12_quality_gate.py",
         "tools/python/operations/deployment/d13_bind_release_evidence.py",
         "tools/python/operations/deployment/d14_clone_instance.py",
+        "tools/python/operations/deployment/d15_package_stable_components.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
@@ -190,9 +213,21 @@
         "tools/python/operations/maintenance/g12_seo_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/admin_convergence_gate.py",
+        "tools/python/qualification/bundle_stock_strategy_gate.py",
+        "tools/python/qualification/crm_event_activity_gate.py",
+        "tools/python/qualification/crm_guest_order_gate.py",
+        "tools/python/qualification/crm_segmentation_consent_gate.py",
+        "tools/python/qualification/customer_identity_gate.py",
+        "tools/python/qualification/inventory_ledger_gate.py",
         "tools/python/qualification/omnichannel_gate.py",
+        "tools/python/qualification/payment_provider_gate.py",
         "tools/python/qualification/performance_baseline.py",
+        "tools/python/qualification/reservation_availability_gate.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/qualification/shop_operational_gate.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
+        "tools/python/qualification/usability_commerce_gate.py",
         "tools/python/tests/test_audit_and_release_export_layout.py",
         "tools/python/tests/test_audit_evidence_collection.py",
         "tools/python/tests/test_business_module_smoke.py",
@@ -203,6 +238,7 @@
         "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tests/test_release_package_cli.py",
         "tools/python/tests/test_sale_module_smoke.py",
+        "tools/python/tests/test_stable_component_packager.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/configuration/repository_layout.py",
@@ -402,6 +438,7 @@
         "tools/python/commands/export.py",
         "tools/python/commands/init.py",
         "tools/python/commands/instance.py",
+        "tools/python/commands/inventory.py",
         "tools/python/commands/migrate.py",
         "tools/python/commands/outbox.py",
         "tools/python/commands/qualify.py",
@@ -417,6 +454,7 @@
         "tools/python/qualification/run_all.py",
         "tools/python/tests/integration/test_php_functional_suites.py",
         "tools/python/tests/test_command_runtime_reliability.py",
+        "tools/python/tests/test_database_rebuild_profiles.py",
         "tools/python/tests/test_static_export_multisite.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/operations/manifests.py",
@@ -523,6 +561,8 @@
         "docs/development/testing-validation/E2E_RESULTS.md",
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "tools/python/qualification/run_all.py",
+        "tools/python/qualification/shop_operational_gate.py",
+        "tools/python/tests/test_e2e_harness.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -558,6 +598,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "database/00-overview.md",
+        "docs/evaluation/shop-operational-release-gate-48.md",
         "tools/python/operations/database/a_db_init.py",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g7_add_site.py",
@@ -566,6 +607,7 @@
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/tests/support/database_fixture.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py <commande>",
@@ -590,6 +632,32 @@
       "replacement": "python3 tools/cms.py <commande>",
       "status": "active",
       "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/commands/inventory.py",
+      "category": "command",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.release.txt",
+        "TREE.txt",
+        "docs/development/architecture/business-module-plan.md",
+        "docs/development/python-tooling/cli.md",
+        "docs/evaluation/business-crm-review.md",
+        "docs/evaluation/machine-readable/validators.json",
+        "docs/operations/existing-database-update.md",
+        "docs/operations/local-update.md",
+        "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
+        "tools/python/archive/consolidation_inventory.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py <commande>",
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
@@ -651,6 +719,7 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
@@ -659,6 +728,7 @@
         "docs/operations/hostpoint-git-ftp.md",
         "docs/reference/generated/cli-commands.md",
         "docs/reference/generated/configuration.md",
+        "tools/admin.py",
         "tools/python/README.md",
         "tools/python/generators/generate_evaluation_documentation.py",
         "tools/python/operations/deployment/d11_ci_release.py",
@@ -975,11 +1045,13 @@
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
         "tools/python/commands/migrate.py",
         "tools/python/generators/generate_tree_manifest.py",
         "tools/python/operations/backup/d6_backup_sqlite.py",
         "tools/python/operations/backup/d7_restore_sqlite.py",
         "tools/python/operations/database/a_db_init.py",
+        "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/d9_migrate_sqlite.py",
         "tools/python/operations/deployment/d1_preflight_local.py",
         "tools/python/operations/deployment/d2_package_release.py",
@@ -1008,9 +1080,11 @@
         "TREE.txt",
         "tools/python/generators/generate_tree_manifest.py",
         "tools/python/operations/backup/d6_backup_sqlite.py",
+        "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d3_deploy_ftp.py",
         "tools/python/qualification/performance_baseline.py",
+        "tools/python/tests/test_ftp_instance_update.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/qualification/backup_restore_roundtrip.py"
       ],
@@ -1264,6 +1338,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "database/00-overview.md",
+        "docs/evaluation/shop-operational-release-gate-48.md",
         "tools/python/commands/init.py",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g7_add_site.py",
@@ -1272,6 +1347,7 @@
         "tools/python/operations/maintenance/g0_iam_reference_audit.py",
         "tools/python/operations/maintenance/g14_media_maintenance.py",
         "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/tests/support/database_fixture.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py init|rebuild",
@@ -1290,7 +1366,10 @@
         "TREE.txt",
         "database/00-overview.md",
         "docs/evaluation/business-crm-review.md",
+        "docs/evaluation/machine-readable/sale-inventory-ledger.json",
         "tools/python/operations/database/a_db_init.py",
+        "tools/python/qualification/inventory_ledger_gate.py",
+        "tools/python/tests/test_database_rebuild_profiles.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/security/pii.py"
       ],
@@ -1424,6 +1503,7 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/reference/generated/configuration.md",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1563,6 +1643,22 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/operations/deployment/d15_package_stable_components.py",
+      "category": "operation-deployment",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        ".github/workflows/publish-stable-components.yml",
+        "docs/operations/stable-component-updates.md",
+        "tools/python/tests/test_stable_component_packager.py"
+      ],
+      "replacement": "python3 tools/cms.py release",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/operations/deployment/d1_preflight_local.py",
       "category": "operation-deployment",
       "public": false,
@@ -1589,12 +1685,14 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        ".github/workflows/publish-stable-components.yml",
         "TREE.release.txt",
         "TREE.txt",
         "docs/development/python-tooling/cli.md",
         "docs/evaluation/machine-readable/features.json",
         "docs/evaluation/machine-readable/release-contents.json",
         "docs/operations/hostpoint-git-ftp.md",
+        "tools/admin.py",
         "tools/python/README.md",
         "tools/python/generators/generate_documentation.py",
         "tools/python/generators/generate_evaluation_documentation.py",
@@ -1622,6 +1720,8 @@
       "called_by": [
         "TREE.release.txt",
         "TREE.txt",
+        "docs/operations/client-instance-update.md",
+        "tools/admin.py",
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d2_package_release.py",
         "tools/python/operations/deployment/d_deploy.py",
@@ -1820,6 +1920,7 @@
         "tools/python/commands/e2e.py",
         "tools/python/qualification/performance_baseline.py",
         "tools/python/qualification/run_all.py",
+        "tools/python/qualification/shop_operational_gate.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1846,16 +1947,179 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/admin_convergence_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_admin_convergence_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/bundle_stock_strategy_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/bundle-stock-strategies.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_bundle_stock_strategy_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/crm_event_activity_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_crm_event_activity_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/crm_guest_order_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/CRM_GUEST_ORDER_GATE.md",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_crm_guest_order_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/crm_segmentation_consent_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_crm_segmentation_consent_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/customer_identity_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_customer_identity_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/inventory_ledger_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_inventory_ledger_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/omnichannel_gate.py",
       "category": "internal",
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
         "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/operations/testing/run_playwright_e2e.py",
         "tools/python/qualification/run_all.py",
         "tools/python/tests/test_omnichannel_gate.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/payment_provider_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/payment-provider-ux-comparison.md",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_payment_provider_gate.py",
         "tools/python/tests/test_qualification_orchestrator.py",
         "tools/python/tool-manifest.json"
       ],
@@ -1886,6 +2150,26 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/qualification/reservation_availability_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tests/test_reservation_availability_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/qualification/run_all.py",
       "category": "internal",
       "public": false,
@@ -1912,6 +2196,72 @@
         "tools/python/operations/deployment/d11_ci_release.py",
         "tools/python/operations/deployment/d12_quality_gate.py",
         "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/shop_operational_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/shop-operational-release-gate-48.md",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_qualification_orchestrator.py",
+        "tools/python/tests/test_shop_operational_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/stock_reconstruction_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_stock_reconstruction_gate.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": null,
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/qualification/usability_commerce_gate.py",
+      "category": "internal",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/QUALIFICATION_COMMANDS.md",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
+        "docs/evaluation/admin-relation-360-crm-38b.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/usability-commerce-foundations.md",
+        "tools/python/operations/testing/run_playwright_e2e.py",
+        "tools/python/qualification/run_all.py",
+        "tools/python/tests/test_usability_commerce_gate.py",
         "tools/python/tool-manifest.json"
       ],
       "replacement": null,
@@ -1971,6 +2321,57 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/support/__init__.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.release.txt",
+        "TREE.txt",
+        "tools/python/tests/test_release_package_cli.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/support/database_fixture.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "tools/python/tests/integration/test_php_functional_suites.py",
+        "tools/python/tests/test_static_export_multisite.py",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_admin_convergence_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_admin_menu.py",
       "category": "test",
       "public": false,
@@ -2010,6 +2411,23 @@
       "called_by": [
         "TREE.txt",
         "docs/evaluation/audit-evidence-troubleshooting.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_bundle_stock_strategy_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2135,7 +2553,107 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_crm_event_activity_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_crm_guest_order_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_crm_segmentation_consent_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_customer_identity_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_database_rebuild_profiles.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": true,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_e2e_harness.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "docs/evaluation/public-cart-checkout-resilience-44.md",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_ftp_instance_update.py",
       "category": "test",
       "public": false,
       "entrypoint": false,
@@ -2183,6 +2701,23 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_inventory_ledger_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_migrate_plan_readonly.py",
       "category": "test",
       "public": false,
@@ -2220,7 +2755,26 @@
       "public": false,
       "entrypoint": false,
       "called_by": [
+        "TREE.txt",
         "docs/development/testing-validation/OMNICHANNEL_E2E_GATE.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_payment_provider_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
       "replacement": "python3 tools/cms.py test",
@@ -2252,6 +2806,8 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/admin-convergence-ux-gate-38e.md",
+        "docs/evaluation/admin-operations-produits-stock-offres-38d.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2284,6 +2840,23 @@
       "entrypoint": false,
       "called_by": [
         "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_reservation_availability_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
         "docs/evaluation/machine-readable/tests.json",
         "tools/python/tool-manifest.json"
       ],
@@ -2327,6 +2900,39 @@
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
+      "path": "tools/python/tests/test_shop_operational_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_stable_component_packager.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
       "path": "tools/python/tests/test_static_export_multisite.py",
       "category": "test",
       "public": false,
@@ -2339,12 +2945,45 @@
       ],
       "replacement": "python3 tools/cms.py test",
       "status": "active",
-      "destructive": true,
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_stock_reconstruction_gate.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/development/testing-validation/FUNCTIONAL_COVERAGE_MAP.md",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
       "archived_at": null,
       "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
     },
     {
       "path": "tools/python/tests/test_test_suite_structure.py",
+      "category": "test",
+      "public": false,
+      "entrypoint": false,
+      "called_by": [
+        "TREE.txt",
+        "docs/evaluation/machine-readable/tests.json",
+        "tools/python/tool-manifest.json"
+      ],
+      "replacement": "python3 tools/cms.py test",
+      "status": "active",
+      "destructive": false,
+      "archived_at": null,
+      "reason": "Module interne appelé par la CLI, un test, un générateur ou le registre"
+    },
+    {
+      "path": "tools/python/tests/test_usability_commerce_gate.py",
       "category": "test",
       "public": false,
       "entrypoint": false,
@@ -2532,6 +3171,7 @@
         "TREE.release.txt",
         "TREE.txt",
         "docs/evaluation/machine-readable/validators.json",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/operations/database/b0_db_seed.py",
         "tools/python/operations/database/g1_seed_native_blueprints.py",
@@ -2641,8 +3281,10 @@
         "docs/operations/existing-database-update.md",
         "docs/operations/local-update.md",
         "docs/operations/module-migrations.md",
+        "docs/reference/generated/configuration.md",
         "docs/reference/generated/validators.md",
         "tools/python/archive/consolidation_inventory.py",
+        "tools/python/qualification/stock_reconstruction_gate.py",
         "tools/python/tool-manifest.json",
         "tools/python/validation/registry.py"
       ],

@@ -25,7 +25,7 @@ generated: false
 ---
 # Registre d’aide contextuelle
 
-Chaque entrée possède un identifiant stable utilisé par le back-office. Le bundle porte seulement l’identifiant, un résumé court et le lien vers cette documentation ; le détail reste dans les pages ci-dessous.
+Chaque entrée possède un identifiant stable utilisé par le back-office. Une icône `bi-bookmarks` est placée dans le titre, à côté de l’indicateur d’information issu du blueprint, et ouvre directement la documentation cible. Aucun panneau d’aide redondant n’est affiché dans la page.
 
 | Identifiant stable | Écran ou fonctionnalité | Documentation cible | Résumé court | Erreurs fréquentes |
 |---|---|---|---|---|
@@ -34,6 +34,7 @@ Chaque entrée possède un identifiant stable utilisé par le back-office. Le bu
 | `system.blueprints` | Cockpit > Structures de contenu | [Blueprints](../administration/content-model/blueprints.md) | Maintenir les structures éditoriales, champs et groupes réutilisables. | Supprimer un champ système ; activer un brouillon sans relire les versions. |
 | `tools.maintenance` | Cockpit > Maintenance | [Maintenance](../administration/maintenance.md) | Lire versions, bases, dépendances, cache, recherche et journaux. | Confondre inventaire informatif et mise à jour ; vider le cache pour corriger une migration manquante. |
 | `modules.sale` | Modules > Vente | [Vente](../business/vente.md) | Contrôler commandes, POS, paiements et stock transactionnel. | Créer une vente sans canal actif ; interpréter un paiement en attente comme payé. |
+| `modules.commerce` | Ventes > Réglages > E-Commerce | [E-Commerce](../business/commerce.md) | Comprendre la configuration des sites e-commerce rattachée aux réglages Ventes. | Supposer qu’ouvrir les réglages publie un Shop ; confondre canal existant et Shop activé. |
 | `business.crm` | Modules > Business CRM | [CRM](../business/crm-guide-utilisateur.md) | Gérer contacts, sociétés, mémos, consentements et messages. | Travailler sur une relation archivée ; oublier les consentements avant un message. |
 
 ## Règles de maintenance

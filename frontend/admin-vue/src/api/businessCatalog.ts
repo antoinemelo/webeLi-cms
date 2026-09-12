@@ -110,6 +110,14 @@ export type CatalogProductBundle = Record<string, unknown> & {
   bundle_variant_id?: number | null;
   pricing_mode?: string;
   stock_mode?: string;
+  stock_strategy?: 'OWN_STOCK' | 'COMPONENT_DERIVED' | 'NON_STOCKED';
+  partial_availability_policy?: 'REQUIRE_ALL' | 'ALLOW_PARTIAL';
+  partial_fulfillment_supported?: boolean;
+  component_return_policy?: 'BUNDLE_ONLY' | 'COMPONENTS_ALLOWED';
+  components_public?: boolean;
+  stock_estimate?: Record<string, unknown>;
+  inventory_plan?: Array<Record<string, unknown>>;
+  configuration_errors?: string[];
   is_active?: boolean;
   components?: CatalogBundleComponent[];
 };
@@ -131,6 +139,24 @@ export type ProductContentCandidate = Record<string, unknown> & {
   title?: string | null;
   type_key?: string;
   status?: string;
+};
+export type ProductRelation = Record<string, unknown> & {
+  id: number | string;
+  related_product_id?: number;
+  relation_type?: 'related' | 'alternative' | 'accessory' | 'upsell' | 'cross_sell';
+  sort_order?: number;
+  source?: 'manual' | 'automatic';
+  target_name?: string;
+  target_slug?: string;
+  target_status?: string;
+};
+export type ProductRelationRule = Record<string, unknown> & {
+  id: number;
+  relation_type?: ProductRelation['relation_type'];
+  match_type?: 'category' | 'group';
+  match_id?: number;
+  result_limit?: number;
+  sort_order?: number;
 };
 
 export type ProductDetail = Record<string, unknown> & {
@@ -233,6 +259,21 @@ export const businessCatalogApi = {
   },
   productContentLinks(id: number) {
     return adminApi.get<{ links: ProductContentLink[] }>(`/business/pim/products/${id}/content-links`);
+  },
+  productRelations(id: number) {
+    return adminApi.get<{ relations: ProductRelation[]; rules: ProductRelationRule[] }>(`/business/pim/products/${id}/relations`);
+  },
+  createProductRelation(productId: number, payload: Record<string, unknown>) {
+    return adminApi.post<{ relation: ProductRelation }>(`/business/pim/products/${productId}/relations`, payload);
+  },
+  deleteProductRelation(id: number) {
+    return adminApi.delete<{ deleted: boolean }>(`/business/pim/product-relations/${id}`);
+  },
+  createProductRelationRule(productId: number, payload: Record<string, unknown>) {
+    return adminApi.post<{ rule: ProductRelationRule }>(`/business/pim/products/${productId}/relation-rules`, payload);
+  },
+  deleteProductRelationRule(id: number) {
+    return adminApi.delete<{ deleted: boolean }>(`/business/pim/product-relation-rules/${id}`);
   },
   contentCandidates(query = '') {
     return adminApi.get<{ contents: ProductContentCandidate[] }>('/business/pim/content-candidates', { q: query });
@@ -370,16 +411,19 @@ export const businessCatalogApi = {
     return adminApi.put<{ variant: CatalogVariant }>(`/business/catalog/variants/${id}/price-adjustments`, payload);
   },
   stock(id: number) {
-    return adminApi.get<{ stock: Record<string, unknown>; movements: Array<Record<string, unknown>> }>(`/business/catalog/variants/${id}/stock`);
+    return adminApi.get<{ stock: Record<string, unknown>; locations?: Array<Record<string, unknown>>; location_stock?: Array<Record<string, unknown>>; movements: Array<Record<string, unknown>> }>(`/business/catalog/variants/${id}/stock`);
   },
   createStockMovement(id: number, payload: Record<string, unknown>) {
-    return adminApi.post<{ stock: Record<string, unknown>; movement: Record<string, unknown> }>(`/business/catalog/variants/${id}/stock-movements`, payload);
+    return adminApi.post<{ stock?: Record<string, unknown>; movement?: Record<string, unknown>; preview?: Record<string, unknown> }>(`/business/catalog/variants/${id}/stock-movements`, payload);
   },
   discounts() {
     return adminApi.get<{ discounts: CatalogDiscount[] }>('/business/catalog/discounts', { limit: 200 });
   },
   createDiscount(payload: Record<string, unknown>) {
     return adminApi.post<{ discount: CatalogDiscount }>('/business/catalog/discounts', payload);
+  },
+  previewDiscount(payload: Record<string, unknown>) {
+    return adminApi.post<{ preview: Record<string, unknown> }>('/business/catalog/discounts/preview', payload);
   },
   updateDiscount(id: number, payload: Record<string, unknown>) {
     return adminApi.patch<{ discount: CatalogDiscount }>(`/business/catalog/discounts/${id}`, payload);

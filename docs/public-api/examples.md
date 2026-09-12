@@ -37,13 +37,13 @@ L’API publique headless v1 expose uniquement les contenus publiés. Les brouil
 Les exemples Next.js et Nuxt utilisent des variables d’environnement explicites :
 
 ```env
-AMCMS_BASE_URL=https://webe.li/mod/site_a
+AMCMS_BASE_URL=https://webe.li/cms/site_a
 AMCMS_TOKEN=
 AMCMS_SITE=site_a
 AMCMS_LANG=fr
 ```
 
-- `AMCMS_BASE_URL` : URL publique du site ciblé, sans ajouter `/api/v1`. Pour un sous-site publié sous `/mod/site_a`, utilisez par exemple `https://webe.li/mod/site_a`, même si la clé de site peut avoir n’importe quelle valeur.
+- `AMCMS_BASE_URL` : URL publique du site ciblé, sans ajouter `/api/v1`. Pour un sous-site publié sous `/cms/site_a`, utilisez par exemple `https://webe.li/cms/site_a`, même si la clé de site peut avoir n’importe quelle valeur.
 - `AMCMS_TOKEN` : jeton optionnel. S’il est fourni, le SDK ou le fallback `fetch` ajoute `Authorization: Bearer <token>`. Aucun token réel ne doit être commité.
 - `AMCMS_SITE` : identifiant textuel du site, utile en contexte multisite.
 - `AMCMS_LANG` : langue souhaitée pour les contenus, menus, routes, médias et recherches.

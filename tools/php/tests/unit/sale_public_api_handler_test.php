@@ -23,6 +23,8 @@ use App\Modules\Sale\Repositories\SaleEventRepository;
 use App\Modules\Sale\Repositories\SaleIdempotencyRepository;
 use App\Modules\Sale\Repositories\SaleInventoryRepository;
 use App\Modules\Sale\Repositories\SaleOrderRepository;
+use App\Modules\Sale\Repositories\SalePaymentRepository;
+use App\Modules\Sale\Payments\PaymentProviderRegistry;
 use App\Modules\Sale\SaleModuleProvider;
 use App\Modules\Sale\Services\SaleCartService;
 use App\Modules\Sale\Services\SaleCatalogSnapshotService;
@@ -32,10 +34,14 @@ use App\Modules\Sale\Services\SaleEventService;
 use App\Modules\Sale\Services\SaleGuestCheckoutService;
 use App\Modules\Sale\Services\SaleIdempotencyService;
 use App\Modules\Sale\Services\SaleInventoryService;
+use App\Modules\Sale\Services\SaleOnlinePaymentService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Repository\SiteRepository;
 
 $h = new TestHarness();
+$appConfig=require __DIR__.'/../../../../backend/config/app.php';
+$h->assertSame(true,$appConfig['public_api_module_routes']??false,'native Storefront deployments load the public Sale routes required by cart and checkout');
 [$businessDir, $businessPath, $businessDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/business.sql');
 [$saleDir, $salePath, $saleDb] = test_temp_cms_db(__DIR__ . '/../../../../database/modules/sale.sql');
 $coreDir = sys_get_temp_dir() . '/amcms-sale-public-core-' . bin2hex(random_bytes(6));
@@ -66,10 +72,12 @@ try {
     $cartService = new SaleCartService($carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, $events, $idempotency);
     $checkout = new SaleCheckoutService($saleConnection, $carts, $orders, $inventory, $events, $idempotency);
     $guestCheckout = new SaleGuestCheckoutService($saleConnection, $carts, $channels, $catalogSnapshots, new SalePricingService(), $inventory, new SaleStateMachineService($saleConnection->database()));
+    $onlinePayments = new SaleOnlinePaymentService($saleConnection,new SalePaymentRepository($saleConnection),$orders,$inventory,new SaleStateMachineService($saleConnection->database()),new PaymentProviderRegistry(null,$saleConnection->database(),null,'test'));
+    $paymentMethods = new SalePaymentMethodService($saleConnection,new PaymentProviderRegistry(null,$saleConnection->database(),null,'test'));
 
-    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout): PublicSaleApiHandler {
+    $handlerFor = static function (string $method, string $path, array $payload = [], array $query = []) use ($sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, $onlinePayments, $paymentMethods): PublicSaleApiHandler {
         $request = new Request($method, $path, $query, $payload === [] ? [] : ['data' => $payload], ['HTTP_HOST' => 'example.test'], [], []);
-        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout);
+        return new PublicSaleApiHandler($request, $sites, $saleConnection, $channels, $carts, $orders, $cartService, $checkout, $guestCheckout, null, null, null, $onlinePayments, $paymentMethods);
     };
 
     $provider = new SaleModuleProvider();
@@ -84,12 +92,16 @@ try {
         ['PATCH', '/api/v1/sale/channels/web-main/cart/test-token/checkout'],
         ['DELETE', '/api/v1/sale/channels/web-main/cart/test-token'],
         ['POST', '/api/v1/sale/channels/web-main/checkout'],
+        ['POST', '/api/v1/sale/channels/web-main/gift-cards/validate'],
+        ['POST', '/api/v1/sale/channels/web-main/gift-cards/claim'],
+        ['POST', '/api/v1/sale/channels/web-main/cart/test-token/payment-retry'],
     ] as [$method, $path]) {
         $h->assertTrue((new Router())->match($method, $path, $routes) !== null, 'sale public ecommerce route is declared: ' . $method . ' ' . $path);
     }
     $h->assertSame(null, (new Router())->match('GET', '/api/v1/sale/orders', $routes), 'sale public API still has no public order listing');
     $webRoutes = require __DIR__ . '/../../../../backend/routes/web.php';
     $h->assertTrue((new Router())->match('GET', '/checkout', $webRoutes) !== null, 'native guest checkout SSR route is declared');
+    $h->assertTrue((new Router())->match('GET', '/gift-card', $webRoutes) !== null, 'one-time gift card reveal SSR route is declared');
     $h->assertTrue((new Router())->match('GET', '/cart', $webRoutes) !== null, 'native storefront cart route is declared');
     $h->assertTrue((new Router())->match('GET', '/account', $webRoutes) !== null, 'secure customer account SSR route is declared');
     $ssr = (new PublicSaleCheckoutController(new Request('GET', '/checkout', ['channel' => 'web-main', 'cart_token' => str_repeat('A', 43)], [], ['HTTP_HOST' => 'example.test'], [], [])))->show();
@@ -99,6 +111,8 @@ try {
     $cartPage = (new PublicStorefrontCartController())->show();
     $h->assertSame(200, $cartPage->status(), 'native storefront cart page renders');
     $h->assertTrue(str_contains($cartPage->body(), 'data-cart-page'), 'storefront cart page exposes the accessible cart root');
+    $h->assertTrue(str_contains($cartPage->body(), 'cart-page__layout') && str_contains($cartPage->body(), 'cart-page__summary'), 'storefront cart page renders its modern responsive content and summary columns');
+    $h->assertTrue(str_contains($cartPage->body(),'data-storefront-api-base="'.public_api_url_path('sale/channels/web-main').'"'),'standalone cart page exposes the installation-aware public Sale API base');
     $accountPage = (new PublicCustomerAccountController())->show();
     $h->assertSame(200, $accountPage->status(), 'customer account SSR renders');
     $h->assertTrue(str_contains($accountPage->body(), 'data-customer-account'), 'customer account SSR exposes the secure client root');
@@ -114,6 +128,10 @@ try {
     $h->assertSame(200, $bootstrap->status(), 'active public ecommerce channel can bootstrap');
     $bootstrapPayload = json_decode($bootstrap->body(), true);
     $h->assertSame('web-main', $bootstrapPayload['data']['channel']['code'] ?? null, 'bootstrap exposes public channel code');
+    $publicPaymentMethods = array_column($bootstrapPayload['data']['payment_methods'] ?? [], null, 'code');
+    $h->assertSame('Virement bancaire', $publicPaymentMethods['bank_transfer']['label'] ?? null, 'bootstrap exposes localized payment methods');
+    $h->assertSame('redirect', $publicPaymentMethods['sandbox_online']['next_action'] ?? null, 'bootstrap explains the next payment action');
+    $h->assertTrue(!array_key_exists('provider_key', $publicPaymentMethods['sandbox_online'] ?? []), 'bootstrap does not expose provider implementation details');
 
     $cartResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/cart')->storeCart('web-main');
     $h->assertSame(201, $cartResponse->status(), 'public ecommerce cart can be created');
@@ -179,6 +197,12 @@ try {
     $h->assertSame(900, (int) ($reviewBody['data']['cart']['shipping_method']['amount_minor'] ?? -1), 'fixed fulfillment rate is calculated by the server');
     $h->assertSame(false, $reviewBody['data']['cart']['marketing_consent'] ?? null, 'marketing refusal remains distinct from terms consent');
     $h->assertSame('active', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront review creates the checkout reservation');
+    $reviewLine = $reviewBody['data']['cart']['lines'][0] ?? [];
+    $h->assertSame('sale.inventory.availability.v1', $reviewLine['availability']['contract'] ?? null, 'cart line exposes the same versioned availability contract as Shop');
+    $h->assertSame('En stock', $reviewLine['availability']['label'] ?? null, 'cart line uses a readable availability label');
+    $h->assertSame(1, (int) ($reviewLine['reservation']['physical_quantity'] ?? 0), 'cart explains the physically protected quantity');
+    $h->assertTrue(($reviewLine['reservation']['expires_at'] ?? null) !== null, 'cart exposes reservation expiry for immediate feedback');
+    $h->assertTrue(in_array('reduce_quantity', $reviewLine['recovery_options'] ?? [], true), 'cart exposes a quantity reduction recovery without losing the cart');
 
     $checkoutPayload = ['cart_token' => $token, 'idempotency_key' => 'public-sale-checkout'] + $guestData;
     $checkoutResponse = $handlerFor('POST', '/api/v1/sale/channels/web-main/checkout', $checkoutPayload)->checkout('web-main');
@@ -193,7 +217,13 @@ try {
     $h->assertSame(0, (int) ($placedOrder['marketing_consent'] ?? 1), 'marketing refusal is frozen separately');
     $h->assertSame('guest@example.test', json_decode((string) $placedOrder['customer_snapshot_json'], true)['email'] ?? null, 'guest identity snapshot is frozen on the order');
     $h->assertSame(900, (int) $placedOrder['shipping_total_minor'], 'fulfillment total is frozen on the order');
-    $h->assertSame('consumed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Storefront checkout consumes its confirmed reservation');
+    $h->assertSame('confirmed', $saleDb->one('SELECT status FROM sale_stock_reservations WHERE cart_id=?', [$cartId])['status'] ?? null, 'Bank transfer keeps the checkout reservation while awaiting receipt');
+    $h->assertSame('pending_payment',(string)($placedOrder['status']??''),'bank transfer order remains explicitly pending');
+    $h->assertSame('awaiting_receipt',$checkoutBody['data']['payment']['instructions']['status']??null,'bank transfer exposes unambiguous pending instructions');
+    $retryResponse=$handlerFor('POST','/api/v1/sale/channels/web-main/cart/'.$token.'/payment-retry',['payment'=>['code'=>'manual'],'idempotency_key'=>'public-sale-payment-retry'])->retryPayment('web-main',$token);
+    $h->assertSame(201,$retryResponse->status(),'pending checkout can retry with another configured provider');
+    $retryBody=json_decode($retryResponse->body(),true);
+    $h->assertSame('manual_card',$retryBody['data']['payment']['provider']??null,'payment retry resolves provider through configured method');
     $h->assertTrue((int) ($saleDb->one('SELECT COUNT(*) AS c FROM sale_order_tax_lines WHERE order_id=?',[$orderId])['c']??0)>0, 'tax snapshots are persisted per order line');
     $shippingSnapshot=(string)$placedOrder['shipping_method_snapshot_json'];
     $saleDb->run("UPDATE sale_fulfillment_methods SET flat_rate_minor=1500 WHERE site_id=1 AND code='standard'");

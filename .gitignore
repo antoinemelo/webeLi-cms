@@ -29,6 +29,7 @@ storage/uploads/*
 !storage/uploads/.gitkeep
 storage/security/*
 !storage/security/.gitkeep
+storage/updates/
 
 # Dépendances locales de développement
 node_modules/

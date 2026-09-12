@@ -2,7 +2,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import InfoHint from '@/components/ui/InfoHint.vue';
 import BlueprintStructureTree from '@/components/blueprints/BlueprintStructureTree.vue';
@@ -609,8 +608,7 @@ watch(() => context.siteId, async (_next, previous) => {
 </script>
 
 <template>
-  <PageHeader :eyebrow="t('blueprints.eyebrow')" :title="t('blueprints.title')" :intro="t('blueprints.intro')" />
-  <ContextualHelpLink id="system.blueprints" class="mb-3" />
+  <PageHeader :eyebrow="t('blueprints.eyebrow')" :title="t('blueprints.title')" :intro="t('blueprints.intro')" help-id="system.blueprints" />
   <div v-if="!canRead" class="card empty-state"><h2>{{ t('blueprints.accessDenied') }}</h2><p class="muted" v-html="t('blueprints.accessDeniedHelp', { permission: '<code>blueprints.read</code>' })"></p></div>
   <template v-else>
     <section class="blueprint-stats-grid mb-3">
@@ -732,7 +730,7 @@ watch(() => context.siteId, async (_next, previous) => {
           <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><h3 class="h5 mb-0">{{ t('blueprints.stats.fields') }}</h3><select class="form-select w-auto" :disabled="!canManage || activeFieldsetProtected" @change="addFieldsetField(String(($event.target as HTMLSelectElement).value)); ($event.target as HTMLSelectElement).value='' "><option value="">{{ t('blueprints.tree.addField') }}</option><option v-for="type in fieldTypeOptions" :key="type.handle" :value="type.handle">{{ type.label }}</option></select></div>
           <div class="list-group">
             <button v-for="(field, i) in editingFieldset.fields || []" :key="field.field_handle + i" class="list-group-item list-group-item-action" type="button" draggable="true" @click="openFieldsetFieldModal(i)" @dragstart.stop="startDrag({ kind: 'fieldsetField', fieldIndex: i })" @dragover.prevent @drop.stop="dropOnFieldsetField(i)">
-              <span class="d-flex align-items-center gap-2"><span class="blueprint-drag-handle" title="Move" aria-hidden="true">⋮</span><span class="flex-grow-1"><strong>{{ field.label }}</strong><small class="d-block text-muted"><code>{{ field.field_handle }}</code> · {{ fieldLabel(field.field_type) }} · {{ field.width }}%</small></span><span v-if="field.is_required" class="badge text-bg-warning">{{ t('common.required') }}</span></span>
+              <span class="d-flex align-items-center gap-2"><span class="dnd-handle" :title="t('common.dragToReorder')" aria-hidden="true">⋮</span><span class="flex-grow-1"><strong>{{ field.label }}</strong><small class="d-block text-muted"><code>{{ field.field_handle }}</code> · {{ fieldLabel(field.field_type) }} · {{ field.width }}%</small></span><span v-if="field.is_required" class="badge text-bg-warning">{{ t('common.required') }}</span></span>
             </button>
           </div>
         </div>

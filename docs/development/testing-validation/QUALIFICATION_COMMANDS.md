@@ -11,6 +11,7 @@ source_paths:
   - tools/python/qualification/run_all.py
   - tools/python/qualification/performance_baseline.py
   - tools/python/qualification/omnichannel_gate.py
+  - tools/python/qualification/usability_commerce_gate.py
   - tools/python/commands/qualify.py
   - tools/admin.py
 owners:
@@ -67,7 +68,13 @@ Le rapport JSON `storage/qualification/latest.json` contient `version`, `commit`
 | Reconstruction from scratch | instance isolée Playwright et baseline performance | `tools/cms.py rebuild` explicite |
 | Smoke HTTP / E2E | Playwright isolé et installation neuve | `tools/cms.py smoke` |
 | Gate omnicanale storefront/POS | Playwright isolé, preuve JSON validée | commande ciblée disponible depuis le dépôt source |
+| Utilisabilité Commerce M5–M7 | revue statique + sept captures Playwright, accessibilité et preuve JSON | `tools/python/qualification/usability_commerce_gate.py` et exécution E2E ciblée |
 | Catalogue, panier, commande, paiement local, stock | tests PHP + `performance-baseline` | smoke structurel uniquement |
+| Reconstruction et réconciliation stock M6.5 | `stock-reconstruction-gate` + scénario PHP + sauvegarde/restauration | `tools/python/qualification/stock_reconstruction_gate.py` et diagnostic CLI |
+| Identité client M7.1 | `customer-identity-gate` + tests IAM/CRM/Sale + Playwright | `tools/python/qualification/customer_identity_gate.py` |
+| Activités CRM par événements M7.2 | `crm-event-activity-gate` + tests de projection et chronologie | `tools/python/qualification/crm_event_activity_gate.py` |
+| Segmentation et consentements M7.3 | `crm-segmentation-consent-gate` + tests métier et UX | `tools/python/qualification/crm_segmentation_consent_gate.py` |
+| Commande invitée et CRM M7.4 | `crm-guest-order-gate` + checkout, identité, projection, consentements et Playwright | `tools/python/qualification/crm_guest_order_gate.py` |
 | Backup / restore | `BACKUP_RESTORE_ROUNDTRIP` avec SHA-256 et intégrité SQLite | `tools/cms.py backup`, `tools/cms.py backup --restore` |
 | Documentation / OpenAPI / SDK | `docs generate`, `docs check`, `API_SPEC` | `tools/cms.py docs check` |
 | Dépendances | `composer audit --locked`, `npm audit --audit-level=high` | audit externe à l’archive |
@@ -83,9 +90,12 @@ Le profil `release` exécute `tools/python/qualification/performance_baseline.py
 - ajout de ligne ;
 - lecture panier ;
 - checkout avec paiement local ;
-- réservation de stock.
+- réservation de stock (création couverte par le checkout, puis lecture de preuve chronométrée séparément).
 
-Le seuil critique par scénario est de `2000 ms` par défaut. Il est configurable avec :
+Le seuil critique par scénario est de `2000 ms` par défaut et s'applique à la
+médiane des répétitions. Le p95 et le nombre d'échantillons au-dessus du seuil
+restent consignés afin de rendre les pointes visibles sans transformer une seule
+variation locale en échec. Le seuil est configurable avec :
 
 ```bash
 AMCMS_M0_PERF_CRITICAL_MS=2500 AMCMS_M0_PERF_REPEAT=5 \
@@ -104,13 +114,57 @@ Le rapport détaillé est écrit dans `storage/qualification/performance/latest.
 
 ## Gate omnicanale storefront/POS
 
-Le profil `release` exige une preuve JSON valide sous `storage/qualification/omnichannel/latest.json`. Une exécution ciblée est disponible pour diagnostiquer uniquement ce contrat :
+Le profil `release` exige la preuve JSON omnicanale M5/M6/M7 au format 2 sous `storage/qualification/omnichannel/latest.json`. Elle couvre checkout UI, paiement, ledger/réservations, fulfillment, CRM, POS, rapprochements, régressions et empreintes du paquet d’audit. Une exécution ciblée est disponible pour diagnostiquer uniquement ce contrat :
 
 ```bash
 python3 tools/cms.py e2e --use-built-assets --omnichannel-only
 ```
 
 Le détail des deux parcours, des comparaisons croisées et des mutations négatives est documenté dans [Gate E2E omnicanale storefront et POS](OMNICHANNEL_E2E_GATE.md).
+
+## Gate d’utilisabilité Commerce M5–M7
+
+Les profils `complete` et `release` valident la matrice statique des rôles, tâches, états et heuristiques. Le profil `release` exige en plus le rapport runtime et les sept captures hachées produits par Playwright. La commande ciblée reconstruit une instance jetable depuis les schémas canoniques et n’emploie aucune migration :
+
+```bash
+python3 tools/python/qualification/usability_commerce_gate.py --static-only
+python3 tools/cms.py e2e --use-built-assets --usability-only
+```
+
+Le rapport runtime est écrit dans `storage/qualification/usability/latest.json`, avec les captures sous `storage/qualification/usability/captures/`. Il ne contient ni saisie client ni donnée de paiement. La méthode, la revue structurée, les recommandations P0/P1/P2 et ses limites sont documentées dans [Gate d’utilisabilité Commerce M5–M7](../../evaluation/usability-commerce-foundations.md).
+
+## Gate release Shop opérationnel 48
+
+Cette gate agrège les parcours canoniques 38a à 47 sur une instance reconstruite sans migration. Elle exige deux sites sur des chemins distincts, deux langues, la matrice de rôles, une activation Shop sélective, les scénarios métier A à E, les contrôles négatifs et les preuves UX. Elle ne crée pas de suite Commerce parallèle.
+
+```bash
+python3 tools/python/qualification/shop_operational_gate.py --static-only
+python3 tools/cms.py e2e --use-built-assets --shop-operational-only
+python3 tools/python/qualification/shop_operational_gate.py
+```
+
+Le rapport runtime sans donnée personnelle est écrit dans `storage/qualification/shop-operational/latest.json`. Une décision de diffusion requiert toujours `python3 tools/cms.py qualify --profile release`, car les performances, le paquet et l’installation neuve sont des étapes bloquantes du même profil. Voir [Gate release Shop opérationnel — point 48](../../evaluation/shop-operational-release-gate-48.md).
+
+## Gate M6.5 reconstruction du stock
+
+La porte vérifie le dry-run par défaut, les équations du ledger, les relations réservations/fulfillments/retours/transferts, la cohérence de la projection Business/Shop et la réparation obligatoirement motivée après sauvegarde :
+
+```bash
+python3 tools/python/qualification/stock_reconstruction_gate.py
+python3 tools/cms.py inventory reconcile --site 1
+```
+
+Un diagnostic avec écarts retourne un code non nul afin de bloquer une automatisation. L'option `--repair` n'est jamais implicite et exige `--reason`. Les tests utilisent uniquement des bases temporaires reconstruites depuis `database/modules/*.sql`, puis copient et rouvrent les sauvegardes pour prouver leur restauration sans migration.
+
+## Gate M7.4 commande invitée et CRM
+
+La gate consolide les douze scénarios de commande invitée, rapprochement prudent, rejeu, panne CRM, retrait de consentement et panier abandonné :
+
+```bash
+python3 tools/python/qualification/crm_guest_order_gate.py
+```
+
+Le rapport machine-readable détaille identités avant/après, règles, décisions, événements, activités, consentements, doublons évités et métriques du parcours opérateur. Voir [Gate M7.4 commande invitée et CRM](CRM_GUEST_ORDER_GATE.md).
 
 ## Cache local
 

@@ -27,8 +27,37 @@ $runtimePath = static function (string $key, string $default, array $aliases = [
     return rtrim($value, DIRECTORY_SEPARATOR . '/');
 };
 
-$vueNodeModulesPath = $runtimePath('APP_VUE_NODE_MODULES_PATH', './vendor/node_modules/', ['APP_NODE_MODULES_PATH']);
-$twigVendorPath = $runtimePath('APP_TWIG_VENDOR_PATH', './vendor/twig/', ['APP_TWIG_PATH']);
+$firstExistingDependencyPath = static function (array $candidates, string $fallback): string {
+    foreach (array_values(array_unique(array_map(
+        static fn(string $path): string => rtrim($path, DIRECTORY_SEPARATOR . '/'),
+        $candidates,
+    ))) as $candidate) {
+        if ($candidate !== '' && is_dir($candidate)) {
+            return $candidate;
+        }
+    }
+    return rtrim($fallback, DIRECTORY_SEPARATOR . '/');
+};
+
+$configuredNodeModulesPath = $runtimePath('APP_VUE_NODE_MODULES_PATH', './vendor/node_modules/', ['APP_NODE_MODULES_PATH']);
+$configuredTwigVendorPath = $runtimePath('APP_TWIG_VENDOR_PATH', './vendor/twig/', ['APP_TWIG_PATH']);
+$vendorRoots = function_exists('cms_vendor_roots')
+    ? cms_vendor_roots()
+    : [base_path('backend/vendor'), base_path('vendor'), base_path('../vendor')];
+$vueNodeModulesPath = $firstExistingDependencyPath([
+    ...array_map(static fn(string $root): string => $root . '/node_modules', $vendorRoots),
+    $configuredNodeModulesPath,
+], $configuredNodeModulesPath);
+$twigVendorPath = $firstExistingDependencyPath([
+    ...array_map(static fn(string $root): string => $root . '/twig', $vendorRoots),
+    $configuredTwigVendorPath,
+], $configuredTwigVendorPath);
+$primaryPaymentProvider = strtolower(trim((string) env('PAYMENT_REAL_PROVIDER', '')));
+$secondPaymentProvider = strtolower(trim((string) env('PROVIDER_REAL_2', '')));
+$configuredPaymentProviders = trim((string) env('PAYMENT_REAL_PROVIDERS', $primaryPaymentProvider));
+if ($secondPaymentProvider !== '') {
+    $configuredPaymentProviders = trim($configuredPaymentProviders . ' ' . $secondPaymentProvider);
+}
 
 $twigCache = env('APP_TWIG_CACHE', base_path('storage/cache/twig'));
 if (is_string($twigCache) && $twigCache !== '' && $twigCache !== '0' && !str_starts_with($twigCache, DIRECTORY_SEPARATOR) && !preg_match('#^[A-Z]:[\\/]#i', $twigCache)) {
@@ -42,9 +71,10 @@ return [
     'timezone' => env('APP_TIMEZONE', 'Europe/Zurich'),
     'base_path' => env('APP_BASE_PATH', ''),
     'public_base_url' => env('APP_PUBLIC_BASE_URL', ''),
+    'allow_local_hosts' => $boolEnv('APP_ALLOW_LOCAL_HOSTS', !$isProduction),
     'default_locale' => env('APP_LOCALE', 'fr'),
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
-    'session_name' => env('APP_SESSION_NAME', 'amcms_mod2'),
+    'session_name' => env('APP_SESSION_NAME', 'amcms_cms'),
     'session_idle_timeout' => (int) env('APP_SESSION_IDLE_TIMEOUT', 3600),
     'login_rate_limit_attempts' => (int) env('APP_LOGIN_RATE_LIMIT_ATTEMPTS', 5),
     'login_rate_limit_window' => (int) env('APP_LOGIN_RATE_LIMIT_WINDOW', 900),
@@ -81,6 +111,8 @@ return [
             '#^/api/v1/forms/[a-z0-9_-]+$#',
             '#^/api/v1/forms/[a-z0-9_-]+/submit$#',
             '#^/api/v1/sale/channels/[a-z0-9_-]+/(?:bootstrap|cart|checkout)(?:/|$)#',
+            '#^/api/v1/sale/payments/webhooks/(?:stripe_checkout|revolut_checkout)$#',
+            '#^/api/v1/sale/payments/return$#',
             '#^/api/v1/customer(?:/|$)#',
             '#^/api/v1/media$#',
         ],
@@ -115,6 +147,11 @@ return [
             'group' => 'route',
         ],
         'endpoints' => [
+            '#^/api/v1/sale/payments/webhooks/(?:stripe_checkout|revolut_checkout)$#' => [
+                'limit' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_MAX', 180),
+                'window' => (int) env('PAYMENT_WEBHOOK_RATE_LIMIT_WINDOW', 60),
+                'group' => '/api/v1/sale/payments/webhooks/real-provider',
+            ],
             '#^/api/v1/customer/(?:login|accounts/register)$#' => [
                 'limit' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_MAX', 10),
                 'window' => (int) env('APP_PUBLIC_API_RATE_LIMIT_CUSTOMER_AUTH_WINDOW', 900),
@@ -143,6 +180,39 @@ return [
         ],
     ],
 
+    'payments' => [
+        'real_provider' => $primaryPaymentProvider,
+        'real_providers' => array_values(array_filter(array_map(
+            static fn(string $provider): string => strtolower(trim($provider)),
+            preg_split('/[,\s]+/', $configuredPaymentProviders) ?: []
+        ))),
+        'public_base_url' => (string) env('APP_PUBLIC_BASE_URL', ''),
+        'stripe' => [
+            'enabled' => $boolEnv('PAYMENT_STRIPE_ENABLED', false),
+            'environment' => strtolower((string) env('PAYMENT_STRIPE_ENV', 'test')),
+            'secret_key' => (string) env('STRIPE_SECRET_KEY', ''),
+            'webhook_secrets' => array_values(array_filter([
+                (string) env('STRIPE_WEBHOOK_SECRET', ''),
+                (string) env('STRIPE_WEBHOOK_SECRET_PREVIOUS', ''),
+            ])),
+            'signature_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
+            'api_version' => (string) env('STRIPE_API_VERSION', ''),
+            'twint_mode' => strtolower((string) env('PAYMENT_STRIPE_TWINT_MODE', 'dynamic')),
+        ],
+        'revolut' => [
+            'enabled' => $boolEnv('PAYMENT_REVOLUT_ENABLED', false),
+            'environment' => strtolower((string) env('PAYMENT_REVOLUT_ENV', 'sandbox')),
+            'secret_key' => (string) env('REVOLUT_MERCHANT_SECRET_KEY', ''),
+            'webhook_secrets' => array_values(array_filter([
+                (string) env('REVOLUT_WEBHOOK_SECRET', ''),
+                (string) env('REVOLUT_WEBHOOK_SECRET_PREVIOUS', ''),
+            ])),
+            'signature_tolerance' => (int) env('REVOLUT_WEBHOOK_TOLERANCE_SECONDS', 300),
+            'api_version' => (string) env('REVOLUT_API_VERSION', '2026-04-20'),
+            'timeout' => (int) env('REVOLUT_API_TIMEOUT_SECONDS', 15),
+        ],
+    ],
+
     'password_reset' => [
         'token_lifetime_minutes' => (int) env('APP_PASSWORD_RESET_LIFETIME_MINUTES', 30),
         'cooldown_seconds' => (int) env('APP_PASSWORD_RESET_COOLDOWN_SECONDS', 600),
@@ -163,6 +233,8 @@ return [
     'vue_node_modules_path' => $vueNodeModulesPath,
     'twig_vendor_path' => $twigVendorPath,
     'preview_signing_key' => env('APP_PREVIEW_SIGNING_KEY', 'change-this-preview-key'),
+    'gift_card_signing_key' => env('APP_GIFT_CARD_SIGNING_KEY', env('APP_PREVIEW_SIGNING_KEY', 'change-this-gift-card-key')),
+    'form_relation_signing_key' => env('APP_FORM_RELATION_SIGNING_KEY', env('APP_PREVIEW_SIGNING_KEY', 'change-this-preview-key')),
     'worker_max_attempts' => (int) env('APP_WORKER_MAX_ATTEMPTS', 5),
 
     // Runtime public léger : en production, aucune maintenance automatique ne
@@ -172,7 +244,9 @@ return [
     // reste pratique et peut être forcé avec APP_AUTO_MAINTENANCE=1.
     'auto_maintenance' => $boolEnv('APP_AUTO_MAINTENANCE', !$isProduction),
     'public_module_routes' => $boolEnv('APP_PUBLIC_MODULE_ROUTES', !$isProduction),
-    'public_api_module_routes' => $boolEnv('APP_PUBLIC_API_MODULE_ROUTES', !$isProduction),
+    // Les routes Sale publiques sont nécessaires au panier du Storefront natif.
+    // Le canal, le site et la langue restent contrôlés par les handlers publics.
+    'public_api_module_routes' => $boolEnv('APP_PUBLIC_API_MODULE_ROUTES', true),
     'admin_module_routes' => $boolEnv('APP_ADMIN_MODULE_ROUTES', true),
     'start_session_for_public' => $boolEnv('APP_START_SESSION_FOR_PUBLIC', false),
 ];

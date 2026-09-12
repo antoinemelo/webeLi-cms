@@ -127,6 +127,39 @@ try {
     $h->assertSame(1, (int) ($db->one('SELECT returned_quantity FROM sale_order_lines WHERE id=?', [$orderLineId])['returned_quantity'] ?? 0), 'completed return updates the historical order line quantity');
     $h->assertSame(9, (int) ($db->one("SELECT on_hand_quantity FROM sale_inventory_items WHERE sku='P11-SKU'")['on_hand_quantity'] ?? 0), 'completed return restocks inventory');
 
+    $bundleSnapshot = ['snapshot' => [
+        'is_bundle' => true,
+        'bundle_stock_strategy' => 'COMPONENT_DERIVED',
+        'bundle_component_return_policy' => 'COMPONENTS_ALLOWED',
+        'bundle_inventory_plan' => [
+            ['business_variant_id' => 11201, 'sku' => 'RETURN-COMP-A', 'track_stock' => true, 'quantity_per_bundle' => 2],
+            ['business_variant_id' => 11202, 'sku' => 'RETURN-COMP-B', 'track_stock' => true, 'quantity_per_bundle' => 1],
+        ],
+    ]];
+    $db->run(
+        'INSERT INTO sale_order_lines(order_id,line_number,business_product_id,business_variant_id,sellable_id,sku,product_name,product_type,quantity,unit_price_minor,regular_unit_price_minor,currency,line_subtotal_minor,line_total_minor,snapshot_json) VALUES(?,2,11200,11299,11299,\'RETURN-BUNDLE\',\'Bundle retour\',\'bundle\',2,0,0,\'CHF\',0,0,?)',
+        [$orderId, json_encode($bundleSnapshot, JSON_UNESCAPED_SLASHES)]
+    );
+    $bundleLineId = (int) $db->lastInsertId();
+    $bundleReturn = $returnService->request($orderId, [['order_line_id' => $bundleLineId, 'quantity' => 1]], 'Retour bundle complet', 7, 'p30-return-bundle');
+    $returnService->transition((int) $bundleReturn['id'], 'approved', 7);
+    $returnService->transition((int) $bundleReturn['id'], 'received', 7);
+    $returnService->transition((int) $bundleReturn['id'], 'completed', 7);
+    $h->assertSame(2, (int) ($db->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=11201')['on_hand_quantity'] ?? 0), 'full derived-bundle return restores the first component ratio');
+    $h->assertSame(1, (int) ($db->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=11202')['on_hand_quantity'] ?? 0), 'full derived-bundle return restores the second component ratio');
+    $h->assertSame(0, (int) ($db->one('SELECT COUNT(*) AS count FROM sale_inventory_items WHERE business_variant_id=11299')['count'] ?? 0), 'derived-bundle return never restocks the parent sellable');
+
+    $componentReturn = $returnService->request($orderId, [[
+        'order_line_id' => $bundleLineId,
+        'quantity' => 1,
+        'components' => [['business_variant_id' => 11202, 'quantity' => 1]],
+    ]], 'Retour composant seul', 7, 'p30-return-component');
+    $returnService->transition((int) $componentReturn['id'], 'approved', 7);
+    $returnService->transition((int) $componentReturn['id'], 'received', 7);
+    $returnService->transition((int) $componentReturn['id'], 'completed', 7);
+    $h->assertSame(2, (int) ($db->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=11202')['on_hand_quantity'] ?? 0), 'authorized component-only return restores exactly the received component');
+    $h->assertSame(2, (int) ($db->one('SELECT on_hand_quantity FROM sale_inventory_items WHERE business_variant_id=11201')['on_hand_quantity'] ?? 0), 'component-only return does not restock absent components');
+
     $fr = $receiptService->issue($orderId, 'fr', 7);
     $frReplay = $receiptService->issue($orderId, 'fr', 99);
     $en = $receiptService->issue($orderId, 'en', 7);

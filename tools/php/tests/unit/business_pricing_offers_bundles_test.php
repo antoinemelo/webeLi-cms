@@ -90,6 +90,32 @@ try {
     $relation = $relations->link(1, $productId, (int) $target['id'], 'cross_sell', 10);
     $h->assertSame('cross_sell', $relation['relation_type'], 'cross-sell is stored as a catalog relation');
     $h->assertSame(1, count($relations->relations(1, $productId, 'cross_sell')), 'catalog relations are queryable without cart mutation');
+    $related = $relations->link(1, $productId, (int) $target['id'], 'related', 2);
+    $h->assertSame('related', $related['relation_type'], 'canonical related type is stored independently');
+    $h->assertTrue($relations->deleteRelation(1, (int) $related['id']), 'a manual product relation can be removed explicitly');
+    $h->assertSame(0, count($relations->relations(1, $productId, 'related')), 'removed manual relation is no longer returned');
+
+    $categoryId = (int) ($db->one('SELECT id FROM business_product_categories WHERE site_id=1 ORDER BY id LIMIT 1')['id'] ?? 0);
+    [$automaticTarget] = $makeProduct('automatic-related-target');
+    [$nonPublicTarget] = $makeProduct('automatic-private-target');
+    $db->run('UPDATE business_products SET category_id=? WHERE id IN (?,?)', [$categoryId, (int) $automaticTarget['id'], (int) $nonPublicTarget['id']]);
+    $db->run('UPDATE business_products SET is_public=0 WHERE id=?', [(int) $nonPublicTarget['id']]);
+    $rule = $relations->saveRule(1, $productId, ['relation_type'=>'related','match_type'=>'category','match_id'=>$categoryId,'result_limit'=>6,'sort_order'=>20]);
+    $automaticRelations = $relations->relations(1, $productId, 'related');
+    $automaticIds = array_map(static fn(array $row): int => (int) ($row['related_product_id'] ?? 0), $automaticRelations);
+    $h->assertTrue(in_array((int) $automaticTarget['id'], $automaticIds, true), 'automatic category rule exposes its active public ecommerce target');
+    $h->assertTrue(!in_array((int) $nonPublicTarget['id'], $automaticIds, true), 'automatic category rule excludes non-public targets');
+    $h->assertSame(0, count(array_filter($automaticRelations, static fn(array $row): bool => ($row['source'] ?? null) !== 'automatic')), 'automatic relation provenance remains explicit');
+    $h->assertSame(1, count($relations->rules(1, $productId)), 'automatic relation rules can be inspected in the back office');
+    $h->assertTrue($relations->deleteRule(1, (int) $rule['id']), 'automatic relation rule can be removed explicitly');
+
+    $selfRelationRejected = false;
+    try { $relations->link(1, $productId, $productId, 'related'); } catch (InvalidArgumentException) { $selfRelationRejected = true; }
+    $h->assertTrue($selfRelationRejected, 'a product relation cannot target the source product');
+    $otherSiteProduct = $repository->createProduct(2, $validator->product(['name'=>'Other site target','slug'=>'other-site-target','type'=>'physical','status'=>'active','channels'=>['public','ecommerce'],'base_sale_price'=>10,'currency'=>'CHF']));
+    $crossSiteRejected = false;
+    try { $relations->link(1, $productId, (int)$otherSiteProduct['id'], 'related'); } catch (InvalidArgumentException) { $crossSiteRejected = true; }
+    $h->assertTrue($crossSiteRejected, 'a relation cannot target a product belonging to another site');
 
     [$gift] = $makeProduct('gift-policy', 'gift_card');
     $policy = $relations->configureGiftCard(1, (int) $gift['id'], ['currency' => 'CHF', 'value_mode' => 'open', 'minimum_amount' => 20, 'maximum_amount' => 500, 'expires_after_days' => 730]);

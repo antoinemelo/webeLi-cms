@@ -33,12 +33,12 @@ Un export pouvant contenir plusieurs sites ne doit jamais écrire deux routes ve
 Exemple de sortie attendue :
 
 ```text
-public/webe.li/mod/index.html
-public/webe.li/mod/en/index.html
-public/webe.li/mod/site-a/index.html
-public/webe.li/mod/site-a/en/news/index.html
-public/webe.li/mod/site-b/index.html
-public/webe.li/mod/site-b/de/nachrichten/index.html
+public/webe.li/cms/index.html
+public/webe.li/cms/en/index.html
+public/webe.li/cms/site-a/index.html
+public/webe.li/cms/site-a/en/news/index.html
+public/webe.li/cms/site-b/index.html
+public/webe.li/cms/site-b/de/nachrichten/index.html
 ```
 
 Les fichiers techniques propres au site, comme `sitemap.xml` et `robots.txt`, sont écrits dans le préfixe de sortie du site concerné.

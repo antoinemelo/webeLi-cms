@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "key": "accounting",
+  "name": "Comptabilité",
+  "version": "0.1.0",
+  "type": "system",
+  "provider_class": "App\\Modules\\Accounting\\AccountingModuleProvider",
+  "provider_file": "backend/src/Modules/Accounting/AccountingModuleProvider.php",
+  "enabled_by_default": true,
+  "databases": [
+    {
+      "key": "accounting",
+      "path": "storage/database/accounting.sqlite",
+      "schema": "database/modules/accounting.sql"
+    }
+  ],
+  "protected_on_core_update": false
+}

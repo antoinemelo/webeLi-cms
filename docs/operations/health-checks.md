@@ -84,11 +84,11 @@ curl -i https://example.test/health/live
 curl -i https://example.test/health/ready
 ```
 
-Avec un sous-répertoire configuré par `APP_BASE_PATH=/mod` :
+Avec un sous-répertoire configuré par `APP_BASE_PATH=/cms` :
 
 ```bash
-curl -i https://example.test/mod/health/live
-curl -i https://example.test/mod/health/ready
+curl -i https://example.test/cms/health/live
+curl -i https://example.test/cms/health/ready
 ```
 
 ## Limites

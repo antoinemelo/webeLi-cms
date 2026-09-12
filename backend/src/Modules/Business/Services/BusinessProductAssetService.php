@@ -91,6 +91,9 @@ final class BusinessProductAssetService
         $mediaId = $this->requirePositive((int) ($payload['media_id'] ?? 0), 'media_id');
         $role = $this->role((string) ($payload['role'] ?? 'gallery'));
         $channelScope = $this->channel((string) ($payload['channel_scope'] ?? 'all'));
+        $this->assertProductContext($siteId,$productId,$variantId);
+        $isPublic=$role==='internal'?0:(int)(bool)($payload['is_public']??false);
+        if($role==='internal')$channelScope='admin';
 
         $this->db->run(
             'INSERT INTO business_product_assets(
@@ -110,7 +113,7 @@ final class BusinessProductAssetService
                 'alt_text' => $this->nullableText($payload['alt_text'] ?? null, 255),
                 'caption' => $this->nullableText($payload['caption'] ?? null, 1000),
                 'sort_order' => max(0, (int) ($payload['sort_order'] ?? 0)),
-                'is_public' => (int) (bool) ($payload['is_public'] ?? false),
+                'is_public' => $isPublic,
                 'channel_scope' => $channelScope,
                 'actor' => isset($payload['actor_iam_user_id']) ? (int) $payload['actor_iam_user_id'] : null,
             ]
@@ -119,18 +122,29 @@ final class BusinessProductAssetService
         return $this->asset((int) $this->db->lastInsertId());
     }
 
-    public function archiveAsset(int $assetId): void
+    /** @return array<string,mixed> */
+    public function archiveAsset(int $assetId, ?int $expectedSiteId = null): array
     {
+        $current=$this->asset($this->requirePositive($assetId, 'asset_id'));
+        if($expectedSiteId!==null&&(int)$current['site_id']!==$this->requirePositive($expectedSiteId,'site_id'))throw new InvalidArgumentException('business.product_asset_not_found');
         $this->db->run(
             'UPDATE business_product_assets SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [$this->requirePositive($assetId, 'asset_id')]
+            [$assetId]
         );
+        return $current;
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function updateAsset(int $assetId, array $payload): array
     {
         $current = $this->asset($this->requirePositive($assetId, 'asset_id'));
+        if(isset($payload['site_id'])&&(int)$current['site_id']!==$this->requirePositive((int)$payload['site_id'],'site_id'))throw new InvalidArgumentException('business.product_asset_not_found');
+        $variantId=array_key_exists('variant_id',$payload)?($payload['variant_id']===null?null:$this->requirePositive((int)$payload['variant_id'],'variant_id')):$current['variant_id'];
+        $role=$this->role((string)($payload['role']??$current['role']));
+        $channelScope=$this->channel((string)($payload['channel_scope']??$current['channel_scope']??'all'));
+        $this->assertProductContext((int)$current['site_id'],(int)$current['product_id'],$variantId===null?null:(int)$variantId);
+        $isPublic=$role==='internal'?0:(int)(bool)($payload['is_public']??$current['is_public']??false);
+        if($role==='internal')$channelScope='admin';
         $this->db->run(
             'UPDATE business_product_assets
              SET variant_id = :variant_id,
@@ -146,14 +160,14 @@ final class BusinessProductAssetService
              WHERE id = :id',
             [
                 'id' => $assetId,
-                'variant_id' => array_key_exists('variant_id', $payload) ? ($payload['variant_id'] === null ? null : $this->requirePositive((int) $payload['variant_id'], 'variant_id')) : $current['variant_id'],
-                'role' => $this->role((string) ($payload['role'] ?? $current['role'])),
+                'variant_id' => $variantId,
+                'role' => $role,
                 'title' => $this->nullableText($payload['title'] ?? $current['title'] ?? null, 255),
                 'alt_text' => $this->nullableText($payload['alt_text'] ?? $current['alt_text'] ?? null, 255),
                 'caption' => $this->nullableText($payload['caption'] ?? $current['caption'] ?? null, 1000),
                 'sort_order' => max(0, (int) ($payload['sort_order'] ?? $current['sort_order'] ?? 0)),
-                'is_public' => (int) (bool) ($payload['is_public'] ?? $current['is_public'] ?? false),
-                'channel_scope' => $this->channel((string) ($payload['channel_scope'] ?? $current['channel_scope'] ?? 'all')),
+                'is_public' => $isPublic,
+                'channel_scope' => $channelScope,
                 'actor' => isset($payload['actor_iam_user_id']) ? (int) $payload['actor_iam_user_id'] : ($current['updated_by_iam_user_id'] ?? null),
             ]
         );
@@ -237,6 +251,15 @@ final class BusinessProductAssetService
             throw new InvalidArgumentException('business.' . $field . '_invalid');
         }
         return $value;
+    }
+
+    private function assertProductContext(int $siteId,int $productId,?int $variantId): void
+    {
+        $product=$this->db->one('SELECT id FROM business_products WHERE id=? AND site_id=? LIMIT 1',[$productId,$siteId]);
+        if($product===null)throw new InvalidArgumentException('business.product_not_found');
+        if($variantId!==null&&$this->db->one('SELECT id FROM business_product_variants WHERE id=? AND product_id=? LIMIT 1',[$variantId,$productId])===null){
+            throw new InvalidArgumentException('business.variant_product_mismatch');
+        }
     }
 
     private function role(string $role): string

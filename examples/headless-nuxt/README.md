@@ -15,13 +15,13 @@ cp .env.example .env
 Variables utilisées :
 
 ```env
-AMCMS_BASE_URL=https://example.com/mod/site_a
+AMCMS_BASE_URL=https://example.com/cms/site_a
 AMCMS_TOKEN=
 AMCMS_SITE=site_a
 AMCMS_LANG=fr
 ```
 
-- `AMCMS_BASE_URL` : URL publique du site ciblé, sans `/api/v1` final. En multisite, incluez le chemin du sous-site, par exemple `/mod/site_a`.
+- `AMCMS_BASE_URL` : URL publique du site ciblé, sans `/api/v1` final. En multisite, incluez le chemin du sous-site, par exemple `/cms/site_a`.
 - `AMCMS_TOKEN` : token public API optionnel. Ne jamais commiter de token réel.
 - `AMCMS_SITE` : clé du site à cibler.
 - `AMCMS_LANG` : langue à demander.

@@ -29,6 +29,12 @@ final class Renderer
         }
 
         $loader = new FilesystemLoader($this->basePath);
+        $defaultThemePath = base_path('frontend/theme-default/templates');
+        if (is_dir($defaultThemePath)) {
+            // Les composants publics canoniques restent partageables par les thèmes
+            // sans empêcher chaque thème de surcharger ses propres templates.
+            $loader->addPath($defaultThemePath, 'default');
+        }
         $cachePath = $this->options['cache_path'] ?? null;
         if (is_string($cachePath) && $cachePath !== '') {
             if (!is_dir($cachePath)) {

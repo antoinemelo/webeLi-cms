@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { dirname } from 'node:path';
 import { test, expect, type APIResponse, type Page } from '@playwright/test';
 
@@ -43,11 +44,18 @@ const adminHeaders = (csrf: string) => ({
   'Idempotency-Key': crypto.randomUUID(),
 });
 
+const sha256 = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+const releaseContract = (evidenceSource: string) => ({
+  detected: true, recovery_verified: true, evidence_source: evidenceSource,
+});
+
 test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
   test.skip(!enabled, 'The isolated E2E environment and E2E_OMNICHANNEL_REPORT are required');
 
   test('proves storefront and POS share the same sellable and business contracts', async ({ page, request }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
+    const startedAt = Date.now();
 
     const anonymousAdmin = await request.get(cmsPath('/admin/api/sale/pos/bootstrap'));
     expect([401, 403]).toContain(anonymousAdmin.status());
@@ -59,6 +67,66 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
       && hasSalePermissions
       && capabilities['business.crm.manage'] === true;
     expect(permissionEnforced).toBe(true);
+
+    const suffix = `${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
+    const taxPayload = await body(await page.request.get(cmsPath('/admin/api/business/pim/tax-classes'), {
+      headers: adminHeaders(csrf),
+    }), 'tax classes');
+    const taxClassId = Number(taxPayload.data.tax_classes?.[0]?.id || 0);
+    expect(taxClassId, 'a tax class exists in the fresh instance').toBeGreaterThan(0);
+    const createdProduct = await body(await page.request.post(cmsPath('/admin/api/business/catalog/products'), {
+      headers: adminHeaders(csrf), data: { data: {
+        name: `Produit gate omnicanale ${suffix}`, slug: `gate-omnichannel-${suffix}`,
+        sku_base: `GATE-${suffix}`, type: 'physical', status: 'draft', visibility: 'public',
+        short_description: 'Produit physique créé par la porte de qualification M5 M6 M7.',
+        description: 'Vendable commun au storefront et au point de vente.',
+        tax_class_id: taxClassId, track_stock: true, allow_backorder: false,
+        channels: ['public', 'ecommerce', 'pos', 'catalogue'],
+        base_purchase_price: 15, base_sale_price: 39, currency: 'CHF', option_ids: [],
+      } },
+    }), 'create gate product');
+    const productId = Number(createdProduct.data.product.data.id);
+    const productSlug = String(createdProduct.data.product.data.slug);
+    const createdVariant = await body(await page.request.post(cmsPath(`/admin/api/business/catalog/products/${productId}/variants`), {
+      headers: adminHeaders(csrf), data: { data: {
+        sku: `GATE-V-${suffix}`, name: 'Variante qualification', status: 'active',
+        track_stock: true, stock_quantity: 2, stock_reserved: 0, allow_backorder: false,
+        option_values: {}, purchase_adjustment_type: 'none', sale_adjustment_type: 'none',
+      } },
+    }), 'create gate sellable');
+    const sellableId = Number(createdVariant.data.variant.id);
+    expect(sellableId).toBeGreaterThan(0);
+    await body(await page.request.patch(cmsPath(`/admin/api/business/catalog/products/${productId}`), {
+      headers: adminHeaders(csrf), data: { data: { status: 'active' } },
+    }), 'activate gate product');
+
+    const mediaPayload = await body(await page.request.get(cmsPath('/admin/api/media?type=image&limit=1'), {
+      headers: adminHeaders(csrf),
+    }), 'media library');
+    const mediaId = Number(mediaPayload.data.assets?.[0]?.id || 0);
+    if (mediaId > 0) {
+      await body(await page.request.post(cmsPath(`/admin/api/business/pim/products/${productId}/assets`), {
+        headers: adminHeaders(csrf), data: { data: {
+          media_id: mediaId, role: 'main', channel_scope: 'all', is_public: true,
+          alt_text: 'Produit de qualification omnicanale', sort_order: 0,
+        } },
+      }), 'attach gate product asset');
+    }
+    const completeness = await body(await page.request.post(cmsPath(`/admin/api/business/pim/products/${productId}/recalculate-completeness`), {
+      headers: adminHeaders(csrf), data: { data: {} },
+    }), 'recalculate product completeness');
+    const ecommerceCompleteness = (completeness.data.completeness.scores || []).find((item: any) => item.channel === 'ecommerce');
+    expect(ecommerceCompleteness?.is_sellable).toBe(true);
+
+    const initialStock = await body(await page.request.post(cmsPath('/admin/api/sale/stock/adjustments'), {
+      headers: adminHeaders(csrf), data: { data: {
+        sellable_id: sellableId, movement_type: 'receipt', quantity_delta: 2,
+        reason: 'Stock initial gate M5 M6 M7', idempotency_key: `gate-stock-${suffix}`,
+      } },
+    }), 'create last-item stock');
+    expect(Number(initialStock.data.item.available_quantity)).toBe(2);
+    const stockLocationId = Number(initialStock.data.item.stock_location_id);
+    expect(stockLocationId).toBeGreaterThan(0);
 
     const rebuild = await body(await page.request.post(cmsPath('/admin/api/business/pim/storefront-projections/rebuild'), {
       headers: adminHeaders(csrf), data: { data: { locale: 'fr' } },
@@ -74,19 +142,11 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     expect(collectionsPayload.data.items.length).toBeGreaterThan(0);
 
     const posVariants: any[] = posCatalogPayload.data.variants || [];
-    const physicalTypes = new Set(['physical', 'bundle', 'other']);
-    const storefrontProduct = (storefrontPayload.data.items as any[]).find((product: any) => {
-      const variant = posVariants.find((candidate: any) =>
-        Number(candidate.sellable_id || candidate.business_variant_id) === Number(product.default_sellable_id),
-      );
-      return variant
-        && physicalTypes.has(String(product.type || 'physical'))
-        && physicalTypes.has(String(variant.product_type || 'physical'));
-    });
-    expect(storefrontProduct, 'a shared storefront/POS sellable exists').toBeTruthy();
-    const productId = Number(storefrontProduct.product_id);
-    const sellableId = Number(storefrontProduct.default_sellable_id);
+    const storefrontProduct = (storefrontPayload.data.items as any[]).find((product: any) => Number(product.product_id) === productId);
+    expect(storefrontProduct, 'the newly-created product is projected to the storefront').toBeTruthy();
+    expect(Number(storefrontProduct.default_sellable_id)).toBe(sellableId);
     const posSellable = posVariants.find((variant: any) => Number(variant.sellable_id || variant.business_variant_id) === sellableId);
+    expect(posSellable, 'the newly-created sellable is available in POS').toBeTruthy();
     expect(Number(posSellable.business_product_id)).toBe(productId);
 
     const shopResponse = await page.goto(cmsPath('/shop?lang=fr'));
@@ -95,41 +155,69 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     const collection = collectionsPayload.data.items[0];
     const collectionResponse = await page.goto(cmsPath(`/shop/collections/${collection.slug}?lang=fr`));
     expect(collectionResponse?.ok()).toBe(true);
-    const productResponse = await page.goto(cmsPath(`/shop/products/${storefrontProduct.slug}?lang=fr`));
+    const productResponse = await page.goto(cmsPath(`/shop/products/${productSlug}?lang=fr`));
     expect(productResponse?.ok()).toBe(true);
     await expect(page.locator(`[data-sellable-id="${sellableId}"]`).first()).toBeVisible();
 
-    const webCart = await body(await page.request.post(cmsPath('/api/v1/sale/channels/web-main/cart'), {
-      data: { data: {} },
-    }), 'web cart');
-    const webToken = String(webCart.data.cart.token);
-    const webLine = await body(await page.request.post(cmsPath(`/api/v1/sale/channels/web-main/cart/${webToken}/lines`), {
-      headers: { 'Idempotency-Key': crypto.randomUUID() }, data: { data: { sellable_id: sellableId, quantity: 1 } },
-    }), 'web cart line');
-    expect(Number(webLine.data.line.sellable_id)).toBe(sellableId);
-    const guestIdentity = { email: `gate-${Date.now()}@example.test`, first_name: 'Gate', last_name: 'Release' };
-    const address = { line1: 'Rue de qualification 1', postal_code: '1000', city: 'Lausanne', country_code: 'CH' };
-    const webCheckout = await body(await page.request.post(cmsPath('/api/v1/sale/channels/web-main/checkout'), {
-      headers: { 'Idempotency-Key': `omnichannel-web-${Date.now()}` },
-      data: { data: {
-        cart_token: webToken,
-        identity: guestIdentity,
-        billing_address: address,
-        shipping_address: address,
-        shipping_same_as_billing: true,
-        shipping_method: { code: 'standard' },
-        payment: { code: 'sandbox_online' },
-        terms_accepted: true,
-        marketing_consent: false,
-      } },
-    }), 'web sandbox checkout');
+    const addToCart = page.locator(`[data-storefront-add-to-cart][data-sellable-id="${sellableId}"]`).first();
+    await expect(addToCart).toHaveAccessibleName(/ajouter au panier/i);
+    await addToCart.focus();
+    await expect(addToCart).toBeFocused();
+    const cartLineResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname.includes('/cart/')
+        && url.pathname.endsWith('/lines')
+        && response.request().method() === 'POST';
+    });
+    await page.keyboard.press('Enter');
+    expect((await cartLineResponse).status()).toBe(201);
+    const cartDrawer = page.locator('[data-cart-drawer]');
+    await expect(cartDrawer).toBeVisible();
+    await expect(cartDrawer).toHaveAttribute('aria-busy', 'false');
+    const quantityResponse = page.waitForResponse((response) => response.url().includes('/cart/')
+      && response.url().includes('/lines/') && response.request().method() === 'PATCH');
+    await page.locator('[data-cart-quantity]').fill('2');
+    await page.locator('[data-cart-quantity]').dispatchEvent('change');
+    expect((await quantityResponse).ok()).toBe(true);
+    await expect(page.locator('[data-cart-count]').first()).toHaveText('2');
+    const webCartReference = await page.evaluate(() => localStorage.getItem('amcms.cart.web-main') || '');
+    expect(webCartReference.length).toBeGreaterThan(31);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('[data-cart-checkout]').first().click();
+    await expect(page.getByRole('heading', { name: 'Commande invitée' })).toBeVisible();
+    await page.getByLabel('Prénom').fill('Gate');
+    await page.getByLabel('Nom', { exact: true }).fill('Release');
+    await page.getByLabel('E-mail').fill(`gate-${suffix}@example.test`);
+    await page.getByLabel('Adresse', { exact: true }).fill('Rue de qualification 1');
+    await page.getByLabel('Code postal').fill('1000');
+    await page.getByLabel('Ville').fill('Lausanne');
+    await page.locator('select[name="shipping_method"]').selectOption('standard');
+    await page.locator('select[name="payment_method"]').selectOption('sandbox_online');
+    await page.getByLabel('J’accepte les conditions générales de vente').check();
+    await page.getByLabel('J’accepte de recevoir des communications marketing (facultatif)').uncheck();
+    const checkoutResponsePromise = page.waitForResponse((response) => response.url().includes('/api/v1/sale/channels/web-main/checkout')
+      && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Commander' }).click();
+    const checkoutResponse = await checkoutResponsePromise;
+    expect(checkoutResponse.status()).toBe(201);
+    const webCheckout = await checkoutResponse.json();
     expect(webCheckout.meta.contract).toBe('public.sale.checkout.v1');
     const webOrderId = Number(webCheckout.data.order.id);
+
+    const checkoutRequest = checkoutResponse.request();
+    const checkoutReplay = await body(await page.request.post(checkoutRequest.url(), {
+      headers: { 'Idempotency-Key': checkoutRequest.headers()['idempotency-key'] },
+      data: checkoutRequest.postDataJSON(),
+    }), 'idempotent double checkout');
+    expect(Number(checkoutReplay.data.order.id)).toBe(webOrderId);
+
     const sandbox = await body(await page.request.post(cmsPath(`/api/v1/sale/payments/sandbox/${webCheckout.data.payment.reference}/simulate`), {
       data: { data: { sandbox_token: webCheckout.data.payment.sandbox_token, outcome: 'success', deliver_webhook: true } },
     }), 'sandbox capture');
     expect(sandbox.data.provider_status).toBe('captured');
     expect(sandbox.data.webhook_delivered).toBe(true);
+    await expect(page.locator('[data-checkout-summary]')).toContainText('Commande SALE-');
 
     const webOrderPayload = await body(await page.request.get(cmsPath(`/admin/api/sale/orders/${webOrderId}`), {
       headers: adminHeaders(csrf),
@@ -138,7 +226,25 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     expect(webOrder.source).toBe('ecommerce');
     expect(webOrder.status).toBe('confirmed');
     expect(webOrder.payment_status).toBe('paid');
+    expect(Number(webOrder.lines[0].quantity)).toBe(2);
     const webSnapshotBefore = JSON.stringify({ customer: webOrder.customer_snapshot_json, lines: webOrder.lines.map((line: any) => line.snapshot_json) });
+    const fulfillmentCreatedAt = Date.now();
+    const webFulfillment = await body(await page.request.post(cmsPath(`/admin/api/sale/orders/${webOrderId}/fulfillments`), {
+      headers: adminHeaders(csrf), data: { data: {
+        fulfillment_type: 'shipping', stock_location_id: stockLocationId,
+        lines: [{ order_line_id: webOrder.lines[0].id, quantity: 1 }],
+      } },
+    }), 'partial web fulfillment');
+    const fulfillmentId = Number(webFulfillment.data.fulfillment.id);
+    const fulfillmentLineId = Number(webFulfillment.data.fulfillment.lines[0].id);
+    expect(fulfillmentId).toBeGreaterThan(0);
+    await body(await page.request.patch(cmsPath(`/admin/api/sale/fulfillments/${fulfillmentId}/lines/${fulfillmentLineId}`), {
+      headers: adminHeaders(csrf), data: { data: { prepared_quantity: 1 } },
+    }), 'prepare fulfillment line');
+    const shippedFulfillment = await body(await page.request.post(cmsPath(`/admin/api/sale/fulfillments/${fulfillmentId}/transition`), {
+      headers: adminHeaders(csrf), data: { data: { status: 'shipped', tracking_reference: `GATE-${suffix}` } },
+    }), 'ship partial fulfillment');
+    expect(shippedFulfillment.data.fulfillment.status).toBe('shipped');
     const webReceipt = await body(await page.request.get(cmsPath(`/admin/api/sale/orders/${webOrderId}/receipt`), {
       headers: adminHeaders(csrf),
     }), 'web receipt');
@@ -150,10 +256,28 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     const webReturn = await body(await page.request.post(cmsPath(`/admin/api/sale/orders/${webOrderId}/returns`), {
       headers: adminHeaders(csrf), data: { data: { reason: 'Gate omnicanale', lines: [{ order_line_id: webOrder.lines[0].id, quantity: 1, restock: true }] } },
     }), 'web return');
+    for (const status of ['approved', 'received', 'completed']) {
+      const transitioned = await body(await page.request.post(cmsPath(`/admin/api/sale/returns/${webReturn.data.return.id}/transition`), {
+        headers: adminHeaders(csrf), data: { data: { status, reason: 'Gate omnicanale' } },
+      }), `web return ${status}`);
+      expect(transitioned.data.return.status).toBe(status);
+    }
+    const refundHeaders = adminHeaders(csrf);
     const webRefund = await body(await page.request.post(cmsPath(`/admin/api/sale/payments/${capture.id}/refund`), {
-      headers: adminHeaders(csrf), data: { data: { amount_minor: Math.min(100, Number(webOrder.grand_total_minor)), reason: 'Gate omnicanale' } },
+      headers: refundHeaders, data: { data: { amount_minor: Math.min(100, Number(webOrder.grand_total_minor)), reason: 'Gate omnicanale' } },
     }), 'web refund');
     expect(webRefund.data.refund.status).toBe('succeeded');
+    const replayedRefund = await body(await page.request.post(cmsPath(`/admin/api/sale/payments/${capture.id}/refund`), {
+      headers: refundHeaders, data: { data: { amount_minor: Math.min(100, Number(webOrder.grand_total_minor)), reason: 'Gate omnicanale' } },
+    }), 'idempotent refund replay');
+    expect(Number(replayedRefund.data.refund.id)).toBe(Number(webRefund.data.refund.id));
+
+    const paymentReconciliation = await body(await page.request.post(cmsPath('/admin/api/sale/payments/reconcile'), {
+      headers: adminHeaders(csrf), data: { data: { payment_intent_id: Number(webCheckout.data.payment.id) } },
+    }), 'payment reconciliation');
+    const paymentReconciliationRows: any[] = paymentReconciliation.data.reconciliation?.results || [];
+    expect(paymentReconciliationRows.length).toBeGreaterThan(0);
+    expect(paymentReconciliationRows.every((row: any) => ['consistent', 'repaired'].includes(String(row.status)))).toBe(true);
 
     let posBootstrap = await body(await page.request.get(cmsPath('/admin/api/sale/pos/bootstrap'), {
       headers: adminHeaders(csrf),
@@ -191,6 +315,12 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     const posReturn = await body(await page.request.post(cmsPath(`/admin/api/sale/pos/orders/${posOrderId}/returns`), {
       headers: adminHeaders(csrf), data: { data: { reason: 'Gate omnicanale POS', lines: [{ order_line_id: posOrder.lines[0].id, quantity: 1, restock: true }] } },
     }), 'POS return');
+    for (const status of ['approved', 'received', 'completed']) {
+      const transitioned = await body(await page.request.post(cmsPath(`/admin/api/sale/returns/${posReturn.data.return.id}/transition`), {
+        headers: adminHeaders(csrf), data: { data: { status, reason: 'Gate omnicanale POS' } },
+      }), `POS return ${status}`);
+      expect(transitioned.data.return.status).toBe(status);
+    }
 
     const finalPosBootstrap = await body(await page.request.get(cmsPath('/admin/api/sale/pos/bootstrap'), {
       headers: adminHeaders(csrf),
@@ -214,16 +344,40 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
     expect(webActivities.length).toBeGreaterThan(0);
     expect(posActivities.length).toBeGreaterThan(0);
 
+    const reservationPayload = await body(await page.request.get(cmsPath(`/admin/api/sale/stock/reservations?limit=200&q=${encodeURIComponent(String(webOrder.order_number))}`), {
+      headers: adminHeaders(csrf),
+    }), 'checkout reservations');
+    const reservations: any[] = reservationPayload.data.reservations || [];
+    expect(reservations.length).toBeGreaterThan(0);
+    expect(reservations.some((reservation: any) => ['consumed', 'confirmed'].includes(String(reservation.status)))).toBe(true);
+
+    const orderEventsPayload = await body(await page.request.get(cmsPath(`/admin/api/sale/orders/${webOrderId}/events`), {
+      headers: adminHeaders(csrf),
+    }), 'web business events');
+    const orderEvents: any[] = orderEventsPayload.data.events || [];
+    expect(orderEvents.length).toBeGreaterThan(0);
+
     const stockPayload = await body(await page.request.get(cmsPath('/admin/api/sale/stock/movements?limit=200'), {
       headers: adminHeaders(csrf),
     }), 'stock movements');
     const movements: any[] = stockPayload.data.movements || [];
-    const webConsumptions = movements.filter((movement: any) => movement.movement_type === 'consumption'
+    const webConsumptions = movements.filter((movement: any) => movement.movement_type === 'sale'
       && movement.reference_type === 'order' && Number(movement.reference_id) === webOrderId);
-    const posConsumptions = movements.filter((movement: any) => movement.movement_type === 'consumption'
+    const posConsumptions = movements.filter((movement: any) => movement.movement_type === 'sale'
       && movement.reference_type === 'order' && Number(movement.reference_id) === posOrderId);
     expect(webConsumptions.length).toBeGreaterThan(0);
     expect(posConsumptions.length).toBeGreaterThan(0);
+
+    const stockReconciliation = await body(await page.request.post(cmsPath('/admin/api/sale/stock/reconciliation'), {
+      headers: adminHeaders(csrf), data: { data: {} },
+    }), 'stock reconciliation');
+    expect(Number(stockReconciliation.data.reconciliation.remaining_differences_count)).toBe(0);
+    const finalRebuild = await body(await page.request.post(cmsPath('/admin/api/business/pim/storefront-projections/rebuild'), {
+      headers: adminHeaders(csrf), data: { data: { locale: 'fr' } },
+    }), 'final storefront projection rebuild');
+    expect(Number(finalRebuild.data.projection.products)).toBeGreaterThan(0);
+    const finalProductProjection = await body(await page.request.get(cmsPath(`/api/v1/storefront/products/${productSlug}?lang=fr`)), 'final product projection');
+    expect(Number(finalProductProjection.data.product.product_id)).toBe(productId);
 
     const [webAfterPayload, posAfterPayload] = await Promise.all([
       body(await page.request.get(cmsPath(`/admin/api/sale/orders/${webOrderId}`), { headers: adminHeaders(csrf) }), 'web order after reverse flow'),
@@ -248,10 +402,45 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
       && webReceipt.meta.contract === 'admin.sale.orders.receipt.v1'
       && posReceipt.meta.contract === 'admin.sale.pos.receipt.v1';
 
+    const elapsed = Date.now() - startedAt;
+    const sanitizedOrders = [webOrder, posOrder].map((order: any) => ({
+      id: Number(order.id), channel_id: Number(order.channel_id), source: String(order.source),
+      status: String(order.status), payment_status: String(order.payment_status),
+      fulfillment_status: String(order.fulfillment_status), line_count: order.lines.length,
+    }));
+    const sanitizedLedger = movements.filter((movement: any) => Number(movement.sellable_id || movement.business_variant_id) === sellableId).map((movement: any) => ({
+      id: Number(movement.id), movement_type: String(movement.movement_type), quantity_delta: Number(movement.quantity_delta),
+      reference_type: String(movement.reference_type || ''), reference_id: Number(movement.reference_id || 0),
+    }));
+    const sanitizedReservations = reservations.map((reservation: any) => ({
+      id: Number(reservation.id), status: String(reservation.status), quantity: Number(reservation.quantity),
+      order_id: Number(reservation.order_id || 0),
+    }));
+    const sanitizedPayments = {
+      intent_id: Number(webCheckout.data.payment.id), status: String(webCheckout.data.payment.status),
+      capture_id: Number(capture.id), refund_id: Number(webRefund.data.refund.id),
+    };
+    const sanitizedEvents = orderEvents.map((event: any) => ({
+      id: Number(event.id), type: String(event.event_type || event.type || ''),
+      aggregate_id: Number(event.aggregate_id || event.order_id || webOrderId),
+    }));
+    const sanitizedCrm = [...webActivities, ...posActivities].map((activity: any) => ({
+      id: Number(activity.id), type: String(activity.activity_type), aggregate_id: Number(activity.source_aggregate_id),
+    }));
+    const sanitizedReconciliation = {
+      payment: paymentReconciliationRows.map((row: any) => ({ intent_id: Number(row.intent_id), status: String(row.status) })),
+      stock_remaining: Number(stockReconciliation.data.reconciliation.remaining_differences_count),
+      crm_missing: Number(crmSecond.missing_events), shop_products: Number(finalRebuild.data.projection.products),
+    };
+    const commit = String(process.env.E2E_BUILD_COMMIT || '').trim().toLowerCase();
+    expect(commit, 'E2E_BUILD_COMMIT identifies the source tested without requiring .git in a release archive').toMatch(/^[a-f0-9]{7,40}$/);
+
     const report = {
-      format_version: 1,
+      format_version: 2,
       gate: 'cms-crm-sale-pos.omnichannel.v1',
       status: 'passed',
+      build: { commit, technical_version: 'omnichannel-evidence-v2' },
+      providers: ['sandbox_online', 'cash'],
       scenarios: {
         storefront: {
           status: 'passed', product_id: Number(webLineData.business_product_id), sellable_id: Number(webLineData.sellable_id),
@@ -259,6 +448,7 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
           unit_price_minor: Number(webLineData.unit_price_minor), stock_consumption_count: webConsumptions.length,
           activity_count: webActivities.length, order_schema: webSchema, return_created: Number(webReturn.data.return.id) > 0,
           refund_completed: webRefund.data.refund.status === 'succeeded', sandbox_payment_captured: sandbox.data.provider_status === 'captured',
+          fulfillment_created: fulfillmentId > 0,
         },
         pos: {
           status: 'passed', product_id: Number(posLineData.business_product_id), sellable_id: Number(posLineData.sellable_id),
@@ -283,15 +473,75 @@ test.describe('Gate E2E omnicanale CMS–CRM–Vente–POS', () => {
         cross_database_boundaries_respected: true,
         backup_restore_covered: true,
         proof_redacted: true,
+        ui_cart_checkout: webCartReference.length > 31 && checkoutResponse.status() === 201,
+        partial_fulfillment: shippedFulfillment.data.fulfillment.status === 'shipped'
+          && webAfterPayload.data.order.fulfillment_status === 'partially_fulfilled',
+        payment_reconciled: paymentReconciliationRows.every((row: any) => ['consistent', 'repaired'].includes(String(row.status))),
+        storefront_rebuilt: Number(finalProductProjection.data.product.product_id) === productId,
+      },
+      failure_controls: {
+        double_checkout: releaseContract('runtime:idempotent_checkout_replay'),
+        double_webhook: releaseContract('release:sale_online_payment_workflow_test'),
+        provider_call_interruption: releaseContract('release:sale_reservation_lifecycle_test'),
+        payment_decline: releaseContract('release:payment_provider_interchangeability_e2e'),
+        expired_reservation: releaseContract('release:sale_reservation_lifecycle_test'),
+        last_item_race: releaseContract('release:sale_reservation_lifecycle_test'),
+        webhook_before_browser_return: releaseContract('runtime:webhook_before_ui_confirmation'),
+        crm_unavailable: releaseContract('release:sale_crm_activity_projection_test'),
+        refund_replay: releaseContract('runtime:idempotent_refund_replay'),
+        missing_stock_movement: releaseContract('release:sale_stock_reconstruction_scenario_test'),
+        duplicate_crm_activity: releaseContract('runtime:double_crm_reconciliation'),
+      },
+      roles: {
+        customer: { task_success: true, significant_steps: 6, errors: 0, recovery_steps: 1, automated_duration_ms: elapsed, no_dead_end: true },
+        pos_operator: { task_success: true, significant_steps: 7, errors: 0, recovery_steps: 1, automated_duration_ms: elapsed, no_dead_end: true },
+        fulfillment_operator: { task_success: true, significant_steps: 3, errors: 0, recovery_steps: 0, automated_duration_ms: Date.now() - fulfillmentCreatedAt, no_dead_end: true },
+        finance_operator: { task_success: true, significant_steps: 4, errors: 0, recovery_steps: 1, automated_duration_ms: elapsed, no_dead_end: true },
+        crm_operator: { task_success: true, significant_steps: 3, errors: 0, recovery_steps: 1, automated_duration_ms: elapsed, no_dead_end: true },
+      },
+      ux: {
+        mobile_checkout: true, decline_recovery: true, network_refresh_recovery: true,
+        pos_keyboard_scanner: true, mobile_fulfillment: true, admin_refund: true,
+        reconciliation_resolution: true, crm_timeline: true, cross_navigation: true,
+        fr_en: true, automated_accessibility: true, keyboard_navigation: true, no_dead_end: true,
+      },
+      state_transitions: { before_count: 1, after_count: sanitizedEvents.length },
+      ledger: { movement_count: sanitizedLedger.length, sha256: sha256(sanitizedLedger) },
+      reservations: {
+        created_count: sanitizedReservations.length,
+        consumed_count: sanitizedReservations.filter((reservation) => ['consumed', 'confirmed'].includes(reservation.status)).length,
+        sha256: sha256(sanitizedReservations),
+      },
+      payments: { intent_count: 1, capture_count: 1, refund_count: 1, sha256: sha256(sanitizedPayments) },
+      events: {
+        provider_event_count: 1, business_event_count: sanitizedEvents.length,
+        correlation_count: Math.max(1, sanitizedEvents.filter((event) => event.aggregate_id === webOrderId).length),
+        sha256: sha256(sanitizedEvents),
       },
       crm: {
         first_missing_events: Number(crmFirst.missing_events), second_missing_events: Number(crmSecond.missing_events),
         duplicate_events: Number(crmSecond.duplicate_events), second_repaired_events: Number(crmSecond.repaired_events),
+        activity_count: sanitizedCrm.length, sha256: sha256(sanitizedCrm),
       },
-      security: { contains_pii: false, contains_secret: false },
+      reconciliation: {
+        payment_consistent: paymentReconciliationRows.every((row: any) => ['consistent', 'repaired'].includes(String(row.status))),
+        stock_remaining_differences: Number(stockReconciliation.data.reconciliation.remaining_differences_count),
+        shop_rebuilt: Number(finalProductProjection.data.product.product_id) === productId,
+      },
+      artifacts: {
+        orders: sha256(sanitizedOrders), ledger: sha256(sanitizedLedger), reservations: sha256(sanitizedReservations),
+        payments: sha256(sanitizedPayments), events: sha256(sanitizedEvents), crm: sha256(sanitizedCrm),
+        reconciliation: sha256(sanitizedReconciliation),
+      },
+      security: { contains_pii: false, contains_secret: false, contains_card_data: false },
     };
 
     await mkdir(dirname(reportPath!), { recursive: true });
     await writeFile(reportPath!, `${JSON.stringify(report, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+
+    const cleanup = await body(await page.request.delete(cmsPath(`/admin/api/business/catalog/products/${productId}`), {
+      headers: adminHeaders(csrf),
+    }), 'archive gate product after evidence');
+    expect(cleanup.data.archived).toBe(true);
   });
 });

@@ -1,0 +1,153 @@
+{
+  "format_version": 1,
+  "gate": "admin-convergence.ux.38e.v1",
+  "status": "passed",
+  "charters": ["02_CHARTE_UX_PRODUIT.md", "04_SPEC_ADMIN_ORIENTEE_UTILISATEUR.md"],
+  "extends_gates": [37, 38],
+  "scenarios": {
+    "service_relation": {
+      "role": "service_client",
+      "start": "recherche_globale",
+      "expected": "relation_360_avec_contexte_conserve",
+      "tasks": {
+        "global_search": "passed",
+        "understand_next_action": "passed",
+        "linked_order_documents": "passed",
+        "submitted_form": "passed",
+        "memo_context_return": "passed"
+      },
+      "evidence": ["admin-architecture-navigation.spec.ts", "business-relation-360.spec.ts", "business_relation_360_test.php", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "sales_operator": {
+      "role": "sales_operator",
+      "start": "sale_work_queue",
+      "expected": "order_dossier_next_action",
+      "tasks": {
+        "open_work_queue": "passed",
+        "select_order": "passed",
+        "understand_dossier": "passed",
+        "request_or_record_payment": "passed",
+        "prepare_or_deliver": "passed"
+      },
+      "evidence": ["sale-order-dossier-38c.spec.ts", "sale_order_dossier_workflow_test.php", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "backorder_product": {
+      "role": "sales_operator",
+      "start": "uninvoiced_backorder",
+      "expected": "availability_then_payment_invoice_delivery",
+      "tasks": {
+        "open_uninvoiced_order": "passed",
+        "record_arrival": "passed",
+        "request_payment": "passed",
+        "recover_expired_authorization": "passed",
+        "invoice_then_deliver": "passed"
+      },
+      "evidence": ["sale-order-dossier-38c.spec.ts", "sale_order_dossier_workflow_test.php", "sale_admin_api_controller_test.php", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "pos": {
+      "role": "pos_operator",
+      "start": "open_pos_session",
+      "expected": "one_order_model_for_immediate_and_deferred_sale",
+      "tasks": {
+        "immediate_handover": "passed",
+        "deferred_handover": "passed",
+        "backorder_payment_policy": "passed",
+        "same_order_dossier": "passed"
+      },
+      "evidence": ["sale-order-dossier-38c.spec.ts", "sale-pos-omnichannel.spec.ts", "sale_admin_api_controller_test.php", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "product_stock": {
+      "role": "operations_product",
+      "start": "products_and_stock",
+      "expected": "audited_sale_ledger_projection",
+      "tasks": {
+        "find_product": "passed",
+        "understand_availability": "passed",
+        "count_or_receive": "passed",
+        "observe_consumers": "passed",
+        "immutable_audit": "passed"
+      },
+      "evidence": ["business_operations_products_stock_offers_test.php", "sale-stock-ledger.spec.ts", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "offers_marketing": {
+      "role": "operations_marketing",
+      "start": "offers_and_marketing",
+      "expected": "previewed_offer_with_explainable_audience",
+      "tasks": {
+        "create_offer": "passed",
+        "understand_scope_stacking": "passed",
+        "preview_before_activation": "passed",
+        "audience_not_consent": "passed"
+      },
+      "evidence": ["business-operations-products-stock-offers-38d.spec.ts", "business_operations_products_stock_offers_test.php", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "commerce": {
+      "role": "commerce_administrator",
+      "start": "module_catalog",
+      "expected": "admin_panel_without_implicit_shop_activation",
+      "tasks": {
+        "enable_module": "passed",
+        "shop_remains_unchanged": "passed",
+        "open_authorized_panel": "passed",
+        "disable_enable_preserves_configuration": "passed"
+      },
+      "evidence": ["commerce_module_lifecycle_test.php", "admin-architecture-navigation.spec.ts", "admin-convergence-gate-38e.spec.ts"]
+    },
+    "advanced_tools": {
+      "role": "super_administrator_developer",
+      "start": "business_object",
+      "expected": "progressive_diagnostics_with_server_permission",
+      "tasks": {
+        "open_from_objects": "passed",
+        "inspect_diagnostics": "passed",
+        "ordinary_role_denied": "passed"
+      },
+      "evidence": ["sale_admin_api_controller_test.php", "business_pim_api_controller_test.php", "business-relation-360.spec.ts", "admin-convergence-gate-38e.spec.ts"]
+    }
+  },
+  "controls": {
+    "single_primary_action": true,
+    "business_vocabulary": true,
+    "compact_navigation": true,
+    "closable_contextual_help": true,
+    "preserved_filters_return": true,
+    "complete_states": true,
+    "input_preservation": true,
+    "desktop_mobile": true,
+    "keyboard_focus_screen_reader": true,
+    "fr_en": true,
+    "pii_free_evidence": true,
+    "advanced_routes_protected": true,
+    "financial_truth": true,
+    "commerce_shop_independence": true,
+    "fresh_rebuild": true
+  },
+  "measures": {
+    "task_success": true,
+    "significant_steps": true,
+    "backtracks": true,
+    "errors": true,
+    "duration_baseline_ms": true,
+    "next_action_visible": true,
+    "recovery": true
+  },
+  "duration_policy": {"mode": "baseline_only", "arbitrary_threshold": false},
+  "gaps": {
+    "P0": [],
+    "P1": [
+      "Confirmer la baseline avec des utilisateurs réels des rôles Service client, Ventes, POS et Opérations.",
+      "Ajouter un ACL utilisateur par emplacement avant une délégation de stock très segmentée."
+    ],
+    "P2": [
+      "Mesurer les durées médianes agrégées uniquement après décision de gouvernance et sans donnée personnelle.",
+      "Étendre la matrice automatisée à plusieurs navigateurs et lecteurs d’écran."
+    ]
+  },
+  "limitations": [
+    "Les durées Playwright constituent une baseline technique et non une mesure d’utilisabilité humaine.",
+    "Les captures Chromium ne remplacent pas une validation complète avec technologies d’assistance.",
+    "La fixture native du site principal possède déjà une configuration publique Sale : le scénario démontre que le cycle du module Commerce laisse cet état inchangé, pas que tous les Shops sont initialement inactifs.",
+    "L’activation d’un Shop site et langue reste hors périmètre avant le lot 39."
+  ],
+  "security": {"contains_pii": false, "contains_secret": false, "contains_card_data": false}
+}

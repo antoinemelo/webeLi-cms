@@ -8,6 +8,8 @@
   "paths": [
     "/admin/api/maintenance",
     "/admin/api/maintenance/dependencies/refresh",
+    "/admin/api/maintenance/updates/stable/refresh",
+    "/admin/api/maintenance/updates/stable/apply",
     "/admin/api/maintenance/cache/clear",
     "/admin/api/maintenance/search/reindex",
     "/admin/api/maintenance/audit-logs",
@@ -80,7 +82,7 @@
           {
             "key": "backend_vendor",
             "label": "Vendor PHP backend",
-            "path": "/var/www/mod/backend/vendor",
+            "path": "/var/www/cms/backend/vendor",
             "exists": true,
             "active": true,
             "detail": "Autoload Composer principal."
@@ -103,6 +105,22 @@
           }
         ]
       },
+      "stable_updates": {
+        "enabled": true,
+        "channel": "stable",
+        "checked_at": 1787385600,
+        "repository": "antoinemelo/webeLi-cms",
+        "catalog_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "core": {
+          "type": "core",
+          "key": "core",
+          "version": "version-stable-courante",
+          "installed_version": "version-stable-précédente",
+          "update_available": true,
+          "update_allowed": true
+        },
+        "modules": []
+      },
       "message": "Maintenance action completed.",
       "deleted_files": 0,
       "deleted_rows": 0,
@@ -114,6 +132,14 @@
         "refresh_dependencies": {
           "method": "POST",
           "path": "/admin/api/maintenance/dependencies/refresh"
+        },
+        "refresh_stable_updates": {
+          "method": "POST",
+          "path": "/admin/api/maintenance/updates/stable/refresh"
+        },
+        "apply_stable_update": {
+          "method": "POST",
+          "path": "/admin/api/maintenance/updates/stable/apply"
         },
         "clear_cache": {
           "method": "POST",

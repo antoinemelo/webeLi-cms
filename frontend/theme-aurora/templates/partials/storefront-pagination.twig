@@ -1,0 +1,6 @@
+{% set catalog_en = language_code|default('fr')|slice(0, 2) == 'en' %}
+<nav class="storefront-pagination" aria-label="{{ catalog_en ? 'Catalog pagination' : 'Pagination du catalogue' }}">
+  {% if pagination.previous_url|default(null) %}<a class="btn btn--ghost" rel="prev" href="{{ pagination.previous_url }}">{{ catalog_en ? 'Previous page' : 'Page précédente' }}</a>{% endif %}
+  {% if pagination.pages|default(0) %}<span>{{ catalog_en ? 'Page' : 'Page' }} {{ pagination.page }} {{ catalog_en ? 'of' : 'sur' }} {{ pagination.pages }}</span>{% endif %}
+  {% if pagination.next_url|default(null) %}<a class="btn btn--ghost" rel="next" href="{{ pagination.next_url }}">{{ catalog_en ? 'Next page' : 'Page suivante' }}</a>{% endif %}
+</nav>

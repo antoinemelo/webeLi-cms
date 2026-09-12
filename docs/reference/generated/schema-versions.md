@@ -33,6 +33,10 @@ generated: true
 | `database/migrations/business/0010_sales_channel_configs.sql` | `0010_sales_channel_configs` |
 | `database/migrations/business/0011_sellables_storefront_invalidation.sql` | `0011_sellables_storefront_invalidation` |
 | `database/migrations/business/0012_sellable_lifecycle_triggers.sql` | `0012_sellable_lifecycle_triggers` |
+| `database/migrations/business/0013_relation_360.sql` | `0013_relation_360` |
+| `database/migrations/business/0014_stock_ledger_immutability.sql` | `0014_stock_ledger_immutability` |
+| `database/migrations/business/0015_storefront_product_relations.sql` | `0015_storefront_product_relations` |
+| `database/migrations/business/0016_storefront_asset_update_invalidation.sql` | `0016_storefront_asset_update_invalidation` |
 | `database/migrations/cookies/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/core/070_module_resource_blueprints.sql` | `070_module_resource_blueprints` |
 | `database/migrations/core/071_backfill_forms_module_blueprint_storage.sql` | `071_backfill_forms_module_blueprint_storage` |
@@ -43,6 +47,13 @@ generated: true
 | `database/migrations/core/077_outbox_reliability.sql` | `077_outbox_reliability` |
 | `database/migrations/core/078_sales_channel_storefronts.sql` | `078_sales_channel_storefronts` |
 | `database/migrations/core/079_storefront_projections.sql` | `079_storefront_projections` |
+| `database/migrations/core/080_shop_system_configurations.sql` | `080_shop_system_configurations` |
+| `database/migrations/core/081_storefront_catalog_facets.sql` | `081_storefront_catalog_facets` |
+| `database/migrations/core/082_storefront_merchandising_analytics.sql` | `082_storefront_merchandising_analytics` |
+| `database/migrations/core/083_studio_commerce_blocks.sql` | `083_studio_commerce_blocks` |
+| `database/migrations/core/084_remove_demo_home_product_link.sql` | `084_remove_demo_home_product_link` |
+| `database/migrations/core/085_storytelling_and_studio_commerce_blocks.sql` | `085_storytelling_and_studio_commerce_blocks` |
+| `database/migrations/core/086_storefront_block_labels_and_actions.sql` | `086_storefront_block_labels_and_actions` |
 | `database/migrations/forms/0001_baseline.sql` | `0001_baseline` |
 | `database/migrations/iam/0001_init.sql` | `0001_init` |
 | `database/migrations/iam/0002_admin_security_hardening.sql` | `0002_admin_security_hardening` |
@@ -54,6 +65,7 @@ generated: true
 | `database/migrations/iam/0008_business_permissions.sql` | `0008_business_permissions` |
 | `database/migrations/iam/0009_customer_accounts.sql` | `0009_customer_accounts` |
 | `database/migrations/iam/0010_sales_channel_permission.sql` | `0010_sales_channel_permission` |
+| `database/migrations/iam/0011_accounting_permissions.sql` | `0011_accounting_permissions` |
 | `database/migrations/sale/0001_bundle_product_type_check.sql` | `0001_bundle_product_type_check` |
 | `database/migrations/sale/0002_cart_surcharge_adjustment_check.sql` | `0002_cart_surcharge_adjustment_check` |
 | `database/migrations/sale/0003_state_machines_snapshots.sql` | `0003_state_machines_snapshots` |
@@ -64,3 +76,7 @@ generated: true
 | `database/migrations/sale/0008_sales_channel_contract.sql` | `0008_sales_channel_contract` |
 | `database/migrations/sale/0009_sellable_references.sql` | `0009_sellable_references` |
 | `database/migrations/sale/0010_cart_aggregate_contract.sql` | `0010_cart_aggregate_contract` |
+| `database/migrations/sale/0011_order_dossier_documents.sql` | `0011_order_dossier_documents` |
+| `database/migrations/sale/0012_stock_ledger_immutability.sql` | `0012_stock_ledger_immutability` |
+| `database/migrations/sale/0013_order_logistics_tracking.sql` | `0013_order_logistics_tracking` |
+| `database/migrations/sale/0014_invoicing_sales_inventory.sql` | `0014_invoicing_sales_inventory` |

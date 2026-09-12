@@ -1,0 +1,73 @@
+{
+  "format_version": 1,
+  "gate": "sale.stock-reconstruction.m6.5.v1",
+  "status": "passed",
+  "source_of_truth": "sale_stock_movements",
+  "invariants": {
+    "current_equals_movement_sum": true,
+    "available_equals_physical_minus_reserved": true,
+    "movement_balance_chain_checked": true,
+    "exceptions_explicit": true
+  },
+  "comparisons": ["materialized_state", "movements", "reservations", "fulfillments", "returns", "transfers", "business_shop_projection"],
+  "diagnostic": {
+    "dry_run_default": true,
+    "mutates_stock": false,
+    "severity_levels": ["warning", "error", "critical"],
+    "before_after_preview": true,
+    "probable_causes": true,
+    "operational_links": true,
+    "failures_only_retry": true,
+    "downloadable_json": true
+  },
+  "repair": {
+    "automatic_by_default": false,
+    "reason_required": true,
+    "backup_before_write": true,
+    "proof_per_correction": true,
+    "external_count_uses_corrective_movement": true,
+    "derived_cache_rebuilt_from_ledger": true,
+    "direct_ledger_mutation": false
+  },
+  "scenario": {
+    "initial_stock": "passed",
+    "reservation": "passed",
+    "payment": "passed",
+    "sale": "passed",
+    "partial_fulfillment": "passed",
+    "return": "passed",
+    "correction": "passed",
+    "transfer": "passed",
+    "expiration": "passed"
+  },
+  "projection": {
+    "business_checked": true,
+    "shop_contract": "sale.inventory.availability.v1",
+    "stale_public_state_rejected": true,
+    "storefront_invalidated_after_repair": true
+  },
+  "fresh_instance": {
+    "empty_database_supported": true,
+    "canonical_schema_rebuild": true,
+    "migration_required": false,
+    "backup_restore_verified": true
+  },
+  "ux": {
+    "admin_without_database_access": true,
+    "preview_before_repair": true,
+    "visible_progress": true,
+    "mobile_readable": true,
+    "permissions_separate_diagnostic_repair": true,
+    "languages": ["fr"]
+  },
+  "security": {"contains_pii": false, "contains_secret": false},
+  "evidence": {
+    "service": "backend/src/Modules/Sale/Services/SaleInventoryReconciliationService.php",
+    "cli": "tools/cms.py inventory reconcile",
+    "admin_ui": "frontend/admin-vue/src/views/modules/SaleOperationsView.vue",
+    "scenario_test": "tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php",
+    "reconciliation_test": "tools/php/tests/unit/sale_inventory_reconciliation_test.php",
+    "backup_restore": "tools/php/tests/unit/sale_stock_reconstruction_scenario_test.php",
+    "browser_test": "frontend/admin-vue/tests/e2e/sale-stock-reconstruction.spec.ts"
+  }
+}

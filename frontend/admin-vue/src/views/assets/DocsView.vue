@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { adminApi, apiErrorMessage } from '@/api/client';
 import ApiFeedback from '@/components/feedback/ApiFeedback.vue';
-import ContextualHelpLink from '@/components/ui/ContextualHelpLink.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import { useAdminContextStore } from '@/stores/adminContext';
 
@@ -41,8 +40,9 @@ const documentLoading = ref(false);
 const error = ref('');
 const q = ref('');
 const selectedAudience = ref('all');
-const selectedSection = ref('all');
+const selectedCollection = ref('use');
 const selectedId = ref('');
+const openSections = ref<Set<string>>(new Set());
 
 // Documentation access only requires the current authenticated back-office context.
 const canOpenDocs = computed(() => Boolean(context.context));
@@ -83,6 +83,24 @@ const hiddenAudienceTabs = new Set([
   'seo-manager'
 ]);
 
+const collectionDefinitions = [
+  { key: 'use', label: 'Démarrer et utiliser', shortLabel: 'Utiliser', description: 'Prendre ses repères, créer du contenu, publier, gérer les médias et améliorer le référencement.', sections: ['overview', 'getting-started', 'user-guide'] },
+  { key: 'business', label: 'Gérer l’activité', shortLabel: 'Activité', description: 'Piloter le catalogue, les clients, les ventes, les paiements et les opérations métier.', sections: ['business'] },
+  { key: 'configure', label: 'Configurer le CMS', shortLabel: 'Configurer', description: 'Organiser les sites, langues, utilisateurs, rôles, modules et intégrations.', sections: ['administration'] },
+  { key: 'operate', label: 'Installer et exploiter', shortLabel: 'Exploiter', description: 'Installer, sauvegarder, mettre à jour, déployer et dépanner une instance.', sections: ['installation', 'operations'] },
+  { key: 'build', label: 'Intégrer et développer', shortLabel: 'Développer', description: 'Utiliser les API, comprendre l’architecture et étendre le CMS sans casser ses contrats.', sections: ['api', 'public-api', 'development', 'reference'] },
+  { key: 'verify', label: 'Vérifier et auditer', shortLabel: 'Vérifier', description: 'Consulter les capacités démontrées, les limites connues et les contrôles reproductibles.', sections: ['evaluation'] }
+] as const;
+
+const collections = computed(() => collectionDefinitions.map((collection) => ({
+  ...collection,
+  count: documents.value.filter((doc) => collection.sections.includes(doc.section_key as never)).length
+})));
+
+function collectionForSection(sectionKey?: string): string {
+  return collectionDefinitions.find((collection) => collection.sections.includes(String(sectionKey || '') as never))?.key || 'use';
+}
+
 const profileTabs = computed(() => {
   const counts = new Map<string, number>();
   documents.value.forEach((doc) => {
@@ -102,8 +120,9 @@ const profileTabs = computed(() => {
 
 const filteredSections = computed(() => {
   const term = q.value.trim().toLowerCase();
+  const collection = collectionDefinitions.find((item) => item.key === selectedCollection.value) || collectionDefinitions[0];
   return sections.value
-    .filter((section) => selectedSection.value === 'all' || section.key === selectedSection.value)
+    .filter((section) => Boolean(term) || collection.sections.includes(section.key as never))
     .map((section) => ({
       ...section,
       documents: section.documents.filter((doc) => {
@@ -118,6 +137,88 @@ const filteredSections = computed(() => {
 
 const filteredDocuments = computed(() => filteredSections.value.flatMap((section) => section.documents));
 const currentSection = computed(() => sections.value.find((section) => section.key === current.value?.section_key));
+const currentDocumentIndex = computed(() => filteredDocuments.value.findIndex((doc) => doc.id === current.value?.id));
+const previousDocument = computed(() => currentDocumentIndex.value > 0 ? filteredDocuments.value[currentDocumentIndex.value - 1] : null);
+const nextDocument = computed(() => currentDocumentIndex.value >= 0 ? filteredDocuments.value[currentDocumentIndex.value + 1] || null : null);
+
+const groupLabels: Record<string, string> = {
+  index: 'Commencer ici',
+  'getting-started': 'Prise en main', content: 'Contenus', publication: 'Publication', media: 'Médias',
+  'navigation-taxonomies': 'Navigation et classement', seo: 'Référencement', 'forms-cookies': 'Formulaires et consentement',
+  'ai-assistant': 'Assistant IA', business: 'Activité et relations clients',
+  'sites-and-languages': 'Sites et langues', 'users-roles-permissions': 'Utilisateurs et accès', 'content-model': 'Structure des contenus',
+  modules: 'Modules', security: 'Sécurité et intégrations', 'imports-exports': 'Imports et exports',
+  architecture: 'Architecture', extending: 'Étendre le CMS', 'testing-validation': 'Tests et validation', database: 'Base de données',
+  backoffice: 'Back-office', 'frontend-twig': 'Rendu public', 'python-tooling': 'Outils en ligne de commande', generated: 'Références générées',
+  'admin-internal': 'API du back-office', 'machine-readable': 'Données d’audit', catalogue: 'Catalogue et produits', crm: 'Clients et relations',
+  vente: 'Ventes', operations: 'Opérations métier', general: 'Guides principaux'
+};
+
+function documentGroupKey(doc: DocsDocument): string {
+  if (doc.is_section_index) return 'index';
+  const relative = doc.relative_path.replace(`${doc.section_key}/`, '');
+  const first = relative.split('/')[0];
+  if (relative.includes('/')) return first;
+  const filename = first.toLowerCase();
+  if (doc.section_key === 'business') {
+    if (filename.startsWith('catalogue')) return 'catalogue';
+    if (filename.startsWith('crm')) return 'crm';
+    if (filename.startsWith('vente') || filename === 'commerce.md') return 'vente';
+    if (filename.startsWith('operations')) return 'operations';
+  }
+  return 'general';
+}
+
+function groupsForSection(section: DocsSection): Array<{ key: string; label: string; documents: DocsDocument[] }> {
+  const groups = new Map<string, DocsDocument[]>();
+  section.documents.forEach((doc) => {
+    const key = documentGroupKey(doc);
+    groups.set(key, [...(groups.get(key) || []), doc]);
+  });
+  return [...groups.entries()].map(([key, docs]) => ({ key, label: groupLabels[key] || titleizeAudience(key), documents: docs }));
+}
+
+function setSectionOpen(sectionKey: string, open: boolean): void {
+  const next = new Set(openSections.value);
+  if (open) next.add(sectionKey); else next.delete(sectionKey);
+  openSections.value = next;
+}
+
+function onSectionToggle(sectionKey: string, event: Event): void {
+  setSectionOpen(sectionKey, Boolean((event.currentTarget as HTMLDetailsElement | null)?.open));
+}
+
+function selectCollection(key: string): void {
+  selectedCollection.value = key;
+  q.value = '';
+  const collection = collectionDefinitions.find((item) => item.key === key);
+  const firstSection = sections.value.find((section) => collection?.sections.includes(section.key as never));
+  if (!firstSection) return;
+  openSections.value = new Set([firstSection.key]);
+  const first = firstSection.documents.find((doc) => doc.is_section_index) || firstSection.documents[0];
+  if (first) void selectDocument(first.id);
+}
+
+function slugHeading(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
+}
+
+const renderedDocument = computed(() => {
+  if (!current.value?.html || typeof DOMParser === 'undefined') return { html: current.value?.html || '', headings: [] as Array<{ id: string; label: string; level: number }> };
+  const parsed = new DOMParser().parseFromString(`<div>${current.value.html}</div>`, 'text/html');
+  parsed.querySelector('h1')?.remove();
+  const used = new Set<string>();
+  const headings = [...parsed.querySelectorAll('h2,h3')].map((heading) => {
+    const label = heading.textContent?.trim() || '';
+    let id = heading.id || slugHeading(label);let suffix = 2;while (used.has(id)) id = `${slugHeading(label)}-${suffix++}`;used.add(id);heading.id = id;
+    return { id, label, level: heading.tagName === 'H3' ? 3 : 2 };
+  }).filter((heading) => heading.label);
+  return { html: parsed.body.firstElementChild?.innerHTML || current.value.html, headings };
+});
+
+function scrollToHeading(id: string): void {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function requestedDocumentId(): string {
   const doc = route.query.doc;
@@ -154,7 +255,14 @@ async function loadIndex(): Promise<void> {
     const first = requested
       ? documents.value.find((doc) => doc.id === requested) || { id: requested }
       : documents.value.find((doc) => doc.is_section_index) || documents.value[0];
-    if (first && !selectedId.value) await selectDocument(first.id);
+    if (first && !selectedId.value) {
+      const indexed = documents.value.find((doc) => doc.id === first.id);
+      if (indexed) {
+        selectedCollection.value = collectionForSection(indexed.section_key);
+        openSections.value = new Set([indexed.section_key]);
+      }
+      await selectDocument(first.id);
+    }
   } catch (err) {
     error.value = apiErrorMessage(err, 'Documentation indisponible.');
   } finally {
@@ -205,6 +313,8 @@ async function selectDocument(id: string, options: SelectDocumentOptions = {}): 
     });
     current.value = response.data.document;
     selectedId.value = response.data.document.id;
+    selectedCollection.value = collectionForSection(response.data.document.section_key);
+    setSectionOpen(response.data.document.section_key, true);
     if (Array.isArray(response.data.navigation) && response.data.navigation.length > 0) documents.value = response.data.navigation;
   } catch (err) {
     selectedId.value = current.value?.id || previousId;
@@ -399,8 +509,11 @@ watch(() => route.query.doc, (doc) => {
 </script>
 
 <template>
-  <PageHeader title="Documentation" intro="Toute la documentation du CMS, accessible à chaque utilisateur du back-office depuis le menu principal Actifs." />
-  <ContextualHelpLink id="docs.index" class="mb-3" />
+  <PageHeader
+    title="Documentation"
+    intro="Des parcours guidés pour utiliser, configurer et exploiter le CMS, avec les références techniques lorsque vous en avez besoin."
+    help-id="docs.index"
+  />
 
   <ApiFeedback :error="error" />
 
@@ -410,70 +523,133 @@ watch(() => route.query.doc, (doc) => {
   </div>
 
   <template v-else>
-    <nav class="editor-tabs docs-profile-tabs" role="tablist" aria-label="Filtrer la documentation par profil">
+    <section class="docs-collections" aria-labelledby="docs-needs-title">
+      <div class="docs-collections__intro">
+        <p class="eyebrow">Choisir un parcours</p>
+        <h2 id="docs-needs-title">Que souhaitez-vous faire ?</h2>
+      </div>
       <button
-        v-for="tab in profileTabs"
-        :id="`docs-profile-tab-${tab.key}`"
-        :key="tab.key"
+        v-for="collection in collections"
+        :key="collection.key"
         type="button"
-        :class="['editor-tab', { active: selectedAudience === tab.key }]"
-        role="tab"
-        :aria-selected="selectedAudience === tab.key"
-        :tabindex="selectedAudience === tab.key ? 0 : -1"
-        @click="selectAudience(tab.key)"
-        @keydown="handleAudienceTabKeydown($event, tab.key)"
+        :class="['docs-collection-card', { active: selectedCollection === collection.key }]"
+        :aria-pressed="selectedCollection === collection.key"
+        @click="selectCollection(collection.key)"
       >
-        {{ tab.label }}
-        <span class="docs-profile-tabs__count">{{ tab.count }}</span>
+        <span class="docs-collection-card__title">{{ collection.label }}</span>
+        <span class="docs-collection-card__description">{{ collection.description }}</span>
+        <span class="docs-collection-card__count">{{ collection.count }} page{{ collection.count > 1 ? 's' : '' }}</span>
       </button>
-    </nav>
+    </section>
 
     <section class="card docs-toolbar">
-      <input v-model="q" class="input docs-toolbar__search" type="search" placeholder="Rechercher dans les titres, chemins et résumés…" />
-      <select v-model="selectedSection" class="select docs-toolbar__section" aria-label="Filtrer par espace documentaire">
-        <option value="all">Tous les espaces</option>
-        <option v-for="section in sections" :key="section.key" :value="section.key">{{ section.label }}</option>
-      </select>
+      <label class="docs-toolbar__field docs-toolbar__search">
+        <span>Rechercher dans toute la documentation</span>
+        <input v-model="q" class="input" type="search" placeholder="Ex. publier une page, sauvegarder, droits d’accès…" />
+      </label>
+      <label class="docs-toolbar__field docs-toolbar__profile">
+        <span>Adapter les résultats à mon profil</span>
+        <select v-model="selectedAudience" class="select" @change="selectAudience(selectedAudience)">
+          <option v-for="tab in profileTabs" :key="tab.key" :value="tab.key">
+            {{ tab.label }} ({{ tab.count }})
+          </option>
+        </select>
+      </label>
+      <p v-if="q" class="docs-toolbar__hint">
+        {{ filteredDocuments.length }} résultat{{ filteredDocuments.length > 1 ? 's' : '' }} dans l’ensemble des espaces.
+      </p>
     </section>
 
     <section class="docs-layout">
       <aside class="card docs-sidebar" aria-label="Documents disponibles">
+        <header class="docs-sidebar__header">
+          <span class="eyebrow">Parcours actif</span>
+          <strong>{{ collections.find((collection) => collection.key === selectedCollection)?.label }}</strong>
+          <span class="muted">{{ filteredDocuments.length }} page{{ filteredDocuments.length > 1 ? 's' : '' }}</span>
+        </header>
         <div v-if="loading" class="muted">Chargement de la documentation…</div>
         <div v-else-if="filteredSections.length === 0" class="muted">Aucun document ne correspond au filtre.</div>
-        <div v-for="section in filteredSections" :key="section.key" class="docs-section-list">
-          <h2>{{ section.label }}</h2>
-          <button
-            v-for="doc in section.documents"
-            :key="doc.id"
-            class="docs-nav-item"
-            :class="{ active: doc.id === selectedId }"
-            type="button"
-            @click="selectDocument(doc.id)"
-          >
-            <strong>{{ doc.title }}</strong>
-          </button>
-        </div>
+        <details
+          v-for="section in filteredSections"
+          :key="section.key"
+          class="docs-section-list"
+          :open="Boolean(q) || openSections.has(section.key)"
+          @toggle="onSectionToggle(section.key, $event)"
+        >
+          <summary>
+            <span>
+              <strong>{{ section.label }}</strong>
+              <small>{{ section.description }}</small>
+            </span>
+            <span class="docs-section-list__count">{{ section.documents.length }}</span>
+          </summary>
+          <div class="docs-section-list__body">
+            <div v-for="group in groupsForSection(section)" :key="group.key" class="docs-nav-group">
+              <h3 v-if="groupsForSection(section).length > 1">{{ group.label }}</h3>
+              <button
+                v-for="doc in group.documents"
+                :key="doc.id"
+                class="docs-nav-item"
+                :class="{ active: doc.id === selectedId }"
+                type="button"
+                @click="selectDocument(doc.id)"
+              >
+                <strong>{{ doc.title }}</strong>
+                <span v-if="doc.summary">{{ doc.summary }}</span>
+              </button>
+            </div>
+          </div>
+        </details>
       </aside>
 
+      <div class="docs-reader-layout">
       <article class="card docs-viewer">
         <div v-if="documentLoading" class="muted">Ouverture du document…</div>
         <div v-else-if="!current" class="empty-state">
-          <strong>Sélectionnez un document</strong>
-          <span>Sélectionnez une page Markdown ou une référence technique.</span>
+          <strong>Choisissez une page</strong>
+          <span>La navigation de gauche vous guide par sujet et par tâche.</span>
         </div>
         <template v-else>
           <header class="docs-viewer__header">
             <p class="eyebrow">{{ currentSection?.label || current.section_label }}</p>
             <h1>{{ current.title }}</h1>
-            <div class="docs-meta-row">
-              <span v-if="labelForStatus(current.status)" class="badge">{{ labelForStatus(current.status) }}</span>
-              <span v-if="current.last_verified" class="muted">Vérifié : {{ current.last_verified }}</span>
-              <span class="muted">{{ current.source_path }}</span>
-            </div>
+            <p v-if="current.summary" class="docs-viewer__summary">{{ current.summary }}</p>
+            <details class="docs-source-details">
+              <summary>Informations sur cette page</summary>
+              <div>
+                <span v-if="labelForStatus(current.status)">Statut : {{ labelForStatus(current.status) }}</span>
+                <span v-if="current.last_verified">Vérifiée le {{ current.last_verified }}</span>
+                <span>Source : {{ current.source_path }}</span>
+              </div>
+            </details>
           </header>
-          <div class="docs-markdown" v-html="current.html" @click="onMarkdownClick"></div>
+          <div class="docs-markdown" v-html="renderedDocument.html" @click="onMarkdownClick"></div>
+          <nav v-if="previousDocument || nextDocument" class="docs-page-navigation" aria-label="Pages précédente et suivante">
+            <button v-if="previousDocument" type="button" class="docs-page-navigation__link previous" @click="selectDocument(previousDocument.id)">
+              <span>Page précédente</span>
+              <strong>{{ previousDocument.title }}</strong>
+            </button>
+            <span v-else></span>
+            <button v-if="nextDocument" type="button" class="docs-page-navigation__link next" @click="selectDocument(nextDocument.id)">
+              <span>Page suivante</span>
+              <strong>{{ nextDocument.title }}</strong>
+            </button>
+          </nav>
         </template>
       </article>
+      <aside v-if="current && renderedDocument.headings.length" class="docs-on-this-page" aria-label="Sommaire de la page">
+        <strong>Sur cette page</strong>
+        <button
+          v-for="heading in renderedDocument.headings"
+          :key="heading.id"
+          type="button"
+          :class="{ nested: heading.level === 3 }"
+          @click="scrollToHeading(heading.id)"
+        >
+          {{ heading.label }}
+        </button>
+      </aside>
+      </div>
     </section>
   </template>
 </template>

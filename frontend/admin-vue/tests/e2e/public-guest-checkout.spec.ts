@@ -11,11 +11,15 @@ function cmsPath(path: string): string {
 }
 
 async function createCheckoutCart(page: Page): Promise<string> {
-  const variantsResponse = await page.request.get(cmsPath('/api/v1/catalog/products?channel=ecommerce&limit=1'));
+  const variantsResponse = await page.request.get(cmsPath('/api/v1/catalog/products?channel=ecommerce&limit=100'));
   const variantsText = await variantsResponse.text();
   expect(variantsResponse.ok(), variantsText).toBeTruthy();
   const variants = JSON.parse(variantsText);
-  const variantId = Number(variants.data?.items?.[0]?.variants?.[0]?.id ?? 0);
+  const catalogVariants = (variants.data?.items || []).flatMap((product: any) => product.variants || []);
+  const orderableVariant = catalogVariants.find((variant: any) =>
+    variant.is_sellable_public === true && variant.availability?.is_orderable === true
+  );
+  const variantId = Number(orderableVariant?.id ?? 0);
   expect(variantId).toBeGreaterThan(0);
 
   const cartResponse = await page.request.post(cmsPath('/api/v1/sale/channels/web-main/cart'), { data: { data: {} } });

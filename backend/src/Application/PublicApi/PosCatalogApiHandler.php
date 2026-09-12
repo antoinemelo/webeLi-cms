@@ -81,7 +81,7 @@ final class PosCatalogApiHandler
     /** @return array{0:array<string,mixed>,1:string} */
     private function context(): array
     {
-        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''), $this->request->path);
+        $site = $this->sites->resolveCurrentSite((string) ($this->request->server['HTTP_HOST'] ?? ''));
         $languageCode = strtolower(trim((string) ($this->request->query['lang'] ?? $site['default_language_code'] ?? 'fr')));
         if (!preg_match('/^[a-z]{2}(?:-[a-z0-9]{2,8})?$/i', $languageCode)) {
             $languageCode = (string) ($site['default_language_code'] ?? 'fr');
@@ -216,7 +216,8 @@ final class PosCatalogApiHandler
         }
         return match ((string) ($summary['bundle_availability_status'] ?? 'in_stock')) {
             'backorder' => $this->availabilityPayload(true, true, 0.0, max(1, (int) ($summary['bundle_backorder_delivery_days'] ?? $fallback['delivery_lead_time_days'] ?? 7))),
-            'contact_us' => $this->availabilityPayload(true, false, 0.0, 7),
+            'contact_us', 'unavailable' => $this->availabilityPayload(true, false, 0.0, 7),
+            'in_stock' => $this->availabilityPayload(true, false, max(1.0, (float) ($summary['bundle_available_quantity'] ?? 1)), 7),
             default => $this->availabilityPayload(false, false, 1.0, 7),
         };
     }

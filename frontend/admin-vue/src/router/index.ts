@@ -8,11 +8,13 @@ const StudioView = () => import('@/views/StudioView.vue');
 const ImportsExportsView = () => import('@/views/ImportsExportsView.vue');
 const ContentListView = () => import('@/views/content/ContentListView.vue');
 const ContentEditorView = () => import('@/views/content/ContentEditorView.vue');
+const ShopSystemEditorView = () => import('@/views/content/ShopSystemEditorView.vue');
 const MediaLibraryView = () => import('@/views/content/MediaLibraryView.vue');
 const DocsView = () => import('@/views/assets/DocsView.vue');
 const FormsView = () => import('@/views/forms/FormsView.vue');
 const ModulesView = () => import('@/views/modules/ModulesView.vue');
 const AiAssistantConfigView = () => import('@/views/modules/AiAssistantConfigView.vue');
+const AccountingView = () => import('@/views/modules/AccountingView.vue');
 const BusinessCrmView = () => import('@/views/modules/BusinessCrmView.vue');
 const SaleView = () => import('@/views/modules/SaleView.vue');
 const MenusView = () => import('@/views/content/MenusView.vue');
@@ -66,6 +68,7 @@ export const router = createRouter({
     { path: '/studio', name: 'studio', component: StudioView },
     { path: '/static-exports', redirect: '/imports-exports' },
     { path: '/imports-exports', name: 'imports-exports', component: ImportsExportsView },
+    { path: '/contents/pages/system-shop', name: 'shop-system-edit', component: ShopSystemEditorView },
     { path: '/contents/:typeKey', name: 'content-list', component: ContentListView, props: true },
     { path: '/contents/:typeKey/new', name: 'content-new', component: ContentEditorView, props: true },
     { path: '/contents/:typeKey/:id', name: 'content-edit', component: ContentEditorView, props: true },
@@ -74,18 +77,42 @@ export const router = createRouter({
     { path: '/forms', name: 'forms', component: FormsView },
     { path: '/modules', name: 'modules', component: ModulesView },
     { path: '/modules/ai-assistant/config', name: 'ai-assistant-config', component: AiAssistantConfigView },
-    { path: '/business', name: 'business', component: BusinessCrmView },
-    { path: '/business/crm', redirect: '/business' },
-    { path: '/business/companies', redirect: '/business' },
-    { path: '/business/contacts', redirect: '/business' },
-    { path: '/business/memos', redirect: '/business' },
-    { path: '/business/mailing', name: 'business-mailing-compat', component: BusinessCrmView, props: { initialTab: 'messages' } },
-    { path: '/business/messaging', name: 'business-messaging-compat', component: BusinessCrmView, props: { initialTab: 'messages' } },
-    { path: '/business/catalog', name: 'business-catalog-compat', component: BusinessCrmView, props: { initialTab: 'products' } },
+    { path: '/accounting', name: 'accounting', component: AccountingView },
+    { path: '/accounting/opening', name: 'accounting-opening', component: AccountingView },
+    { path: '/business', name: 'business', component: BusinessCrmView, props: { initialTab: 'dashboard' } },
+    { path: '/business/relations', name: 'business-relations', component: BusinessCrmView, props: { initialTab: 'relations' } },
+    { path: '/business/relations/advanced/profiles', name: 'business-advanced-profiles', component: BusinessCrmView, props: { initialTab: 'relations' } },
+    { path: '/business/products-stock', name: 'business-products-stock', component: BusinessCrmView, props: { initialTab: 'products' } },
+    { path: '/business/inventory', name: 'business-inventory', component: BusinessCrmView, props: { initialTab: 'inventory' } },
+    { path: '/business/offers-marketing', name: 'business-offers-marketing', component: BusinessCrmView, props: { initialTab: 'offers' } },
+    { path: '/business/offers-marketing/storytelling', name: 'business-storytelling', component: BusinessCrmView, props: { initialTab: 'storytelling' } },
+    { path: '/business/offers-marketing/audiences', name: 'business-audiences', component: BusinessCrmView, props: { initialTab: 'segments' } },
+    { path: '/business/offers-marketing/campaigns', name: 'business-campaigns', component: BusinessCrmView, props: { initialTab: 'messages' } },
+    { path: '/business/settings', name: 'business-settings', component: BusinessCrmView, props: { initialTab: 'settings' } },
+    { path: '/business/crm', redirect: '/business/relations' },
+    { path: '/business/companies', redirect: '/business/relations' },
+    { path: '/business/contacts', redirect: '/business/relations' },
+    { path: '/business/memos', redirect: '/business/relations' },
+    { path: '/business/mailing', redirect: '/business/offers-marketing/campaigns' },
+    { path: '/business/messaging', redirect: '/business/offers-marketing/campaigns' },
+    { path: '/business/catalog', redirect: '/business/products-stock' },
     { path: '/sale', name: 'sale', component: SaleView },
     { path: '/sale/orders', name: 'sale-orders', component: SaleView },
+    { path: '/sale/payments', name: 'sale-payments', component: SaleView },
+    { path: '/sale/gift-cards', name: 'sale-gift-cards', component: SaleView },
+    { path: '/sale/stock', redirect: '/sale/advanced/stock' },
+    { path: '/sale/reservations', redirect: '/sale/advanced/reservations' },
+    { path: '/sale/operations', redirect: '/sale/advanced/logistics' },
+    { path: '/sale/identities', redirect: to => ({ path: '/business/relations/advanced/profiles', query: to.query }) },
+    { path: '/sale/advanced/stock', name: 'sale-advanced-stock', component: SaleView },
+    { path: '/sale/advanced/reservations', name: 'sale-advanced-reservations', component: SaleView },
+    { path: '/sale/advanced/logistics', name: 'sale-advanced-logistics', component: SaleView },
+    { path: '/sale/advanced/payments', name: 'sale-advanced-payments', component: SaleView },
+    { path: '/sale/advanced/identities', redirect: to => ({ path: '/business/relations/advanced/profiles', query: to.query }) },
     { path: '/sale/pos', name: 'sale-pos', component: SaleView },
     { path: '/sale/settings', name: 'sale-settings', component: SaleView },
+    { path: '/commerce', redirect: to => ({ path: '/sale/settings', query: { ...to.query, section: 'ecommerce' } }) },
+    { path: '/modules/commerce', redirect: to => ({ path: '/sale/settings', query: { ...to.query, section: 'ecommerce' } }) },
     { path: '/modules/:moduleKey', name: 'module-detail', component: ModulesView, props: true },
     { path: '/menus', name: 'menus', component: MenusView },
     { path: '/taxonomies', name: 'taxonomies', component: TaxonomiesView },

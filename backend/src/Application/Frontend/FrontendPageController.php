@@ -11,6 +11,7 @@ use App\Application\Routing\PublicRouteReadRepository;
 use App\Repository\SiteRepository;
 use App\Security\PreviewSigner;
 use App\Security\EditorialBlockSecurityPolicy;
+use App\Application\Commerce\StorefrontMerchandisingService;
 
 abstract class FrontendPageController
 {
@@ -21,6 +22,7 @@ abstract class FrontendPageController
         private readonly PublicRouteReadRepository $routes,
         private readonly SiteRepository $sites,
         private readonly ResolvePublicRoute $resolvePublicRoute,
+        private readonly ?StorefrontMerchandisingService $merchandising = null,
     ) {}
 
     protected function handlePublicRequest(): Response
@@ -54,11 +56,31 @@ abstract class FrontendPageController
         }
 
         $result = $this->resolvePublicRoute->execute($site, $languageCode, $path, $this->request->query);
+        if ($result['type'] === 'payload' && (int) $result['status'] === 200 && !$this->wantsJson()) {
+            $this->recordStorefrontActivity($site, $languageCode, $result['payload']);
+        }
         return match ($result['type']) {
             'redirect' => redirect((string) $result['to'], (int) $result['status']),
             'payload' => $this->respondForMode($site, $languageCode, $result['payload'], (int) $result['status']),
             default => Response::html('<h1>404</h1><p>Page introuvable.</p>', 404),
         };
+    }
+
+    /** @param array<string,mixed> $site @param array<string,mixed> $payload */
+    private function recordStorefrontActivity(array $site, string $languageCode, array $payload): void
+    {
+        if ($this->merchandising === null) return;
+        $template=(string)($payload['template']??'');
+        if ($template==='storefront-product') {
+            $product=(array)($payload['storefront_product']??[]);
+            $this->merchandising->recordProductView((int)$site['id'],$languageCode,(int)($product['product_id']??0),$this->request->server,$this->request->query);
+            return;
+        }
+        if ($template==='storefront-shop') {
+            $term=trim((string)($this->request->query['q']??''));
+            $catalog=(array)($payload['storefront_catalog']??[]);
+            $this->merchandising->recordSearch((int)$site['id'],$languageCode,$term,(int)($catalog['pagination']['total']??0),$this->request->server,$this->request->query);
+        }
     }
 
     protected function preview(array $site, string $languageCode, int $entryId): Response
@@ -178,7 +200,7 @@ abstract class FrontendPageController
 
     protected function pageLayout(string $template, array $data, int $status = 200): Response
     {
-        [$themeKey, $theme, $isThemePreview] = $this->activeTheme((int) ($data['site']['id'] ?? 0));
+        [$themeKey, $theme, $isThemePreview] = $this->activeTheme((int) ($data['site']['id'] ?? 0), (string) ($data['theme_override_key'] ?? ''));
         $themeBase = (string) ($theme['templates_path'] ?? $theme['path'] ?? $this->config['themes']['default']['templates_path'] ?? base_path('frontend/theme-default/templates'));
         $renderer = new Renderer($themeBase, ['app_name' => $this->config['app']['name']], [
             'cache' => ($this->config['app']['env'] ?? 'production') === 'production' && !$isThemePreview ? (string) ($this->config['app']['twig_cache'] ?? '') : false,
@@ -199,7 +221,7 @@ abstract class FrontendPageController
     }
 
     /** @return array{0:string,1:array<string,mixed>,2:bool} */
-    private function activeTheme(int $siteId): array
+    private function activeTheme(int $siteId, string $overrideKey = ''): array
     {
         $themes = (array) ($this->config['themes'] ?? []);
         $fallbackKey = isset($themes['default']) ? 'default' : (array_key_first($themes) ?: 'default');
@@ -211,6 +233,11 @@ abstract class FrontendPageController
             if ($candidate !== '' && isset($themes[$candidate])) {
                 $configuredKey = $candidate;
             }
+        }
+
+        $overrideKey = trim($overrideKey);
+        if ($overrideKey !== '' && isset($themes[$overrideKey])) {
+            $configuredKey = $overrideKey;
         }
 
         $previewKey = trim((string) ($this->request->query['_theme'] ?? ''));

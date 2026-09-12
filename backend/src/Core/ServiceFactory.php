@@ -23,8 +23,11 @@ use App\Application\Content\UnpublishContentEntry;
 use App\Application\Content\ArchiveDeleteContentEntry;
 use App\Application\Content\ValidateEntryPayload;
 use App\Application\Business\ProductContentLinkService;
+use App\Application\Business\StorytellingService;
 use App\Application\Business\StorefrontProjectionRepository;
 use App\Application\Business\StorefrontProjectionService;
+use App\Application\Commerce\ShopConfigurationService;
+use App\Application\Commerce\StorefrontMerchandisingService;
 use App\Application\Capability\ActionRunRepository;
 use App\Application\Consistency\CrossDatabaseOperationJournal;
 use App\Application\Capability\BlueprintActionContextService;
@@ -35,6 +38,7 @@ use App\Application\VisualEditing\SaveVisualField;
 use App\Application\VisualEditing\VisualEditingMapBuilder;
 use App\Application\Frontend\ResolvePublicRoute;
 use App\Application\Forms\FormRepository;
+use App\Application\Forms\FormRelationAddressToken;
 use App\Application\Cookies\CookieConsentRepository;
 use App\Application\Iam\UserReferenceValidator;
 use App\Application\Iam\IamAdminRepository;
@@ -110,6 +114,8 @@ use App\Modules\AiAssistant\Services\AiSettingsService;
 use App\Modules\AiAssistant\Services\AiSuggestionService;
 use App\Modules\AiAssistant\Services\AiTaskService;
 use App\Modules\AiAssistant\Services\AiUsageLogger;
+use App\Modules\Accounting\Services\AccountingChartService;
+use App\Modules\Accounting\Services\AccountingDatabaseConnection;
 use App\Modules\Business\Repositories\BusinessCompanyRepository;
 use App\Modules\Business\Repositories\BusinessCatalogPricingRepository;
 use App\Modules\Business\Repositories\BusinessActivityRepository;
@@ -140,8 +146,12 @@ use App\Modules\Business\Services\BusinessCrmRelationSnapshotService;
 use App\Modules\Business\Services\BusinessCsvService;
 use App\Modules\Business\Services\BusinessCrmService;
 use App\Modules\Business\Services\BusinessDatabaseConnection;
+use App\Modules\Business\Services\BusinessOperationsDashboardService;
 use App\Modules\Business\Services\BusinessMemoSharingService;
 use App\Modules\Business\Services\BusinessRelationSummaryService;
+use App\Modules\Business\Services\BusinessRelation360Service;
+use App\Modules\Business\Services\FormSubmissionRelationProjectionService;
+use App\Modules\Business\Services\BusinessSegmentationService;
 use App\Modules\Business\Services\SaleCrmActivityProjectionService;
 use App\Modules\Business\Services\BusinessMessagingOutboxService;
 use App\Modules\Business\Services\BusinessMessagingProviderManager;
@@ -160,11 +170,11 @@ use App\Modules\Business\Services\CatalogStockService;
 use App\Modules\Business\Services\CatalogVariantService;
 use App\Modules\Sale\Adapters\BusinessCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\BusinessSellableCatalogAdapter;
-use App\Modules\Sale\Adapters\NullCrmActivitySink;
 use App\Modules\Sale\Adapters\NullCustomerSnapshotAdapter;
 use App\Modules\Sale\Adapters\UnavailableSellableCatalogAdapter;
 use App\Modules\Sale\Contracts\CmsAccountBridge;
 use App\Modules\Sale\Contracts\CrmActivitySink;
+use App\Modules\Sale\Contracts\CustomerIdentityBridge;
 use App\Modules\Sale\Contracts\CustomerSnapshotPort;
 use App\Modules\Sale\Contracts\SellableCatalogPort;
 use App\Modules\Sale\Services\SaleDatabaseConnection;
@@ -196,11 +206,17 @@ use App\Modules\Sale\Services\SaleStockReservationService;
 use App\Modules\Sale\Services\SaleOrderService;
 use App\Modules\Sale\Services\SaleStateMachineService;
 use App\Modules\Sale\Services\SalePaymentService;
+use App\Modules\Sale\Services\SaleGiftCardService;
+use App\Modules\Sale\Services\SalePaymentMethodService;
 use App\Modules\Sale\Services\SaleOnlinePaymentService;
 use App\Modules\Sale\Services\SalePosService;
 use App\Modules\Sale\Services\SaleReceiptService;
 use App\Modules\Sale\Services\SaleReturnService;
 use App\Modules\Sale\Services\SaleOrderTimelineService;
+use App\Modules\Sale\Services\SaleOrderDossierService;
+use App\Modules\Sale\Services\SaleOrderDocumentService;
+use App\Modules\Sale\Services\SaleOrderNotificationService;
+use App\Modules\Sale\Services\SaleDeferredPaymentService;
 use App\Modules\Sale\Services\SalesChannelIntegrityService;
 use App\Modules\Sale\Services\SalesChannelResolverService;
 use App\Modules\Sale\Payments\PaymentProviderRegistry;
@@ -281,7 +297,18 @@ final class ServiceFactory
 
     public function forms(): FormRepository
     {
-        return $this->once('forms', fn() => new FormRepository($this->formsDatabase()));
+        return $this->once('forms', fn() => new FormRepository(
+            $this->formsDatabase(),
+            $this->formSubmissionRelationProjection(),
+            $this->formRelationAddressTokens(),
+        ));
+    }
+
+    public function formRelationAddressTokens(): FormRelationAddressToken
+    {
+        return $this->once('form_relation_address_tokens', fn() => new FormRelationAddressToken(
+            (string) ($this->config['form_relation_signing_key'] ?? $this->config['preview_signing_key'] ?? 'change-this-preview-key')
+        ));
     }
 
     public function logger(): Logger
@@ -605,20 +632,35 @@ final class ServiceFactory
 
     public function aiDatabaseConnection(): AiDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['ai']['path'] ?? base_path('storage/database/ai.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['ai']['path'] ?? ($modulesDir . '/ai.sqlite'));
         return $this->once('ai_database_connection', fn() => new AiDatabaseConnection($path));
     }
 
     public function businessDatabaseConnection(): BusinessDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['business']['path'] ?? base_path('storage/database/business.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['business']['path'] ?? ($modulesDir . '/business.sqlite'));
         return $this->once('business_database_connection', fn() => new BusinessDatabaseConnection($path));
     }
 
     public function saleDatabaseConnection(): SaleDatabaseConnection
     {
-        $path = (string) ($this->config['databases']['sale']['path'] ?? base_path('storage/database/sale.sqlite'));
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['sale']['path'] ?? ($modulesDir . '/sale.sqlite'));
         return $this->once('sale_database_connection', fn() => new SaleDatabaseConnection($path));
+    }
+
+    public function accountingDatabaseConnection(): AccountingDatabaseConnection
+    {
+        $modulesDir = (string) ($this->config['databases']['modules_dir'] ?? base_path('storage/database'));
+        $path = (string) ($this->config['databases']['accounting']['path'] ?? ($modulesDir . '/accounting.sqlite'));
+        return $this->once('accounting_database_connection', fn() => new AccountingDatabaseConnection($path, base_path('database/modules/accounting.sql')));
+    }
+
+    public function accountingChart(): AccountingChartService
+    {
+        return $this->once('accounting_chart', fn() => new AccountingChartService($this->accountingDatabaseConnection()));
     }
 
     public function saleCatalogSnapshots(): SaleCatalogSnapshotService
@@ -662,10 +704,16 @@ final class ServiceFactory
 
     public function saleCrmActivitySink(): CrmActivitySink
     {
-        return $this->once('sale_crm_activity_sink', fn() => new NullCrmActivitySink());
+        return $this->once('sale_crm_activity_sink', fn() => $this->saleCrmActivities());
     }
 
+    /** @deprecated Use saleCustomerIdentityBridge(). */
     public function saleCmsAccountBridge(): CmsAccountBridge
+    {
+        return $this->saleCustomerAccounts();
+    }
+
+    public function saleCustomerIdentityBridge(): CustomerIdentityBridge
     {
         return $this->saleCustomerAccounts();
     }
@@ -679,6 +727,8 @@ final class ServiceFactory
             $this->businessContacts(),
             $this->businessConsents(),
             $this->saleReturnService(),
+            $this->businessDatabaseConnection()->database(),
+            $this->saleEvents(),
         ));
     }
 
@@ -762,7 +812,8 @@ final class ServiceFactory
             $this->saleInventoryRepository(),
             new SaleStockReservationService($this->saleInventoryRepository()),
             new SaleStockMovementService($this->saleInventoryRepository()),
-            $this->saleEvents()
+            $this->saleEvents(),
+            $this->businessDatabaseConnection()
         ));
     }
 
@@ -770,7 +821,8 @@ final class ServiceFactory
     {
         return $this->once('sale_inventory_reconciliation', fn() => new SaleInventoryReconciliationService(
             $this->saleDatabaseConnection(),
-            $this->businessDatabaseConnection()
+            $this->businessDatabaseConnection(),
+            $this->saleInventory(),
         ));
     }
 
@@ -804,7 +856,22 @@ final class ServiceFactory
             $this->saleInventory(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            $this->saleStateMachines()
+            $this->saleStateMachines(),
+            $this->saleGiftCards(),
+            $this->saleOrderDocuments(),
+            $this->saleOrderNotifications(),
+        ));
+    }
+
+    public function saleGiftCards(): SaleGiftCardService
+    {
+        return $this->once('sale_gift_cards', fn() => new SaleGiftCardService(
+            $this->saleDatabaseConnection(),
+            $this->salePayments(),
+            $this->saleOrders(),
+            $this->saleEvents(),
+            (string)($this->config['app']['gift_card_signing_key'] ?? $this->config['app']['preview_signing_key'] ?? 'change-this-gift-card-key'),
+            $this->mailer()
         ));
     }
 
@@ -818,13 +885,28 @@ final class ServiceFactory
             $this->salePricing(),
             $this->saleInventory(),
             $this->saleStateMachines(),
-            $this->saleFulfillment()
+            $this->saleFulfillment(),
+            $this->salePaymentMethods(),
+            $this->saleEvents()
         ));
     }
 
     public function saleFulfillment(): SaleFulfillmentService
     {
-        return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService($this->saleDatabaseConnection()));
+        return $this->once('sale_fulfillment', fn() => new SaleFulfillmentService(
+            $this->saleDatabaseConnection(),
+            $this->saleInventory(),
+            $this->saleStateMachines(),
+            $this->saleOrderNotifications(),
+        ));
+    }
+
+    public function salePaymentMethods(): SalePaymentMethodService
+    {
+        return $this->once('sale_payment_methods', fn() => new SalePaymentMethodService(
+            $this->saleDatabaseConnection(),
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'), (array)($this->config['app']['payments'] ?? []))
+        ));
     }
 
     public function salePaymentService(): SalePaymentService
@@ -834,8 +916,10 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleEvents(),
             $this->saleIdempotency(),
-            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
-            $this->saleStateMachines()
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'), (array)($this->config['app']['payments'] ?? [])),
+            $this->saleStateMachines(),
+            $this->saleInventory(),
+            $this->saleGiftCards()
         ));
     }
 
@@ -847,8 +931,9 @@ final class ServiceFactory
             $this->saleOrders(),
             $this->saleInventory(),
             $this->saleStateMachines(),
-            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database()),
-            $this->logger()
+            new PaymentProviderRegistry(null, $this->saleDatabaseConnection()->database(), null, (string) ($this->config['app']['env'] ?? 'production'), (array)($this->config['app']['payments'] ?? [])),
+            $this->logger(),
+            $this->saleGiftCards()
         ));
     }
 
@@ -880,6 +965,36 @@ final class ServiceFactory
         return $this->once('sale_order_timeline', fn() => new SaleOrderTimelineService($this->saleDatabaseConnection()));
     }
 
+    public function saleOrderDossier(): SaleOrderDossierService
+    {
+        return $this->once('sale_order_dossier', fn() => new SaleOrderDossierService(
+            $this->saleDatabaseConnection(),
+            $this->saleOrderTimeline(),
+            $this->saleOrderNotifications(),
+        ));
+    }
+
+    public function saleOrderDocuments(): SaleOrderDocumentService
+    {
+        return $this->once('sale_order_documents', fn() => new SaleOrderDocumentService($this->saleDatabaseConnection()));
+    }
+
+    public function saleOrderNotifications(): SaleOrderNotificationService
+    {
+        return $this->once('sale_order_notifications', fn() => new SaleOrderNotificationService(
+            $this->saleDatabaseConnection(),
+            $this->saleEvents(),
+        ));
+    }
+
+    public function saleDeferredPayments(): SaleDeferredPaymentService
+    {
+        return $this->once('sale_deferred_payments', fn() => new SaleDeferredPaymentService(
+            $this->saleDatabaseConnection(),
+            $this->saleOnlinePayments(),
+        ));
+    }
+
     public function salePosService(): SalePosService
     {
         return $this->once('sale_pos_service', fn() => new SalePosService($this->saleCartService(), $this->saleCheckout(), $this->salePosRepository()));
@@ -903,6 +1018,14 @@ final class ServiceFactory
     public function businessDashboard(): BusinessDashboardRepository
     {
         return $this->once('business_dashboard', fn() => new BusinessDashboardRepository($this->businessDatabaseConnection()->database()));
+    }
+
+    public function businessOperationsDashboard(): BusinessOperationsDashboardService
+    {
+        return $this->once('business_operations_dashboard', fn() => new BusinessOperationsDashboardService(
+            $this->businessDatabaseConnection(),
+            $this->saleDatabaseConnection(),
+        ));
     }
 
     public function businessRelations(): BusinessRelationRepository
@@ -970,6 +1093,23 @@ final class ServiceFactory
         return $this->once('business_relation_summary', fn() => new BusinessRelationSummaryService($this->businessRelationRead(), $this->businessActivity()));
     }
 
+    public function formSubmissionRelationProjection(): FormSubmissionRelationProjectionService
+    {
+        return $this->once('form_submission_relation_projection', fn() => new FormSubmissionRelationProjectionService(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable')
+        ));
+    }
+
+    public function businessRelation360(): BusinessRelation360Service
+    {
+        return $this->once('business_relation_360', fn() => new BusinessRelation360Service(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable'),
+            $this->businessRelationRead(),
+            $this->businessActivity(),
+            $this->formSubmissionRelationProjection(),
+        ));
+    }
+
     public function saleCrmActivities(): SaleCrmActivityProjectionService
     {
         return $this->once('sale_crm_activities', fn() => new SaleCrmActivityProjectionService(
@@ -981,6 +1121,13 @@ final class ServiceFactory
     public function businessConsentService(): BusinessConsentService
     {
         return $this->once('business_consent_service', fn() => new BusinessConsentService($this->businessConsents()));
+    }
+
+    public function businessSegmentation(): BusinessSegmentationService
+    {
+        return $this->once('business_segmentation', fn() => new BusinessSegmentationService(
+            $this->businessDatabaseConnection()->database() ?? throw new \RuntimeException('business.database_unavailable')
+        ));
     }
 
     public function businessMessagingOutbox(): BusinessMessagingOutboxService
@@ -1082,6 +1229,11 @@ final class ServiceFactory
         ));
     }
 
+    public function storytellings(): StorytellingService
+    {
+        return $this->once('business_storytellings', fn() => new StorytellingService($this->coreDb));
+    }
+
     public function storefrontProjections(): StorefrontProjectionRepository
     {
         return $this->once('storefront_projections', fn() => new StorefrontProjectionRepository($this->coreDb));
@@ -1095,6 +1247,25 @@ final class ServiceFactory
             new ProductContentSourceRepository($this->businessDatabaseConnection()->database()),
             $this->businessPublicCatalog(),
             $this->businessCatalogSellables(),
+            $this->saleDatabaseConnection(),
+        ));
+    }
+
+    public function shopConfigurations(): ShopConfigurationService
+    {
+        return $this->once('shop_configurations', fn() => new ShopConfigurationService(
+            $this->coreDb,
+            $this->saleDatabaseConnection(),
+            $this->storefrontProjectionBuilder(),
+            $this->storefrontMerchandising(),
+        ));
+    }
+
+    public function storefrontMerchandising(): StorefrontMerchandisingService
+    {
+        return $this->once('storefront_merchandising', fn() => new StorefrontMerchandisingService(
+            $this->coreDb,
+            (string) ($this->config['app']['preview_signing_key'] ?? 'storefront-analytics'),
         ));
     }
 
@@ -1387,6 +1558,7 @@ final class ServiceFactory
             new BlockDocumentNormalizer(new EditorialBlockSecurityPolicy((array) ($this->config['cms']['editorial_security'] ?? []))),
             $this->productContentLinks(),
             $this->storefrontProjections(),
+            $this->storefrontMerchandising(),
         ));
     }
 

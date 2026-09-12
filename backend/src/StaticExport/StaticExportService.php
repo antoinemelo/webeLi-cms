@@ -549,7 +549,7 @@ CSS;
     {
         // A static export must never expose an administration/login shortcut.
         // The rendered SSR HTML may contain /admin/login, /admin/app, or the
-        // same URLs prefixed by the CMS installation directory such as /mod.
+        // same URLs prefixed by the CMS installation directory such as /cms.
         $adminHref = '[^"\']*/admin(?:/[^"\']*)?';
         $patterns = [
             '#<a\b(?=[^>]*\bhref=["\']' . $adminHref . '["\'])[^>]*>.*?</a>#is',

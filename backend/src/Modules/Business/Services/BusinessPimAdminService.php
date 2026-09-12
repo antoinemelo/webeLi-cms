@@ -82,9 +82,13 @@ final class BusinessPimAdminService
 
     public function archiveAttributeGroup(int $siteId, int $id, int $actorId): void
     {
+        $id=$this->id($id,'attribute_group_id');
+        if ($this->db->one('SELECT 1 FROM business_product_attribute_group_links WHERE group_id = ? LIMIT 1',[$id])!==null) {
+            throw new InvalidArgumentException('business.attribute_group_in_use');
+        }
         $this->db->run(
             'UPDATE business_attribute_groups SET archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
-            [$actorId > 0 ? $actorId : null, $this->siteId($siteId), $this->id($id, 'attribute_group_id')]
+            [$actorId > 0 ? $actorId : null, $this->siteId($siteId), $id]
         );
     }
 
@@ -106,6 +110,7 @@ final class BusinessPimAdminService
     {
         $groupId = $this->requiredGroupId($payload['group_id'] ?? null);
         $this->assertGroupBelongsToSite($siteId, $groupId);
+        $this->assertPublicAttributeFlags($payload['is_public']??false,$payload['is_filterable']??false,$payload['is_searchable']??false);
         $this->db->run(
             'INSERT INTO business_attributes(site_id, group_id, code, name, data_type, unit, is_required, is_filterable, is_searchable, is_public, sort_order, validation_json, created_by_iam_user_id, updated_by_iam_user_id)
              VALUES(:site_id, :group_id, :code, :name, :data_type, :unit, :is_required, :is_filterable, :is_searchable, :is_public, :sort_order, :validation_json, :actor, :actor)',
@@ -140,6 +145,7 @@ final class BusinessPimAdminService
             : $this->requiredGroupId($current['group_id'] ?? null);
         $this->assertGroupBelongsToSite($siteId, $groupId);
         $dataType = $this->choice((string) ($payload['data_type'] ?? $current['data_type']), self::ATTRIBUTE_TYPES, 'attribute_type');
+        $this->assertPublicAttributeFlags($payload['is_public']??$current['is_public'],$payload['is_filterable']??$current['is_filterable'],$payload['is_searchable']??$current['is_searchable']);
         if ($dataType !== (string) $current['data_type'] && $this->attributeHasValues($id)) {
             throw new InvalidArgumentException('business.attribute_type_locked');
         }
@@ -172,6 +178,7 @@ final class BusinessPimAdminService
 
     public function archiveAttribute(int $siteId, int $id, int $actorId): void
     {
+        if ($this->attributeHasValues($id)) throw new InvalidArgumentException('business.attribute_in_use');
         $this->db->run(
             'UPDATE business_attributes SET archived_at = CURRENT_TIMESTAMP, updated_by_iam_user_id = ?, updated_at = CURRENT_TIMESTAMP WHERE site_id = ? AND id = ?',
             [$actorId > 0 ? $actorId : null, $this->siteId($siteId), $this->id($id, 'attribute_id')]
@@ -204,6 +211,10 @@ final class BusinessPimAdminService
         if ($current === null) {
             return null;
         }
+        $nextValue=$this->text($payload['value'] ?? $current['value'],'attribute_option_value',180);
+        if ($nextValue!==(string)$current['value'] && $this->optionHasValues($current)) {
+            throw new InvalidArgumentException('business.attribute_option_value_locked');
+        }
         $this->db->run(
             'UPDATE business_attribute_options
              SET code = :code, label = :label, value = :value, color_hex = :color_hex, sort_order = :sort_order, updated_at = CURRENT_TIMESTAMP
@@ -212,7 +223,7 @@ final class BusinessPimAdminService
                 'id' => $this->id($id, 'attribute_option_id'),
                 'code' => $this->key($payload['code'] ?? $current['code'], 'attribute_option_code'),
                 'label' => $this->text($payload['label'] ?? $current['label'], 'attribute_option_label', 180),
-                'value' => $this->text($payload['value'] ?? $current['value'], 'attribute_option_value', 180),
+                'value' => $nextValue,
                 'color_hex' => $this->color($payload['color_hex'] ?? $current['color_hex'] ?? null),
                 'sort_order' => max(0, (int) ($payload['sort_order'] ?? $current['sort_order'] ?? 0)),
             ]
@@ -222,9 +233,9 @@ final class BusinessPimAdminService
 
     public function archiveOption(int $siteId, int $id): void
     {
-        if ($this->optionForSite($siteId, $id) === null) {
-            return;
-        }
+        $option=$this->optionForSite($siteId,$id);
+        if ($option===null) return;
+        if ($this->optionHasValues($option)) throw new InvalidArgumentException('business.attribute_option_in_use');
         $this->db->run('UPDATE business_attribute_options SET archived_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [$this->id($id, 'attribute_option_id')]);
     }
 
@@ -1120,6 +1131,29 @@ final class BusinessPimAdminService
             return true;
         }
         return $this->db->one('SELECT 1 FROM business_variant_attribute_values WHERE attribute_id = ? LIMIT 1', [$id]) !== null;
+    }
+
+    private function assertPublicAttributeFlags(mixed $public,mixed $filterable,mixed $searchable): void
+    {
+        if (!$this->bool($public) && ($this->bool($filterable) || $this->bool($searchable))) {
+            throw new InvalidArgumentException('business.attribute_public_required');
+        }
+    }
+
+    /** @param array<string,mixed> $option */
+    private function optionHasValues(array $option): bool
+    {
+        $attributeId=$this->id((int)($option['attribute_id']??0),'attribute_id');
+        $value=(string)($option['value']??''); $code=(string)($option['code']??'');
+        foreach (['business_product_attribute_values','business_variant_attribute_values'] as $table) {
+            $row=$this->db->one(
+                'SELECT 1 FROM '.$table.' v WHERE v.attribute_id=? AND
+                 (v.value_text IN (?,?) OR EXISTS (SELECT 1 FROM json_each(v.value_json) j WHERE CAST(j.value AS TEXT) IN (?,?))) LIMIT 1',
+                [$attributeId,$value,$code,$value,$code]
+            );
+            if ($row!==null) return true;
+        }
+        return false;
     }
 
     /** @param list<array<string,mixed>> $values */

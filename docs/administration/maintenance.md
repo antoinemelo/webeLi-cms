@@ -112,7 +112,7 @@ Les canaux sont configurés côté serveur dans `backend/config/updates.php`.
 
 | Canal | Usage recommandé |
 |---|---|
-| `dev` | Référence de développement/staging. Dans l'organisation webeLi, ce canal correspond à l'instance `/mod` et à la branche Git `staging`. |
+| `dev` | Référence de développement/staging. Dans l'organisation webeLi, ce canal correspond à l'instance `/cms` et à la branche Git `staging`. |
 | `stable` | Référence stable/release. Dans l'organisation webeLi, ce canal correspond à l'instance `/maj` et à la branche Git `main`. |
 
 Chaque canal essaie d'abord de lire un manifeste public :

@@ -3,9 +3,44 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../TestHarness.php';
 
-putenv('APP_PUBLIC_API_MODULE_ROUTES=1');
-putenv('APP_PUBLIC_API_AUTH_ENABLED=1');
-putenv('APP_PUBLIC_API_CORS_ENABLED=1');
+function sale_http_prepare_isolated_databases(): ?string
+{
+    $source = $_ENV['CMS_TEST_PRISTINE_DATABASE_DIR']
+        ?? $_SERVER['CMS_TEST_PRISTINE_DATABASE_DIR']
+        ?? getenv('CMS_TEST_PRISTINE_DATABASE_DIR');
+    if (!is_string($source) || !is_dir($source)) {
+        return null;
+    }
+
+    $target = sys_get_temp_dir() . '/amcms-http-sale-databases-' . bin2hex(random_bytes(6));
+    if (!mkdir($target, 0775, true) && !is_dir($target)) {
+        throw new RuntimeException('Unable to create isolated Sale HTTP database directory.');
+    }
+    foreach (glob(rtrim($source, DIRECTORY_SEPARATOR) . '/*.sqlite') ?: [] as $database) {
+        if (!copy($database, $target . '/' . basename($database))) {
+            test_remove_tree($target);
+            throw new RuntimeException('Unable to copy pristine test database: ' . $database);
+        }
+    }
+
+    putenv('CMS_DATABASE_DIR=' . $target);
+    $_ENV['CMS_DATABASE_DIR'] = $target;
+    $_SERVER['CMS_DATABASE_DIR'] = $target;
+    return $target;
+}
+
+$saleHttpIsolatedDatabaseDir = sale_http_prepare_isolated_databases();
+
+foreach ([
+    'APP_ENV' => 'test',
+    'APP_PUBLIC_API_MODULE_ROUTES' => '1',
+    'APP_PUBLIC_API_AUTH_ENABLED' => '1',
+    'APP_PUBLIC_API_CORS_ENABLED' => '1',
+] as $key => $value) {
+    putenv($key . '=' . $value);
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
+}
 
 require_once __DIR__ . '/../../../../backend/bootstrap/runtime.php';
 
@@ -22,6 +57,15 @@ use App\Core\Database;
 
 $h = new TestHarness();
 
+function sale_http_database_dir(): string
+{
+    $override = $_ENV['CMS_DATABASE_DIR'] ?? $_SERVER['CMS_DATABASE_DIR'] ?? getenv('CMS_DATABASE_DIR');
+    if (is_string($override) && trim($override) !== '') {
+        return rtrim($override, DIRECTORY_SEPARATOR);
+    }
+    return base_path('storage/database');
+}
+
 /** @return array{dir:string, files:array<string,string>} */
 function backup_sale_http_databases(): array
 {
@@ -30,7 +74,7 @@ function backup_sale_http_databases(): array
         throw new RuntimeException('Unable to create temporary database backup directory.');
     }
     $files = [];
-    foreach (glob(base_path('storage/database/*.sqlite')) ?: [] as $source) {
+    foreach (glob(sale_http_database_dir() . '/*.sqlite') ?: [] as $source) {
         $target = $backupDir . '/' . basename($source);
         if (!copy($source, $target)) {
             throw new RuntimeException('Unable to backup database: ' . $source);
@@ -155,9 +199,44 @@ $server = null;
 $pipes = [];
 
 try {
-    $saleDb = new Database(base_path('storage/database/sale.sqlite'));
-    $iamDb = new Database(base_path('storage/database/iam.sqlite'));
-    $saleDb->run("UPDATE sale_channels SET status = 'active', is_public = 1 WHERE site_id = 1 AND code = 'web-main'");
+    $coreDb = new Database(sale_http_database_dir() . '/core.sqlite');
+    $saleDb = new Database(sale_http_database_dir() . '/sale.sqlite');
+    $iamDb = new Database(sale_http_database_dir() . '/iam.sqlite');
+    $coreDb->run(
+        "INSERT INTO modules(module_key, name, version, provider_class, is_system, is_installed, is_enabled, updated_at)
+         VALUES('sale', 'Ventes', '0.1.0', 'App\\Modules\\Sale\\SaleModuleProvider', 1, 1, 1, CURRENT_TIMESTAMP)
+         ON CONFLICT(module_key) DO UPDATE SET
+             provider_class = excluded.provider_class,
+             is_installed = 1,
+             is_enabled = 1,
+             updated_at = CURRENT_TIMESTAMP"
+    );
+    $saleDb->run(
+        "INSERT INTO sale_channels(
+            site_id,code,name,channel_type,channel_kind,is_default,status,currency,
+            default_language,tax_mode,price_tax_included,is_public
+         ) VALUES(1,'web-main','Boutique web de test','ecommerce','storefront',1,'active','CHF','fr','tax_included',1,1)
+         ON CONFLICT(site_id,code) DO UPDATE SET
+            channel_type='ecommerce',channel_kind='storefront',status='active',currency='CHF',
+            default_language='fr',tax_mode='tax_included',price_tax_included=1,is_public=1,archived_at=NULL"
+    );
+    $channelId = (int) ($saleDb->one(
+        "SELECT id FROM sale_channels WHERE site_id=1 AND code='web-main' LIMIT 1"
+    )['id'] ?? 0);
+    if ($channelId < 1) {
+        throw new RuntimeException('Unable to prepare the public Sale test channel.');
+    }
+    $coreDb->run(
+        "INSERT INTO cms_shop_configurations(
+            site_id,language_code,channel_id,channel_code,status,currency,route_path,theme_key,
+            menu_key,menu_label,cart_visible,draft_json,published_json,config_version,published_version
+         ) VALUES(1,'fr',?,'web-main','active','CHF','/shop','default','main','Boutique',1,'{}','{}',1,1)
+         ON CONFLICT(site_id,language_code) DO UPDATE SET
+            channel_id=excluded.channel_id,channel_code='web-main',status='active',currency='CHF',
+            route_path='/shop',published_json=COALESCE(cms_shop_configurations.published_json,'{}'),
+            published_version=COALESCE(cms_shop_configurations.published_version,1)",
+        [$channelId]
+    );
 
     $contentToken = 'sale-http-content-' . bin2hex(random_bytes(12));
     $routeOnlyToken = 'sale-http-routes-' . bin2hex(random_bytes(12));
@@ -184,7 +263,14 @@ try {
         1 => ['pipe', 'w'],
         2 => ['pipe', 'w'],
     ];
-    $server = proc_open($command, $descriptors, $pipes, base_path());
+    $serverEnvironment = getenv();
+    $serverEnvironment = is_array($serverEnvironment) ? $serverEnvironment : [];
+    $serverEnvironment['APP_ENV'] = 'test';
+    $serverEnvironment['APP_PUBLIC_API_MODULE_ROUTES'] = '1';
+    $serverEnvironment['APP_PUBLIC_API_AUTH_ENABLED'] = '1';
+    $serverEnvironment['APP_PUBLIC_API_CORS_ENABLED'] = '1';
+    $serverEnvironment['CMS_DATABASE_DIR'] = sale_http_database_dir();
+    $server = proc_open($command, $descriptors, $pipes, base_path(), $serverEnvironment);
     if (!is_resource($server)) {
         throw new RuntimeException('Unable to start PHP built-in server.');
     }
@@ -224,7 +310,7 @@ try {
     $token = (string) ($cart['json']['data']['cart']['token'] ?? '');
     $h->assertTrue(strlen($token) >= 32, 'Sale cart returns an opaque token');
 
-    $variant = (new Database(base_path('storage/database/business.sqlite')))->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
+    $variant = (new Database(sale_http_database_dir() . '/business.sqlite'))->one("SELECT id FROM business_product_variants WHERE sku = 'DEMO-GOURDE-BLEU' LIMIT 1");
     $invalid = sale_http_request(
         $baseUrl . '/api/v1/sale/channels/web-main/cart/' . rawurlencode($token) . '/lines',
         'POST',
@@ -301,6 +387,9 @@ try {
         }
     }
     restore_sale_http_databases($backup);
+    if (is_string($saleHttpIsolatedDatabaseDir)) {
+        test_remove_tree($saleHttpIsolatedDatabaseDir);
+    }
 }
 
 exit($h->finish('INTEGRATION public Sale HTTP contracts and CORS'));

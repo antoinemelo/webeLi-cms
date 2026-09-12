@@ -23,7 +23,7 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
 
     public function supports(string $operation): bool
     {
-        return in_array($operation, ['create_intent','capture','refund','void','read_state','webhook'], true);
+        return in_array($operation, ['create_intent','capture','partial_capture','multiple_capture','refund','partial_refund','void','read_state','webhook'], true);
     }
 
     public function createIntent(array $payload): array
@@ -60,6 +60,7 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
     public function capture(array $payload): array
     {
         $state = $this->requireState((string) ($payload['provider_reference'] ?? ''));
+        if (($replay=$this->operationReplay($state,$payload,'capture'))!==null) return $replay;
         $amount = (int) ($payload['amount_minor'] ?? ((int) $state['amount_minor'] - (int) $state['captured_minor']));
         if ($amount < 1 || (int) $state['captured_minor'] + $amount > (int) $state['amount_minor']) {
             throw new SalePaymentException('sale.payment_capture_amount_invalid');
@@ -70,12 +71,13 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
             'UPDATE sale_sandbox_payment_states SET status=?,authorized_minor=MAX(authorized_minor,?),captured_minor=?,updated_at=CURRENT_TIMESTAMP WHERE provider_reference=?',
             [$status, $captured, $captured, (string) $state['provider_reference']]
         );
-        return $this->operationResult($state, $status, $amount, 'capture');
+        return $this->storeOperation($state,$payload,'capture',$amount,$this->operationResult($state, $status, $amount, 'capture'));
     }
 
     public function refund(array $payload): array
     {
         $state = $this->stateFromPayload($payload);
+        if (($replay=$this->operationReplay($state,$payload,'refund'))!==null) return $replay;
         $amount = (int) ($payload['amount_minor'] ?? 0);
         if ($amount < 1 || (int) $state['refunded_minor'] + $amount > (int) $state['captured_minor']) {
             throw new SalePaymentException('sale.refund_exceeds_payment');
@@ -84,17 +86,18 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
             'UPDATE sale_sandbox_payment_states SET refunded_minor=refunded_minor+?,updated_at=CURRENT_TIMESTAMP WHERE provider_reference=?',
             [$amount, (string) $state['provider_reference']]
         );
-        return $this->operationResult($state, 'succeeded', $amount, 'refund');
+        return $this->storeOperation($state,$payload,'refund',$amount,$this->operationResult($state, 'succeeded', $amount, 'refund'));
     }
 
     public function void(array $payload): array
     {
         $state = $this->stateFromPayload($payload);
+        if (($replay=$this->operationReplay($state,$payload,'void'))!==null) return $replay;
         if ((int) $state['captured_minor'] > 0) {
             throw new SalePaymentException('sale.payment_intent_already_captured');
         }
         $this->db->run('UPDATE sale_sandbox_payment_states SET status=\'cancelled\',updated_at=CURRENT_TIMESTAMP WHERE provider_reference=?', [(string) $state['provider_reference']]);
-        return $this->operationResult($state, 'cancelled', 0, 'void');
+        return $this->storeOperation($state,$payload,'void',0,$this->operationResult($state, 'cancelled', 0, 'void'));
     }
 
     public function readState(array $payload): array
@@ -116,23 +119,6 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
 
     public function parseWebhook(string $rawBody, array $headers): array
     {
-        $signatureHeader = trim((string) ($headers['x-sale-signature'] ?? $headers['X-Sale-Signature'] ?? ''));
-        $parts = [];
-        foreach (explode(',', $signatureHeader) as $part) {
-            if (str_contains($part, '=')) {
-                [$name, $value] = explode('=', trim($part), 2);
-                $parts[$name] = $value;
-            }
-        }
-        $timestamp = (int) ($parts['t'] ?? 0);
-        $signature = strtolower((string) ($parts['v1'] ?? ''));
-        if ($timestamp < 1 || abs(time() - $timestamp) > $this->toleranceSeconds || preg_match('/^[a-f0-9]{64}$/', $signature) !== 1) {
-            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
-        }
-        $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $this->secret);
-        if (!hash_equals($expected, $signature)) {
-            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
-        }
         $event = json_decode($rawBody, true);
         if (!is_array($event)) {
             throw new SalePaymentException('sale.payment_webhook_payload_invalid');
@@ -156,6 +142,27 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
             'provider_transaction_id' => (string) ($event['provider_transaction_id'] ?? $event['id']),
             'data' => is_array($event['data'] ?? null) ? $event['data'] : [],
         ];
+    }
+
+    public function verifyWebhookSignature(string $rawBody, array $headers): void
+    {
+        $signatureHeader = trim((string) ($headers['x-sale-signature'] ?? $headers['X-Sale-Signature'] ?? ''));
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $part) {
+            if (str_contains($part, '=')) {
+                [$name, $value] = explode('=', trim($part), 2);
+                $parts[$name] = $value;
+            }
+        }
+        $timestamp = (int) ($parts['t'] ?? 0);
+        $signature = strtolower((string) ($parts['v1'] ?? ''));
+        if ($timestamp < 1 || abs(time() - $timestamp) > $this->toleranceSeconds || preg_match('/^[a-f0-9]{64}$/', $signature) !== 1) {
+            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
+        }
+        $expected = hash_hmac('sha256', $timestamp . '.' . $rawBody, $this->secret);
+        if (!hash_equals($expected, $signature)) {
+            throw new SalePaymentException('sale.payment_webhook_signature_invalid');
+        }
     }
 
     /** @return array{body:string,signature:string,event:array<string,mixed>} */
@@ -245,6 +252,24 @@ final class SandboxPaymentProvider implements OnlinePaymentProvider
             'amount_minor' => $amount,
             'payload' => ['provider' => $this->key(), 'operation' => $operation, 'test_mode' => true],
         ];
+    }
+
+    /** @param array<string,mixed> $state @param array<string,mixed> $payload @return array<string,mixed>|null */
+    private function operationReplay(array $state,array $payload,string $operation): ?array
+    {
+        $key=trim((string)($payload['idempotency_key']??'')); if($key==='') return null;
+        $row=$this->db->one('SELECT result_json,amount_minor FROM sale_test_payment_operations WHERE provider_key=? AND provider_reference=? AND operation_kind=? AND operation_key=?',[$this->key(),$state['provider_reference'],$operation,$key]);
+        if($row===null)return null;
+        if((int)$row['amount_minor']!==(int)($payload['amount_minor']??0))throw new SalePaymentException('sale.payment_operation_idempotency_conflict');
+        $result=json_decode((string)$row['result_json'],true); return is_array($result)?$result:null;
+    }
+
+    /** @param array<string,mixed> $state @param array<string,mixed> $payload @param array<string,mixed> $result @return array<string,mixed> */
+    private function storeOperation(array $state,array $payload,string $operation,int $amount,array $result): array
+    {
+        $key=trim((string)($payload['idempotency_key']??'')); if($key==='')return $result;
+        $this->db->run('INSERT INTO sale_test_payment_operations(provider_key,provider_reference,operation_kind,operation_key,amount_minor,result_json) VALUES(?,?,?,?,?,?)',[$this->key(),$state['provider_reference'],$operation,$key,$amount,json_encode($result,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)?:'{}']);
+        return $result;
     }
 
     /** @param array<string,mixed> $payload */

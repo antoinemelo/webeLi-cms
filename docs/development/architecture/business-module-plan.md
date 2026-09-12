@@ -46,7 +46,7 @@ Les routes admin natives sont dans `backend/routes/api.php`. Les routes declaree
 
 ## Recommandation de packaging
 
-Pour une fonctionnalite CRM prevue dans l'update officielle de `/mod`, le bon statut est un module produit optionnel livre comme module systeme, et non un module local client. Cela permet de le valider, documenter et packager dans la release, tout en gardant le noyau editorial separe.
+Pour une fonctionnalite CRM prevue dans l'update officielle de `/cms`, le bon statut est un module produit optionnel livre comme module systeme, et non un module local client. Cela permet de le valider, documenter et packager dans la release, tout en gardant le noyau editorial separe.
 
 Emplacements recommandes :
 

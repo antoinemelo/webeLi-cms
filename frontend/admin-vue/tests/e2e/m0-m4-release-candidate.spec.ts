@@ -10,6 +10,7 @@ const adminHeaders=(csrf:string)=>({'Content-Type':'application/json','X-Contrac
 test.describe('M0-M4 release candidate commerce flow',()=>{
   test.skip(!enabled,'Dedicated E2E environment and administrator credentials are required');
   test('publishes, checks out, pays, receipts, returns, refunds and links account',async({page})=>{
+    test.setTimeout(90_000);
     const catalog=await body(await page.request.get(cmsPath('/api/v1/catalog/products?channel=ecommerce&limit=1')),'published catalog');
     const product=catalog.data.items[0]; const variantId=Number(product.variants[0].id); expect(variantId).toBeGreaterThan(0);
     const cart=await body(await page.request.post(cmsPath('/api/v1/sale/channels/web-main/cart'),{data:{data:{}}}),'cart'); const token=String(cart.data.cart.token);

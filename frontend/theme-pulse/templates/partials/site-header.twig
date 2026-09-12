@@ -41,6 +41,13 @@
 
       {% include 'partials/header-search.twig' with { search_id: 'header-search-q', search_class: 'header-search header-search--primary' } %}
 
+      {% if storefront_cart_visible|default(false) %}
+      <button type="button" class="storefront-cart-toggle" data-cart-toggle aria-controls="storefront-cart-drawer" aria-expanded="false" aria-label="{{ ui.open_cart|default('Ouvrir le panier') }}">
+        <svg class="bi bi-bag" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a2.5 2.5 0 0 0-2.5 2.5V4h5v-.5A2.5 2.5 0 0 0 8 1m3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1zM3 5h10v9H3z"/></svg>
+        <span class="visually-hidden">{{ ui.cart|default('Panier') }}</span><span class="storefront-cart-count" data-cart-count aria-live="polite">0</span>
+      </button>
+      {% endif %}
+
       <button class="navbar-toggler nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#site-navigation" data-nav-toggle="site-navigation" aria-controls="site-navigation" aria-expanded="false" aria-label="{{ ui.menu }}">
         <span class="navbar-toggler-icon"></span>
       </button>

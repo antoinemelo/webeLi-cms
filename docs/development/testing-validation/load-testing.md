@@ -31,7 +31,7 @@ Le guide détaillé est maintenu avec le script dans `tools/tests/README_LOAD-TE
 
 ## Usage prévu
 
-Le script `tools/tests/load_test.py` exécute des campagnes HTTP autorisées sur une instance cible, par défaut `https://webe.li/mod/`. Il produit un dossier de preuve contenant les paramètres, mesures brutes, synthèses, empreintes SHA-256 et une copie du script exécuté.
+Le script `tools/tests/load_test.py` exécute des campagnes HTTP autorisées sur une instance cible, par défaut `https://webe.li/cms/`. Il produit un dossier de preuve contenant les paramètres, mesures brutes, synthèses, empreintes SHA-256 et une copie du script exécuté.
 
 Utilisez-le pour :
 
@@ -71,7 +71,7 @@ Campagne publique sur l'environnement de test :
 ```bash
 cd tools/tests
 python3 load_test.py \
-  --base-url https://webe.li/mod/ \
+  --base-url https://webe.li/cms/ \
   --users 20 \
   --ramp 1,5,10,15,20 \
   --duration 60 \
@@ -88,7 +88,7 @@ Campagne administrative avec comptes dédiés :
 ```bash
 cd tools/tests
 python3 load_test.py \
-  --base-url https://webe.li/mod/ \
+  --base-url https://webe.li/cms/ \
   --credentials-file users.csv \
   --users 10 \
   --ramp 1,5,10 \

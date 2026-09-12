@@ -1,3 +1,3 @@
 url,nom,token
-http://127.0.0.1:8080/mod/,perf,amcms_a98044277f8c024e1404ee02f5648a2333fc48b1b208b737fb6a45f698f47299
-https://webe.li/mod/,perf,amcms_81662b4c1bbac8defbba9f4d7ba553ab00c89bd49979c03c34b4f5bbb78d2eb6
+http://127.0.0.1:8080/cms/,perf,amcms_a98044277f8c024e1404ee02f5648a2333fc48b1b208b737fb6a45f698f47299
+https://webe.li/cms/,perf,amcms_81662b4c1bbac8defbba9f4d7ba553ab00c89bd49979c03c34b4f5bbb78d2eb6

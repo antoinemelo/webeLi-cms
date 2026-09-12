@@ -1,0 +1,21 @@
+{% set cart_en = languageCode|default('fr')|slice(0, 2) == 'en' %}
+<div class="storefront-cart-backdrop" data-cart-backdrop hidden></div>
+<aside id="storefront-cart-drawer" class="storefront-cart-drawer" data-cart-drawer hidden role="dialog" aria-modal="true" aria-labelledby="storefront-cart-title" tabindex="-1">
+  <header class="cart-drawer__header">
+    <div><p>{{ cart_en ? 'Your selection' : 'Votre sélection' }}</p><h2 id="storefront-cart-title">{{ cart_en ? 'Cart' : 'Panier' }}</h2></div>
+    <button class="cart-drawer__close" type="button" data-cart-close aria-label="{{ cart_en ? 'Close cart' : 'Fermer le panier' }}"><span aria-hidden="true">×</span></button>
+  </header>
+  <div class="cart-drawer__content">
+    <div data-cart-error role="alert" aria-live="assertive"></div>
+    <div data-cart-lines aria-live="polite"></div>
+  </div>
+  <footer class="cart-drawer__footer">
+    <div data-cart-summary></div>
+    <div class="cart-total" data-cart-total></div>
+    <div class="cart-drawer__actions">
+      <a class="cart-secondary-action" data-cart-full href="{{ localized_url('/cart', languageCode|default('fr')) }}">{{ cart_en ? 'View full cart' : 'Voir le panier' }}</a>
+      <a class="cart-checkout" data-cart-checkout href="{{ localized_url('/checkout', languageCode|default('fr')) }}">{{ cart_en ? 'Checkout' : 'Commander' }}</a>
+    </div>
+    <p class="cart-reassurance"><span aria-hidden="true">⌁</span>{{ cart_en ? 'Secure checkout · cart saved on this device' : 'Paiement sécurisé · panier conservé sur cet appareil' }}</p>
+  </footer>
+</aside>
